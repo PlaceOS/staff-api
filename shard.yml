@@ -1,0 +1,17 @@
+name: staff-api
+version: 0.1
+
+dependencies:
+  action-controller:
+    github: spider-gazelle/action-controller
+    version: ~> 3.0
+
+  placeos:
+    github: placeos/crystal-client
+    branch: master
+
+development_dependencies:
+  ameba:
+    github: veelenga/ameba
+
+
