@@ -6,3 +6,6 @@ app
 *.dwarf
 bin
 *.DS_Store
+.env
+auth_test.cr
+test.cr
