@@ -12,6 +12,10 @@ shards:
     git: https://github.com/spider-gazelle/active-model.git
     version: 1.8.4
 
+  admiral:
+    git: https://github.com/jwaldrip/admiral.cr.git
+    version: 1.11.2+git.commit.c3c3467953654554b72c24e7b853d6fbb23f10c0
+
   ameba:
     git: https://github.com/veelenga/ameba.git
     version: 0.13.0
@@ -20,17 +24,45 @@ shards:
     git: https://github.com/spider-gazelle/bindata.git
     version: 1.5.5
 
+  clear:
+    git: https://github.com/anykeyh/clear.git
+    version: 0.8+git.commit.4120e5e9bdea4d1ea78c9c7c74b6deb65bfcebe2
+
+  connect-proxy:
+    git: https://github.com/spider-gazelle/connect-proxy.git
+    version: 1.0.0
+
+  cron_parser:
+    git: https://github.com/kostya/cron_parser.git
+    version: 0.3.0
+
   db:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.9.0
+
+  faker:
+    git: https://github.com/askn/faker.git
+    version: 0.4.0
 
   future:
     git: https://github.com/crystal-community/future.cr.git
     version: 0.1.0
 
+  generate:
+    git: https://github.com/anykeyh/generate.cr.git
+    version: 0.1.0+git.commit.27a59d663ded8ce39a361e3a88b8dd747f59ce42
+
+  google:
+    git: https://github.com/PlaceOS/google.git
+    version: 2.3.0
+
   habitat:
     git: https://github.com/luckyframework/habitat.git
     version: 0.4.4
+
+  inflector:
+    git: https://github.com/phoffer/inflector.cr.git
+    version: 0.1.8
 
   json_mapping:
     git: https://github.com/crystal-lang/json_mapping.cr.git
@@ -48,9 +80,21 @@ shards:
     git: https://github.com/spider-gazelle/neuroplastic.git
     version: 1.6.1
 
+  office365:
+    git: https://github.com/PlaceOS/office365.git
+    version: 1.1.0
+
   openssl_ext:
     git: https://github.com/stakach/openssl_ext.git
     version: 1.2.2
+
+  pg:
+    git: https://github.com/will/crystal-pg.git
+    version: 0.21.1+git.commit.cafe111fc28e366c219144d5f656c3718d7357dd
+
+  place_calendar:
+    git: https://github.com/PlaceOS/calendar.git
+    version: 2.0.1
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -59,6 +103,10 @@ shards:
   placeos-models:
     git: https://github.com/placeos/models.git
     version: 3.1.1
+
+  promise:
+    git: https://github.com/spider-gazelle/promise.git
+    version: 2.2.1
 
   rethinkdb:
     git: https://github.com/kingsleyh/crystal-rethinkdb.git
@@ -71,6 +119,18 @@ shards:
   retriable:
     git: https://github.com/sija/retriable.cr.git
     version: 0.2.2
+
+  secrets-env:
+    git: https://github.com/place-labs/secrets-env.git
+    version: 1.0.0
+
+  tasker:
+    git: https://github.com/spider-gazelle/tasker.git
+    version: 2.0.1
+
+  webmock:
+    git: https://github.com/manastech/webmock.cr.git
+    version: 0.13.0+git.commit.bb3eab30f6c7d1fdc0a7ff14cd136d68e860d1a7
 
   yaml_mapping:
     git: https://github.com/crystal-lang/yaml_mapping.cr.git

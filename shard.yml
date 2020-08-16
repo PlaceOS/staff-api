@@ -10,8 +10,28 @@ dependencies:
     github: placeos/crystal-client
     branch: master
 
+  place_calendar:
+    github: PlaceOS/calendar
+
+  clear:
+    github: anykeyh/clear
+    branch: master
+
+  promise:
+    github: spider-gazelle/promise
+
+  secrets-env:
+    github: place-labs/secrets-env
+
 development_dependencies:
   ameba:
     github: veelenga/ameba
+  webmock:
+    github: manastech/webmock.cr
+    branch: master
+  faker:
+    github: askn/faker
 
-
+targets:
+  app:
+    main: src/staff-api.cr
