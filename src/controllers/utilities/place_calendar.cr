@@ -1,9 +1,9 @@
 module Utils::PlaceCalendar
 
-  @calendar : PlaceCalendar? = nil
+  @client : PlaceCalendar? = nil
 
   def calendar
-    @calendar ||= PlaceCalendar.new(tenant.place_calendar_params)
+    @client ||= PlaceCalendar.new(tenant.place_calendar_params)
   end
 
 end
