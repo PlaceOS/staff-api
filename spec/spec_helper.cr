@@ -39,9 +39,10 @@ def authentication
   {authenticated_user, authorization_header}
 end
 
+
 # Provide some basic headers for auth
 HEADERS = HTTP::Headers{
-  "Host"          => URI.parse(DOMAIN).host.as(String),
+  "Host"          => "test.staff-api.dev",
   "Authorization" => authentication[1]["Authorization"],
 }
 

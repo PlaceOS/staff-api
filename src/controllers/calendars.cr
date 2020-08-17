@@ -2,7 +2,7 @@ class Calendars < Application
   base "/api/staff/v1/calendars"
 
   def index
-    render json: %({"Hello":"#{@tenant.try &.name}"})
+    render json: client.list_calendars(user.email)
   end
 
 #  get "/availability", :availability do

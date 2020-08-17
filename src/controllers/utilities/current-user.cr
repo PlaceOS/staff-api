@@ -48,6 +48,10 @@ module Utils::CurrentUser
     @user_token.as(UserJWT)
   end
 
+  def user
+    user_token.user
+  end
+
   # Read admin status from supplied request JWT
   def check_admin
     raise Error::Forbidden.new unless is_admin?

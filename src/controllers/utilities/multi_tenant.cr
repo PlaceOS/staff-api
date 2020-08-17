@@ -1,25 +1,20 @@
 module Utils::MultiTenant
 
   macro included
-    before_action :deterrmine_tenant_from_domain
+    before_action :determine_tenant_from_domain
   end
 
   @tenant : Tenant? = nil
 
   def tenant
-    if @tenant.nil?
-      Log.debug("Tenant not found")
-      head :not_found
-    else
-      @tenant
-    end
+    determine_tenant_from_domain unless @tenant
+    @tenant.as(Tenant)
   end
 
-  private def deterrmine_tenant_from_domain
-    if hostname = /[^:]+/.match(request.headers["Host"])
-      @tenant = Tenant.query.find { domain == hostname[0] }
-      Log.context.set(domain: hostname[0], tenant_id: @tenant.try &.id)
-    end
+  private def determine_tenant_from_domain
+    authority_domain_host = URI.parse(request.host.as(String)).host.to_s
+    @tenant = Tenant.query.find { domain == authority_domain_host }
+    Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
   end
 
 end
