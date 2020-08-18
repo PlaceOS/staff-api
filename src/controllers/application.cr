@@ -15,7 +15,6 @@ abstract class Application < ActionController::Base
   include Utils::CurrentUser
   # include Utils::Responders
   include Utils::MultiTenant
-  include Utils::PlaceCalendar
 
   # =========================================
   # LOGGING

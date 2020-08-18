@@ -85,12 +85,14 @@ class Tenant
     add_error("credentials", e.message.to_s)
   end
 
-  def place_calendar_params
+  def place_calendar_client
     case platform
     when "office365"
-      Office365Config.from_json(credentials).params
+      params = Office365Config.from_json(credentials).params
+      ::PlaceCalendar::Client.new(**params)
     when "google"
-      GoogleConfig.from_json(credentials).params
+      params = GoogleConfig.from_json(credentials).params
+      ::PlaceCalendar::Client.new(**params)
     end
   end
 end

@@ -6,10 +6,10 @@ require "../src/config"
 
 # Helper methods for testing controllers (curl, with_server, context)
 require "../lib/action-controller/spec/curl_context"
-require "webmock"
+#require "webmock"
 
 Spec.before_suite do
-  WebMock.reset
+  #WebMock.reset
   truncate_db
 end
 
@@ -17,32 +17,35 @@ def truncate_db
   Clear::SQL.execute("TRUNCATE TABLE tenants;")
 end
 
-Spec.before_each &->WebMock.reset
+#Spec.before_each &->WebMock.reset
 
-# Grab the models generator
-require "placeos-models"
-require "../lib/placeos-models/spec/generator"
-
-# Yield an authenticated user, and a header with Authorization bearer set
-def authentication
-  authority = PlaceOS::Model::Generator.authority("example.place.technology")
-  authority.id = "sgrp-testing"
-
-  authenticated_user = PlaceOS::Model::Generator.user(authority).not_nil!
-  authenticated_user.email = authenticated_user.email.as(String) + Random.rand(9999).to_s
-  authenticated_user.id = "user-testing"
-  authenticated_user.authority = authority
-
-  authorization_header = {
-    "Authorization" => "Bearer #{PlaceOS::Model::Generator.jwt(authenticated_user).encode}",
-  }
-  {authenticated_user, authorization_header}
+def mock_token
+  UserJWT.new(
+    iss: "staff-api",
+    iat: Time.local,
+    exp: Time.local + 1.week,
+    aud: "toby.staff-api.dev",
+    sub: "toby@redant.com.au",
+    user: UserJWT::Metadata.new(
+      name: "Toby Carvan",
+      email: "dev@acaprojects.com",
+      permissions: UserJWT::Permissions::Admin
+    )
+  ).encode
 end
 
+def mock_tenant_params
+  {
+    name: "Toby", 
+    platform: "office365", 
+    domain: "toby.staff-api.dev",
+    credentials: %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
+  }
+end
 
 # Provide some basic headers for auth
 HEADERS = HTTP::Headers{
-  "Host"          => "test.staff-api.dev",
-  "Authorization" => authentication[1]["Authorization"],
+  "Host"          => "toby.staff-api.dev",
+  "Authorization" => "Bearer #{mock_token}"
 }
 
