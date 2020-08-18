@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/red-ant/staff-api.svg?token=RzVfSpK1WxvVvMdpTs99&branch=master)](https://travis-ci.com/red-ant/staff-api)
+
 # PlaceOS Staff API
 
 ## Env Vars
