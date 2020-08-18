@@ -24,17 +24,6 @@ module Utils::CurrentUser
       # Request bearer was malformed
       raise Error::Unauthorized.new "bearer malformed"
     end
-
-    # Token and authority domains must match
-    token_domain_host = user_token.domain
-    authority_domain_host = request.host.as(String)
-    unless token_domain_host == authority_domain_host
-      ::Log.with_context do
-        Log.context.set({token: token_domain_host, authority: authority_domain_host})
-        Log.info { "domain does not match token's" }
-      end
-      raise Error::Unauthorized.new "domain does not match token's"
-    end
   rescue e
     # ensure that the user token is nil if this function ever errors.
     @user_token = nil
