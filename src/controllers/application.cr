@@ -10,7 +10,7 @@ abstract class Application < ActionController::Base
   # =========================================
   # HELPERS
   # =========================================
-  # include Utils::PlaceOSHelpers
+  include Utils::PlaceOSHelpers
   # include Utils::GoogleHelpers
   include Utils::CurrentUser
   # include Utils::Responders
@@ -75,4 +75,3 @@ abstract class Application < ActionController::Base
 
 
 end
-

@@ -1,12 +1,13 @@
 module App
-  NAME = "StaffAPI"
+  NAME    = "StaffAPI"
   VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
 
   ENVIRONMENT = ENV["SG_ENV"]? || "development"
-  PRODUCTION = ENVIRONMENT == "production"
+  TEST        = ENVIRONMENT == "test"
+  PRODUCTION  = ENVIRONMENT == "production"
 
-  DEFAULT_PORT = (ENV["SG_SERVER_PORT"]? || 3000).to_i
-  DEFAULT_HOST = ENV["SG_SERVER_HOST"]? || "127.0.0.1"
+  DEFAULT_PORT          = (ENV["SG_SERVER_PORT"]? || 3000).to_i
+  DEFAULT_HOST          = ENV["SG_SERVER_HOST"]? || "127.0.0.1"
   DEFAULT_PROCESS_COUNT = (ENV["SG_PROCESS_COUNT"]? || 1).to_i
 
   COOKIE_SESSION_KEY    = ENV["COOKIE_SESSION_KEY"]? || "_staff_api_"
@@ -15,11 +16,12 @@ module App
   Log         = ::Log.for(NAME)
   LOG_BACKEND = ActionController.default_backend
 
-  PG_DATABASE_URL = ENV["PG_DATABASE_URL"]
+  PG_DATABASE_URL         = TEST ? ENV["PG_TEST_DATABASE_URL"] : ENV["PG_DATABASE_URL"]
   PG_CONNECTION_POOL_SIZE = 5
+
+  PLACE_URI = ENV["PLACE_URI"]
 
   def self.running_in_production?
     PRODUCTION
   end
 end
-
