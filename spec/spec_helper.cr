@@ -49,3 +49,7 @@ HEADERS = HTTP::Headers{
   "Authorization" => "Bearer #{mock_token}"
 }
 
+def extract_json(response)
+  JSON.parse(response.to_s.split("\r\n").reject(&.empty?)[-1])
+end
+
