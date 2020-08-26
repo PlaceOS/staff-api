@@ -8,9 +8,6 @@ module Utils::PlaceOSHelpers
   @placeos_client : PlaceOS::Client? = nil
 
   def get_placeos_client : PlaceOS::Client
-    @plaseos_client ||= PlaceOS::Client.new(
-      PLACE_URI,
-      token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil)
-    )
+    @plaseos_client ||= PlaceOS::Client.from_environment_user
   end
 end
