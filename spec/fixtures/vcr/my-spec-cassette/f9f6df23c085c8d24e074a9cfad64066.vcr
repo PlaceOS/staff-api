@@ -1,0 +1,13 @@
+HTTP/1.1 200 OK
+Cache-Control: private
+Content-Type: application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8
+Vary: Accept-Encoding
+request-id: 846507d5-b77d-4b75-b4d4-ad2173f11bb5
+client-request-id: 846507d5-b77d-4b75-b4d4-ad2173f11bb5
+x-ms-ags-diagnostic: {"ServerInfo":{"DataCenter":"Australia Southeast","Slice":"SliceC","Ring":"3","ScaleUnit":"000","RoleInstance":"AGSFE_IN_4"}}
+OData-Version: 4.0
+Strict-Transport-Security: max-age=31536000
+Date: Thu, 27 Aug 2020 01:08:55 GMT
+Content-Length: 1648
+
+{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendars","value":[{"id":"AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAEGAAB08dwEuoS_QYSBDzuv558sAAAKe1yoAAA=","name":"Calendar","color":"auto","changeKey":"dPHcBLqEvkGEgQ87r+efLAAACntKaQ==","canShare":true,"canViewPrivateItems":true,"canEdit":true,"allowedOnlineMeetingProviders":["teamsForBusiness"],"defaultOnlineMeetingProvider":"teamsForBusiness","isTallyingResponses":true,"isRemovable":false,"owner":{"name":"Developer","address":"dev@acaprojects.onmicrosoft.com"}},{"id":"AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAEGAAB08dwEuoS_QYSBDzuv558sAAAKe1ypAAA=","name":"United States holidays","color":"auto","changeKey":"dPHcBLqEvkGEgQ87r+efLAAACntKfA==","canShare":false,"canViewPrivateItems":true,"canEdit":false,"allowedOnlineMeetingProviders":[],"defaultOnlineMeetingProvider":"unknown","isTallyingResponses":false,"isRemovable":true,"owner":{"name":"Developer","address":"dev@acaprojects.onmicrosoft.com"}},{"id":"AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAEGAAB08dwEuoS_QYSBDzuv558sAAAKe1ysAAA=","name":"Birthdays","color":"auto","changeKey":"dPHcBLqEvkGEgQ87r+efLAAACntLVw==","canShare":false,"canViewPrivateItems":true,"canEdit":false,"allowedOnlineMeetingProviders":[],"defaultOnlineMeetingProvider":"unknown","isTallyingResponses":false,"isRemovable":true,"owner":{"name":"Developer","address":"dev@acaprojects.onmicrosoft.com"}}]}
