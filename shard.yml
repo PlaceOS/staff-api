@@ -31,6 +31,8 @@ development_dependencies:
     branch: master
   faker:
     github: askn/faker
+  vcr:
+    github: spoved/vcr.cr
 
 targets:
   app:

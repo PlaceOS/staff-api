@@ -7,9 +7,11 @@ require "../src/config"
 # Helper methods for testing controllers (curl, with_server, context)
 require "../lib/action-controller/spec/curl_context"
 #require "webmock"
+require "vcr"
 
 Spec.before_suite do
   #WebMock.reset
+  load_cassette("my-spec-cassette")
   truncate_db
 end
 
