@@ -5,9 +5,8 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  def self.compose(event : PlaceCalendar::Event, system)
+  def self.compose(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil)
     visitors = {} of String => Attendee
-    metadata = EventMetadata.query.find({event_id: event.id})
 
     if event.status == "cancelled"
       metadata.try &.delete
@@ -51,6 +50,7 @@ class StaffApi::Event
 
     {
       id:             event.id,
+      calendar:       calendar,
       status:         event.status,
       title:          event.title,
       body:           event.body,

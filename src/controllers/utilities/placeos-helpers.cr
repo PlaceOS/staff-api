@@ -18,7 +18,7 @@ module Utils::PlaceOSHelpers
   end
 
   class CalendarSelection < Params
-    attribute calendars : String
+    attribute calendars : String?
     attribute zone_ids : String?
     attribute system_ids : String?
     attribute features : String?
