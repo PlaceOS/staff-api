@@ -15,10 +15,10 @@ class CreateEventMetadataMigration
 
         t.timestamps
       end
+    end
 
-      direction.down do
-        execute("DROP TABLE event_metadatas")
-      end
+    direction.down do
+      execute("DROP TABLE event_metadatas")
     end
   end
 end

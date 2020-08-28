@@ -10,11 +10,10 @@ class CreateTenantMigration
         t.column :credentials, :text
         t.timestamps
       end
+    end
 
-      direction.down do
-        execute("DROP TABLE tenants")
-      end
+    direction.down do
+      execute("DROP TABLE tenants")
     end
   end
 end
-

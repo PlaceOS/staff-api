@@ -57,8 +57,133 @@ class Events < Application
 
     # return array of standardised events
     render json: results.map { |(calendar_id, system, event)|
-      StaffApi::Event.compose(event, calendar_id, system, metadatas[event.id]?)
+      StaffApi::Event.augment(event, calendar_id, system, metadatas[event.id]?)
     }
+  end
+
+  def create
+    input_event = PlaceCalendar::Event.from_json(request.body.as(IO))
+
+    host = input_event.host || user.email
+
+    system_id = input_event.system_id || input_event.system.try(&.id)
+    if system_id
+      system = get_placeos_client.systems.fetch(system_id)
+      system_email = system.email.presence.not_nil!
+      system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
+      input_event.attendees << system_attendee
+    end
+
+    # Ensure the host is configured to be attending the meeting and has accepted the meeting
+    attendees = input_event.attendees.uniq.reject { |attendee| attendee.email == host }
+    input_event.attendees = attendees
+    host_attendee = PlaceCalendar::Event::Attendee.new(name: host, email: host, response_status: "accepted")
+    host_attendee.visit_expected = true
+    input_event.attendees << host_attendee
+
+    # Default to system timezone if not passed in
+    zone = input_event.timezone ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
+
+    input_event.event_start = input_event.event_start.in(zone)
+    input_event.event_end = input_event.event_end.not_nil!.in(zone)
+
+    created_event = client.create_event(user_id: host, event: input_event, calendar_id: host)
+
+    # Update PlaceOS with an signal "/staff/event/changed"
+    if system && created_event
+      sys = system.not_nil!
+
+      # Grab the list of externals that might be attending
+      attending = input_event.attendees.try(&.select { |attendee|
+        attendee.visit_expected
+      })
+
+      spawn do
+        get_placeos_client.root.signal("staff/event/changed", {
+          action:    :create,
+          system_id: input_event.system_id,
+          event_id:  created_event.not_nil!.id,
+          host:      host,
+          resource:  sys.email,
+        })
+      end
+
+      # Save custom data
+      ext_data = input_event.extension_data
+      if ext_data || (attending && !attending.empty?)
+        meta = EventMetadata.new
+        meta.system_id = sys.id.not_nil!
+        meta.event_id = created_event.not_nil!.id.not_nil!
+        meta.event_start = created_event.not_nil!.event_start.not_nil!.to_unix
+        meta.event_end = created_event.not_nil!.event_end.not_nil!.to_unix
+        meta.resource_calendar = sys.email.not_nil!
+        meta.host_email = host
+        meta.ext_data = ext_data
+        meta.save!
+
+        Log.info { "saving extension data for event #{created_event.not_nil!.id} in #{sys.id}" }
+
+        if attending
+          # Create guests
+          attending.each do |attendee|
+            email = attendee.email.strip.downcase
+
+            existing_guest = Guest.query.find({email: email})
+            if existing_guest
+              guest = existing_guest
+            else
+              guest = Guest.new
+              guest.email = email
+              guest.name = attendee.name
+              guest.preferred_name = attendee.preferred_name
+              guest.phone = attendee.phone
+              guest.organisation = attendee.organisation
+              guest.photo = attendee.photo
+              guest.notes = attendee.notes
+              guest.banned = false
+              guest.dangerous = false
+            end
+
+            if attendee_ext_data = attendee.extension_data
+              guest.ext_data = attendee_ext_data
+            end
+
+            guest.save!
+
+            # Create attendees
+            attend = Attendee.new
+            attend.event_id = meta.id.not_nil!
+            attend.guest_id = guest.id
+            attend.visit_expected = true
+            attend.checked_in = false
+            attend.save!
+
+            spawn do
+              get_placeos_client.root.signal("staff/guest/attending", {
+                action:         :meeting_created,
+                system_id:      sys.id,
+                event_id:       created_event.not_nil!.id,
+                host:           host,
+                resource:       sys.email,
+                event_summary:  created_event.not_nil!.body,
+                event_starting: created_event.not_nil!.event_start.not_nil!.to_unix,
+                attendee_name:  attendee.name,
+                attendee_email: attendee.email,
+              })
+            end
+          end
+        end
+
+        render json: StaffApi::Event.augment(created_event.not_nil!, sys.email, sys, meta)
+      end
+
+      Log.info { "no extension data for event #{created_event.not_nil!.id} in #{sys.id}, #{ext_data}" }
+
+      render json: StaffApi::Event.augment(created_event.not_nil!, sys.email, sys)
+    end
+
+    Log.info { "no system provided for event #{created_event.not_nil!.id}" }
+    render json: StaffApi::Event.augment(created_event.not_nil!, host)
   end
 
   def show
@@ -72,7 +197,7 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
       head(:not_found) unless event
 
-      render json: StaffApi::Event.compose(event.not_nil!, user_cal)
+      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     elsif system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
       begin
@@ -87,7 +212,7 @@ class Events < Application
       head(:not_found) unless event
 
       metadata = EventMetadata.query.find({event_id: event.id})
-      render json: StaffApi::Event.compose(event.not_nil!, cal_id, system, metadata)
+      render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
     end
 
     head :bad_request

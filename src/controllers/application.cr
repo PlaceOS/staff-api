@@ -40,6 +40,15 @@ abstract class Application < ActionController::Base
   # HELPER METHODS
   # =========================================
 
+  # Grab the users timezone
+  def get_timezone
+    tz = query_params["timezone"]?
+    if tz && !tz.empty?
+      Time::Location.load(URI.decode(tz))
+    else
+      DEFAULT_TIME_ZONE
+    end
+  end
 
   # =========================================
   # ERROR HANDLERS

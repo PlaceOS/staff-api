@@ -5,11 +5,12 @@ class Attendee
 
   column checked_in : Bool = false
   column visit_expected : Bool = true
-  column guest_id : String
+  column guest_id : Int64
 
   belongs_to event_metadata : EventMetadata, foreign_key: "event_id"
+  belongs_to guest : Guest, foreign_key: "guest_id"
 
   def email
-    guest_id
+    guest.email
   end
 end

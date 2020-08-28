@@ -5,7 +5,7 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  def self.compose(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil)
+  def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil)
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
@@ -20,22 +20,14 @@ class StaffApi::Event
 
     # Grab the list of external visitors
     attendees = (event.attendees || NOP_PLACE_CALENDAR_ATTENDEES).map do |attendee|
-      email = attendee.email.downcase
-      result = {
-        name:            attendee.name,
-        email:           email,
-        response_status: attendee.response_status,
-        organizer:       attendee.organizer,
-        resource:        attendee.resource,
-      }
+      attendee.email = attendee.email.downcase
 
-      if visitor = visitors[email]?
-        result = result.merge({checked_in:     visitor.checked_in,
-                               visit_expected: visitor.visit_expected,
-        })
+      if visitor = visitors[attendee.email]?
+        attendee.checked_in = visitor.checked_in
+        attendee.visit_expected = visitor.visit_expected
       end
 
-      result
+      attendee
     end
 
     event_start = event.event_start.not_nil!.to_unix
@@ -48,26 +40,44 @@ class StaffApi::Event
       metadata.save
     end
 
-    {
-      id:             event.id,
-      calendar:       calendar,
-      status:         event.status,
-      title:          event.title,
-      body:           event.body,
-      location:       event.location,
-      host:           event.host,
-      creator:        event.creator,
-      private:        event.private?,
-      event_start:    event_start,
-      event_end:      event_end,
-      timezone:       event.timezone,
-      all_day:        event.all_day?,
-      attendees:      attendees,
-      recurring:      event.recurring,
-      recurrence:     event.recurrence,
-      attachments:    event.attachments,
-      system:         system,
-      extension_data: metadata.try(&.ext_data) || {} of Nil => Nil,
-    }
+    event.calendar = calendar
+    event.attendees = attendees
+    event.system = system
+    event.extension_data = metadata.try(&.ext_data)
+
+    event
+  end
+end
+
+# Adding attributes needed by Staff API
+class PlaceCalendar::Event
+  class System
+    include JSON::Serializable
+
+    property id : String
+  end
+
+  # Needed so that json input without attachments array can be accepted
+  property attachments : Array(Attachment) = [] of PlaceCalendar::Attachment
+
+  property calendar : String?
+
+  # This is the resource calendar, it will be moved to one of the attendees
+  property system_id : String?
+  property system : System? | PlaceOS::Client::API::Models::System?
+
+  property extension_data : JSON::Any?
+
+  struct Attendee
+    property checked_in : Bool?
+    property visit_expected : Bool?
+    property extension_data : JSON::Any?
+    property preferred_name : String?
+    property phone : String?
+    property organisation : String?
+    property photo : String?
+    property notes : String?
+    property banned : Bool? = false
+    property dangerous : Bool? = false
   end
 end
