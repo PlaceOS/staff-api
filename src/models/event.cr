@@ -77,7 +77,7 @@ class PlaceCalendar::Event
     property organisation : String?
     property photo : String?
     property notes : String?
-    property banned : Bool? = false
-    property dangerous : Bool? = false
+    property banned : Bool?
+    property dangerous : Bool?
   end
 end
