@@ -50,6 +50,18 @@ abstract class Application < ActionController::Base
     end
   end
 
+  def attending_guest(visitor : Attendee?, guest : Guest?)
+    if guest
+      guest.to_h(visitor)
+    elsif visitor
+      # TODO: Need to verify in guests api if this is still needed.
+      # DB structure was changed where each attendee has a corresponding guest record which keeps the email
+      visitor.to_h
+    else
+      raise "requires either an attendee or a guest"
+    end
+  end
+
   # =========================================
   # ERROR HANDLERS
   # =========================================

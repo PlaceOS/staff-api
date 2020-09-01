@@ -21,6 +21,23 @@ class Guest
     validate_email_uniqueness
   end
 
+  def to_h(visitor : Attendee?)
+    {
+      email: email,
+      name: name,
+      preferred_name: name,
+      phone: phone,
+      organisation: organisation,
+      notes: notes,
+      photo: photo,
+      banned: banned,
+      dangerous: dangerous,
+      extension_data: ext_data,
+      checked_in:     visitor.try(&.checked_in) || false,
+      visit_expected: visitor.try(&.visit_expected) || false
+    }
+  end
+
   private def validate_email_uniqueness
     if (!persisted? && Guest.query.find { raw("email = '#{self.email}'") }) || (persisted? && Guest.query.find { raw("email = '#{self.email}'") & raw("id != '#{self.id}'") })
       add_error("email", "duplicate error. A guest with this email already exists")

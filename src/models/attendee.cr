@@ -13,4 +13,12 @@ class Attendee
   def email
     guest.email
   end
+
+  def to_h
+    {
+      email: email,
+      checked_in: checked_in,
+      visit_expected: visit_expected
+    }
+  end
 end

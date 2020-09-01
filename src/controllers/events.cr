@@ -504,6 +504,30 @@ class Events < Application
     head :bad_request
   end
 
+  get("/:id/guests", :guest_list) do
+    event_id = route_params["id"]
+    render(json: [] of Nil) if query_params["calendar"]?
+    system_id = query_params["system_id"]?
+    render :bad_request, json: {error: "missing system_id param"} unless system_id
+
+    # Grab meeting metadata if it exists
+    metadata = EventMetadata.query.find({event_id: event_id})
+    render(json: [] of Nil) unless metadata
+
+    # Find anyone who is attending
+    visitors = metadata.attendees.to_a
+    render(json: [] of Nil) if visitors.empty?
+
+    # Grab the guest profiles if they exist
+    guests = {} of String => Guest
+    visitors.each { |visitor| guests[visitor.guest.email.not_nil!] = visitor.guest }
+
+    # Merge the visitor data with guest profiles
+    visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?) }
+
+    render json: visitors
+  end
+
   private def get_user_calendars
     client.list_calendars(user.email)
   end
