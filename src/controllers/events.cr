@@ -458,6 +458,52 @@ class Events < Application
     head :bad_request
   end
 
+  def destroy
+    event_id = route_params["id"]
+    notify_guests = query_params["notify"]? != "false"
+
+    if user_cal = query_params["calendar"]?
+      # Need to confirm the user can access this calendar
+      found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
+      head(:not_found) unless found
+
+      # Delete the event
+      client.delete_event(user_id: user.email, id: event_id, calendar_id: user_cal, notify: notify_guests)
+
+      head :accepted
+    elsif system_id = query_params["system_id"]?
+      placeos_client = get_placeos_client
+
+      # Need to grab the calendar associated with this system
+      begin
+        system = placeos_client.systems.fetch(system_id)
+      rescue _ex : ::PlaceOS::Client::API::Error
+        head(:not_found)
+      end
+      cal_id = system.email
+      head(:not_found) unless cal_id
+
+      EventMetadata.query.find({event_id: event_id}).try &.delete
+      # Delete the event
+      client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
+
+      head :accepted
+
+      spawn do
+        placeos_client.root.signal("staff/event/changed", {
+          action:    :cancelled,
+          system_id: system.id,
+          event_id:  event_id,
+          resource:  system.email,
+        })
+      end
+
+      head :accepted
+    end
+
+    head :bad_request
+  end
+
   private def get_user_calendars
     client.list_calendars(user.email)
   end
