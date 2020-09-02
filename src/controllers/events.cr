@@ -504,6 +504,53 @@ class Events < Application
     head :bad_request
   end
 
+  #
+  # Event Approval / Rejection
+  #
+  post "/:id/approve", :approve do
+    update_status("accepted")
+  end
+
+  post "/:id/reject", :reject do
+    update_status("declined")
+  end
+
+  def update_status(status)
+    event_id = route_params["id"]
+    system_id = query_params["system_id"]
+
+    # Check this system has an associated resource
+    begin
+      system = get_placeos_client.systems.fetch(system_id)
+    rescue _ex : ::PlaceOS::Client::API::Error
+      head(:not_found)
+    end
+    cal_id = system.email
+    head(:not_found) unless cal_id
+
+    # Check the event was in the calendar
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    head(:not_found) unless event
+
+    # Existing attendees without system
+    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
+    # Adding back system with correct status
+    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
+
+    event.not_nil!.attendees = attendees
+
+    # Update the event (user must be a resource approver)
+    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
+
+    # Return the full event details
+    metadata = EventMetadata.query.find({event_id: event_id})
+    # render json: StaffApi::Event.augment(event.not_nil!, system.email, system, metadata)
+    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
+  end
+
+  #
+  # Event Guest management
+  #
   get("/:id/guests", :guest_list) do
     event_id = route_params["id"]
     render(json: [] of Nil) if query_params["calendar"]?
