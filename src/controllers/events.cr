@@ -254,7 +254,6 @@ class Events < Application
     changes.event_start = changes.event_start.in(zone)
     changes.event_end = changes.event_end.not_nil!.in(zone)
 
-    # TODO: Test change of room for o365
     # are we moving the event room?
     changing_room = system_id != (changes.system_id.presence || system_id)
     if changing_room
