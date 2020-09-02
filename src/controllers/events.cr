@@ -286,7 +286,7 @@ class Events < Application
       system = new_system
     else
       # If room is not changing and it is not an attendee, add it.
-      if system && !changes.attendees.map{ |a| a.email }.includes?(sys_cal)
+      if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
         changes.attendees << PlaceCalendar::Event::Attendee.new(name: sys_cal.not_nil!, email: sys_cal.not_nil!)
       end
     end
@@ -526,6 +526,50 @@ class Events < Application
     visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?) }
 
     render json: visitors
+  end
+
+  post("/:id/guests/:guest_id/checkin", :guest_checkin) do
+    event_id = route_params["id"]
+    guest_email = route_params["guest_id"].downcase
+    checkin = (query_params["state"]? || "true") == "true"
+
+    system_id = query_params["system_id"]?
+    render :bad_request, json: {error: "missing system_id param"} unless system_id
+
+    guest = Guest.query.find({email: guest_email})
+    eventmeta = EventMetadata.query.find({event_id: event_id})
+    head(:not_found) if guest.nil? || eventmeta.nil?
+
+    attendee = Attendee.query.find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
+    if attendee
+      attendee.checked_in = checkin
+      attendee.save!
+
+      guest_details = attendee.guest
+
+      # Check the event is still on
+      event = client.get_event(user.email, id: event_id, calendar_id: eventmeta.not_nil!.resource_calendar)
+      head(:not_found) unless event && event.status != "cancelled"
+
+      # Update PlaceOS with an signal "staff/guest/checkin"
+      spawn do
+        get_placeos_client.root.signal("staff/guest/checkin", {
+          action:         :checkin,
+          system_id:      system_id,
+          event_id:       event_id,
+          host:           eventmeta.not_nil!.host_email,
+          resource:       eventmeta.not_nil!.resource_calendar,
+          event_summary:  event.not_nil!.body,
+          event_starting: eventmeta.not_nil!.event_start,
+          attendee_name:  guest_details.name,
+          attendee_email: guest_details.email,
+        })
+      end
+
+      render json: attending_guest(attendee, attendee.guest)
+    else
+      head :not_found
+    end
   end
 
   private def get_user_calendars

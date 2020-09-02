@@ -25,7 +25,7 @@ class Guest
     {
       email: email,
       name: name,
-      preferred_name: name,
+      preferred_name: preferred_name,
       phone: phone,
       organisation: organisation,
       notes: notes,
