@@ -16,7 +16,7 @@ Spec.before_suite do
 end
 
 def truncate_db
-  Clear::SQL.execute("TRUNCATE TABLE tenants;")
+  Clear::SQL.execute("TRUNCATE TABLE tenants CASCADE;")
 end
 
 #Spec.before_each &->WebMock.reset

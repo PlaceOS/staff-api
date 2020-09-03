@@ -4,6 +4,8 @@ class CreateGuestMigration
   def change(direction)
     direction.up do
       create_table(:guests) do |t|
+        t.references to: "tenants", name: "tenant_id", on_delete: "cascade", null: false
+
         t.column :name, :string
         t.column :email, :string
         t.column :preferred_name, :string
@@ -19,7 +21,7 @@ class CreateGuestMigration
         t.timestamps
       end
 
-      execute("CREATE UNIQUE INDEX idx_lower_unique_guests_email ON guests (lower(email))")
+      execute("CREATE UNIQUE INDEX idx_lower_unique_guests_email ON guests (lower(email), tenant_id)")
     end
 
     direction.down do

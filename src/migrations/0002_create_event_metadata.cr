@@ -4,6 +4,8 @@ class CreateEventMetadataMigration
   def change(direction)
     direction.up do
       create_table(:event_metadatas) do |t|
+        t.references to: "tenants", name: "tenant_id", on_delete: "cascade", null: false
+
         t.column :system_id, :text, index: true
         t.column :event_id, :text, unique: true, index: true
 

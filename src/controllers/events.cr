@@ -1,6 +1,8 @@
 class Events < Application
   base "/api/staff/v1/events"
 
+  # TODO: Guest scopes: https://github.com/place-labs/google-staff-api/commit/2012146edfeb849020d2b1928faf8124130f6f80#diff-9c4a58454b24c4b5d48b6d48b1eae363
+
   def index
     period_start = Time.unix(query_params["period_start"].to_i64)
     period_end = Time.unix(query_params["period_end"].to_i64)
@@ -51,7 +53,7 @@ class Events < Application
 
     # Don't perform the query if there are no calendar entries
     if !metadata_ids.empty?
-      data = EventMetadata.query.where { event_id.in?(metadata_ids) }
+      data = EventMetadata.query.by_tenant(tenant.id).where { event_id.in?(metadata_ids) }
       data.each { |meta| metadatas[meta.event_id] = meta }
     end
 
@@ -124,6 +126,7 @@ class Events < Application
         meta.resource_calendar = sys.email.not_nil!
         meta.host_email = host
         meta.ext_data = ext_data
+        meta.tenant_id = tenant.id
         meta.save!
 
         Log.info { "saving extension data for event #{created_event.not_nil!.id} in #{sys.id}" }
@@ -147,6 +150,7 @@ class Events < Application
               guest.notes = attendee.notes
               guest.banned = attendee.banned || false
               guest.dangerous = attendee.dangerous || false
+              guest.tenant_id = tenant.id
             end
 
             if attendee_ext_data = attendee.extension_data
@@ -161,6 +165,7 @@ class Events < Application
             attend.guest_id = guest.id
             attend.visit_expected = true
             attend.checked_in = false
+            attend.tenant_id = tenant.id
             attend.save!
 
             spawn do
@@ -294,7 +299,7 @@ class Events < Application
 
     if system
       meta = if changing_room
-               old_meta = EventMetadata.query.find({event_id: event.id})
+               old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
 
                if old_meta
                  new_meta = EventMetadata.new
@@ -305,7 +310,7 @@ class Events < Application
                  EventMetadata.new
                end
              else
-               EventMetadata.query.find({event_id: event.id}) || EventMetadata.new
+               EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id}) || EventMetadata.new
              end
 
       meta.system_id = system.id.not_nil!
@@ -314,9 +319,12 @@ class Events < Application
       meta.event_end = changes.not_nil!.event_end.not_nil!.to_unix
       meta.resource_calendar = system.email.not_nil!
       meta.host_email = host
+      meta.tenant_id = tenant.id
 
       if extension_data = changes.extension_data
-        data = meta.ext_data.not_nil!.as_h
+        # TODO: Test updating extension data
+        meta_ext_data = meta.not_nil!.ext_data
+        data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
         meta.ext_data = JSON.parse(data.to_json)
@@ -364,6 +372,7 @@ class Events < Application
               guest.notes = attendee.notes
               guest.banned = attendee.banned || false
               guest.dangerous = attendee.dangerous || false
+              guest.tenant_id = tenant.id
             end
 
             if attendee_ext_data = attendee.extension_data
@@ -380,6 +389,7 @@ class Events < Application
               previously_visiting = false
               attend.visit_expected = true
               attend.checked_in = false
+              attend.tenant_id = tenant.id
             end
 
             attend.event_id = meta.id.not_nil!
@@ -450,7 +460,7 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
       head(:not_found) unless event
 
-      metadata = EventMetadata.query.find({event_id: event.id})
+      metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
       render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
     end
 
@@ -482,7 +492,7 @@ class Events < Application
       cal_id = system.email
       head(:not_found) unless cal_id
 
-      EventMetadata.query.find({event_id: event_id}).try &.delete
+      EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id}).try &.delete
       # Delete the event
       client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
 
@@ -542,7 +552,7 @@ class Events < Application
     updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
 
     # Return the full event details
-    metadata = EventMetadata.query.find({event_id: event_id})
+    metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
     # render json: StaffApi::Event.augment(event.not_nil!, system.email, system, metadata)
     render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
@@ -557,7 +567,7 @@ class Events < Application
     render :bad_request, json: {error: "missing system_id param"} unless system_id
 
     # Grab meeting metadata if it exists
-    metadata = EventMetadata.query.find({event_id: event_id})
+    metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
     render(json: [] of Nil) unless metadata
 
     # Find anyone who is attending
@@ -582,11 +592,11 @@ class Events < Application
     system_id = query_params["system_id"]?
     render :bad_request, json: {error: "missing system_id param"} unless system_id
 
-    guest = Guest.query.find({email: guest_email})
-    eventmeta = EventMetadata.query.find({event_id: event_id})
+    guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
+    eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
     head(:not_found) if guest.nil? || eventmeta.nil?
 
-    attendee = Attendee.query.find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
+    attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
     if attendee
       attendee.checked_in = checkin
       attendee.save!

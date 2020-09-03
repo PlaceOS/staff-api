@@ -50,6 +50,10 @@ class Tenant
   column platform : String
   column credentials : String
 
+  has_many attendees : Attendee, foreign_key: "tenant_id"
+  has_many guests : Guest, foreign_key: "tenant_id"
+  has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
+
   def validate
     add_error("domain", "must be defined") unless domain_column.defined?
     add_error("platform", "must be defined") unless platform_column.defined?
