@@ -1,7 +1,8 @@
 class Events < Application
   base "/api/staff/v1/events"
 
-  # TODO: Guest scopes: https://github.com/place-labs/google-staff-api/commit/2012146edfeb849020d2b1928faf8124130f6f80#diff-9c4a58454b24c4b5d48b6d48b1eae363
+  # Skip scope check for a single route
+  skip_action :check_jwt_scope, only: [:show, :guest_checkin]
 
   def index
     period_start = Time.unix(query_params["period_start"].to_i64)
@@ -437,6 +438,37 @@ class Events < Application
 
   def show
     event_id = route_params["id"]
+    placeos_client = get_placeos_client
+
+    # Guest access
+    if user_token.scope.includes?("guest")
+      guest_event_id, system_id = user_token.user.roles
+      guest_email = user.email.downcase
+
+      head :forbidden unless event_id == guest_event_id
+
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+      guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
+      head(:not_found) if guest.nil? || eventmeta.nil?
+
+      attendee = Attendee.query.find({guest_id: guest.not_nil!.id, event_id: eventmeta.not_nil!.id})
+
+      if attendee
+        event = client.get_event(user.email, id: event_id, calendar_id: eventmeta.resource_calendar)
+        head(:not_found) unless event
+
+        begin
+          system = placeos_client.systems.fetch(system_id)
+        rescue _ex : ::PlaceOS::Client::API::Error
+          head(:not_found)
+        end
+
+        render json: StaffApi::Event.augment(event.not_nil!, eventmeta.resource_calendar, system, eventmeta)
+      else
+        head :not_found
+      end
+    end
+
     if user_cal = query_params["calendar"]?
       # Need to confirm the user can access this calendar
       found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
@@ -450,7 +482,7 @@ class Events < Application
     elsif system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
       begin
-        system = get_placeos_client.systems.fetch(system_id)
+        system = placeos_client.systems.fetch(system_id)
       rescue _ex : ::PlaceOS::Client::API::Error
         head(:not_found)
       end
@@ -585,12 +617,19 @@ class Events < Application
   end
 
   post("/:id/guests/:guest_id/checkin", :guest_checkin) do
+    checkin = (query_params["state"]? || "true") == "true"
     event_id = route_params["id"]
     guest_email = route_params["guest_id"].downcase
-    checkin = (query_params["state"]? || "true") == "true"
 
-    system_id = query_params["system_id"]?
-    render :bad_request, json: {error: "missing system_id param"} unless system_id
+    if user_token.scope.includes?("guest")
+      guest_event_id, system_id = user_token.user.roles
+      guest_token_email = user.email.downcase
+
+      head :forbidden unless event_id == guest_event_id && guest_email == guest_token_email
+    else
+      system_id = query_params["system_id"]?
+      render :bad_request, json: {error: "missing system_id param"} unless system_id
+    end
 
     guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
     eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
