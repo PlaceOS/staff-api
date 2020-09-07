@@ -5,7 +5,7 @@ describe "Authorization" do
   it "should 403 if the domain in the header doesn't match the token" do
     headers = HTTP::Headers{
       "Host"          => "wrong.staff-api.dev",
-      "Authorization" => "Bearer #{mock_token}"
+      "Authorization" => "Bearer #{office_mock_token}"
     }
 
     response = IO::Memory.new
@@ -20,7 +20,7 @@ describe "Authorization" do
   it "should 403 if the token is invalid" do
     headers = HTTP::Headers{
       "Host"          => "toby.staff-api.dev",
-      "Authorization" => "Bearer #{mock_token}e"
+      "Authorization" => "Bearer #{office_mock_token}e"
     }
 
     response = IO::Memory.new
