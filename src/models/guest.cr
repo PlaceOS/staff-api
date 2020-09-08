@@ -18,6 +18,17 @@ class Guest
   belongs_to tenant : Tenant, foreign_key: "tenant_id"
   has_many attendees : Attendee, foreign_key: "guest_id"
 
+  # Save searchable information
+  before(:save) do |m|
+    guest_model = m.as(Guest)
+    searchable_string = ""
+    searchable_string += guest_model.name.to_s if guest_model.name_column.defined?
+    searchable_string += " #{guest_model.preferred_name}" if guest_model.preferred_name_column.defined?
+    searchable_string += " #{guest_model.organisation}" if guest_model.organisation_column.defined?
+    searchable_string += " #{guest_model.id}" if guest_model.id_column.defined?
+    guest_model.searchable = searchable_string.downcase
+  end
+
   scope :by_tenant do |tenant_id|
     where { var("guests", "tenant_id") == tenant_id }
   end
@@ -69,6 +80,17 @@ class Guest
         .order_by(event_start: "ASC")
         .limit(limit)
     end
+  end
+
+  def attendee_for(event_id)
+    attend = Attendee.new
+    attend.event_id = event_id
+    attend.guest_id = self.id
+    attend.tenant_id = self.tenant_id
+    attend.checked_in = false
+    attend.visit_expected = true
+    attend.save!
+    attend
   end
 
   # TODO: Update to take tenant_id into account

@@ -82,12 +82,20 @@ class Guests < Application
 
     parsed = JSON.parse(request.body.not_nil!)
     changes = Guest.new(parsed)
-    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo, :banned, :dangerous] %}
+    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
       begin
-        guest.not_nil!.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
+        if changes.{{key.id}}_column.defined?
+          guest.not_nil!.{{key.id}} = changes.{{key.id}}
+        end
       rescue NilAssertionError
       end
     {% end %}
+
+    # For some reason need to manually set the banned and dangerous
+    banned = parsed.as_h["banned"]?
+    guest.not_nil!.banned = banned.as_bool if banned
+    dangerous = parsed.as_h["dangerous"]?
+    guest.not_nil!.dangerous = dangerous.as_bool if dangerous
 
     # merge changes into extension data
     extension_data = parsed.as_h["extension_data"]
@@ -112,6 +120,10 @@ class Guests < Application
     parsed = JSON.parse(request.body.not_nil!)
     guest = Guest.new(parsed)
     guest.tenant_id = tenant.id
+    banned = parsed.as_h["banned"]?
+    guest.not_nil!.banned = banned ? banned.as_bool : false
+    dangerous = parsed.as_h["dangerous"]?
+    guest.not_nil!.dangerous = dangerous ? dangerous.as_bool : false
     guest.ext_data = parsed.as_h["extension_data"]
     if guest.save
       attendee = guest.attending_today(tenant.id, get_timezone)

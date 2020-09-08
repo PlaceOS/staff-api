@@ -10,13 +10,18 @@ require "webmock"
 
 Spec.before_suite do
   truncate_db
+  # Since almost all specs need need tenant to work
+  TenantsHelper.create_tenant
+end
+
+def truncate_db
+  Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
+  Clear::SQL.execute("TRUNCATE TABLE guests CASCADE;")
+  Clear::SQL.execute("TRUNCATE TABLE attendees CASCADE;")
+  Clear::SQL.execute("TRUNCATE TABLE tenants CASCADE;")
 end
 
 Spec.before_each &->WebMock.reset
-
-def truncate_db
-  Clear::SQL.execute("TRUNCATE TABLE tenants CASCADE;")
-end
 
 def office_mock_token
   UserJWT.new(
@@ -75,4 +80,40 @@ GOOGLE_HEADERS = HTTP::Headers{
 
 def extract_json(response)
   JSON.parse(response.to_s.split("\r\n").reject(&.empty?)[-1])
+end
+
+module TenantsHelper
+  extend self
+
+  def create_tenant(params = mock_tenant_params)
+    tenant = Tenant.new(params)
+    tenant.save
+    tenant
+  end
+end
+
+module EventMetadatasHelper
+  extend self
+
+  def create_event(tenant_id,
+                   id,
+                   event_start = Time.utc.to_unix,
+                   event_end = 60.minutes.from_now.to_unix,
+                   system_id = "sys_id",
+                   room_email = "room@example.com",
+                   host = "user@example.com",
+                   ext_data = JSON.parse({"foo": 123}.to_json))
+    meta = EventMetadata.new
+    meta.tenant_id = tenant_id
+    meta.system_id = system_id
+    meta.event_id = id
+    meta.host_email = host
+    meta.resource_calendar = room_email
+    meta.event_start = event_start
+    meta.event_end = event_end
+    meta.ext_data = ext_data
+    meta.save!
+
+    meta
+  end
 end

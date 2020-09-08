@@ -12,9 +12,9 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/index.json"))
-    WebMock.stub(:post, "http://pwcme.dev.place.tech/auth/oauth/token")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "http://pwcme.dev.place.tech/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/calendarView?startDateTime=2020-05-02T08:20:45-00:00&endDateTime=2020-05-02T12:21:37-00:00")
       .to_return(body: File.read("./spec/fixtures/events/o365/index.json"))
@@ -27,16 +27,7 @@ describe Events do
     host = "dev@acaprojects.onmicrosoft.com"
     tenant_id = events.tenant.id
 
-    meta = EventMetadata.new
-    meta.system_id = system_id
-    meta.event_id = id
-    meta.event_start = event_start
-    meta.event_end = event_end
-    meta.resource_calendar = room_email
-    meta.host_email = host
-    meta.ext_data = JSON.parse({"foo": 123}.to_json)
-    meta.tenant_id = tenant_id
-    meta.save!
+    EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
 
     events.index
 
