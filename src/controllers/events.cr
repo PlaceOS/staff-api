@@ -502,47 +502,54 @@ class Events < Application
   def destroy
     event_id = route_params["id"]
     notify_guests = query_params["notify"]? != "false"
+    placeos_client = get_placeos_client
 
-    if user_cal = query_params["calendar"]?
-      # Need to confirm the user can access this calendar
-      found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-      head(:not_found) unless found
+    cal_id = if user_cal = query_params["calendar"]?
+               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
+               head(:not_found) unless found
+               user_cal
+             elsif system_id = query_params["system_id"]?
+               begin
+                 system = placeos_client.systems.fetch(system_id)
+               rescue _ex : ::PlaceOS::Client::API::Error
+                 head(:not_found)
+               end
+               sys_cal = system.email.presence
+               head(:not_found) unless sys_cal
+               sys_cal
+             else
+               head :bad_request
+             end
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    head(:not_found) unless event
 
-      # Delete the event
-      client.delete_event(user_id: user.email, id: event_id, calendar_id: user_cal, notify: notify_guests)
+    # User details
+    user_email = user.email
+    host = event.host || user_email
 
-      head :accepted
-    elsif system_id = query_params["system_id"]?
-      placeos_client = get_placeos_client
+    # check permisions
+    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+      # may be able to delete on behalf of the user
+      head(:forbidden) unless system && !check_access(user.roles, system).none?
+    end
 
-      # Need to grab the calendar associated with this system
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
-      cal_id = system.email
-      head(:not_found) unless cal_id
+    client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
 
+    if system
       EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id}).try &.delete
-      # Delete the event
-      client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
-
-      head :accepted
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
-          action:    :cancelled,
-          system_id: system.id,
-          event_id:  event_id,
-          resource:  system.email,
-        })
+                                     action:    :cancelled,
+                                     system_id: system.not_nil!.id,
+                                     event_id:  event_id,
+                                     resource:  system.not_nil!.email,
+                                   })
       end
-
-      head :accepted
     end
 
-    head :bad_request
+    head :accepted
   end
 
   #
