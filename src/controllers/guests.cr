@@ -27,7 +27,7 @@ class Guests < Application
           .by_tenant(tenant.id)
           .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
           .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
-          .where("event_metadatas.event_start >= :starting AND event_metadatas.event_end <= :ending", {starting: starting, ending: ending})
+          .where("event_metadatas.event_start <= :ending AND event_metadatas.event_end >= :starting", {starting: starting, ending: ending})
           .where { event_metadatas.system_id.in?(system_ids) }
           .each { |attendee| attendees[attendee.guest.email] = attendee }
       else
@@ -36,7 +36,7 @@ class Guests < Application
           .by_tenant(tenant.id)
           .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
           .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
-          .where("event_metadatas.event_start >= :starting AND event_metadatas.event_end <= :ending", {starting: starting, ending: ending})
+          .where("event_metadatas.event_start <= :ending AND event_metadatas.event_end >= :starting", {starting: starting, ending: ending})
           .each { |attendee| attendees[attendee.guest.email] = attendee }
       end
 
@@ -98,7 +98,7 @@ class Guests < Application
     guest.not_nil!.dangerous = dangerous.as_bool if dangerous
 
     # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]
+    extension_data = parsed.as_h["extension_data"]?
     if extension_data
       guest_ext_data = guest.not_nil!.ext_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
@@ -124,7 +124,7 @@ class Guests < Application
     guest.not_nil!.banned = banned ? banned.as_bool : false
     dangerous = parsed.as_h["dangerous"]?
     guest.not_nil!.dangerous = dangerous ? dangerous.as_bool : false
-    guest.ext_data = parsed.as_h["extension_data"]
+    guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
     if guest.save
       attendee = guest.attending_today(tenant.id, get_timezone)
       render json: attending_guest(attendee, guest), status: HTTP::Status::CREATED

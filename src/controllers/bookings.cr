@@ -18,7 +18,7 @@ class Bookings < Application
       .by_user_id(user_id)
       .by_zones(zones)
       .where(
-        "booking_start >= :starting AND booking_end <= :ending AND booking_type = :booking_type",
+        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         {starting: starting, ending: ending, booking_type: booking_type})
       .order_by("booking_start", "DESC")
       .limit(1500)
@@ -47,7 +47,7 @@ class Bookings < Application
     existing = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start >= :starting AND booking_end <= :ending AND booking_type = :booking_type AND asset_id = :asset_id",
+        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
         {starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id}
       ).to_a
 
@@ -62,7 +62,7 @@ class Bookings < Application
     booking.user_name = user.name
 
     # Extension data
-    booking.ext_data = parsed.as_h["extension_data"]
+    booking.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
 
     # Add missing defaults if any
     checked_in = parsed.as_h["checked_in"]?
@@ -112,7 +112,7 @@ class Bookings < Application
     {% end %}
 
     # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]
+    extension_data = parsed.as_h["extension_data"]?
     if extension_data
       booking_ext_data = booking.not_nil!.ext_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
@@ -134,7 +134,7 @@ class Bookings < Application
     existing = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start >= :starting AND booking_end <= :ending AND booking_type = :booking_type AND asset_id = :asset_id",
+        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
         {starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id}
       ).to_a
 
@@ -234,9 +234,10 @@ class Bookings < Application
 
   def set_approver(booking, approved : Bool)
     user = user_token.user
-    booking.approver_id = user_token.id
-    booking.approver_email = user.email
-    booking.approver_name = user.name
+    # In case of rejections reset approver related information
+    booking.approver_id = approved ? user_token.id : nil
+    booking.approver_email = approved ? user.email : nil
+    booking.approver_name = approved ? user.name : nil
     booking.approved = approved
     booking.rejected = !approved
   end

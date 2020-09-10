@@ -15,6 +15,7 @@ Spec.before_suite do
 end
 
 def truncate_db
+  Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE guests CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE attendees CASCADE;")

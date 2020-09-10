@@ -9,15 +9,13 @@ describe Guests do
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
   it "#index unfiltered should return a list of all guests" do
-    # instantiate the controller
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+    GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+
     response = IO::Memory.new
-    guests = Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response)).index
 
-    GuestsHelper.create_guest(guests.tenant.id, "Jon", "jon@example.com")
-    GuestsHelper.create_guest(guests.tenant.id, "Steve", "steve@example.com")
-
-    # Test the instance method of the controller
-    guests.index
     results = extract_json(response)
 
     guest_names = results.as_a.map { |r| r["name"] }
@@ -27,15 +25,13 @@ describe Guests do
   end
 
   it "#index query filtered should return a list of only matched guests" do
-    # instantiate the controller
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+    GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+
     response = IO::Memory.new
-    guests = Guests.new(context("GET", "/api/staff/v1/guests?q=steve", OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", "/api/staff/v1/guests?q=steve", OFFICE365_HEADERS, response_io: response)).index
 
-    GuestsHelper.create_guest(guests.tenant.id, "Jon", "jon@example.com")
-    GuestsHelper.create_guest(guests.tenant.id, "Steve", "steve@example.com")
-
-    # Test the instance method of the controller
-    guests.index
     results = extract_json(response)
 
     guest_names = results.as_a.map { |r| r["name"] }
@@ -52,20 +48,16 @@ describe Guests do
     later = 4.hours.from_now.to_unix
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}"
     response = IO::Memory.new
-    app = Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
 
-    # Test the instance method of the controller
-    app.index
     results = extract_json(response)
     results.should eq([] of String)
 
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
     guest.attendee_for(meta.id.not_nil!)
 
-    # instantiate the controller
     response = IO::Memory.new
-    app = Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response))
-    app.index
+    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
     results = extract_json(response)
     guest_names = results.as_a.map { |r| r["name"] }
     guest_emails = results.as_a.map { |r| r["email"] }
@@ -95,20 +87,15 @@ describe Guests do
     later = 4.hours.from_now.to_unix
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7"
     response = IO::Memory.new
-    app = Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
 
-    # Test the instance method of the controller
-    app.index
     results = extract_json(response)
     results.should eq([] of String)
 
-    # instantiate the controller
     response = IO::Memory.new
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
-    app = Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
 
-    # Test the instance method of the controller
-    app.index
     results = extract_json(response)
     guest_names = results.as_a.map { |r| r["name"] }
     guest_emails = results.as_a.map { |r| r["email"] }
@@ -120,17 +107,15 @@ describe Guests do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
 
-    # instantiate the controller
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    app = Guests.new(context)
-
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
-    # Test the instance method of the controller
-    app.show
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => guest.email.not_nil!}
+    Guests.new(context).show
+
+
     results = extract_json(response)
 
     results.as_h["name"].should eq("Toby")
@@ -141,18 +126,14 @@ describe Guests do
   it "#show should show a guests details when visting today" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-
-    # instantiate the controller
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    app = Guests.new(context)
-
     meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
     guest.attendee_for(meta.id.not_nil!)
 
-    # Test the instance method of the controller
-    app.show
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => guest.email.not_nil!}
+    Guests.new(context).show
+
     results = extract_json(response)
 
     results.as_h["name"].should eq("Toby")
@@ -165,20 +146,14 @@ describe Guests do
     toby = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
     steve = GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-    # instantiate the controller
     context = context("DELETE", "/api/staff/v1/guests/#{toby.email}/", OFFICE365_HEADERS)
     context.route_params = {"id" => toby.email.not_nil!}
-    app = Guests.new(context)
-
-    # Test the instance method of the controller
-    app.destroy
+    Guests.new(context).destroy
 
     # Check only one is returned
     response = IO::Memory.new
-    app = Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response))
+    Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response)).index
 
-    # Test the instance method of the controller
-    app.index
     results = extract_json(response)
 
     # Only has steve, toby got deleted
@@ -194,8 +169,7 @@ describe Guests do
     body.rewind
     response = IO::Memory.new
     context = context("POST", "/api/staff/v1/guests/", OFFICE365_HEADERS, body, response_io: response)
-    app = Guests.new(context)
-    app.create
+    Guests.new(context).create
     create_results = extract_json(response)
 
     create_results.as_h["email"].should eq("toby@redant.com.au")
@@ -209,8 +183,7 @@ describe Guests do
     response = IO::Memory.new
     context = context("PATCH", "/api/staff/v1/guests/toby@redant.com.au", OFFICE365_HEADERS, body, response_io: response)
     context.route_params = {"id" => "toby@redant.com.au"}
-    app = Guests.new(context)
-    app.update
+    Guests.new(context).update
     update_results = extract_json(response)
 
     update_results.as_h["email"].should eq("toby@redant.com.au")
@@ -222,12 +195,8 @@ describe Guests do
   it "#meetings should show meetings for guest" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-
-    # instantiate the controller
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/meetings", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    app = Guests.new(context)
+    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
+    guest.attendee_for(meta.id.not_nil!)
 
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
@@ -241,11 +210,11 @@ describe Guests do
         .to_return(body: systems_resp[index])
     end
 
-    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
-    guest.attendee_for(meta.id.not_nil!)
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/guests/#{guest.email}/meetings", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => guest.email.not_nil!}
+    Guests.new(context).meetings
 
-    # Test the instance method of the controller
-    app.meetings
     results = extract_json(response)
 
     # Should get 1 event
