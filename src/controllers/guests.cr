@@ -165,7 +165,6 @@ class Guests < Application
   # ============================================
 
   def find_guest
-    # Find will raise a 404 (not found) if there is an error
     guest = Guest.query
       .by_tenant(tenant.id)
       .find({email: route_params["id"].downcase})
