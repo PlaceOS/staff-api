@@ -1,0 +1,83 @@
+require "place_calendar"
+
+# Augments PlaceCalendar::Event as required by StaffAPI
+class StaffApi::Event
+  # So we don't have to allocate array objects
+  NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
+
+  def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil)
+    visitors = {} of String => Attendee
+
+    if event.status == "cancelled"
+      metadata.try &.delete
+      metadata = nil
+    else
+      staff_api_attendees = metadata.try(&.attendees)
+      if staff_api_attendees
+        staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
+      end
+    end
+
+    # Grab the list of external visitors
+    attendees = (event.attendees || NOP_PLACE_CALENDAR_ATTENDEES).map do |attendee|
+      attendee.email = attendee.email.downcase
+
+      if visitor = visitors[attendee.email]?
+        attendee.checked_in = visitor.checked_in
+        attendee.visit_expected = visitor.visit_expected
+      end
+
+      attendee
+    end
+
+    event_start = event.event_start.not_nil!.to_unix
+    event_end = event.event_end.try &.to_unix
+
+    # Ensure metadata is in sync
+    if metadata && (event_start != metadata.event_start || (event_end && event_end != metadata.event_end))
+      metadata.event_start = start_time = event_start
+      metadata.event_end = event_end ? event_end : (start_time + 24.hours.to_i)
+      metadata.save
+    end
+
+    event.calendar = calendar
+    event.attendees = attendees
+    event.system = system
+    event.extension_data = metadata.try(&.ext_data)
+
+    event
+  end
+end
+
+# Adding attributes needed by Staff API
+class PlaceCalendar::Event
+  class System
+    include JSON::Serializable
+
+    property id : String
+  end
+
+  # Needed so that json input without attachments array can be accepted
+  property attachments : Array(Attachment) = [] of PlaceCalendar::Attachment
+
+  property calendar : String?
+
+  # This is the resource calendar, it will be moved to one of the attendees
+  property system_id : String?
+  property system : System? | PlaceOS::Client::API::Models::System?
+
+  property extension_data : JSON::Any?
+
+  struct Attendee
+    property checked_in : Bool?
+    property visit_expected : Bool?
+    property extension_data : JSON::Any?
+    property preferred_name : String?
+    property phone : String?
+    property organisation : String?
+    property photo : String?
+    property notes : String?
+    property banned : Bool?
+    property dangerous : Bool?
+  end
+end

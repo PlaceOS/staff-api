@@ -4,7 +4,6 @@ version: 0.1
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
-    version: ~> 3.0
 
   placeos:
     github: placeos/crystal-client
@@ -31,8 +30,6 @@ development_dependencies:
     branch: master
   faker:
     github: askn/faker
-  vcr:
-    github: spoved/vcr.cr
 
 targets:
   app:

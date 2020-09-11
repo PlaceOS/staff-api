@@ -35,11 +35,41 @@ abstract class Application < ActionController::Base
     response.headers["X-Request-ID"] = request_id
   end
 
+  # ============================
+  # JWT Scope Check
+  # ============================
+  before_action :check_jwt_scope
+
+  def check_jwt_scope
+    unless user_token.scope.includes?("public")
+      Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.host, sub: user_token.sub} }
+      raise Error::Unauthorized.new "valid scope required for access"
+    end
+  end
 
   # =========================================
   # HELPER METHODS
   # =========================================
 
+  # Grab the users timezone
+  def get_timezone
+    tz = query_params["timezone"]?
+    if tz && !tz.empty?
+      Time::Location.load(URI.decode(tz))
+    else
+      DEFAULT_TIME_ZONE
+    end
+  end
+
+  def attending_guest(visitor : Attendee?, guest : Guest?)
+    if guest
+      guest.to_h(visitor)
+    elsif visitor
+      visitor.to_h
+    else
+      raise "requires either an attendee or a guest"
+    end
+  end
 
   # =========================================
   # ERROR HANDLERS
