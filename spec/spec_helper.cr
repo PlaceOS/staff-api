@@ -80,7 +80,11 @@ GOOGLE_HEADERS = HTTP::Headers{
 }
 
 def extract_json(response)
-  JSON.parse(response.to_s.split("\r\n").reject(&.empty?)[-1])
+  JSON.parse(extract_body(response))
+end
+
+def extract_body(response)
+  response.to_s.split("\r\n").reject(&.empty?)[-1]
 end
 
 module TenantsHelper

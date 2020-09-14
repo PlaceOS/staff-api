@@ -1,0 +1,14 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users/$entity",
+  "businessPhones": [],
+  "displayName": "Kim Burgess",
+  "givenName": "Kim",
+  "jobTitle": null,
+  "mail": "kim@acaprojects.com",
+  "mobilePhone": null,
+  "officeLocation": null,
+  "preferredLanguage": "en-AU",
+  "surname": "Burgess",
+  "userPrincipalName": "kim@acaprojects.com",
+  "id": "786aa06a-cc30-48fd-868f-99874442a840"
+}
