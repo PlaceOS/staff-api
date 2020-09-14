@@ -1,13 +1,19 @@
 language: crystal
 
 env:
+  global:
     - PG_DATABASE_URL=postgres://postgres@localhost/travis_ci_test
+    - PLACE_URI=http://toby.dev.place.tech
+    - PLACE_EMAIL=toby@place.technology.com
+    - PLACE_PASSWORD=password
+    - PLACE_AUTH_CLIENT_ID=abc123
+    - PLACE_AUTH_SECRET=abc123
 
 services:
-    - postgresql
+  - postgresql
 
 before_script:
-    - psql -c 'create database travis_ci_test;' -U postgres
+  - psql -c 'create database travis_ci_test;' -U postgres
 
 script:
   - crystal spec
