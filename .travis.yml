@@ -1,12 +1,13 @@
 language: crystal
 
 env:
-  - PG_DATABASE_URL=postgres://postgres@localhost/travis_ci_test
-  - PLACE_URI=http://toby.dev.place.tech
-  - PLACE_EMAIL=toby@place.technology.com
-  - PLACE_PASSWORD=password
-  - PLACE_AUTH_CLIENT_ID=abc123
-  - PLACE_AUTH_SECRET=abc123
+  global:
+    - PG_DATABASE_URL=postgres://postgres@localhost/travis_ci_test
+    - PLACE_URI=http://toby.dev.place.tech
+    - PLACE_EMAIL=toby@place.technology.com
+    - PLACE_PASSWORD=password
+    - PLACE_AUTH_CLIENT_ID=abc123
+    - PLACE_AUTH_SECRET=abc123
 
 services:
   - postgresql
