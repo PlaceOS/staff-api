@@ -1,0 +1,31 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users",
+  "value": [
+    {
+      "businessPhones": [],
+      "displayName": "John Smith",
+      "givenName": "John",
+      "jobTitle": null,
+      "mail": "john.smith@email.com",
+      "mobilePhone": null,
+      "officeLocation": null,
+      "preferredLanguage": "en-AU",
+      "surname": "Smith",
+      "userPrincipalName": "john.smith@email.com",
+      "id": "786aa06a-cc30-48fd-868f-99874442a840"
+    },
+    {
+      "businessPhones": [],
+      "displayName": "Bar, Foo",
+      "givenName": null,
+      "jobTitle": null,
+      "mail": "foo@domain.net",
+      "mobilePhone": null,
+      "officeLocation": null,
+      "preferredLanguage": null,
+      "surname": null,
+      "userPrincipalName": "Foo Bar",
+      "id": "8896406a-d4ac-4183-9017-666f72bfbd5a"
+    }
+  ]
+}
