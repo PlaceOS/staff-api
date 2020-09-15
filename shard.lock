@@ -10,7 +10,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 2.0.1
+    version: 2.0.2
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
@@ -54,7 +54,7 @@ shards:
 
   google:
     git: https://github.com/PlaceOS/google.git
-    version: 2.5.4
+    version: 2.6.1
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -98,7 +98,7 @@ shards:
 
   place_calendar:
     git: https://github.com/PlaceOS/calendar.git
-    version: 4.0.1
+    version: 4.1.0
 
   placeos:
     git: https://github.com/placeos/crystal-client.git

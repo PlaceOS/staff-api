@@ -241,6 +241,7 @@ class Events < Application
       host_attendee = PlaceCalendar::Event::Attendee.new(name: host, email: host, response_status: "accepted")
       host_attendee.visit_expected = true
       changes.attendees << host_attendee
+      attendees << host
     end
 
     attendees << cal_id
@@ -323,11 +324,12 @@ class Events < Application
       meta.tenant_id = tenant.id
 
       if extension_data = changes.extension_data
-        # TODO: Test updating extension data
         meta_ext_data = meta.not_nil!.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
+        # Needed for clear to assign the updated json correctly
+        meta.ext_data_column.clear
         meta.ext_data = JSON.parse(data.to_json)
         meta.save!
       elsif changing_room || update_attendees
@@ -342,7 +344,7 @@ class Events < Application
 
         if !remove_attendees.empty?
           remove_attendees.each do |email|
-            existing.select { |attend| attend.email == email }.each do |attend|
+            existing.select { |attend| attend.guest.email == email }.each do |attend|
               existing_lookup.delete(attend.email)
               attend.delete
             end
@@ -430,7 +432,10 @@ class Events < Application
         })
       end
 
-      render json: StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, meta)
+      # Reloading meta with attendees and guests to avoid n+1
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id})
+
+      render json: StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
     else
       render json: StaffApi::Event.augment(updated_event.not_nil!, host)
     end
@@ -541,11 +546,11 @@ class Events < Application
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
-                                     action:    :cancelled,
-                                     system_id: system.not_nil!.id,
-                                     event_id:  event_id,
-                                     resource:  system.not_nil!.email,
-                                   })
+          action:    :cancelled,
+          system_id: system.not_nil!.id,
+          event_id:  event_id,
+          resource:  system.not_nil!.email,
+        })
       end
     end
 
