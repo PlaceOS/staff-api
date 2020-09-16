@@ -79,12 +79,20 @@ GOOGLE_HEADERS = HTTP::Headers{
   "Authorization" => "Bearer #{google_mock_token}",
 }
 
+def extract_http_status(response)
+  split_res(response)[0].split(" ")[1]
+end
+
 def extract_json(response)
   JSON.parse(extract_body(response))
 end
 
 def extract_body(response)
-  response.to_s.split("\r\n").reject(&.empty?)[-1]
+  split_res(response)[-1]
+end
+
+private def split_res(response)
+  response.to_s.split("\r\n").reject(&.empty?)
 end
 
 module TenantsHelper
