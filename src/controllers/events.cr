@@ -597,7 +597,7 @@ class Events < Application
 
     # Return the full event details
     metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
-    # render json: StaffApi::Event.augment(event.not_nil!, system.email, system, metadata)
+
     render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
 

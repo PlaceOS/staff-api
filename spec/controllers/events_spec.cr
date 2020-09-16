@@ -311,6 +311,90 @@ describe Events do
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
   end
+
+  it "#approve marks room as accepted" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
+
+    # Create event
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+    created_event = extract_json(response).as_h
+
+    # approve
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s}
+    Events.new(context).approve
+    accepted_event = extract_json(response).as_h
+    room_attendee =  accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com"}.not_nil!
+    room_attendee["response_status"].as_s.should eq("accepted")
+  end
+
+  it "#reject marks room as declined" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
+
+    # Create event
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+    created_event = extract_json(response).as_h
+
+    # reject
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s}
+    Events.new(context).approve
+    declined_event = extract_json(response).as_h
+    room_attendee =  declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com"}.not_nil!
+    room_attendee["response_status"].as_s.should eq("declined")
+  end
 end
 
 module EventsHelper
