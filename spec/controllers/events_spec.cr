@@ -350,7 +350,7 @@ describe Events do
     context.route_params = {"id" => created_event["id"].to_s}
     Events.new(context).approve
     accepted_event = extract_json(response).as_h
-    room_attendee =  accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com"}.not_nil!
+    room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }.not_nil!
     room_attendee["response_status"].as_s.should eq("accepted")
   end
 
@@ -392,8 +392,83 @@ describe Events do
     context.route_params = {"id" => created_event["id"].to_s}
     Events.new(context).approve
     declined_event = extract_json(response).as_h
-    room_attendee =  declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com"}.not_nil!
+    room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }.not_nil!
     room_attendee["response_status"].as_s.should eq("declined")
+  end
+
+  it "#guest_list lists guests for an event & guest_checkin checks them in" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "http://pwcme.dev.place.tech/api/engine/v2/signal?channel=staff/guest/checkin")
+      .to_return(body: "")
+
+    # Create event
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+    created_event = extract_json(response).as_h
+
+    # guest_list
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/events/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s}
+    Events.new(context).guest_list
+    guests = extract_json(response).as_a
+    guests.should eq(EventsHelper.guests_list_output)
+
+    # guest_checkin via system
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(true)
+
+    # guest_checkin via system state = false
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(false)
+
+    # guest_checkin via guest_token
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(true)
+
+    # guest_checkin via guest_token state = false
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(false)
   end
 end
 
@@ -622,5 +697,44 @@ module EventsHelper
                    "version" => 5},
       "extension_data" => {"foo" => "bar", "fizz" => "buzz"},
     }
+  end
+
+  def guests_list_output
+    [{"email"          => "amit@redant.com.au",
+      "name"           => "Amit",
+      "preferred_name" => nil,
+      "phone"          => nil,
+      "organisation"   => nil,
+      "notes"          => nil,
+      "photo"          => nil,
+      "banned"         => false,
+      "dangerous"      => false,
+      "extension_data" => {} of String => String?,
+      "checked_in"     => false,
+      "visit_expected" => true},
+    {"email"          => "jon@example.com",
+     "name"           => "John",
+     "preferred_name" => "Jon",
+     "phone"          => "012334446",
+     "organisation"   => "Google inc",
+     "notes"          => "some notes",
+     "photo"          => "http://example.com/first.jpg",
+     "banned"         => false,
+     "dangerous"      => false,
+     "extension_data" => {"fizz" => "buzz"},
+     "checked_in"     => false,
+     "visit_expected" => true},
+    {"email"          => "dev@acaprojects.onmicrosoft.com",
+     "name"           => "dev@acaprojects.onmicrosoft.com",
+     "preferred_name" => nil,
+     "phone"          => nil,
+     "organisation"   => nil,
+     "notes"          => nil,
+     "photo"          => nil,
+     "banned"         => false,
+     "dangerous"      => false,
+     "extension_data" => {} of String => String?,
+     "checked_in"     => false,
+     "visit_expected" => true}]
   end
 end
