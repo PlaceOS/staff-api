@@ -14,7 +14,7 @@
       "reminderMinutesBeforeStart": 15,
       "isReminderOn": true,
       "hasAttachments": false,
-      "subject": "My New Meeting, Delete me",
+      "subject": "My new meeting",
       "bodyPreview": "The quick brown fox jumps over the lazy dog",
       "importance": "normal",
       "sensitivity": "private",

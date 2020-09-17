@@ -117,6 +117,8 @@ class Bookings < Application
       booking_ext_data = booking.not_nil!.ext_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
+      # Needed for clear to assign the updated json correctly
+      existing_booking.ext_data_column.clear
       existing_booking.ext_data = JSON.parse(data.to_json)
     end
 

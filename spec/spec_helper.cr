@@ -31,12 +31,29 @@ def office_mock_token
     exp: Time.local + 1.week,
     aud: "toby.staff-api.dev",
     sub: "toby@redant.com.au",
-    scope: ["public", "guest"],
+    scope: ["public"],
     user: UserJWT::Metadata.new(
       name: "Toby Carvan",
       email: "dev@acaprojects.com",
       permissions: UserJWT::Permissions::Admin,
       roles: ["manage", "admin"]
+    )
+  ).encode
+end
+
+def office_guest_mock_token(guest_event_id, system_id)
+  UserJWT.new(
+    iss: "staff-api",
+    iat: Time.local,
+    exp: Time.local + 1.week,
+    aud: "toby.staff-api.dev",
+    sub: "toby@redant.com.au",
+    scope: ["guest"],
+    user: UserJWT::Metadata.new(
+      name: "Jon Jon",
+      email: "jon@example.com",
+      permissions: UserJWT::Permissions::Admin,
+      roles: [guest_event_id, system_id]
     )
   ).encode
 end
@@ -73,18 +90,33 @@ OFFICE365_HEADERS = HTTP::Headers{
   "Authorization" => "Bearer #{office_mock_token}",
 }
 
+# Provide some basic headers for office365 auth
+def office365_guest_headers(guest_event_id, system_id)
+  HTTP::Headers{
+    "Host"          => "toby.staff-api.dev",
+    "Authorization" => "Bearer #{office_guest_mock_token(guest_event_id, system_id)}",
+  }
+end
 # Provide some basic headers for google auth
 GOOGLE_HEADERS = HTTP::Headers{
   "Host"          => "google.staff-api.dev",
   "Authorization" => "Bearer #{google_mock_token}",
 }
 
+def extract_http_status(response)
+  split_res(response)[0].split(" ")[1]
+end
+
 def extract_json(response)
   JSON.parse(extract_body(response))
 end
 
 def extract_body(response)
-  response.to_s.split("\r\n").reject(&.empty?)[-1]
+  split_res(response)[-1]
+end
+
+private def split_res(response)
+  response.to_s.split("\r\n").reject(&.empty?)
 end
 
 module TenantsHelper

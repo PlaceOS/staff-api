@@ -103,6 +103,8 @@ class Guests < Application
       guest_ext_data = guest.not_nil!.ext_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
+      # Needed for clear to assign the updated json correctly
+      guest.not_nil!.ext_data_column.clear
       guest.not_nil!.ext_data = JSON.parse(data.to_json)
     end
 

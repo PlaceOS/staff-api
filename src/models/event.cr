@@ -25,6 +25,7 @@ class StaffApi::Event
       if visitor = visitors[attendee.email]?
         attendee.checked_in = visitor.checked_in
         attendee.visit_expected = visitor.visit_expected
+        attendee.extension_data = visitor.try(&.guest).try(&.ext_data) || JSON.parse("{}")
       end
 
       attendee
@@ -71,7 +72,7 @@ class PlaceCalendar::Event
   struct Attendee
     property checked_in : Bool?
     property visit_expected : Bool?
-    property extension_data : JSON::Any?
+    property extension_data : JSON::Any? = JSON.parse("{}")
     property preferred_name : String?
     property phone : String?
     property organisation : String?

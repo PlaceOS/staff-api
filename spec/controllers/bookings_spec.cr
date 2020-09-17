@@ -154,6 +154,8 @@ describe Bookings do
 
     updated = extract_json(response).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
+    booking = Booking.query.find({id: updated["id"]}).not_nil!
+    booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
   end
 
   it "#approve should approve a booking and #reject should reject meeting" do

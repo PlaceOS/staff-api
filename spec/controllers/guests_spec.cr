@@ -79,7 +79,7 @@ describe Guests do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-      .to_return(body: File.read("./spec/fixtures/calendars/o365/index.json"))
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
 
@@ -190,6 +190,8 @@ describe Guests do
     update_results.as_h["banned"].should eq(true)
     update_results.as_h["dangerous"].should eq(true)
     update_results.as_h["extension_data"].should eq({"test" => "data", "other" => "info"})
+    guest = Guest.query.find({email: update_results.as_h["email"]}).not_nil!
+    guest.ext_data.not_nil!.as_h.should eq({"test" => "data", "other" => "info"})
   end
 
   it "#meetings should show meetings for guest" do
