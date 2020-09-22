@@ -21,7 +21,7 @@ module Utils::PlaceOSHelpers
 
   # Get the list of local calendars this user has access to
   def get_user_calendars
-    client.list_calendars(user.email)
+    client.list_calendars(user.email, only_writable: true)
   end
 
   class CalendarSelection < Params
@@ -39,7 +39,7 @@ module Utils::PlaceOSHelpers
     system_calendars = {} of String => PlaceOS::Client::API::Models::System?
 
     # only obtain events for calendars the user has access to
-    calendars = Set.new((args.calendars || "").split(',').map(&.strip).reject(&.empty?))
+    calendars = Set.new((args.calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
     user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id))
     if calendars.size > 0
       (calendars & user_calendars).each do |calendar|

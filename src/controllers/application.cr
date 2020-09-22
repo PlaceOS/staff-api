@@ -3,7 +3,6 @@ require "uri"
 require "./utilities/*"
 
 abstract class Application < ActionController::Base
-
   # TODO:: Move this to user model
   DEFAULT_TIME_ZONE = Time::Location.load(ENV["STAFF_TIME_ZONE"]? || "Australia/Sydney")
 
@@ -30,8 +29,8 @@ abstract class Application < ActionController::Base
     Log.context.set(
       client_ip: client_ip,
       request_id: request_id,
-      #user_id: user_token.id
-    )
+          # user_id: user_token.id
+)
     response.headers["X-Request-ID"] = request_id
   end
 
@@ -61,11 +60,11 @@ abstract class Application < ActionController::Base
     end
   end
 
-  def attending_guest(visitor : Attendee?, guest : Guest?)
+  def attending_guest(visitor : Attendee?, guest : Guest?, is_parent_metadata = false, meeting_details = nil)
     if guest
-      guest.to_h(visitor)
+      guest.to_h(visitor, is_parent_metadata, meeting_details)
     elsif visitor
-      visitor.to_h
+      visitor.to_h(is_parent_metadata, meeting_details)
     else
       raise "requires either an attendee or a guest"
     end
@@ -98,10 +97,21 @@ abstract class Application < ActionController::Base
       text error.inspect_with_backtrace
       json({
         error:     error.message,
-        backtrace: error.backtrace?
+        backtrace: error.backtrace?,
       })
     end
   end
 
-
+  # Helpful during dev, see errors from office/google clients
+  unless App.running_in_production?
+    rescue_from PlaceCalendar::Exception do |error|
+      respond_with(:internal_server_error) do
+        text "#{error.http_body} \n #{error.inspect_with_backtrace}"
+        json({
+          error:     error.message,
+          backtrace: error.backtrace?,
+        })
+      end
+    end
+  end
 end

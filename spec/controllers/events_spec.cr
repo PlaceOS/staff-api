@@ -20,6 +20,8 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/calendarView?startDateTime=2020-05-02T08:20:45-00:00&endDateTime=2020-05-02T12:21:37-00:00")
       .to_return(body: File.read("./spec/fixtures/events/o365/index.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
     now = 1588407645
     later = 1588422097
@@ -418,7 +420,7 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:post, "http://pwcme.dev.place.tech/api/engine/v2/signal?channel=staff/guest/checkin")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
       .to_return(body: "")
 
     # Create event

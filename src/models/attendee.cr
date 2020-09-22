@@ -19,11 +19,17 @@ class Attendee
     guest.email
   end
 
-  def to_h
-    {
+  def to_h(is_parent_metadata, meeting_details)
+    result = {
       email: email,
-      checked_in: checked_in,
+      checked_in: is_parent_metadata ? false : checked_in,
       visit_expected: visit_expected
     }
+
+    if meeting_details
+      result = result.merge({event: meeting_details})
+    end
+
+    result
   end
 end

@@ -40,35 +40,12 @@ describe Guests do
     guest_emails.should eq(["steve@example.com"])
   end
 
-  it "#index should return guests visiting today" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-
-    now = Time.utc.to_unix
-    later = 4.hours.from_now.to_unix
-    route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}"
-    response = IO::Memory.new
-    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
-
-    results = extract_json(response)
-    results.should eq([] of String)
-
-    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
-    guest.attendee_for(meta.id.not_nil!)
-
-    response = IO::Memory.new
-    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
-    results = extract_json(response)
-    guest_names = results.as_a.map { |r| r["name"] }
-    guest_emails = results.as_a.map { |r| r["email"] }
-    guest_names.should eq(["Toby"])
-    guest_emails.should eq(["toby@redant.com.au"])
-  end
-
   it "#index should return guests visiting today in a subset of rooms" do
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
+    meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
     guest.attendee_for(meta.id.not_nil!)
 
     {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
@@ -85,13 +62,6 @@ describe Guests do
 
     now = Time.utc.to_unix
     later = 4.hours.from_now.to_unix
-    route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7"
-    response = IO::Memory.new
-    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
-
-    results = extract_json(response)
-    results.should eq([] of String)
-
     response = IO::Memory.new
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
     Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index

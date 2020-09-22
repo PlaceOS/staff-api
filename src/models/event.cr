@@ -5,7 +5,7 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil)
+  def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil, is_parent_metadata = false)
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
@@ -23,7 +23,7 @@ class StaffApi::Event
       attendee.email = attendee.email.downcase
 
       if visitor = visitors[attendee.email]?
-        attendee.checked_in = visitor.checked_in
+        attendee.checked_in = is_parent_metadata ? false : visitor.checked_in
         attendee.visit_expected = visitor.visit_expected
         attendee.extension_data = visitor.try(&.guest).try(&.ext_data) || JSON.parse("{}")
       end
@@ -45,6 +45,7 @@ class StaffApi::Event
     event.attendees = attendees
     event.system = system
     event.extension_data = metadata.try(&.ext_data)
+    event.recurring_master_id = event.recurring_event_id
 
     event
   end
@@ -68,6 +69,7 @@ class PlaceCalendar::Event
   property system : System? | PlaceOS::Client::API::Models::System?
 
   property extension_data : JSON::Any?
+  property recurring_master_id : String?
 
   struct Attendee
     property checked_in : Bool?

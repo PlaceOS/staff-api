@@ -42,7 +42,67 @@ describe Calendars do
 
     calendars.availability
 
-    results = extract_json(response)
-    results.size.should be > 0
+    results = extract_json(response).as_a
+    results.should eq(CalendarsHelper.calendar_list_output)
+  end
+end
+
+module CalendarsHelper
+  extend self
+
+  def calendar_list_output
+    [{"id" => "dev@acaprojects.com"},
+     {"id"     => "room1@example.com",
+      "system" => {"created_at" => 1562041110,
+                   "updated_at" => 1562041120,
+                   "id" => "sys-rJQQlR4Cn7",
+                   "name" => "Room 1",
+                   "zones" => ["zone-rGhCRp_aUD"],
+                   "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"],
+                   "email" => "room1@example.com",
+                   "capacity" => 10,
+                   "features" => [] of String,
+                   "bookable" => true,
+                   "installed_ui_devices" => 0,
+                   "version" => 5}},
+     {"id"     => "room2@example.com",
+      "system" => {"created_at" => 1562041127,
+                   "updated_at" => 1562041137,
+                   "id" => "sys_id",
+                   "name" => "Room 2",
+                   "zones" => ["zone-rGhCRp_aUD"],
+                   "modules" => ["mod-rJRJOM27Kb", "mod-rJRLE4_PQ7", "mod-rJRLwe72Mo"],
+                   "email" => "room2@example.com",
+                   "capacity" => 10,
+                   "features" => [] of String,
+                   "bookable" => true,
+                   "installed_ui_devices" => 0,
+                   "version" => 4}},
+     {"id"     => "room3@example.com",
+      "system" => {"created_at" => 1562041145,
+                   "updated_at" => 1562041155,
+                   "id" => "sys-rJQVPIR9Uf",
+                   "name" => "Room 3",
+                   "zones" => ["zone-rGhCRp_aUD"],
+                   "modules" => ["mod-rJRNrLDPNz", "mod-rJRQ~JwE7U", "mod-rJRV1qokbH"],
+                   "email" => "room3@example.com",
+                   "capacity" => 4,
+                   "features" => [] of String,
+                   "bookable" => true,
+                   "installed_ui_devices" => 0,
+                   "version" => 4}},
+     {"id"     => "room4@example.com",
+      "system" => {"created_at" => 1562041145,
+                   "updated_at" => 1562041155,
+                   "id" => "sys-AAJQVPIR9Uf",
+                   "name" => "Room 4",
+                   "zones" => ["zone-rGhCRp_aUD"],
+                   "modules" => ["mod-rJRNrLDPNz", "mod-rJRQ~JwE7U", "mod-rJRV1qokbH"],
+                   "email" => "room4@example.com",
+                   "capacity" => 20,
+                   "features" => [] of String,
+                   "bookable" => true,
+                   "installed_ui_devices" => 0,
+                   "version" => 4}}]
   end
 end
