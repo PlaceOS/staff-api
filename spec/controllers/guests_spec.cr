@@ -32,10 +32,10 @@ describe Guests do
     response = IO::Memory.new
     Guests.new(context("GET", "/api/staff/v1/guests?q=steve", OFFICE365_HEADERS, response_io: response)).index
 
-    results = extract_json(response)
+    results = extract_json(response).as_a
 
-    guest_names = results.as_a.map { |r| r["name"] }
-    guest_emails = results.as_a.map { |r| r["email"] }
+    guest_names = results.map { |r| r["name"] }
+    guest_emails = results.map { |r| r["email"] }
     guest_names.should eq(["Steve"])
     guest_emails.should eq(["steve@example.com"])
   end
@@ -43,11 +43,6 @@ describe Guests do
   it "#index should return guests visiting today in a subset of rooms" do
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
       .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
-    guest.attendee_for(meta.id.not_nil!)
-
     {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
       WebMock
         .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -60,31 +55,38 @@ describe Guests do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
 
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+    meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
+    guest.attendee_for(meta.id.not_nil!)
+
     now = Time.utc.to_unix
     later = 4.hours.from_now.to_unix
     response = IO::Memory.new
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
     Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
 
-    results = extract_json(response)
-    guest_names = results.as_a.map { |r| r["name"] }
-    guest_emails = results.as_a.map { |r| r["email"] }
+    results = extract_json(response).as_a
+    guest_names = results.map { |r| r["name"] }
+    guest_emails = results.map { |r| r["email"] }
     guest_names.should eq(["Toby"])
     guest_emails.should eq(["toby@redant.com.au"])
+    # Should have event info
+    guest_events = results.map { |r| r["event"] }
+    guest_events.should eq(GuestsHelper.guest_events_output)
   end
 
   it "#show should show a guests details" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
 
     response = IO::Memory.new
     context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
     context.route_params = {"id" => guest.email.not_nil!}
     Guests.new(context).show
-
 
     results = extract_json(response)
 
@@ -165,11 +167,6 @@ describe Guests do
   end
 
   it "#meetings should show meetings for guest" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
-    guest.attendee_for(meta.id.not_nil!)
-
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -181,6 +178,11 @@ describe Guests do
         .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
         .to_return(body: systems_resp[index])
     end
+
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+    meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
+    guest.attendee_for(meta.id.not_nil!)
 
     response = IO::Memory.new
     context = context("GET", "/api/staff/v1/guests/#{guest.email}/meetings", OFFICE365_HEADERS, response_io: response)
@@ -205,5 +207,32 @@ module GuestsHelper
     guest.banned = false
     guest.dangerous = false
     guest.save!
+  end
+
+  def guest_events_output
+    [{"event_start" => 1598832000,
+      "event_end"   => 1598833800,
+      "id"          => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
+      "host"        => "dev@acaprojects.onmicrosoft.com",
+      "title"       => "My new meeting",
+      "body"        => "The quick brown fox jumps over the lazy dog",
+      "attendees"   => [{"name" => "Toby Carvan",
+                       "email" => "testing@redant.com.au",
+                       "response_status" => "needsAction",
+                       "resource" => false,
+                       "extension_data" => {} of String => String?},
+      {"name"            => "Amit Gaur",
+       "email"           => "amit@redant.com.au",
+       "response_status" => "needsAction",
+       "resource"        => false,
+       "extension_data"  => {} of String => String?}],
+      "location"    => {"text" => ""},
+      "private"     => true,
+      "all_day"     => false,
+      "timezone"    => "Australia/Sydney",
+      "recurring"   => false,
+      "attachments" => [] of String,
+      "status"      => "confirmed",
+      "creator"     => "dev@acaprojects.onmicrosoft.com"}]
   end
 end
