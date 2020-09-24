@@ -2,7 +2,7 @@
     "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.scheduleInformation)",
     "value": [
         {
-            "scheduleId": "adelev@contoso.onmicrosoft.com",
+            "scheduleId": "jon@example.com",
             "availabilityView": "000220000",
             "scheduleItems": [
                 {
@@ -36,7 +36,7 @@
             }
         },
         {
-            "scheduleId": "meganb@contoso.onmicrosoft.com",
+            "scheduleId": "room1@example.com",
             "availabilityView": "200220010",
             "scheduleItems": [
                 {
