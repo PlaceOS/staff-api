@@ -18,8 +18,6 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/calendarView?startDateTime=2020-05-02T08:20:45-00:00&endDateTime=2020-05-02T12:21:37-00:00")
-      .to_return(body: File.read("./spec/fixtures/events/o365/index.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
       .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -44,6 +42,45 @@ describe Events do
     results = extract_json(response)
 
     results.as_a.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
+  end
+
+  it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_with_recurring_event.json"))
+
+    now = 1588407645
+    later = 1588422097
+
+    response = IO::Memory.new
+    events = Events.new(context("GET", "/api/staff/v1/events?zone_ids=z1&period_start=#{now}&period_end=#{later}", OFFICE365_HEADERS, response_io: response))
+
+    event_start = 1598832000.to_i64
+    event_end = 1598833800.to_i64
+    master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+    system_id = "sys-rJQQlR4Cn7"
+    room_email = "room1@example.com"
+    host = "dev@acaprojects.onmicrosoft.com"
+    tenant_id = events.tenant.id
+
+    EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
+
+    events.index
+
+    results = extract_json(response)
+
+    expected_result = EventsHelper.mock_event("event_instance_of_reccurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
+    expected_result["recurring_event_id"] = master_event_id
+    expected_result["recurring_master_id"] = master_event_id
+
+    results.as_a.should contain(expected_result)
   end
 
   it "#create should create event with attendees and extension data and #update should update for system" do

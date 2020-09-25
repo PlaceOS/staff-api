@@ -67,7 +67,7 @@ class Events < Application
         metadata = metadatas[event.recurring_event_id]?
         parent_meta = true
       end
-      StaffApi::Event.augment(event, calendar_id, system, metadatas[event.id]?, parent_meta)
+      StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
     }
   end
 
