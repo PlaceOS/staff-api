@@ -170,6 +170,50 @@ describe Events do
     guests.compact_map { |g| g.ext_data }.should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
   end
 
+  it "#create should create event with attendees and extension data and #update should extension data for when guest" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+    created_event = extract_json(response).as_h
+
+    # Guest Update
+    body = IO::Memory.new
+    body << EventsHelper.update_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), body, response_io: response)
+    context.route_params = {"id" => created_event["id"].to_s}
+    Events.new(context).update
+    updated_event = extract_json(response).as_h
+
+    # Should have only updated extension in metadata record
+    evt_meta = EventMetadata.query.find { event_id == updated_event["id"] }.not_nil!
+    evt_meta.event_start.should eq(1598503500) # unchanged event start
+    evt_meta.event_end.should eq(1598507160) # unchanged event end
+    evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
+  end
+
   it "#create should create event and #update should update for user calendar" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))

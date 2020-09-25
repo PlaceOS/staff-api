@@ -246,13 +246,16 @@ class Events < Application
       end
       meta = meta || EventMetadata.new
 
-      meta.system_id = system_id.not_nil!
-      meta.event_id = event.id.not_nil!
-      meta.event_start = event.event_start.not_nil!.to_unix
-      meta.event_end = event.event_end.not_nil!.to_unix
-      meta.resource_calendar = system.not_nil!.email.not_nil!
-      meta.host_email = event.host.not_nil!
-      meta.tenant_id = tenant.id
+      # Only assign values if we are creating it
+      unless meta.persisted?
+        meta.system_id = system_id.not_nil!
+        meta.event_id = event.id.not_nil!
+        meta.event_start = event.event_start.not_nil!.to_unix
+        meta.event_end = event.event_end.not_nil!.to_unix
+        meta.resource_calendar = system.not_nil!.email.not_nil!
+        meta.host_email = event.host.not_nil!
+        meta.tenant_id = tenant.id
+      end
 
       if extension_data = changes.extension_data
         meta_ext_data = meta.not_nil!.ext_data
@@ -347,18 +350,9 @@ class Events < Application
     updated_event = client.update_event(user_id: host, event: changes, calendar_id: host)
 
     if system
-      meta = if changing_room
-               if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
-                 new_meta = EventMetadata.new
-                 new_meta.ext_data = old_meta.ext_data
-                 old_meta.delete
-                 new_meta
-               end
-             else
-               EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
-             end
+      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
 
-      # migrate the parent metadata to this event
+      # migrate the parent metadata to this event if not existing
       if meta.nil? && event.recurring_event_id
         if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
           meta = EventMetadata.new
@@ -368,7 +362,9 @@ class Events < Application
 
       meta = meta || EventMetadata.new
 
+      # Changing the room if applicable
       meta.system_id = system.id.not_nil!
+
       meta.event_id = event.id.not_nil!
       meta.event_start = changes.not_nil!.event_start.not_nil!.to_unix
       meta.event_end = changes.not_nil!.event_end.not_nil!.to_unix
@@ -390,10 +386,10 @@ class Events < Application
       end
 
       # Grab the list of externals that might be attending
-      if update_attendees
+      if update_attendees || changing_room
         existing_lookup = {} of String => Attendee
         existing = meta.attendees.to_a
-        existing.each { |a| existing_lookup[a.email] = a } unless changing_room
+        existing.each { |a| existing_lookup[a.email] = a }
 
         if !remove_attendees.empty?
           remove_attendees.each do |email|
@@ -404,7 +400,7 @@ class Events < Application
           end
         end
 
-        attending = changes.try &.attendees.try(&.reject { |attendee|
+        attending = changes.attendees.try(&.reject { |attendee|
           # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
           attendee.visit_expected.nil?
         })
@@ -452,7 +448,7 @@ class Events < Application
             attend.guest_id = guest.id
             attend.save!
 
-            if !previously_visiting
+            if !previously_visiting || changing_room
               spawn do
                 sys = system.not_nil!
 
@@ -468,6 +464,26 @@ class Events < Application
                   attendee_email: attendee.email,
                 })
               end
+            end
+          end
+        elsif changing_room
+          existing.each do |attend|
+            next unless attend.visit_expected
+            spawn do
+              sys = system.not_nil!
+              guest = attend.guest
+
+              placeos_client.root.signal("staff/guest/attending", {
+                action:         :meeting_update,
+                system_id:      sys.id,
+                event_id:       event_id,
+                host:           host,
+                resource:       sys.email,
+                event_summary:  updated_event.not_nil!.body,
+                event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
+                attendee_name:  guest.name,
+                attendee_email: guest.email,
+              })
             end
           end
         end
