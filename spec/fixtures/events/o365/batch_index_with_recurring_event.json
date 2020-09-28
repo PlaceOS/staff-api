@@ -6,7 +6,7 @@
             "value": [{
                 "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendar/events/$entity",
                 "@odata.etag": "W/\"dPHcBLqEvkGEgQ87r+efLAAAfPJXoQ==\"",
-                "id": "event_instance_of_reccurrence_id",
+                "id": "event_instance_of_recurrence_id",
                 "createdDateTime": "2020-08-31T04:20:56.2768516Z",
                 "lastModifiedDateTime": "2020-08-31T04:20:56.7915535Z",
                 "changeKey": "dPHcBLqEvkGEgQ87r+efLAAAfPJXoQ==",

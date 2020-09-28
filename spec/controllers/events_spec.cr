@@ -76,7 +76,7 @@ describe Events do
 
     results = extract_json(response)
 
-    expected_result = EventsHelper.mock_event("event_instance_of_reccurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
+    expected_result = EventsHelper.mock_event("event_instance_of_recurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
     expected_result["recurring_event_id"] = master_event_id
     expected_result["recurring_master_id"] = master_event_id
 
@@ -209,8 +209,8 @@ describe Events do
 
     # Should have only updated extension in metadata record
     evt_meta = EventMetadata.query.find { event_id == updated_event["id"] }.not_nil!
-    evt_meta.event_start.should eq(1598503500) # unchanged event start
-    evt_meta.event_end.should eq(1598507160) # unchanged event end
+    evt_meta.event_start.should eq(1598503500)                      # unchanged event start
+    evt_meta.event_end.should eq(1598507160)                        # unchanged event end
     evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
   end
 
@@ -289,6 +289,7 @@ describe Events do
     Events.new(context).create
     created_event = extract_json(response).as_h
 
+    # Fetch guest event details
     response = IO::Memory.new
     context = context("GET", "/api/staff/v1/events/#{created_event["id"]}", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), response_io: response)
     context.route_params = {"id" => created_event["id"].to_s}
@@ -297,6 +298,54 @@ describe Events do
     event = extract_json(response).as_h
     event["event_start"].should eq(1598503500)
     event["event_end"].should eq(1598507160)
+  end
+
+  it "#show shows details for event with guest access and event is recurring instance" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/event_instance_of_recurrence_id")
+      .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+    # Create event which will create metadata with id that we'll use as seriesMasterId
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+
+    # Fetch guest event details that is an instance of master event created above
+    event_instance_id = "event_instance_of_recurrence_id"
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/events/#{event_instance_id}", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), response_io: response)
+    context.route_params = {"id" => event_instance_id}
+    Events.new(context).show
+    extract_http_status(response).should eq("200")
+    event = extract_json(response).as_h
+    master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+
+    # Metadata should not exist for this event
+    EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
+    event["event_start"].should eq(1598503500)
+    event["event_end"].should eq(1598507160)
+    event["recurring_master_id"].should eq(master_event_id)
+    # Should have extension data stored on master event
+    event["extension_data"].should eq({"foo" => "bar"})
   end
 
   it "#show shows details for event with normal access" do
@@ -348,6 +397,69 @@ describe Events do
     event = extract_json(response).as_h
     event["event_start"].should eq(1598503500)
     event["event_end"].should eq(1598507160)
+  end
+
+  it "#show shows details for event that is an recurring event instance with normal access" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/event_instance_of_recurrence_id")
+      .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+    # Create event which will create metadata with id that we'll use as seriesMasterId
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+    created_event = extract_json(response).as_h
+
+    event_instance_id = "event_instance_of_recurrence_id"
+    # Metadata should not exist for this event
+    EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
+
+    master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+
+    # Show event details for calendar params that is an instance of master event created above
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/events/#{event_instance_id}?calendar=dev@acaprojects.com", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => event_instance_id}
+    Events.new(context).show
+    extract_http_status(response).should eq("200")
+    event = extract_json(response).as_h
+    event["event_start"].should eq(1598503500)
+    event["event_end"].should eq(1598507160)
+    event["recurring_master_id"].should eq(master_event_id)
+    # Should not have any exetension information
+    event["extension_data"]?.should eq(nil)
+
+    # Show event details for room/system params that is an instance of master event created above
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/events/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => event_instance_id}
+    Events.new(context).show
+    extract_http_status(response).should eq("200")
+    event = extract_json(response).as_h
+    event["event_start"].should eq(1598503500)
+    event["event_end"].should eq(1598507160)
+    event["recurring_master_id"].should eq(master_event_id)
+    # Should have extension data stored on master event
+    event["extension_data"].should eq({"foo" => "bar"})
   end
 
   it "#destroy destroys the event for system" do
@@ -549,6 +661,90 @@ describe Events do
     response = IO::Memory.new
     context = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), response_io: response)
     context.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(false)
+  end
+
+  it "#guest_list lists guests for an event that is an recurring instance & guest_checkin checks them in" do
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
+      WebMock
+        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
+        .to_return(body: systems_resp[index])
+    end
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/event_instance_of_recurrence_id")
+      .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/event_instance_of_recurrence_id")
+      .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
+      .to_return(body: "")
+
+    # Create event which will create metadata with id that we'll use as seriesMasterId
+    body = IO::Memory.new
+    body << EventsHelper.create_event_input
+    body.rewind
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body, response_io: response)
+    Events.new(context).create
+
+    event_instance_id = "event_instance_of_recurrence_id"
+    # Metadata should not exist for this event
+    EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
+
+    # guest_list
+    response = IO::Memory.new
+    context = context("GET", "/api/staff/v1/events/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => event_instance_id}
+    Events.new(context).guest_list
+    guests = extract_json(response).as_a
+    guests.should eq(EventsHelper.guests_list_output)
+
+    # guest_checkin via system
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(true)
+    # We should have created meta by migrating from master event meta
+    meta_after_checkin = EventMetadata.query.find({event_id: event_instance_id}).not_nil!
+    master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+    master_meta = EventMetadata.query.find({event_id: master_event_id}).not_nil!
+    meta_after_checkin.ext_data.should eq(master_meta.ext_data)
+    meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
+
+    # guest_checkin via system state = false
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, response_io: response)
+    context.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(false)
+
+    # guest_checkin via guest_token
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), response_io: response)
+    context.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
+    Events.new(context).guest_checkin
+    checked_in_guest = extract_json(response).as_h
+    checked_in_guest["checked_in"].should eq(true)
+
+    # guest_checkin via guest_token state = false
+    response = IO::Memory.new
+    context = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), response_io: response)
+    context.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
     Events.new(context).guest_checkin
     checked_in_guest = extract_json(response).as_h
     checked_in_guest["checked_in"].should eq(false)

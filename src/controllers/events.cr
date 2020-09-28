@@ -246,7 +246,7 @@ class Events < Application
       end
       meta = meta || EventMetadata.new
 
-      # Only assign values if we are creating it
+      # Only assign values if we are creating metadata
       unless meta.persisted?
         meta.system_id = system_id.not_nil!
         meta.event_id = event.id.not_nil!
