@@ -775,7 +775,7 @@ module EventsHelper
        "extension_data"  => {} of String => String?,
       },
       ],
-      "location"    => {"text" => ""},
+      "location"    => "",
       "private"     => true,
       "all_day"     => false,
       "timezone"    => "Australia/Sydney",
@@ -838,9 +838,7 @@ module EventsHelper
     "host": "dev@acaprojects.onmicrosoft.com",
     "title": "tentative event response status and default timezone trial updated",
     "body": "yeehaw hiya",
-    "location": {
-        "text": "test"
-    },
+    "location": "test",
     "system_id": "sys-rJQQlR4Cn7",
     "system": {
         "id": "sys-rJQQlR4Cn7"
@@ -892,9 +890,7 @@ module EventsHelper
     "host": "dev@acaprojects.onmicrosoft.com",
     "title": "tentative event response status and default timezone trial",
     "body": "yeehaw hiya updated",
-    "location": {
-        "text": "test"
-    },
+    "location": "test",
     "system_id": "sys-rJQQlR4Cn7",
     "system": {
         "id": "sys-rJQQlR4Cn7"
@@ -906,7 +902,7 @@ module EventsHelper
   end
 
   def create_event_output
-    {"event_start" => 1598503500, "event_end" => 1598507160, "id" => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=", "host" => "dev@acaprojects.onmicrosoft.com", "title" => "tentative event response status and default timezone trial updated", "body" => "yeehaw hiya", "attendees" => [{"name" => "Amit", "email" => "amit@redant.com.au", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}, {"name" => "John", "email" => "jon@example.com", "response_status" => "tentative", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {"fizz" => "buzz"}}, {"name" => "RM-AU-DP-L105-Swiss-Alps", "email" => "rmaudpswissalps@booking.demo.acaengine.com", "response_status" => "needsAction", "resource" => false, "extension_data" => {} of String => String?}, {"name" => "Developer", "email" => "dev@acaprojects.onmicrosoft.com", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}], "location" => {"text" => ""}, "private" => true, "all_day" => false, "timezone" => "Australia/Sydney", "recurring" => false, "attachments" => [] of String, "status" => "confirmed", "creator" => "dev@acaprojects.onmicrosoft.com", "calendar" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "extension_data" => {"foo" => "bar"}}
+    {"event_start" => 1598503500, "event_end" => 1598507160, "id" => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=", "host" => "dev@acaprojects.onmicrosoft.com", "title" => "tentative event response status and default timezone trial updated", "body" => "yeehaw hiya", "attendees" => [{"name" => "Amit", "email" => "amit@redant.com.au", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}, {"name" => "John", "email" => "jon@example.com", "response_status" => "tentative", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {"fizz" => "buzz"}}, {"name" => "RM-AU-DP-L105-Swiss-Alps", "email" => "rmaudpswissalps@booking.demo.acaengine.com", "response_status" => "needsAction", "resource" => false, "extension_data" => {} of String => String?}, {"name" => "Developer", "email" => "dev@acaprojects.onmicrosoft.com", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}], "location" => "", "private" => true, "all_day" => false, "timezone" => "Australia/Sydney", "recurring" => false, "attachments" => [] of String, "status" => "confirmed", "creator" => "dev@acaprojects.onmicrosoft.com", "calendar" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "extension_data" => {"foo" => "bar"}}
   end
 
   def update_event_output
@@ -953,7 +949,7 @@ module EventsHelper
          "extension_data"  => {} of String => String?,
         },
       ],
-      "location"    => {"text" => ""},
+      "location"    => "",
       "private"     => true,
       "all_day"     => false,
       "timezone"    => "Australia/Sydney",

@@ -226,7 +226,7 @@ module GuestsHelper
        "response_status" => "needsAction",
        "resource"        => false,
        "extension_data"  => {} of String => String?}],
-      "location"    => {"text" => ""},
+      "location"    => "",
       "private"     => true,
       "all_day"     => false,
       "timezone"    => "Australia/Sydney",

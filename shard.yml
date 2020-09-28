@@ -11,7 +11,7 @@ dependencies:
 
   place_calendar:
     github: PlaceOS/calendar
-    version: 4.2.0
+    version: 4.2.1
 
   clear:
     github: anykeyh/clear
