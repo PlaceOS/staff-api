@@ -9,35 +9,76 @@ class Guests < Application
 
   def index
     query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
-    period_start = query_params["period_start"]?
-    if period_start
-      starting = period_start.to_i64
-      ending = query_params["period_end"].to_i64
+    starting = query_params["period_start"]?
+    if starting
+      period_start = Time.unix(starting.to_i64)
+      period_end = Time.unix(query_params["period_end"].to_i64)
+
+      # We want a subset of the calendars
+      calendars = matching_calendar_ids
+      render(json: [] of Nil) if calendars.empty?
+
+      # Grab events in batches
+      requests = [] of HTTP::Request
+      mappings = calendars.map { |calendar_id, system|
+        request = client.list_events_request(
+          user.email,
+          calendar_id,
+          period_start: period_start,
+          period_end: period_end,
+          showDeleted: false
+        )
+        requests << request
+        {request, calendar_id, system}
+      }
+
+      responses = client.batch(user.email, requests)
+
+      # Process the response (map requests back to responses)
+      errors = 0
+      results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+      mappings.each do |(request, calendar_id, system)|
+        begin
+          results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
+        rescue error
+          errors += 1
+          Log.warn(exception: error) { "error fetching events for #{calendar_id}" }
+        end
+      end
+      response.headers["X-Calendar-Errors"] = errors.to_s if errors > 0
+
+      # Grab any existing eventmeta data
+      metadata_ids = Set(String).new
+      metadata_recurring_ids = Set(String).new
+      meeting_lookup = {} of String => Tuple(String, PlaceOS::Client::API::Models::System, PlaceCalendar::Event)
+      results.each { |(calendar_id, system, event)|
+        if system
+          metadata_id = event.id.not_nil!
+          metadata_ids << metadata_id
+          meeting_lookup[metadata_id] = {calendar_id, system, event}
+          if event.recurring_event_id && event.id != event.recurring_event_id
+            metadata_id = event.recurring_event_id.not_nil!
+            metadata_ids << metadata_id
+            metadata_recurring_ids << metadata_id
+            meeting_lookup[metadata_id] = {calendar_id, system, event}
+          end
+        end
+      }
+
+      # Don't perform the query if there are no calendar entries
+      render(json: [] of Nil) if metadata_ids.empty?
 
       # Return the guests visiting today
       attendees = {} of String => Attendee
 
-      # We want a subset of the calendars
-      if query_params["zone_ids"]? || query_params["system_ids"]?
-        system_ids = matching_calendar_ids.values.map(&.try(&.id))
-        render(json: [] of Nil) if system_ids.empty?
-
-        Attendee.query
-          .with_guest
-          .by_tenant(tenant.id)
-          .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
-          .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
-          .where("event_metadatas.event_start <= :ending AND event_metadatas.event_end >= :starting", {starting: starting, ending: ending})
-          .where { event_metadatas.system_id.in?(system_ids) }
-          .each { |attendee| attendees[attendee.guest.email] = attendee }
-      else
-        Attendee.query
-          .with_guest
-          .by_tenant(tenant.id)
-          .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
-          .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
-          .where("event_metadatas.event_start <= :ending AND event_metadatas.event_end >= :starting", {starting: starting, ending: ending})
-          .each { |attendee| attendees[attendee.guest.email] = attendee }
+      Attendee.query
+        .with_guest
+        .by_tenant(tenant.id)
+        .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
+        .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
+        .where { event_metadatas.event_id.in?(metadata_ids.to_a) }.each do |attend|
+        attend.checked_in = false if attend.event_metadata.event_id.in?(metadata_recurring_ids)
+        attendees[attend.guest.email] = attend
       end
 
       render(json: [] of Nil) if attendees.empty?
@@ -48,7 +89,15 @@ class Guests < Application
         .where { var("guests", "email").in?(attendees.keys) }
         .each { |guest| guests[guest.email.not_nil!] = guest }
 
-      render json: attendees.map { |email, visitor| attending_guest(visitor, guests[email]?) }
+      render json: attendees.map { |email, visitor|
+        attending_guest(visitor, guests[email]?)
+        # Prevent a database lookup
+        meeting_event = nil
+        if meet = meeting_lookup[visitor.event_metadata.event_id]?
+          _calendar_id, _system, meeting_event = meet
+        end
+        attending_guest(visitor, guests[email]?, meeting_details: meeting_event)
+      }
     elsif query.empty?
       # Return the first 1500 guests
       render json: Guest.query

@@ -8,7 +8,14 @@ class Tenants < Application
   end
 
   def create
-    tenant = Tenant.new(JSON.parse(request.body.not_nil!))
+    args = JSON.parse(request.body.not_nil!)
+
+    tenant = Tenant.new({
+      name: args["name"],
+      domain: args["domain"],
+      platform: args["platform"],
+      credentials: args["credentials"].to_json
+    })
 
     if tenant.save
       render json: tenant.to_json

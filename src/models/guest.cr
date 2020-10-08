@@ -37,8 +37,8 @@ class Guest
     validate_email_uniqueness
   end
 
-  def to_h(visitor : Attendee?)
-    {
+  def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
+    result = {
       email:          email,
       name:           name,
       preferred_name: preferred_name,
@@ -49,9 +49,15 @@ class Guest
       banned:         banned,
       dangerous:      dangerous,
       extension_data: ext_data,
-      checked_in:     visitor.try(&.checked_in) || false,
+      checked_in:     is_parent_metadata ? false : visitor.try(&.checked_in) || false,
       visit_expected: visitor.try(&.visit_expected) || false,
     }
+
+    if meeting_details
+      result = result.merge({event: meeting_details})
+    end
+
+    result
   end
 
   def attending_today(tenant_id, timezone)

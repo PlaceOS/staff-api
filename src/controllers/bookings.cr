@@ -235,7 +235,6 @@ class Bookings < Application
   end
 
   def set_approver(booking, approved : Bool)
-    user = user_token.user
     # In case of rejections reset approver related information
     booking.approver_id = approved ? user_token.id : nil
     booking.approver_email = approved ? user.email : nil

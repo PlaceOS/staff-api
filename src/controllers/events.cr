@@ -13,44 +13,45 @@ class Events < Application
 
     include_cancelled = query_params["include_cancelled"]? == "true"
 
-    # Grab events in parallel
-    responses = Promise.all(calendars.map { |calendar_id, system|
-      Promise.defer {
-        events = client.list_events(
-          user.email,
-          calendar_id,
-          period_start: period_start,
-          period_end: period_end,
-          showDeleted: include_cancelled
-        ).map { |event| {calendar_id, system, event} }
+    # Grab events in batches
+    requests = [] of HTTP::Request
+    mappings = calendars.map { |calendar_id, system|
+      request = client.list_events_request(
+        user.email,
+        calendar_id,
+        period_start: period_start,
+        period_end: period_end,
+        showDeleted: include_cancelled
+      )
+      requests << request
+      {request, calendar_id, system}
+    }
 
-        # no error, the cal id and the list of the events
-        {"", calendar_id, events}
-      }.catch { |error|
-        sys_name = system.try(&.name)
-        calendar_id = sys_name ? "#{sys_name} (#{calendar_id})" : calendar_id
-        {error.message || "", calendar_id, [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)}
-      }
-    }).get
+    responses = client.batch(user.email, requests)
 
-    # if there are any errors let's log them and expose them via the API
-    # done outside the promise so we have all the tagging associated with this fiber
-    calendar_errors = [] of String
-    responses.select { |result| result[0].presence }.each do |error|
-      calendar_id = error[1]
-      calendar_errors << calendar_id
-      Log.warn { "error fetching events for #{calendar_id}: #{error[0]}" }
+    # Process the response (map requests back to responses)
+    errors = 0
+    results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+    mappings.each do |(request, calendar_id, system)|
+      begin
+        results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
+      rescue error
+        errors += 1
+        Log.warn(exception: error) { "error fetching events for #{calendar_id}" }
+      end
     end
-    response.headers["X-Calendar-Errors"] = calendar_errors unless calendar_errors.empty?
-
-    # return the valid results
-    results = responses.map { |result| result[2] }.flatten
+    response.headers["X-Calendar-Errors"] = errors.to_s if errors > 0
 
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
-    metadata_ids = results.map { |(_calendar_id, system, event)|
-      system.nil? ? nil : event.id
-    }.compact
+    metadata_ids = [] of String
+    results.map { |(_calendar_id, system, event)|
+      if system
+        metadata_ids << event.id.not_nil!
+        metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
+      end
+    }
+    metadata_ids.uniq!
 
     # Don't perform the query if there are no calendar entries
     if !metadata_ids.empty?
@@ -60,7 +61,13 @@ class Events < Application
 
     # return array of standardised events
     render json: results.map { |(calendar_id, system, event)|
-      StaffApi::Event.augment(event, calendar_id, system, metadatas[event.id]?)
+      parent_meta = false
+      metadata = metadatas[event.id]?
+      if metadata.nil? && event.recurring_event_id
+        metadata = metadatas[event.recurring_event_id]?
+        parent_meta = true
+      end
+      StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
     }
   end
 
@@ -200,6 +207,13 @@ class Events < Application
     event_id = route_params["id"]
     changes = PlaceCalendar::Event.from_json(request.body.as(IO))
 
+    # Guests can update extension_data to indicate their order
+    if user_token.scope.includes?("guest")
+      guest_event_id, guest_system_id = user.roles
+
+      head :forbidden unless changes.extension_data && event_id == guest_event_id && query_params["system_id"]? == guest_system_id
+    end
+
     placeos_client = get_placeos_client
 
     cal_id = if user_cal = query_params["calendar"]?
@@ -220,6 +234,42 @@ class Events < Application
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     head(:not_found) unless event
+
+    # Guests can only update the extension_data
+    if user_token.scope.includes?("guest")
+      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
+      if meta.nil? && event.recurring_event_id
+        if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
+          meta = EventMetadata.new
+          meta.ext_data = old_meta.ext_data
+        end
+      end
+      meta = meta || EventMetadata.new
+
+      # Only assign values if we are creating metadata
+      unless meta.persisted?
+        meta.system_id = system_id.not_nil!
+        meta.event_id = event.id.not_nil!
+        meta.event_start = event.event_start.not_nil!.to_unix
+        meta.event_end = event.event_end.not_nil!.to_unix
+        meta.resource_calendar = system.not_nil!.email.not_nil!
+        meta.host_email = event.host.not_nil!
+        meta.tenant_id = tenant.id
+      end
+
+      if extension_data = changes.extension_data
+        meta_ext_data = meta.not_nil!.ext_data
+        data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
+        # Updating extension data by merging into existing.
+        extension_data.as_h.each { |key, value| data[key] = value }
+        # Needed for clear to assign the updated json correctly
+        meta.ext_data_column.clear
+        meta.ext_data = JSON.parse(data.to_json)
+        meta.save!
+      end
+
+      render json: StaffApi::Event.augment(event, cal_id, system, meta)
+    end
 
     # User details
     user_email = user.email
@@ -300,22 +350,21 @@ class Events < Application
     updated_event = client.update_event(user_id: host, event: changes, calendar_id: host)
 
     if system
-      meta = if changing_room
-               old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
+      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
 
-               if old_meta
-                 new_meta = EventMetadata.new
-                 new_meta.ext_data = old_meta.ext_data
-                 old_meta.delete
-                 new_meta
-               else
-                 EventMetadata.new
-               end
-             else
-               EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id}) || EventMetadata.new
-             end
+      # migrate the parent metadata to this event if not existing
+      if meta.nil? && event.recurring_event_id
+        if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
+          meta = EventMetadata.new
+          meta.ext_data = old_meta.ext_data
+        end
+      end
 
+      meta = meta || EventMetadata.new
+
+      # Changing the room if applicable
       meta.system_id = system.id.not_nil!
+
       meta.event_id = event.id.not_nil!
       meta.event_start = changes.not_nil!.event_start.not_nil!.to_unix
       meta.event_end = changes.not_nil!.event_end.not_nil!.to_unix
@@ -337,10 +386,10 @@ class Events < Application
       end
 
       # Grab the list of externals that might be attending
-      if update_attendees
+      if update_attendees || changing_room
         existing_lookup = {} of String => Attendee
         existing = meta.attendees.to_a
-        existing.each { |a| existing_lookup[a.email] = a } unless changing_room
+        existing.each { |a| existing_lookup[a.email] = a }
 
         if !remove_attendees.empty?
           remove_attendees.each do |email|
@@ -351,7 +400,7 @@ class Events < Application
           end
         end
 
-        attending = changes.try &.attendees.try(&.reject { |attendee|
+        attending = changes.attendees.try(&.reject { |attendee|
           # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
           attendee.visit_expected.nil?
         })
@@ -399,7 +448,7 @@ class Events < Application
             attend.guest_id = guest.id
             attend.save!
 
-            if !previously_visiting
+            if !previously_visiting || changing_room
               spawn do
                 sys = system.not_nil!
 
@@ -415,6 +464,26 @@ class Events < Application
                   attendee_email: attendee.email,
                 })
               end
+            end
+          end
+        elsif changing_room
+          existing.each do |attend|
+            next unless attend.visit_expected
+            spawn do
+              sys = system.not_nil!
+              guest = attend.guest
+
+              placeos_client.root.signal("staff/guest/attending", {
+                action:         :meeting_update,
+                system_id:      sys.id,
+                event_id:       event_id,
+                host:           host,
+                resource:       sys.email,
+                event_summary:  updated_event.not_nil!.body,
+                event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
+                attendee_name:  guest.name,
+                attendee_email: guest.email,
+              })
             end
           end
         end
@@ -447,28 +516,45 @@ class Events < Application
 
     # Guest access
     if user_token.scope.includes?("guest")
-      guest_event_id, system_id = user_token.user.roles
+      guest_event_id, system_id = user.roles
       guest_email = user.email.downcase
 
       head :forbidden unless event_id == guest_event_id
 
+      # grab the calendar id
+      begin
+        calendar_id = placeos_client.systems.fetch(system_id).email.presence
+      rescue _ex : ::PlaceOS::Client::API::Error
+        head(:not_found)
+      end
+      head(:not_found) unless calendar_id
+
+      # Get the event using the admin account
+      event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
+      head(:not_found) unless event
+
       eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
       guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-      head(:not_found) if guest.nil? || eventmeta.nil?
+      head(:not_found) unless guest
 
-      attendee = Attendee.query.find({guest_id: guest.not_nil!.id, event_id: eventmeta.not_nil!.id})
+      attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.try(&.id)})
+
+      # check recurring master
+      if attendee.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+        master_metadata_id = event.recurring_event_id
+        eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: master_metadata_id})
+        attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.try(&.id)})
+      end
+      head(:not_found) unless eventmeta
 
       if attendee
-        event = client.get_event(user.email, id: event_id, calendar_id: eventmeta.resource_calendar)
-        head(:not_found) unless event
-
         begin
           system = placeos_client.systems.fetch(system_id)
         rescue _ex : ::PlaceOS::Client::API::Error
           head(:not_found)
         end
 
-        render json: StaffApi::Event.augment(event.not_nil!, eventmeta.resource_calendar, system, eventmeta)
+        render json: StaffApi::Event.augment(event.not_nil!, eventmeta.not_nil!.resource_calendar, system, eventmeta)
       else
         head :not_found
       end
@@ -497,8 +583,13 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
       head(:not_found) unless event
 
+      parent_meta = false
       metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
-      render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
+      if event.recurring_event_id && event.id != event.recurring_event_id
+        metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
+        parent_meta = true
+      end
+      render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
     end
 
     head :bad_request
@@ -611,7 +702,15 @@ class Events < Application
     render :bad_request, json: {error: "missing system_id param"} unless system_id
 
     # Grab meeting metadata if it exists
+    parent_meta = false
     metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+    if metadata.nil?
+      if cal_id = get_placeos_client.systems.fetch(system_id).email
+        event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+        metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id}) if event && event.recurring_event_id
+        parent_meta = !!metadata
+      end
+    end
     render(json: [] of Nil) unless metadata
 
     # Find anyone who is attending
@@ -623,7 +722,7 @@ class Events < Application
     visitors.each { |visitor| guests[visitor.guest.email.not_nil!] = visitor.guest }
 
     # Merge the visitor data with guest profiles
-    visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?) }
+    visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
 
     render json: visitors
   end
@@ -634,7 +733,7 @@ class Events < Application
     guest_email = route_params["guest_id"].downcase
 
     if user_token.scope.includes?("guest")
-      guest_event_id, system_id = user_token.user.roles
+      guest_event_id, system_id = user.roles
       guest_token_email = user.email.downcase
 
       head :forbidden unless event_id == guest_event_id && guest_email == guest_token_email
@@ -645,7 +744,16 @@ class Events < Application
 
     guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
     eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
-    head(:not_found) if guest.nil? || eventmeta.nil?
+    head(:not_found) if guest.nil?
+
+    if eventmeta.nil?
+      if cal_id = get_placeos_client.systems.fetch(system_id).email
+        event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+        head(:not_found) if event.nil?
+        eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id}) if event && event.recurring_event_id
+        EventMetadata.migrate_recurring_metadata(system_id, event.not_nil!, eventmeta) if event && eventmeta
+      end
+    end
 
     attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
     if attendee
@@ -662,6 +770,7 @@ class Events < Application
       spawn do
         get_placeos_client.root.signal("staff/guest/checkin", {
           action:         :checkin,
+          checkin:        checkin,
           system_id:      system_id,
           event_id:       event_id,
           host:           eventmeta.not_nil!.host_email,
@@ -677,9 +786,5 @@ class Events < Application
     else
       head :not_found
     end
-  end
-
-  private def get_user_calendars
-    client.list_calendars(user.email)
   end
 end

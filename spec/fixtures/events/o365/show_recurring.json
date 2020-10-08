@@ -1,0 +1,111 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.onmicrosoft.com')/calendar/events/$entity",
+  "@odata.etag": "W/\"dPHcBLqEvkGEgQ87r+efLAAAhk36bA==\"",
+  "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
+  "id": "event_instance_of_recurrence_id",
+  "createdDateTime": "2020-09-13T22:44:39.7263717Z",
+  "lastModifiedDateTime": "2020-09-13T22:44:40.4089746Z",
+  "changeKey": "dPHcBLqEvkGEgQ87r+efLAAAhk36bA==",
+  "categories": [],
+  "transactionId": null,
+  "originalStartTimeZone": "Australia/Sydney",
+  "originalEndTimeZone": "Australia/Sydney",
+  "iCalUId": "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10",
+  "reminderMinutesBeforeStart": 15,
+  "isReminderOn": true,
+  "hasAttachments": false,
+  "subject": "tentative event response status and default timezone trial updated",
+  "bodyPreview": "yeehaw hiya",
+  "importance": "normal",
+  "sensitivity": "private",
+  "isAllDay": false,
+  "isCancelled": false,
+  "isOrganizer": true,
+  "responseRequested": true,
+  "seriesMasterId": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
+  "showAs": "busy",
+  "type": "singleInstance",
+  "webLink": "https://outlook.office365.com/owa/?itemid=AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ%2BxSJHh14kbXHWhBwB08dwEuoS%2BQYSBDzuv558sAAAAAAENAAB08dwEuoS%2BQYSBDzuv558sAACGVOwUAAA%3D&exvsurl=1&path=/calendar/item",
+  "onlineMeetingUrl": null,
+  "isOnlineMeeting": false,
+  "onlineMeetingProvider": "unknown",
+  "allowNewTimeProposals": true,
+  "recurrence": null,
+  "onlineMeeting": null,
+  "responseStatus": {
+    "response": "organizer",
+    "time": "0001-01-01T00:00:00Z"
+  },
+  "body": {
+    "contentType": "text",
+    "content": "yeehaw hiya"
+  },
+  "start": {
+    "dateTime": "2020-08-27T14:45:00.0000000",
+    "timeZone": "Australia/Sydney"
+  },
+  "end": {
+    "dateTime": "2020-08-27T15:46:00.0000000",
+    "timeZone": "Australia/Sydney"
+  },
+  "location": {
+    "displayName": "",
+    "locationType": "default",
+    "uniqueIdType": "unknown",
+    "address": {},
+    "coordinates": {}
+  },
+  "locations": [],
+  "attendees": [
+    {
+      "type": "required",
+      "status": {
+        "response": "accepted",
+        "time": "2020-09-13T22:44:39Z"
+      },
+      "emailAddress": {
+        "name": "Amit",
+        "address": "amit@redant.com.au"
+      }
+    },
+    {
+      "type": "required",
+      "status": {
+        "response": "tentativelyAccepted",
+        "time": "2020-09-13T22:44:39Z"
+      },
+      "emailAddress": {
+        "name": "John",
+        "address": "jon@example.com"
+      }
+    },
+    {
+      "type": "required",
+      "status": {
+        "response": "none",
+        "time": "0001-01-01T00:00:00Z"
+      },
+      "emailAddress": {
+        "name": "RM-AU-DP-L105-Swiss-Alps",
+        "address": "RMAUDPSwissAlps@booking.demo.acaengine.com"
+      }
+    },
+    {
+      "type": "required",
+      "status": {
+        "response": "accepted",
+        "time": "2020-09-13T22:44:39Z"
+      },
+      "emailAddress": {
+        "name": "Developer",
+        "address": "dev@acaprojects.onmicrosoft.com"
+      }
+    }
+  ],
+  "organizer": {
+    "emailAddress": {
+      "name": "Developer",
+      "address": "dev@acaprojects.onmicrosoft.com"
+    }
+  }
+}
