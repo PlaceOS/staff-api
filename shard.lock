@@ -38,7 +38,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.10.0
+    version: 0.9.0
 
   faker:
     git: https://github.com/askn/faker.git
@@ -82,7 +82,7 @@ shards:
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
-    version: 1.7.1
+    version: 1.7.0
 
   office365:
     git: https://github.com/PlaceOS/office365.git
@@ -94,7 +94,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.22.1+git.commit.cafeaf6127d8d50cfc345ae987f63e8d39fd9041
+    version: 0.21.1+git.commit.cafe111fc28e366c219144d5f656c3718d7357dd
 
   place_calendar:
     git: https://github.com/PlaceOS/calendar.git
@@ -102,7 +102,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.1.5+git.commit.688ee3533f450b7cf3e6a6d9f7fc078f79b589d5
+    version: 2.1.4+git.commit.ff5f601047b52b2c252ce7ba979e78ccda86fd00
 
   placeos-models:
     git: https://github.com/placeos/models.git
