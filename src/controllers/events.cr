@@ -120,6 +120,7 @@ class Events < Application
           event_id:  created_event.not_nil!.id,
           host:      host,
           resource:  sys.email,
+          ext_data:  input_event.extension_data,
         })
       end
 
@@ -489,6 +490,9 @@ class Events < Application
         end
       end
 
+      # Reloading meta with attendees and guests to avoid n+1
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id})
+
       # Update PlaceOS with an signal "staff/event/changed"
       spawn do
         sys = system.not_nil!
@@ -498,11 +502,9 @@ class Events < Application
           event_id:  event_id,
           host:      host,
           resource:  sys.email,
+          ext_data:  eventmeta.try &.ext_data,
         })
       end
-
-      # Reloading meta with attendees and guests to avoid n+1
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id})
 
       render json: StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
     else
