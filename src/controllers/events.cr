@@ -339,7 +339,7 @@ class Events < Application
       # Add the updated system attendee to the payload for update
       changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_sys_cal, email: new_sys_cal)
 
-      cal_id = new_sys_cal
+      new_sys_cal # cal_id
       system = new_system
     else
       # If room is not changing and it is not an attendee, add it.

@@ -13,7 +13,6 @@ describe Tenant do
   end
 
   it "should accept JSON params" do
-    response = IO::Memory.new
     body = IO::Memory.new
     body << %({
       "name":        "Bob",
@@ -32,15 +31,12 @@ describe Tenant do
     headers = HTTP::Headers{
       "Host"          => "google.staff-api.dev",
       "Authorization" => "Bearer #{google_mock_token}",
-      "Content-Type"  => "application/json"
+      "Content-Type"  => "application/json",
     }
 
-    context = context("POST", "/api/staff/v1/tenants", headers, body, response_io: response)
-
-    Tenants.new(context).create
-    created_tenant = extract_json(response)
-
-    extract_http_status(response).should eq("200")
+    ctx = context("POST", "/api/staff/v1/tenants", headers, body)
+    Tenants.new(ctx).create
+    ctx.response.status_code.should eq(200)
   end
 
   it "takes JSON credentials and returns a PlaceCalendar::Client" do

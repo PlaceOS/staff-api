@@ -13,10 +13,11 @@ describe Guests do
     GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
     GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-    response = IO::Memory.new
-    Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
 
     guest_names = results.as_a.map { |r| r["name"] }
     guest_emails = results.as_a.map { |r| r["email"] }
@@ -29,10 +30,11 @@ describe Guests do
     GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
     GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-    response = IO::Memory.new
-    Guests.new(context("GET", "/api/staff/v1/guests?q=steve", OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", "/api/staff/v1/guests?q=steve", OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).index
 
-    results = extract_json(response).as_a
+    results = JSON.parse(ctx.response.output.to_s).as_a
 
     guest_names = results.map { |r| r["name"] }
     guest_emails = results.map { |r| r["email"] }
@@ -62,11 +64,12 @@ describe Guests do
 
     now = Time.utc.to_unix
     later = 4.hours.from_now.to_unix
-    response = IO::Memory.new
     route = "/api/staff/v1/guests?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
-    Guests.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).index
 
-    results = extract_json(response).as_a
+    results = JSON.parse(ctx.response.output.to_s).as_a
     guest_names = results.map { |r| r["name"] }
     guest_emails = results.map { |r| r["email"] }
     guest_names.should eq(["Toby"])
@@ -83,12 +86,13 @@ describe Guests do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
 
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    Guests.new(context).show
+    ctx = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => guest.email.not_nil!}
+    ctx.response.output = IO::Memory.new
 
-    results = extract_json(response)
+    Guests.new(ctx).show
+
+    results = JSON.parse(ctx.response.output.to_s)
 
     results.as_h["name"].should eq("Toby")
     results.as_h["email"].should eq("toby@redant.com.au")
@@ -101,12 +105,13 @@ describe Guests do
     meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
     guest.attendee_for(meta.id.not_nil!)
 
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    Guests.new(context).show
+    ctx = context("GET", "/api/staff/v1/guests/#{guest.email}/", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => guest.email.not_nil!}
+    ctx.response.output = IO::Memory.new
 
-    results = extract_json(response)
+    Guests.new(ctx).show
+
+    results = JSON.parse(ctx.response.output.to_s)
 
     results.as_h["name"].should eq("Toby")
     results.as_h["email"].should eq("toby@redant.com.au")
@@ -116,17 +121,18 @@ describe Guests do
   it "#destroy should delete a guest" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     toby = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    steve = GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+    GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-    context = context("DELETE", "/api/staff/v1/guests/#{toby.email}/", OFFICE365_HEADERS)
-    context.route_params = {"id" => toby.email.not_nil!}
-    Guests.new(context).destroy
+    ctx = context("DELETE", "/api/staff/v1/guests/#{toby.email}/", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => toby.email.not_nil!}
+    Guests.new(ctx).destroy
 
     # Check only one is returned
-    response = IO::Memory.new
-    Guests.new(context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", "/api/staff/v1/guests", OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
 
     # Only has steve, toby got deleted
     guest_names = results.as_a.map { |r| r["name"] }
@@ -139,10 +145,11 @@ describe Guests do
     body = IO::Memory.new
     body << %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
     body.rewind
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/guests/", OFFICE365_HEADERS, body, response_io: response)
-    Guests.new(context).create
-    create_results = extract_json(response)
+
+    ctx = context("POST", "/api/staff/v1/guests/", OFFICE365_HEADERS, body)
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).create
+    create_results = JSON.parse(ctx.response.output.to_s)
 
     create_results.as_h["email"].should eq("toby@redant.com.au")
     create_results.as_h["banned"].should eq(true)
@@ -152,11 +159,11 @@ describe Guests do
     body = IO::Memory.new
     body << %({"email":"toby@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
     body.rewind
-    response = IO::Memory.new
-    context = context("PATCH", "/api/staff/v1/guests/toby@redant.com.au", OFFICE365_HEADERS, body, response_io: response)
-    context.route_params = {"id" => "toby@redant.com.au"}
-    Guests.new(context).update
-    update_results = extract_json(response)
+    ctx = context("PATCH", "/api/staff/v1/guests/toby@redant.com.au", OFFICE365_HEADERS, body)
+    ctx.route_params = {"id" => "toby@redant.com.au"}
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).update
+    update_results = JSON.parse(ctx.response.output.to_s)
 
     update_results.as_h["email"].should eq("toby@redant.com.au")
     update_results.as_h["banned"].should eq(true)
@@ -184,12 +191,12 @@ describe Guests do
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
     guest.attendee_for(meta.id.not_nil!)
 
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/guests/#{guest.email}/meetings", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => guest.email.not_nil!}
-    Guests.new(context).meetings
+    ctx = context("GET", "/api/staff/v1/guests/#{guest.email}/meetings", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => guest.email.not_nil!}
+    ctx.response.output = IO::Memory.new
+    Guests.new(ctx).meetings
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
 
     # Should get 1 event
     results.size.should eq(1)

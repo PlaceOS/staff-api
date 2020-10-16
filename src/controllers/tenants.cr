@@ -11,10 +11,10 @@ class Tenants < Application
     args = JSON.parse(request.body.not_nil!)
 
     tenant = Tenant.new({
-      name: args["name"],
-      domain: args["domain"],
-      platform: args["platform"],
-      credentials: args["credentials"].to_json
+      name:        args["name"],
+      domain:      args["domain"],
+      platform:    args["platform"],
+      credentials: args["credentials"].to_json,
     })
 
     if tenant.save
@@ -36,4 +36,3 @@ class Tenants < Application
     head(:forbidden) unless is_admin?
   end
 end
-

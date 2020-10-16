@@ -8,11 +8,11 @@ describe Calendars do
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # instantiate the controller
-    response = IO::Memory.new
-    calendars = Calendars.new(context("GET", "/api/staff/v1/calendars", OFFICE365_HEADERS, response_io: response))
+    ctx = context("GET", "/api/staff/v1/calendars", OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Calendars.new(ctx).index
 
-    calendars.index
-    extract_http_status(response).should eq("200")
+    ctx.response.status_code.should eq(200)
   end
 
   it "should return list of available calendars" do
@@ -31,18 +31,14 @@ describe Calendars do
     later = (Time.local + 1.hour).to_unix
 
     # instantiate the controller
-    response = IO::Memory.new
-    calendars = Calendars.new(
-      context(
-        "GET",
-        "/api/staff/v1/calendars?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6",
-        OFFICE365_HEADERS,
-        response_io: response
-      )
-    )
-    calendars.availability
 
-    results = extract_json(response).as_a
+    ctx = context("GET",
+      "/api/staff/v1/calendars?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6",
+      OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Calendars.new(ctx).availability
+
+    results = JSON.parse(ctx.response.output.to_s).as_a
     results.should eq(CalendarsHelper.calendar_list_output)
   end
 
@@ -60,17 +56,14 @@ describe Calendars do
     later = (Time.local + 1.hour).to_unix
 
     # instantiate the controller
-    response = IO::Memory.new
-    calendars = Calendars.new(
-      context(
-        "GET",
-        "/api/staff/v1/calendars/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6",
-        OFFICE365_HEADERS,
-        response_io: response
-      )
+    ctx = context(
+      "GET",
+      "/api/staff/v1/calendars/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6",
+      OFFICE365_HEADERS
     )
-    calendars.free_busy
-    results = extract_json(response).as_a
+    ctx.response.output = IO::Memory.new
+    Calendars.new(ctx).free_busy
+    results = JSON.parse(ctx.response.output.to_s).as_a
     results.should eq(CalendarsHelper.free_busy_output)
   end
 end
