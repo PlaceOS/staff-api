@@ -11,13 +11,13 @@ class Bookings < Application
     booking_type = query_params["type"]
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
     user_id = query_params["user"]?
-    user_id = user_token.id if user_id == "current"
+    user_id = user_token.id if user_id == "current" || zones.empty?
 
-    results = Booking.query
+    query = Booking.query
       .by_tenant(tenant.id)
       .by_user_id(user_id)
-      .by_zones(zones)
-      .where(
+    query.by_zones(zones) unless zones.empty?
+    results = query.where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         {starting: starting, ending: ending, booking_type: booking_type})
       .order_by("booking_start", "DESC")

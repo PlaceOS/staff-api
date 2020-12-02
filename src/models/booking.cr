@@ -40,12 +40,12 @@ class Booking
   #
   # In case of multiple zones as input,
   # we return all bookings that have
-  # all of the input zones in their zones array
+  # any of the input zones in their zones array
   scope :by_zones do |zones|
     return self if zones.empty?
 
     # https://www.postgresql.org/docs/9.1/arrays.html#ARRAYS-SEARCHING
-    query = zones.map { |_zone| " ( ? = ANY (zones)) " }.join("AND")
+    query = zones.map { |_zone| " ( ? = ANY (zones)) " }.join("OR")
 
     where(query, zones)
   end
