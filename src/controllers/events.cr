@@ -9,8 +9,9 @@ class Events < Application
     period_end = Time.unix(query_params["period_end"].to_i64)
 
     calendars = matching_calendar_ids
-    render(json: [] of Nil) unless calendars.size > 0
 
+    Log.context.set(calendar_size: calendars.size.to_s)
+    render(json: [] of Nil) unless calendars.size > 0
     include_cancelled = query_params["include_cancelled"]? == "true"
 
     # Grab events in batches
@@ -781,6 +782,7 @@ class Events < Application
           event_starting: eventmeta.not_nil!.event_start,
           attendee_name:  guest_details.name,
           attendee_email: guest_details.email,
+          ext_data:       eventmeta.try &.ext_data,
         })
       end
 
