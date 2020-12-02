@@ -40,7 +40,7 @@ module Utils::PlaceOSHelpers
 
     # only obtain events for calendars the user has access to
     calendars = Set.new((args.calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
-    user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.downcase))
+    user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase))
     if calendars.size > 0
       (calendars & user_calendars).each do |calendar|
         system_calendars[calendar] = nil
