@@ -102,6 +102,16 @@ abstract class Application < ActionController::Base
     end
   end
 
+  rescue_from JSON::MappingError do |error|
+    respond_with(:bad_request) do
+      text error.inspect_with_backtrace
+      json({
+        error:     error.message,
+        backtrace: error.backtrace?,
+      })
+    end
+  end
+
   # Helpful during dev, see errors from office/google clients
   unless App.running_in_production?
     rescue_from PlaceCalendar::Exception do |error|
