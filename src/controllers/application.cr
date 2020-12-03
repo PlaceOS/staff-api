@@ -102,6 +102,17 @@ abstract class Application < ActionController::Base
     end
   end
 
+  rescue_from KeyError do |error|
+    raise error unless error.message.try &.includes?("param")
+
+    respond_with(:bad_request) do
+      text error.message
+      json({
+        error: error.message,
+      })
+    end
+  end
+
   rescue_from JSON::MappingError do |error|
     respond_with(:bad_request) do
       text error.inspect_with_backtrace
