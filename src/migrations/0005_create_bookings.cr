@@ -31,7 +31,6 @@ class CreateBookingsMigration
 
         t.timestamps
       end
-
     end
 
     direction.down do

@@ -13,7 +13,6 @@ class CreateAttendeeMigration
 
         t.timestamps
       end
-
     end
 
     direction.down do

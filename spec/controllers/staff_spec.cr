@@ -1,7 +1,6 @@
 require "../spec_helper"
 
 describe Staff do
-
   it "should return a list of users" do
     response = IO::Memory.new
     staff = Staff.new(context("GET", "/api/staff/v1/people", OFFICE365_HEADERS, response_io: response))
@@ -53,5 +52,4 @@ describe Staff do
     user = PlaceCalendar::User.from_json(extract_body(response))
     user.id.should eq(user_id)
   end
-
 end

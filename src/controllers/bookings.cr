@@ -197,8 +197,9 @@ class Bookings < Application
   def find_booking
     booking = Booking.query
       .by_tenant(tenant.id)
-      .find({id: route_params["id"]})
-    head(:not_found) unless booking
+      .find({id: route_params["id"].to_i64})
+
+    render :not_found, json: {error: "booking id #{route_params["id"]} not found"} unless booking
 
     booking
   end

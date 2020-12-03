@@ -32,7 +32,7 @@ describe Tenant do
     headers = HTTP::Headers{
       "Host"          => "google.staff-api.dev",
       "Authorization" => "Bearer #{google_mock_token}",
-      "Content-Type"  => "application/json"
+      "Content-Type"  => "application/json",
     }
 
     context = context("POST", "/api/staff/v1/tenants", headers, body, response_io: response)

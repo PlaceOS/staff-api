@@ -1,7 +1,6 @@
 require "place_calendar"
 
 module Utils::MultiTenant
-
   macro included
     before_action :determine_tenant_from_domain
   end
@@ -34,5 +33,4 @@ module Utils::MultiTenant
     @tenant = Tenant.query.find { domain == authority_domain_host }
     Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
   end
-
 end

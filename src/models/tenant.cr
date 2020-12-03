@@ -12,7 +12,7 @@ struct Office365Config
     {
       tenant:        @tenant,
       client_id:     @client_id,
-      client_secret: @client_secret
+      client_secret: @client_secret,
     }
   end
 end
@@ -34,7 +34,7 @@ struct GoogleConfig
       scopes:      @scopes,
       domain:      @domain,
       sub:         @sub,
-      user_agent:  @user_agent
+      user_agent:  @user_agent,
     }
   end
 end

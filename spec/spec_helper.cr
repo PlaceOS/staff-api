@@ -97,6 +97,7 @@ def office365_guest_headers(guest_event_id, system_id)
     "Authorization" => "Bearer #{office_guest_mock_token(guest_event_id, system_id)}",
   }
 end
+
 # Provide some basic headers for google auth
 GOOGLE_HEADERS = HTTP::Headers{
   "Host"          => "google.staff-api.dev",

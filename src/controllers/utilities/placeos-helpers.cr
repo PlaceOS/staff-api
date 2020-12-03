@@ -33,7 +33,7 @@ module Utils::PlaceOSHelpers
     attribute bookable : Bool?
   end
 
-  def matching_calendar_ids
+  def matching_calendar_ids(allow_default = false)
     args = CalendarSelection.new(params)
     # Create a map of calendar ids to systems
     system_calendars = {} of String => PlaceOS::Client::API::Models::System?
@@ -86,6 +86,11 @@ module Utils::PlaceOSHelpers
         next if calendar.empty?
         system_calendars[calendar] = system
       end
+    end
+
+    # default to the current user if no params were passed
+    if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
+      system_calendars[user.email] = nil
     end
 
     system_calendars

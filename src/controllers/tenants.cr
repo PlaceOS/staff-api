@@ -11,10 +11,10 @@ class Tenants < Application
     args = JSON.parse(request.body.not_nil!)
 
     tenant = Tenant.new({
-      name: args["name"],
-      domain: args["domain"],
-      platform: args["platform"],
-      credentials: args["credentials"].to_json
+      name:        args["name"],
+      domain:      args["domain"],
+      platform:    args["platform"],
+      credentials: args["credentials"].to_json,
     })
 
     if tenant.save
@@ -29,11 +29,10 @@ class Tenants < Application
   end
 
   def destroy
-    Tenant.query.find! { id == params["id"] }.delete
+    Tenant.query.find! { id == params["id"].to_i64 }.delete
   end
 
   private def admin_only
     head(:forbidden) unless is_admin?
   end
 end
-

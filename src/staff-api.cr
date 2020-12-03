@@ -27,7 +27,7 @@ OptionParser.parse(ARGV.dup) do |parser|
     exit 0
   end
 
-  parser.on("-h", "--help", "Show this help") do 
+  parser.on("-h", "--help", "Show this help") do
     puts parser
     exit 0
   end
@@ -76,4 +76,3 @@ end
 
 # Shutdown message
 puts "#{App::NAME} leaps through the veldt\n"
-

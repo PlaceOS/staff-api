@@ -9,11 +9,9 @@ require "./controllers/*"
 require "./models/*"
 require "./migrations/*"
 
-
-
-## Application code
-#require "granite/adapter/pg"
-#Granite::Connections << Granite::Adapter::Pg.new(name: "pg", url: App::PG_DATABASE_URL)
+# # Application code
+# require "granite/adapter/pg"
+# Granite::Connections << Granite::Adapter::Pg.new(name: "pg", url: App::PG_DATABASE_URL)
 
 # Configure Clear ORM
 Clear::SQL.init(
@@ -21,8 +19,6 @@ Clear::SQL.init(
   connection_pool_size: App::PG_CONNECTION_POOL_SIZE
 )
 Clear::Migration::Manager.instance.apply_all
-
-
 
 # Server required after application controllers
 require "action-controller/server"
@@ -50,4 +46,3 @@ ActionController::Session.configure do |settings|
   # HTTPS only:
   settings.secure = App.running_in_production?
 end
-

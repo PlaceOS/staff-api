@@ -21,9 +21,9 @@ class Attendee
 
   def to_h(is_parent_metadata, meeting_details)
     result = {
-      email: email,
-      checked_in: is_parent_metadata ? false : checked_in,
-      visit_expected: visit_expected
+      email:          email,
+      checked_in:     is_parent_metadata ? false : checked_in,
+      visit_expected: visit_expected,
     }
 
     if meeting_details

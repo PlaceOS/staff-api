@@ -94,11 +94,11 @@ describe Bookings do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     BookingsHelper.create_booking(tenant.id)
     booking = BookingsHelper.create_booking(tenant_id: tenant.id,
-                                  user_id: "bob@example.com",
-                                  user_email: "bob@example.com",
-                                  asset_id: "asset-2",
-                                  zones: ["zone-4127", "zone-890"],
-                                  booking_end: 30.minutes.from_now.to_unix)
+      user_id: "bob@example.com",
+      user_email: "bob@example.com",
+      asset_id: "asset-2",
+      zones: ["zone-4127", "zone-890"],
+      booking_end: 30.minutes.from_now.to_unix)
 
     # Check both are returned in beginning
     response = IO::Memory.new
