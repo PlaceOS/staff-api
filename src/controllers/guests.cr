@@ -198,7 +198,7 @@ class Guests < Application
 
     events = Promise.all(guest.not_nil!.events(future_only, limit).map { |metadata|
       Promise.defer {
-        cal_id = metadata.resource_calendar.not_nil!
+        cal_id = metadata.host_email.not_nil!
         system = placeos_client.fetch(metadata.system_id.not_nil!)
         event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
         if event
