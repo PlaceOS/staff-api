@@ -532,11 +532,13 @@ class Events < Application
       end
       head(:not_found) unless calendar_id
 
-      # Get the event using the admin account
-      event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+      head(:not_found) unless eventmeta.try(&.host_email)
+
+      # Fetch the event from the host's mailbox
+      event = client.get_event(eventmeta.host_email, id: event_id)
       head(:not_found) unless event
 
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
       guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
       head(:not_found) unless guest
 
@@ -574,16 +576,11 @@ class Events < Application
 
       render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     elsif system_id = query_params["system_id"]?
-      # Need to grab the calendar associated with this system
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
-      cal_id = system.email
-      head(:not_found) unless cal_id
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+      head(:not_found) unless host_email = eventmeta.try(&.host_email)
 
-      event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+      # Fetch the event from the host's mailbox
+      event = client.get_event(host_email, id: event_id)
       head(:not_found) unless event
 
       parent_meta = false
@@ -592,7 +589,7 @@ class Events < Application
         metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
         parent_meta = true
       end
-      render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
+      render json: StaffApi::Event.augment(event.not_nil!, host_email, system, metadata, parent_meta)
     end
 
     head :bad_request
@@ -746,17 +743,19 @@ class Events < Application
     end
 
     guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-    eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
     head(:not_found) if guest.nil?
-
+    
+    eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+    # Todo: determine the event's HOST mailbox via event.icaluid, instead of assuming that event will exist in the system mailbox (it probably won't for o365)
     if eventmeta.nil?
       if cal_id = get_placeos_client.systems.fetch(system_id).email
-        event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+        event = client.get_event(cal_id, id: event_id)
         head(:not_found) if event.nil?
         eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id}) if event && event.recurring_event_id
         EventMetadata.migrate_recurring_metadata(system_id, event.not_nil!, eventmeta) if event && eventmeta
       end
     end
+    head(:not_found) unless host_email = eventmeta.try(&.host_email)
 
     attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
     if attendee
