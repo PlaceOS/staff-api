@@ -536,7 +536,7 @@ class Events < Application
       head(:not_found) unless host_email = eventmeta.try(&.host_email)
 
       # Fetch the event from the host's mailbox
-      event = client.get_event(eventmeta.host_email, id: event_id)
+      event = client.get_event(host_email, id: event_id)
       head(:not_found) unless event
 
       guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
