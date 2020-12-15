@@ -533,7 +533,7 @@ class Events < Application
       head(:not_found) unless calendar_id
 
       eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
-      head(:not_found) unless eventmeta.try(&.host_email)
+      head(:not_found) unless host_email = eventmeta.try(&.host_email)
 
       # Fetch the event from the host's mailbox
       event = client.get_event(eventmeta.host_email, id: event_id)
