@@ -765,7 +765,7 @@ class Events < Application
       guest_details = attendee.guest
 
       # Check the event is still on
-      event = client.get_event(user.email, id: event_id, calendar_id: eventmeta.not_nil!.resource_calendar)
+      event = client.get_event(host_email, id: event_id)
       head(:not_found) unless event && event.status != "cancelled"
 
       # Update PlaceOS with an signal "staff/guest/checkin"
