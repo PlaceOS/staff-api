@@ -14,14 +14,14 @@ class Bookings < Application
     user_id = user_token.id if user_id == "current" || zones.empty?
 
     results = Booking.query
+      .by_zones(zones)
       .by_tenant(tenant.id)
       .by_user_id(user_id)
-      .by_zones(zones)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         {starting: starting, ending: ending, booking_type: booking_type})
       .order_by("booking_start", "DESC")
-      .limit(1500)
+      .limit(20000)
       .to_a.map { |b| b.as_json }
 
     render json: results
