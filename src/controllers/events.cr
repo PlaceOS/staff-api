@@ -137,6 +137,7 @@ class Events < Application
         meta.host_email = host
         meta.ext_data = ext_data
         meta.tenant_id = tenant.id
+        meta.ical_uid = created_event.not_nil!.ical_uid.not_nil!
         meta.save!
 
         Log.info { "saving extension data for event #{created_event.not_nil!.id} in #{sys.id}" }
@@ -239,7 +240,7 @@ class Events < Application
 
     # Guests can only update the extension_data
     if user_token.scope.includes?("guest")
-      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
+      meta = EventMetadata.query.by_tenant(tenant.id).find({ical_uid: event.ical_uid})
       if meta.nil? && event.recurring_event_id
         if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
           meta = EventMetadata.new
@@ -703,6 +704,13 @@ class Events < Application
     render(json: [] of Nil) if query_params["calendar"]?
     system_id = query_params["system_id"]?
     render :bad_request, json: {error: "missing system_id param"} unless system_id
+
+    cal_id = get_placeos_client.systems.fetch(system_id).email
+    render(json: [] of Nil) unless cal_id
+
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    # get icaluid, filter for host email
+
 
     # Grab meeting metadata if it exists
     parent_meta = false

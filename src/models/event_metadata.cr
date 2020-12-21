@@ -7,6 +7,7 @@ class EventMetadata
 
   column system_id : String
   column event_id : String
+  column ical_uid : String
 
   column host_email : String
   column resource_calendar : String
