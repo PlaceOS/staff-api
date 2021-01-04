@@ -46,12 +46,16 @@ class Events < Application
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
     metadata_ids = [] of String
+    ical_uids = [] of String
     results.map { |(_calendar_id, system, event)|
       if system
         metadata_ids << event.id.not_nil!
+        ical_uids << event.ical_uid.not_nil!
+        # TODO:: how to deal with recurring events in Office365 where ical_uid is also different for each recurrance
         metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
       end
     }
+
     metadata_ids.uniq!
 
     # Don't perform the query if there are no calendar entries
@@ -60,14 +64,27 @@ class Events < Application
       data.each { |meta| metadatas[meta.event_id] = meta }
     end
 
+    # Metadata is stored against a resource calendar which in office365 can only
+    # be matched by the `ical_uid`
+    if client.client_id == :office365
+      ical_uids.uniq!
+
+      if !ical_uids.empty?
+        data = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?(ical_uids) }
+        data.each { |meta| metadatas[meta.ical_uid] = meta }
+      end
+    end
+
     # return array of standardised events
     render json: results.map { |(calendar_id, system, event)|
       parent_meta = false
       metadata = metadatas[event.id]?
       if metadata.nil? && event.recurring_event_id
         metadata = metadatas[event.recurring_event_id]?
-        parent_meta = true
+        parent_meta = true if metadata
       end
+      # Workaround for Office365 where ical_uid is unique for each occurance and event_id is different in each calendar
+      metadata = metadata || metadatas[event.ical_uid]? if client.client_id == :office365
       StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
     }
   end
@@ -103,10 +120,10 @@ class Events < Application
     input_event.event_start = input_event.event_start.in(zone)
     input_event.event_end = input_event.event_end.not_nil!.in(zone)
 
-    created_event = client.create_event(user_id: host, event: input_event, calendar_id: host)
+    created_event = client.create_event(user_id: host, event: input_event, calendar_id: host).not_nil!
 
     # Update PlaceOS with an signal "/staff/event/changed"
-    if system && created_event
+    if system
       sys = system.not_nil!
 
       # Grab the list of externals that might be attending
@@ -118,7 +135,7 @@ class Events < Application
         placeos_client.root.signal("staff/event/changed", {
           action:    :create,
           system_id: input_event.system_id,
-          event_id:  created_event.not_nil!.id,
+          event_id:  created_event.id,
           host:      host,
           resource:  sys.email,
           ext_data:  input_event.extension_data,
@@ -130,17 +147,18 @@ class Events < Application
       if ext_data || (attending && !attending.empty?)
         meta = EventMetadata.new
         meta.system_id = sys.id.not_nil!
-        meta.event_id = created_event.not_nil!.id.not_nil!
-        meta.event_start = created_event.not_nil!.event_start.not_nil!.to_unix
-        meta.event_end = created_event.not_nil!.event_end.not_nil!.to_unix
+        meta.event_id = created_event.id.not_nil!
+        meta.recurring_master_id = created_event.recurring_event_id || created_event.id if created_event.recurring
+        meta.event_start = created_event.event_start.not_nil!.to_unix
+        meta.event_end = created_event.event_end.not_nil!.to_unix
         meta.resource_calendar = sys.email.not_nil!
         meta.host_email = host
         meta.ext_data = ext_data
         meta.tenant_id = tenant.id
-        meta.ical_uid = created_event.not_nil!.ical_uid.not_nil!
+        meta.ical_uid = created_event.ical_uid.not_nil!
         meta.save!
 
-        Log.info { "saving extension data for event #{created_event.not_nil!.id} in #{sys.id}" }
+        Log.info { "saving extension data for event #{created_event.id} in #{sys.id}" }
 
         if attending
           # Create guests
@@ -183,11 +201,11 @@ class Events < Application
               placeos_client.root.signal("staff/guest/attending", {
                 action:         :meeting_created,
                 system_id:      sys.id,
-                event_id:       created_event.not_nil!.id,
+                event_id:       created_event.id,
                 host:           host,
                 resource:       sys.email,
-                event_summary:  created_event.not_nil!.body,
-                event_starting: created_event.not_nil!.event_start.not_nil!.to_unix,
+                event_summary:  created_event.body,
+                event_starting: created_event.event_start.not_nil!.to_unix,
                 attendee_name:  attendee.name,
                 attendee_email: attendee.email,
               })
@@ -195,15 +213,15 @@ class Events < Application
           end
         end
 
-        render json: StaffApi::Event.augment(created_event.not_nil!, sys.email, sys, meta)
+        render json: StaffApi::Event.augment(created_event, sys.email, sys, meta)
       end
 
-      Log.info { "no extension data for event #{created_event.not_nil!.id} in #{sys.id}, #{ext_data}" }
-      render json: StaffApi::Event.augment(created_event.not_nil!, sys.email, sys)
+      Log.info { "no extension data for event #{created_event.id} in #{sys.id}, #{ext_data}" }
+      render json: StaffApi::Event.augment(created_event, sys.email, sys)
     end
 
-    Log.info { "no system provided for event #{created_event.not_nil!.id}" }
-    render json: StaffApi::Event.augment(created_event.not_nil!, host)
+    Log.info { "no system provided for event #{created_event.id}" }
+    render json: StaffApi::Event.augment(created_event, host)
   end
 
   def update
@@ -238,30 +256,19 @@ class Events < Application
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     head(:not_found) unless event
 
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id
+    end
+
     # Guests can only update the extension_data
     if user_token.scope.includes?("guest")
-      meta = EventMetadata.query.by_tenant(tenant.id).find({ical_uid: event.ical_uid})
-      if meta.nil? && event.recurring_event_id
-        if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
-          meta = EventMetadata.new
-          meta.ext_data = old_meta.ext_data
-        end
-      end
-      meta = meta || EventMetadata.new
-
-      # Only assign values if we are creating metadata
-      unless meta.persisted?
-        meta.system_id = system_id.not_nil!
-        meta.event_id = event.id.not_nil!
-        meta.event_start = event.event_start.not_nil!.to_unix
-        meta.event_end = event.event_end.not_nil!.to_unix
-        meta.resource_calendar = system.not_nil!.email.not_nil!
-        meta.host_email = event.host.not_nil!
-        meta.tenant_id = tenant.id
-      end
+      # We expect the metadata to exist when a guest is accessing
+      meta = get_migrated_metadata(event, system_id.not_nil!).not_nil!
 
       if extension_data = changes.extension_data
-        meta_ext_data = meta.not_nil!.ext_data
+        meta_ext_data = meta.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
@@ -350,25 +357,17 @@ class Events < Application
       end
     end
 
-    updated_event = client.update_event(user_id: host, event: changes, calendar_id: host)
+    updated_event = client.update_event(user_id: host, event: changes, calendar_id: host).not_nil!
 
     if system
-      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
-
-      # migrate the parent metadata to this event if not existing
-      if meta.nil? && event.recurring_event_id
-        if old_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
-          meta = EventMetadata.new
-          meta.ext_data = old_meta.ext_data
-        end
-      end
-
-      meta = meta || EventMetadata.new
+      meta = get_migrated_metadata(event, system_id.not_nil!) || EventMetadata.new
 
       # Changing the room if applicable
       meta.system_id = system.id.not_nil!
 
       meta.event_id = event.id.not_nil!
+      meta.ical_uid = updated_event.ical_uid.not_nil!
+      meta.recurring_master_id = updated_event.recurring_event_id || updated_event.id if updated_event.recurring
       meta.event_start = changes.not_nil!.event_start.not_nil!.to_unix
       meta.event_end = changes.not_nil!.event_end.not_nil!.to_unix
       meta.resource_calendar = system.email.not_nil!
@@ -493,7 +492,7 @@ class Events < Application
       end
 
       # Reloading meta with attendees and guests to avoid n+1
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id})
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id, system_id: system.not_nil!.id.not_nil!})
 
       # Update PlaceOS with an signal "staff/event/changed"
       spawn do
@@ -537,7 +536,7 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
       head(:not_found) unless event
 
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({ical_uid: event.ical_uid})
       guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
       head(:not_found) unless guest
 
@@ -710,7 +709,6 @@ class Events < Application
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     # get icaluid, filter for host email
-
 
     # Grab meeting metadata if it exists
     parent_meta = false
