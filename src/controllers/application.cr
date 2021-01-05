@@ -146,7 +146,7 @@ abstract class Application < ActionController::Base
 
   def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
-    if meta.nil? && event.recurring_event_id && event.recurring_event_id != event.id
+    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
       meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
     end
     meta
@@ -154,7 +154,7 @@ abstract class Application < ActionController::Base
 
   def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
-    if meta.nil? && event.recurring_event_id && event.recurring_event_id != event.id
+    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
       if original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
         meta = EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
       end

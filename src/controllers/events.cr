@@ -259,7 +259,7 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id
+      event_id = event.id.not_nil!
     end
 
     # Guests can only update the extension_data
@@ -532,23 +532,23 @@ class Events < Application
       end
       head(:not_found) unless calendar_id
 
+      guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
+      head(:not_found) unless guest
+
       # Get the event using the admin account
       event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
       head(:not_found) unless event
 
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).find({ical_uid: event.ical_uid})
-      guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-      head(:not_found) unless guest
-
-      attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.try(&.id)})
-
-      # check recurring master
-      if attendee.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
-        master_metadata_id = event.recurring_event_id
-        eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: master_metadata_id})
-        attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.try(&.id)})
+      # ensure we have the host event details
+      if client.client_id == :office365 && event.host != calendar_id
+        event = get_hosts_event(event)
+        event_id = event.id
       end
+
+      eventmeta = get_event_metadata(event, system_id)
       head(:not_found) unless eventmeta
+
+      attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.id})
 
       if attendee
         begin
@@ -586,12 +586,14 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
       head(:not_found) unless event
 
-      parent_meta = false
-      metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id})
-      if event.recurring_event_id && event.id != event.recurring_event_id
-        metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id})
-        parent_meta = true
+      # ensure we have the host event details
+      if client.client_id == :office365 && event.host != calendar_id
+        event = get_hosts_event(event)
+        event_id = event.id.not_nil!
       end
+
+      metadata = get_event_metadata(event, system_id)
+      parent_meta = metadata && metadata.event_id != event.id
       render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
     end
 
@@ -633,7 +635,13 @@ class Events < Application
       head(:forbidden) unless system && !check_access(user.roles, system).none?
     end
 
-    client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id.not_nil!
+    end
+
+    client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
 
     if system
       EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id}).try &.delete
@@ -679,6 +687,23 @@ class Events < Application
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     head(:not_found) unless event
 
+    # User details
+    user_email = user.email
+    host = event.host || user_email
+
+    # check permisions
+    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+      # may be able to delete on behalf of the user
+      head(:forbidden) unless system && !check_access(user.roles, system).none?
+    end
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id
+    end
+
     # Existing attendees without system
     attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
     # Adding back system with correct status
@@ -690,7 +715,7 @@ class Events < Application
     updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
 
     # Return the full event details
-    metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
+    metadata = get_event_metadata(event, system_id)
 
     render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
@@ -708,18 +733,17 @@ class Events < Application
     render(json: [] of Nil) unless cal_id
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    # get icaluid, filter for host email
+    head(:not_found) unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id
+    end
 
     # Grab meeting metadata if it exists
-    parent_meta = false
-    metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
-    if metadata.nil?
-      if cal_id = get_placeos_client.systems.fetch(system_id).email
-        event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-        metadata = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id}) if event && event.recurring_event_id
-        parent_meta = !!metadata
-      end
-    end
+    metadata = get_event_metadata(event, system_id)
+    parent_meta = metadata && metadata.event_id != event.id
     render(json: [] of Nil) unless metadata
 
     # Find anyone who is attending
@@ -752,17 +776,22 @@ class Events < Application
     end
 
     guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-    eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id})
     head(:not_found) if guest.nil?
 
-    if eventmeta.nil?
-      if cal_id = get_placeos_client.systems.fetch(system_id).email
-        event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-        head(:not_found) if event.nil?
-        eventmeta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id}) if event && event.recurring_event_id
-        EventMetadata.migrate_recurring_metadata(system_id, event.not_nil!, eventmeta) if event && eventmeta
-      end
+    cal_id = get_placeos_client.systems.fetch(system_id).email
+    head(:not_found) unless cal_id
+
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    head(:not_found) if event.nil?
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id.not_nil!
     end
+
+    eventmeta = get_migrated_metadata(event, system_id)
+    head(:not_found) unless eventmeta
 
     attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
     if attendee
@@ -772,7 +801,8 @@ class Events < Application
       guest_details = attendee.guest
 
       # Check the event is still on
-      event = client.get_event(user.email, id: event_id, calendar_id: eventmeta.not_nil!.resource_calendar)
+      host_email = eventmeta.not_nil!.host_email
+      event = client.get_event(host_email, id: event_id)
       head(:not_found) unless event && event.status != "cancelled"
 
       # Update PlaceOS with an signal "staff/guest/checkin"
@@ -782,7 +812,7 @@ class Events < Application
           checkin:        checkin,
           system_id:      system_id,
           event_id:       event_id,
-          host:           eventmeta.not_nil!.host_email,
+          host:           host_email,
           resource:       eventmeta.not_nil!.resource_calendar,
           event_summary:  event.not_nil!.body,
           event_starting: eventmeta.not_nil!.event_start,
