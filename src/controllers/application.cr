@@ -135,4 +135,30 @@ abstract class Application < ActionController::Base
       end
     end
   end
+
+  def get_hosts_event(event : PlaceCalendar::Event) : PlaceCalendar::Event
+    start_time = event.event_start.at_beginning_of_day
+    end_time = event.event_end.not_nil!.at_end_of_day
+    ical_uid = event.ical_uid.not_nil!
+    host_cal = event.host.not_nil!
+    client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
+  end
+
+  def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+    meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
+    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+    end
+    meta
+  end
+
+  def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+    meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
+    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+      if original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+        meta = EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
+      end
+    end
+    meta
+  end
 end

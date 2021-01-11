@@ -48,14 +48,19 @@ class Guests < Application
       response.headers["X-Calendar-Errors"] = errors.to_s if errors > 0
 
       # Grab any existing eventmeta data
+      ical_uids = Set(String).new
       metadata_ids = Set(String).new
       metadata_recurring_ids = Set(String).new
       meeting_lookup = {} of String => Tuple(String, PlaceOS::Client::API::Models::System, PlaceCalendar::Event)
       results.each { |(calendar_id, system, event)|
         if system
+          ical_uid = event.ical_uid.not_nil!
+          ical_uids << ical_uid
           metadata_id = event.id.not_nil!
           metadata_ids << metadata_id
-          meeting_lookup[metadata_id] = {calendar_id, system, event}
+          tuple = {calendar_id, system, event}
+          meeting_lookup[ical_uid] = tuple
+          meeting_lookup[metadata_id] = tuple
           if event.recurring_event_id && event.id != event.recurring_event_id
             metadata_id = event.recurring_event_id.not_nil!
             metadata_ids << metadata_id
@@ -71,12 +76,20 @@ class Guests < Application
       # Return the guests visiting today
       attendees = {} of String => Attendee
 
-      Attendee.query
+      query = Attendee.query
         .with_guest
         .by_tenant(tenant.id)
         .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
         .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
-        .where { event_metadatas.event_id.in?(metadata_ids.to_a) }.each do |attend|
+
+      case client.client_id
+      when :office365
+        query = query.where { event_metadatas.ical_uid.in?(ical_uids.to_a) }
+      else
+        query = query.where { event_metadatas.event_id.in?(metadata_ids.to_a) }
+      end
+
+      query.each do |attend|
         attend.checked_in = false if attend.event_metadata.event_id.in?(metadata_recurring_ids)
         attendees[attend.guest.email] = attend
       end
@@ -93,7 +106,7 @@ class Guests < Application
         attending_guest(visitor, guests[email]?)
         # Prevent a database lookup
         meeting_event = nil
-        if meet = meeting_lookup[visitor.event_metadata.event_id]?
+        if meet = (meeting_lookup[visitor.event_metadata.event_id]? || meeting_lookup[visitor.event_metadata.ical_uid]?)
           _calendar_id, _system, meeting_event = meet
         end
         attending_guest(visitor, guests[email]?, meeting_details: meeting_event)
@@ -198,7 +211,7 @@ class Guests < Application
 
     events = Promise.all(guest.not_nil!.events(future_only, limit).map { |metadata|
       Promise.defer {
-        cal_id = metadata.resource_calendar.not_nil!
+        cal_id = metadata.host_email.not_nil!
         system = placeos_client.fetch(metadata.system_id.not_nil!)
         event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
         if event
