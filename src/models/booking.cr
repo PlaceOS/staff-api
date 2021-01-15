@@ -36,6 +36,10 @@ class Booking
     user_id ? where { var("bookings", "user_id") == user_id } : self
   end
 
+  scope :by_user_email do |user_email|
+    user_email ? where { var("bookings", "user_email") == user_email } : self
+  end
+
   # Bookings have the zones in an array.
   #
   # In case of multiple zones as input,
