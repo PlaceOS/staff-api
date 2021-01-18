@@ -236,7 +236,10 @@ module BookingsHelper
                      zones = ["zone-1234", "zone-4567", "zone-890"],
                      booking_type = "desk",
                      booking_start = 5.minutes.from_now.to_unix,
-                     booking_end = 1.hour.from_now.to_unix)
+                     booking_end = 1.hour.from_now.to_unix,
+                     booked_by_email = "jon@example.com",
+                     booked_by_id = "jon@example.com",
+                     booked_by_name = "Jon Smith")
     booking = Booking.new
     booking.tenant_id = tenant_id
     booking.user_id = user_id
@@ -250,6 +253,9 @@ module BookingsHelper
     booking.checked_in = false
     booking.approved = false
     booking.rejected = false
+    booking.booked_by_email = booked_by_email
+    booking.booked_by_id = booked_by_id
+    booking.booked_by_name = booked_by_name
     booking.save!
   end
 end
