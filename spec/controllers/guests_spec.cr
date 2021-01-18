@@ -1,10 +1,7 @@
 require "../spec_helper"
+require "./helpers/spec_clean_up"
 
 describe Guests do
-  Spec.after_each do
-    Guest.query.each { |record| record.delete }
-    EventMetadata.query.each { |record| record.delete }
-  end
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 

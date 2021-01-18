@@ -1,10 +1,7 @@
 require "../spec_helper"
+require "./helpers/spec_clean_up"
 
 describe Bookings do
-  Spec.after_each do
-    Booking.query.each { |record| record.delete }
-  end
-
   describe "#index" do
     it "should return a list of bookings" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
