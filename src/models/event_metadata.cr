@@ -17,7 +17,7 @@ class EventMetadata
 
   column ext_data : JSON::Any?
 
-  belongs_to tenant : Tenant, foreign_key: "tenant_id"
+  belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "event_id"
 
   scope :by_tenant do |tenant_id|

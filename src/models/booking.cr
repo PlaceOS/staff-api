@@ -33,7 +33,7 @@ class Booking
 
   column ext_data : JSON::Any?
 
-  belongs_to tenant : Tenant, foreign_key: "tenant_id"
+  belongs_to tenant : Tenant
 
   scope :by_tenant do |tenant_id|
     where { var("bookings", "tenant_id") == tenant_id }

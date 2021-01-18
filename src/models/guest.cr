@@ -15,7 +15,7 @@ class Guest
   column searchable : String?
   column ext_data : JSON::Any?
 
-  belongs_to tenant : Tenant, foreign_key: "tenant_id"
+  belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "guest_id"
 
   # Save searchable information
