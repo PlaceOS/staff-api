@@ -77,13 +77,13 @@ class Guest
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
         .where("attendees.guest_id = :guest_id AND event_metadatas.event_end >= :now", {guest_id: id, now: Time.utc.to_unix})
-        .order_by(event_start: "ASC")
+        .order_by(:event_start, :asc)
         .limit(limit)
     else
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
         .where("attendees.guest_id = :guest_id", {guest_id: id})
-        .order_by(event_start: "ASC")
+        .order_by(:event_start, :asc)
         .limit(limit)
     end
   end

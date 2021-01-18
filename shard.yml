@@ -13,7 +13,7 @@ dependencies:
     github: PlaceOS/calendar
 
   clear:
-    github: anykeyh/clear
+    github: place-labs/clear
     branch: master
 
   promise:

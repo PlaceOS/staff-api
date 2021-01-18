@@ -14,10 +14,7 @@ require "./migrations/*"
 # Granite::Connections << Granite::Adapter::Pg.new(name: "pg", url: App::PG_DATABASE_URL)
 
 # Configure Clear ORM
-Clear::SQL.init(
-  App::PG_DATABASE_URL,
-  connection_pool_size: App::PG_CONNECTION_POOL_SIZE
-)
+Clear::SQL.init(App::PG_DATABASE_URL)
 Clear::Migration::Manager.instance.apply_all
 
 # Server required after application controllers
