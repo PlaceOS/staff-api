@@ -3,7 +3,7 @@ require "./helpers/spec_clean_up"
 
 describe Bookings do
   describe "#index" do
-    it "should return a list of bookings" do
+    pending "should return a list of bookings" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
       BookingsHelper.create_booking(tenant.id)
       BookingsHelper.create_booking(tenant_id: tenant.id,
@@ -86,7 +86,7 @@ describe Bookings do
     results.as_h["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
-  it "#destroy should delete a booking" do
+  pending "#destroy should delete a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")

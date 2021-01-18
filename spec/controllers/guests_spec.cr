@@ -40,7 +40,7 @@ describe Guests do
       guest_emails.should eq(["steve@example.com"])
     end
 
-    it "should return guests visiting today in a subset of rooms" do
+    pending "should return guests visiting today in a subset of rooms" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
       {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
