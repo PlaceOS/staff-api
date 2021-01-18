@@ -102,9 +102,9 @@ class Bookings < Application
         })
       end
 
-      render json: booking.as_json, status: HTTP::Status::CREATED
+      render :created, json: booking.as_json
     else
-      render json: booking.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: booking.errors.map(&.to_s)
     end
   end
 
@@ -250,7 +250,7 @@ class Bookings < Application
 
       render json: booking.as_json
     else
-      render json: booking.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: booking.errors.map(&.to_s)
     end
   end
 

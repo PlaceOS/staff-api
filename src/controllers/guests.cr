@@ -172,9 +172,9 @@ class Guests < Application
 
     if guest.not_nil!.save
       attendee = guest.not_nil!.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest), status: HTTP::Status::OK
+      render json: attending_guest(attendee, guest)
     else
-      render json: guest.not_nil!.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: guest.not_nil!.errors.map(&.to_s)
     end
   end
 
@@ -191,9 +191,9 @@ class Guests < Application
     guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
     if guest.save
       attendee = guest.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest), status: HTTP::Status::CREATED
+      render :created, json: attending_guest(attendee, guest)
     else
-      render json: guest.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: guest.errors.map(&.to_s)
     end
   end
 
