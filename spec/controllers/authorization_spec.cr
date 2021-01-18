@@ -1,7 +1,7 @@
 require "../spec_helper"
 
 describe "Authorization" do
-  it "should 403 if the domain in the header doesn't match the token" do
+  it "raise Error::Unauthorized (status: 403) if the domain in the header doesn't match the token" do
     headers = HTTP::Headers{
       "Host"          => "wrong.staff-api.dev",
       "Authorization" => "Bearer #{office_mock_token}",
@@ -15,7 +15,7 @@ describe "Authorization" do
     end
   end
 
-  it "should 403 if the token is invalid" do
+  it "raise Error::Unauthorized (status: 403) if the token is invalid" do
     headers = HTTP::Headers{
       "Host"          => "toby.staff-api.dev",
       "Authorization" => "Bearer #{office_mock_token}e",

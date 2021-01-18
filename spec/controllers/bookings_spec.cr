@@ -5,72 +5,74 @@ describe Bookings do
     Booking.query.each { |record| record.delete }
   end
 
-  it "#index should return a list of bookings" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant.id)
-    BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "bob@example.com",
-      user_email: "bob@example.com",
-      asset_id: "asset-2",
-      zones: ["zone-4127", "zone-890"],
-      booking_end: 30.minutes.from_now.to_unix)
+  describe "#index" do
+    it "should return a list of bookings" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      BookingsHelper.create_booking(tenant.id)
+      BookingsHelper.create_booking(tenant_id: tenant.id,
+        user_id: "bob@example.com",
+        user_email: "bob@example.com",
+        asset_id: "asset-2",
+        zones: ["zone-4127", "zone-890"],
+        booking_end: 30.minutes.from_now.to_unix)
 
-    starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(2)
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(2)
 
-    # filter by zones
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      # filter by zones
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(1)
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(1)
 
-    # More filters by zones
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      # More filters by zones
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(2)
-  end
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(2)
+    end
 
-  it "#index should return a list of bookings when filtered by user" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "toby@redant.com.au")
-    BookingsHelper.create_booking(tenant.id)
+    it "should return a list of bookings when filtered by user" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      BookingsHelper.create_booking(tenant_id: tenant.id,
+        user_id: "toby@redant.com.au")
+      BookingsHelper.create_booking(tenant.id)
 
-    starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
 
-    # Since we are using Toby's token to login, user=current means Toby
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      # Since we are using Toby's token to login, user=current means Toby
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    results = JSON.parse(ctx.response.output.to_s)
-    booking_user_ids = results.as_a.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["toby@redant.com.au"])
+      results = JSON.parse(ctx.response.output.to_s)
+      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      booking_user_ids.should eq(["toby@redant.com.au"])
 
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    results = JSON.parse(ctx.response.output.to_s)
-    booking_user_ids = results.as_a.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["jon@example.com"])
+      results = JSON.parse(ctx.response.output.to_s)
+      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      booking_user_ids.should eq(["jon@example.com"])
+    end
   end
 
   it "#show should find booking" do

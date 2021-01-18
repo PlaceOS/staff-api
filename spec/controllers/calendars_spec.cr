@@ -15,7 +15,7 @@ describe Calendars do
     ctx.response.status_code.should eq(200)
   end
 
-  it "should return list of available calendars" do
+  it "#availability should return list of available calendars" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
