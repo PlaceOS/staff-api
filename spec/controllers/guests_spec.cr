@@ -179,7 +179,7 @@ describe Guests do
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/generic_event")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/user@example.com/calendar/events/generic_event")
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
     {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
       WebMock
