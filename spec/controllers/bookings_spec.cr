@@ -15,30 +15,32 @@ describe Bookings do
       zones: ["zone-4127", "zone-890"],
       booking_end: 30.minutes.from_now.to_unix)
 
-    response = IO::Memory.new
-
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_a.size.should eq(2)
 
     # filter by zones
-    response = IO::Memory.new
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_a.size.should eq(1)
 
     # More filters by zones
-    response = IO::Memory.new
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_a.size.should eq(2)
   end
 
@@ -48,24 +50,25 @@ describe Bookings do
       user_id: "toby@redant.com.au")
     BookingsHelper.create_booking(tenant.id)
 
-    response = IO::Memory.new
-
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
 
     # Since we are using Toby's token to login, user=current means Toby
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
     booking_user_ids = results.as_a.map { |r| r["user_id"] }
     booking_user_ids.should eq(["toby@redant.com.au"])
 
-    response = IO::Memory.new
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
 
-    results = extract_json(response)
+    results = JSON.parse(ctx.response.output.to_s)
     booking_user_ids = results.as_a.map { |r| r["user_id"] }
     booking_user_ids.should eq(["jon@example.com"])
   end
@@ -74,13 +77,12 @@ describe Bookings do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     booking = BookingsHelper.create_booking(tenant.id)
 
-    response = IO::Memory.new
-    context = context("GET", "/api/staff/v1/bookings/#{booking.id}", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => booking.id.to_s}
-    Bookings.new(context).show
+    ctx = context("GET", "/api/staff/v1/bookings/#{booking.id}", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).show
 
-    results = extract_json(response)
-
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_h["user_id"].should eq("jon@example.com")
     results.as_h["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
@@ -101,24 +103,27 @@ describe Bookings do
       booking_end: 30.minutes.from_now.to_unix)
 
     # Check both are returned in beginning
-    response = IO::Memory.new
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
-    results = extract_json(response)
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).index
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_a.size.should eq(2)
 
-    context = context("DELETE", "/api/staff/v1/bookings/#{booking.id}/", OFFICE365_HEADERS)
-    context.route_params = {"id" => booking.id.not_nil!.to_s}
-    Bookings.new(context).destroy
+    ctx = context("DELETE", "/api/staff/v1/bookings/#{booking.id}/", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.not_nil!.to_s}
+    Bookings.new(ctx).destroy
 
     # Check only one is returned after deletion
-    response = IO::Memory.new
     route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    Bookings.new(context("GET", route, OFFICE365_HEADERS, response_io: response)).index
+    ctx = context("GET", route, OFFICE365_HEADERS)
+    ctx.response.output = IO::Memory.new
 
-    results = extract_json(response)
+    Bookings.new(ctx).index
+
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_a.size.should eq(1)
   end
 
@@ -134,11 +139,11 @@ describe Bookings do
     body = IO::Memory.new
     body << %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})
     body.rewind
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/bookings/", OFFICE365_HEADERS, body, response_io: response)
-    Bookings.new(context).create
+    ctx = context("POST", "/api/staff/v1/bookings/", OFFICE365_HEADERS, body)
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).create
 
-    created = extract_json(response).as_h
+    created = JSON.parse(ctx.response.output.to_s).as_h
     created["asset_id"].should eq("some_desk")
     created["booking_start"].should eq(starting)
     created["booking_end"].should eq(ending)
@@ -147,12 +152,12 @@ describe Bookings do
     body = IO::Memory.new
     body << %({"extension_data":{"other":"stuff"}})
     body.rewind
-    response = IO::Memory.new
-    context = context("PATCH", "/api/staff/v1/bookings/#{created["id"]}", OFFICE365_HEADERS, body, response_io: response)
-    context.route_params = {"id" => created["id"].to_s}
-    Bookings.new(context).update
+    ctx = context("PATCH", "/api/staff/v1/bookings/#{created["id"]}", OFFICE365_HEADERS, body)
+    ctx.route_params = {"id" => created["id"].to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).update
 
-    updated = extract_json(response).as_h
+    updated = JSON.parse(ctx.response.output.to_s).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
     booking = Booking.query.find({id: updated["id"]}).not_nil!
     booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
@@ -167,13 +172,12 @@ describe Bookings do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     booking = BookingsHelper.create_booking(tenant.id)
 
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/bookings/#{booking.id}/approve", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => booking.id.to_s}
-    Bookings.new(context).approve
+    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/approve", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).approve
 
-    results = extract_json(response)
-
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_h["approved"].should eq(true)
     results.as_h["approver_id"].should eq("toby@redant.com.au")
     results.as_h["approver_email"].should eq("dev@acaprojects.com")
@@ -181,13 +185,12 @@ describe Bookings do
     results.as_h["rejected"].should eq(false)
 
     # Test rejection
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/bookings/#{booking.id}/reject", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => booking.id.to_s}
-    Bookings.new(context).reject
+    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/reject", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).reject
 
-    results = extract_json(response)
-
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_h["rejected"].should eq(true)
     results.as_h["approved"].should eq(false)
     # Reset approver info
@@ -205,22 +208,20 @@ describe Bookings do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     booking = BookingsHelper.create_booking(tenant.id)
 
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=true", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => booking.id.to_s}
-    Bookings.new(context).check_in
+    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=true", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).check_in
 
-    results = extract_json(response)
-
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_h["checked_in"].should eq(true)
 
-    response = IO::Memory.new
-    context = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=false", OFFICE365_HEADERS, response_io: response)
-    context.route_params = {"id" => booking.id.to_s}
-    Bookings.new(context).check_in
+    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=false", OFFICE365_HEADERS)
+    ctx.route_params = {"id" => booking.id.to_s}
+    ctx.response.output = IO::Memory.new
+    Bookings.new(ctx).check_in
 
-    results = extract_json(response)
-
+    results = JSON.parse(ctx.response.output.to_s)
     results.as_h["checked_in"].should eq(false)
   end
 end

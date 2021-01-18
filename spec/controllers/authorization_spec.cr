@@ -7,8 +7,7 @@ describe "Authorization" do
       "Authorization" => "Bearer #{office_mock_token}",
     }
 
-    response = IO::Memory.new
-    calendars = Calendars.new(context("GET", "/api/staff/v1/calendars", headers, response_io: response))
+    calendars = Calendars.new(context("GET", "/api/staff/v1/calendars", headers))
 
     # Test the instance method of the controller
     expect_raises(Error::Unauthorized) do
@@ -22,8 +21,7 @@ describe "Authorization" do
       "Authorization" => "Bearer #{office_mock_token}e",
     }
 
-    response = IO::Memory.new
-    calendars = Calendars.new(context("GET", "/api/staff/v1/calendars", headers, response_io: response))
+    calendars = Calendars.new(context("GET", "/api/staff/v1/calendars", headers))
 
     # Test the instance method of the controller
     expect_raises(Error::Unauthorized) do
