@@ -670,56 +670,6 @@ class Events < Application
     update_status("declined")
   end
 
-  def update_status(status)
-    event_id = route_params["id"]
-    system_id = query_params["system_id"]
-
-    # Check this system has an associated resource
-    begin
-      system = get_placeos_client.systems.fetch(system_id)
-    rescue _ex : ::PlaceOS::Client::API::Error
-      head(:not_found)
-    end
-    cal_id = system.email
-    head(:not_found) unless cal_id
-
-    # Check the event was in the calendar
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
-
-    # User details
-    user_email = user.email
-    host = event.host || user_email
-
-    # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
-      # may be able to delete on behalf of the user
-      head(:forbidden) unless system && !check_access(user.roles, system).none?
-    end
-
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id
-    end
-
-    # Existing attendees without system
-    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
-    # Adding back system with correct status
-    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
-
-    event.not_nil!.attendees = attendees
-
-    # Update the event (user must be a resource approver)
-    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
-
-    # Return the full event details
-    metadata = get_event_metadata(event, system_id)
-
-    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
-  end
-
   #
   # Event Guest management
   #
@@ -826,5 +776,55 @@ class Events < Application
     else
       head :not_found
     end
+  end
+
+  private def update_status(status)
+    event_id = route_params["id"]
+    system_id = query_params["system_id"]
+
+    # Check this system has an associated resource
+    begin
+      system = get_placeos_client.systems.fetch(system_id)
+    rescue _ex : ::PlaceOS::Client::API::Error
+      head(:not_found)
+    end
+    cal_id = system.email
+    head(:not_found) unless cal_id
+
+    # Check the event was in the calendar
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    head(:not_found) unless event
+
+    # User details
+    user_email = user.email
+    host = event.host || user_email
+
+    # check permisions
+    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+      # may be able to delete on behalf of the user
+      head(:forbidden) unless system && !check_access(user.roles, system).none?
+    end
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id
+    end
+
+    # Existing attendees without system
+    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
+    # Adding back system with correct status
+    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
+
+    event.not_nil!.attendees = attendees
+
+    # Update the event (user must be a resource approver)
+    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
+
+    # Return the full event details
+    metadata = get_event_metadata(event, system_id)
+
+    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
 end

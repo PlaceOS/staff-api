@@ -228,7 +228,7 @@ class Guests < Application
   #              Helper Methods
   # ============================================
 
-  def find_guest
+  private def find_guest
     guest = Guest.query
       .by_tenant(tenant.id)
       .find({email: route_params["id"].downcase})

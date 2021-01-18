@@ -212,7 +212,7 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
-  def find_booking
+  private def find_booking
     booking = Booking.query
       .by_tenant(tenant.id)
       .find({id: route_params["id"].to_i64})
@@ -222,14 +222,14 @@ class Bookings < Application
     booking
   end
 
-  def check_access
+  private def check_access
     user = user_token
     if booking && booking.not_nil!.user_id != user.id
       head :forbidden unless user.is_admin? || user.is_support?
     end
   end
 
-  def update_booking(booking, signal = "changed")
+  private def update_booking(booking, signal = "changed")
     if booking.save
       spawn do
         get_placeos_client.root.signal("staff/booking/changed", {
@@ -254,7 +254,7 @@ class Bookings < Application
     end
   end
 
-  def set_approver(booking, approved : Bool)
+  private def set_approver(booking, approved : Bool)
     # In case of rejections reset approver related information
     booking.approver_id = approved ? user_token.id : nil
     booking.approver_email = approved ? user.email : nil
