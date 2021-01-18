@@ -3,8 +3,8 @@ class Attendee
 
   column id : Int64, primary: true, presence: false
 
-  column checked_in : Bool = false
-  column visit_expected : Bool = true
+  column checked_in : Bool
+  column visit_expected : Bool
   column guest_id : Int64
 
   belongs_to tenant : Tenant, foreign_key: "tenant_id"

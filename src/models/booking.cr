@@ -7,7 +7,7 @@ class Booking
   column user_email : String
   column user_name : String
   column asset_id : String
-  column zones : Array(String) = [] of String
+  column zones : Array(String)
 
   column booking_type : String
   column booking_start : Int64
@@ -16,10 +16,10 @@ class Booking
 
   column title : String?
   column description : String?
-  column checked_in : Bool = false
+  column checked_in : Bool
 
-  column rejected : Bool = false
-  column approved : Bool = false
+  column rejected : Bool
+  column approved : Bool
   column approver_id : String?
   column approver_email : String?
   column approver_name : String?

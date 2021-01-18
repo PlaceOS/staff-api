@@ -19,10 +19,10 @@ class CreateBookingsMigration
 
         t.column :title, :string
         t.column :description, :string
-        t.column :checked_in, :boolean, default: false
+        t.column :checked_in, :boolean, default: "false"
 
-        t.column :rejected, :boolean, default: false
-        t.column :approved, :boolean, default: false
+        t.column :rejected, :boolean, default: "false"
+        t.column :approved, :boolean, default: "false"
         t.column :approver_id, :string
         t.column :approver_email, :string
         t.column :approver_name, :string

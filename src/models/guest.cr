@@ -10,8 +10,8 @@ class Guest
   column organisation : String?
   column notes : String?
   column photo : String?
-  column banned : Bool = false
-  column dangerous : Bool = false
+  column banned : Bool
+  column dangerous : Bool
   column searchable : String?
   column ext_data : JSON::Any?
 
