@@ -7,7 +7,7 @@ class Booking
   column user_email : String
   column user_name : String
   column asset_id : String
-  column zones : Array(String)
+  column zones : Array(String)? # default in migration
 
   column booking_type : String
   column booking_start : Int64
@@ -16,10 +16,10 @@ class Booking
 
   column title : String?
   column description : String?
-  column checked_in : Bool
+  column checked_in : Bool? # default in migration
 
-  column rejected : Bool
-  column approved : Bool
+  column rejected : Bool? # default in migration
+  column approved : Bool? # default in migration
   column approver_id : String?
   column approver_email : String?
   column approver_name : String?

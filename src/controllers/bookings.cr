@@ -34,12 +34,10 @@ class Bookings < Application
     parsed = JSON.parse(request.body.not_nil!).as_h
     booking = Booking.new(parsed)
 
-    unless booking.booking_start_column.defined? &&
-           booking.booking_end_column.defined? &&
-           booking.booking_type_column.defined? &&
-           booking.asset_id_column.defined?
-      head :bad_request
-    end
+    head :bad_request unless booking.booking_start_column.defined? &&
+                             booking.booking_end_column.defined? &&
+                             booking.booking_type_column.defined? &&
+                             booking.asset_id_column.defined?
 
     # check there isn't a clashing booking
     starting = booking.booking_start
@@ -47,14 +45,12 @@ class Bookings < Application
     booking_type = booking.booking_type
     asset_id = booking.asset_id
 
-    existing = Booking.query
-      .by_tenant(tenant.id)
-      .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
-        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-      ).to_a
-
-    head(:conflict) unless existing.empty?
+    head(:conflict) if Booking.query
+                         .by_tenant(tenant.id)
+                         .where(
+                           "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
+                           starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
+                         ).count > 0
 
     # Add the tenant details
     booking.tenant_id = tenant.id
@@ -64,24 +60,12 @@ class Bookings < Application
     booking.booked_by_email = user.email
     booking.booked_by_name = user.name
 
-    booking.user_id = parsed["user_id"]?.try(&.as_s) || booking.booked_by_id
-    booking.user_email = parsed["user_email"]?.try(&.as_s) || booking.booked_by_email
-    booking.user_name = parsed["user_name"]?.try(&.as_s) || booking.booked_by_name
-
-    booking.process_state = parsed["process_state"]?.try(&.as_s)
+    booking.user_id = booking.booked_by_id if !booking.user_id_column.defined?
+    booking.user_email = booking.booked_by_email if !booking.user_email_column.defined?
+    booking.user_name = booking.booked_by_name if !booking.user_name_column.defined?
 
     # Extension data
     booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
-
-    # Add missing defaults if any
-    checked_in = parsed["checked_in"]?
-    booking.checked_in = checked_in ? checked_in.as_bool : false
-    rejected = parsed["rejected"]?
-    booking.rejected = rejected ? rejected.as_bool : false
-    approved = parsed["approved"]?
-    booking.approved = approved ? approved.as_bool : false
-    zones = parsed["zones"]?
-    booking.zones = zones ? zones.as_a.map { |z| z.as_s } : [] of String
 
     if booking.save
       spawn do
