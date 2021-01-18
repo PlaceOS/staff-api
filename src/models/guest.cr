@@ -96,7 +96,6 @@ class Guest
     attend.checked_in = false
     attend.visit_expected = true
     attend.save!
-    attend
   end
 
   # TODO: Update to take tenant_id into account

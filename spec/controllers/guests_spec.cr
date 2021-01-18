@@ -170,7 +170,7 @@ describe Guests do
     update_results.as_h["banned"].should eq(true)
     update_results.as_h["dangerous"].should eq(true)
     update_results.as_h["extension_data"].should eq({"test" => "data", "other" => "info"})
-    guest = Guest.query.find({email: update_results.as_h["email"]}).not_nil!
+    guest = Guest.query.find!({email: update_results.as_h["email"]})
     guest.ext_data.not_nil!.as_h.should eq({"test" => "data", "other" => "info"})
   end
 

@@ -532,8 +532,7 @@ class Events < Application
       end
       head(:not_found) unless calendar_id
 
-      guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-      head(:not_found) unless guest
+      guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
       # Get the event using the admin account
       event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
@@ -725,8 +724,7 @@ class Events < Application
       render :bad_request, json: {error: "missing system_id param"} unless system_id
     end
 
-    guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-    head(:not_found) if guest.nil?
+    guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
     cal_id = get_placeos_client.systems.fetch(system_id).email
     head(:not_found) unless cal_id

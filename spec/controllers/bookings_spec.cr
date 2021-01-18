@@ -158,7 +158,7 @@ describe Bookings do
 
     updated = JSON.parse(ctx.response.output.to_s).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
-    booking = Booking.query.find({id: updated["id"]}).not_nil!
+    booking = Booking.query.find!({id: updated["id"]})
     booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
   end
 

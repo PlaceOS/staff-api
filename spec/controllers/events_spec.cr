@@ -116,7 +116,7 @@ describe Events do
       created_event.should eq(EventsHelper.create_event_output)
 
       # Should have created metadata record
-      evt_meta = EventMetadata.query.find { event_id == created_event["id"] }.not_nil!
+      evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
       evt_meta.event_start.should eq(1598503500)
       evt_meta.event_end.should eq(1598507160)
       evt_meta.system_id.should eq("sys-rJQQlR4Cn7")
@@ -151,7 +151,7 @@ describe Events do
       updated_event.should eq(EventsHelper.update_event_output)
 
       # Should have updated metadata record
-      evt_meta = EventMetadata.query.find { event_id == updated_event["id"] }.not_nil!
+      evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
       evt_meta.event_start.should eq(1598504460)
       evt_meta.event_end.should eq(1598508120)
 
@@ -209,7 +209,7 @@ describe Events do
       updated_event = JSON.parse(ctx.response.output.to_s).as_h
 
       # Should have only updated extension in metadata record
-      evt_meta = EventMetadata.query.find { event_id == updated_event["id"] }.not_nil!
+      evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
       evt_meta.event_start.should eq(1598503500)                      # unchanged event start
       evt_meta.event_end.should eq(1598507160)                        # unchanged event end
       evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
@@ -548,7 +548,7 @@ describe Events do
     ctx.response.output = IO::Memory.new
     Events.new(ctx).approve
     accepted_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }.not_nil!
+    room_attendee = accepted_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee["response_status"].as_s.should eq("accepted")
   end
 
@@ -590,7 +590,7 @@ describe Events do
     ctx.response.output = IO::Memory.new
     Events.new(ctx).approve
     declined_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }.not_nil!
+    room_attendee = declined_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee["response_status"].as_s.should eq("declined")
   end
 
@@ -723,9 +723,9 @@ describe Events do
       checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
       checked_in_guest["checked_in"].should eq(true)
       # We should have created meta by migrating from master event meta
-      meta_after_checkin = EventMetadata.query.find({event_id: event_instance_id}).not_nil!
+      meta_after_checkin = EventMetadata.query.find!({event_id: event_instance_id})
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
-      master_meta = EventMetadata.query.find({event_id: master_event_id}).not_nil!
+      master_meta = EventMetadata.query.find!({event_id: master_event_id})
       meta_after_checkin.ext_data.should eq(master_meta.ext_data)
       meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
 
