@@ -21,8 +21,8 @@ class Bookings < Application
       .by_user_email(user_email)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
-        {starting: starting, ending: ending, booking_type: booking_type})
-      .order_by("booking_start", "DESC")
+        starting: starting, ending: ending, booking_type: booking_type)
+      .order_by(:booking_start, :desc)
       .limit(20000)
       .to_a.map { |b| b.as_json }
 
@@ -50,7 +50,7 @@ class Bookings < Application
       .by_tenant(tenant.id)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
-        {starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id}
+        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       ).to_a
 
     head(:conflict) unless existing.empty?
@@ -139,7 +139,7 @@ class Bookings < Application
       .by_tenant(tenant.id)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
-        {starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id}
+        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       ).to_a
 
     # Don't clash with self

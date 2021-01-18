@@ -68,7 +68,7 @@ class Guest
     Attendee.query
       .by_tenant(tenant_id)
       .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
-      .where("guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", {guest_id: id, morning: morning, tonight: tonight})
+      .where("guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
       .first
   end
 
@@ -77,13 +77,13 @@ class Guest
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
         .where("attendees.guest_id = :guest_id AND event_metadatas.event_end >= :now", {guest_id: id, now: Time.utc.to_unix})
-        .order_by(event_start: "ASC")
+        .order_by(:event_start, :asc)
         .limit(limit)
     else
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
         .where("attendees.guest_id = :guest_id", {guest_id: id})
-        .order_by(event_start: "ASC")
+        .order_by(:event_start, :asc)
         .limit(limit)
     end
   end

@@ -122,7 +122,7 @@ class Guests < Application
       query = "%#{query}%"
       render json: Guest.query
         .by_tenant(tenant.id)
-        .where("searchable LIKE :query", {query: query})
+        .where("searchable LIKE :query", query: query)
         .limit(1500).map { |g| attending_guest(nil, g) }
     end
   end
