@@ -6,7 +6,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 3.5.2
+    version: 3.5.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -143,4 +143,3 @@ shards:
   yaml_mapping:
     git: https://github.com/crystal-lang/yaml_mapping.cr.git
     version: 0.1.0
-
