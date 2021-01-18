@@ -24,6 +24,13 @@ class Booking
   column approver_email : String?
   column approver_name : String?
 
+  column booked_by_id : String
+  column booked_by_email : String
+  column booked_by_name : String
+
+  # used to hold information relating to the state of the booking process
+  column process_state : String?
+
   column ext_data : JSON::Any?
 
   belongs_to tenant : Tenant, foreign_key: "tenant_id"
@@ -38,6 +45,10 @@ class Booking
 
   scope :by_user_email do |user_email|
     user_email ? where { var("bookings", "user_email") == user_email } : self
+  end
+
+  scope :booking_state do |state|
+    state ? where { var("bookings", "process_state") == state } : self
   end
 
   # Bookings have the zones in an array.
