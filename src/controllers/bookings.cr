@@ -98,6 +98,7 @@ class Bookings < Application
           user_email:    booking.user_email,
           user_name:     booking.user_name,
           zones:         booking.zones,
+          process_state: booking.process_state,
         })
       end
 
@@ -179,6 +180,7 @@ class Bookings < Application
         user_email:    booking_ref.user_email,
         user_name:     booking_ref.user_name,
         zones:         booking_ref.zones,
+        process_state: booking_ref.process_state,
       })
     end
 
@@ -242,6 +244,7 @@ class Bookings < Application
           user_email:    booking.user_email,
           user_name:     booking.user_name,
           zones:         booking.zones,
+          process_state: booking.process_state,
         })
       end
 
