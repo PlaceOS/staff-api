@@ -1,14 +1,14 @@
-class ICalMetadataMigration
+class AddColumnsAndUpdateBookingsToEventMetadatas
   include Clear::Migration
 
   def change(direction)
     direction.up do
       # Add the new columns
-      execute("ALTER TABLE bookings ADD COLUMN booked_by_id TEXT")
-      execute("ALTER TABLE bookings ADD COLUMN booked_by_email TEXT")
-      execute("ALTER TABLE bookings ADD COLUMN booked_by_name TEXT")
+      add_column "bookings", "booked_by_id", "text"
+      add_column "bookings", "booked_by_email", "text"
+      add_column "bookings", "booked_by_name", "text"
+      add_column "bookings", "process_state", "text"
 
-      execute("ALTER TABLE bookings ADD COLUMN process_state TEXT")
       execute("CREATE INDEX bookings_process_state_idx ON bookings (process_state)")
 
       # migrate the data
