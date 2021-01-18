@@ -9,6 +9,7 @@ class Bookings < Application
     starting = query_params["period_start"].to_i64
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"]
+    booking_state = query_params["state"]?
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
     user_id = query_params["user"]?
     user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty?)
@@ -19,6 +20,7 @@ class Bookings < Application
       .by_tenant(tenant.id)
       .by_user_id(user_id)
       .by_user_email(user_email)
+      .booking_state(booking_state)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         {starting: starting, ending: ending, booking_type: booking_type})
@@ -30,7 +32,7 @@ class Bookings < Application
   end
 
   def create
-    parsed = JSON.parse(request.body.not_nil!)
+    parsed = JSON.parse(request.body.not_nil!).as_h
     booking = Booking.new(parsed)
 
     unless booking.booking_start_column.defined? &&
@@ -59,21 +61,27 @@ class Bookings < Application
     booking.tenant_id = tenant.id
 
     # Add the user details
-    booking.user_id = user_token.id
-    booking.user_email = user.email
-    booking.user_name = user.name
+    booking.booked_by_id = user_token.id
+    booking.booked_by_email = user.email
+    booking.booked_by_name = user.name
+
+    booking.user_id = parsed["user_id"]?.try(&.as_s) || booking.booked_by_id
+    booking.user_email = parsed["user_email"]?.try(&.as_s) || booking.booked_by_email
+    booking.user_name = parsed["user_name"]?.try(&.as_s) || booking.booked_by_name
+
+    booking.process_state = parsed["process_state"]?.try(&.as_s)
 
     # Extension data
-    booking.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
+    booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
 
     # Add missing defaults if any
-    checked_in = parsed.as_h["checked_in"]?
+    checked_in = parsed["checked_in"]?
     booking.not_nil!.checked_in = checked_in ? checked_in.as_bool : false
-    rejected = parsed.as_h["rejected"]?
+    rejected = parsed["rejected"]?
     booking.not_nil!.rejected = rejected ? rejected.as_bool : false
-    approved = parsed.as_h["approved"]?
+    approved = parsed["approved"]?
     booking.not_nil!.approved = approved ? approved.as_bool : false
-    zones = parsed.as_h["zones"]?
+    zones = parsed["zones"]?
     booking.not_nil!.zones = zones ? zones.as_a.map { |z| z.as_s } : [] of String
 
     if booking.save
@@ -190,6 +198,12 @@ class Bookings < Application
   post "/:id/check_in", :check_in do
     booking.not_nil!.checked_in = params["state"]? != "false"
     update_booking(booking.not_nil!, "checked_in")
+  end
+
+  post "/:id/update_state", :update_state do
+    book = booking.not_nil!
+    book.process_state = params["state"]?
+    update_booking(book)
   end
 
   # ============================================
