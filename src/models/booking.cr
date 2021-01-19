@@ -30,10 +30,18 @@ class Booking
 
   # used to hold information relating to the state of the booking process
   column process_state : String?
+  column last_changed : Int64?
+  column created : Int64?
 
   column ext_data : JSON::Any?
 
   belongs_to tenant : Tenant
+
+  before :create, :set_created
+
+  def set_created
+    self.last_changed = self.created = Time.utc.to_unix
+  end
 
   scope :by_tenant do |tenant_id|
     where(tenant_id: tenant_id)

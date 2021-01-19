@@ -85,6 +85,7 @@ class Bookings < Application
           user_name:     booking.user_name,
           zones:         booking.zones,
           process_state: booking.process_state,
+          last_changed:  booking.last_changed,
         })
       end
 
@@ -123,6 +124,7 @@ class Bookings < Application
       existing_booking.checked_in = false
       existing_booking.rejected = false
       existing_booking.approved = false
+      existing_booking.last_changed = Time.utc.to_unix
     end
 
     # check there isn't a clashing booking
@@ -164,6 +166,7 @@ class Bookings < Application
         user_name:     booking.user_name,
         zones:         booking.zones,
         process_state: booking.process_state,
+        last_changed:  booking.last_changed,
       })
     end
 
@@ -220,6 +223,7 @@ class Bookings < Application
           user_name:     booking.user_name,
           zones:         booking.zones,
           process_state: booking.process_state,
+          last_changed:  booking.last_changed,
         })
       end
 
