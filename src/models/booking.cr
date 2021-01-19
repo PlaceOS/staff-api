@@ -67,6 +67,24 @@ class Booking
     time ? where { created > time.not_nil!.to_i64 } : self
   end
 
+  scope :is_approved do |value|
+    if value
+      check = value == "true"
+      where { approved == check }
+    else
+      self
+    end
+  end
+
+  scope :is_rejected do |value|
+    if value
+      check = value == "true"
+      where { rejected == check }
+    else
+      self
+    end
+  end
+
   # Bookings have the zones in an array.
   #
   # In case of multiple zones as input,
