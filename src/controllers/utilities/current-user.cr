@@ -69,13 +69,15 @@ module Utils::CurrentUser
   @access_token : String? = nil
 
   protected def acquire_token : String?
-    token = @access_token
-    return token if token
-    @access_token = if (token = request.headers["Authorization"]?)
-                      token = token.lchop("Bearer ").rstrip
-                      token unless token.empty?
-                    elsif (token = params["bearer_token"]?)
-                      token.strip
-                    end
+    if token = @access_token
+      token
+    else
+      @access_token = if (token = request.headers["Authorization"]?)
+                        token = token.lchop("Bearer ").rstrip
+                        token unless token.empty?
+                      elsif (token = params["bearer_token"]?)
+                        token.strip
+                      end
+    end
   end
 end

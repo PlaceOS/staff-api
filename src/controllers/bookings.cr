@@ -98,9 +98,7 @@ class Bookings < Application
 
     {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
-        if changes.{{key.id}}_column.defined?
-          existing_booking.{{key.id}} = changes.{{key.id}}
-        end
+        existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
@@ -132,12 +130,9 @@ class Bookings < Application
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-      ).to_a
+      ).where { id != existing_booking.id }
 
-    # Don't clash with self
-    existing = existing.reject { |b| b.id == existing_booking.id }
-
-    head(:conflict) unless existing.empty?
+    head(:conflict) if existing.count > 0
 
     update_booking(existing_booking)
   end
@@ -200,10 +195,7 @@ class Bookings < Application
   end
 
   private def check_access
-    user = user_token
-    if booking && booking.user_id != user.id
-      head :forbidden unless user.is_admin? || user.is_support?
-    end
+    head :forbidden if (user = user_token) && (booking && booking.user_id != user.id) && !(user.is_admin? || user.is_support?)
   end
 
   private def update_booking(booking, signal = "changed")

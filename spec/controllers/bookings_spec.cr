@@ -44,8 +44,7 @@ describe Bookings do
 
     it "should return a list of bookings when filtered by user" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      BookingsHelper.create_booking(tenant_id: tenant.id,
-        user_id: "toby@redant.com.au")
+      BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "toby@redant.com.au")
       BookingsHelper.create_booking(tenant.id)
 
       starting = 5.minutes.from_now.to_unix
@@ -240,22 +239,22 @@ module BookingsHelper
                      booked_by_email = "jon@example.com",
                      booked_by_id = "jon@example.com",
                      booked_by_name = "Jon Smith")
-    booking = Booking.new
-    booking.tenant_id = tenant_id
-    booking.user_id = user_id
-    booking.user_email = user_email
-    booking.user_name = user_name
-    booking.asset_id = asset_id
-    booking.zones = zones
-    booking.booking_type = booking_type
-    booking.booking_start = booking_start
-    booking.booking_end = booking_end
-    booking.checked_in = false
-    booking.approved = false
-    booking.rejected = false
-    booking.booked_by_email = booked_by_email
-    booking.booked_by_id = booked_by_id
-    booking.booked_by_name = booked_by_name
-    booking.save!
+    Booking.create!(
+      tenant_id: tenant_id,
+      user_id: user_id,
+      user_email: user_email,
+      user_name: user_name,
+      asset_id: asset_id,
+      zones: zones,
+      booking_type: booking_type,
+      booking_start: booking_start,
+      booking_end: booking_end,
+      checked_in: false,
+      approved: false,
+      rejected: false,
+      booked_by_email: booked_by_email,
+      booked_by_id: booked_by_id,
+      booked_by_name: booked_by_name,
+    )
   end
 end

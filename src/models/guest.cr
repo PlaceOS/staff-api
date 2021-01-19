@@ -89,13 +89,13 @@ class Guest
   end
 
   def attendee_for(event_id)
-    attend = Attendee.new
-    attend.event_id = event_id
-    attend.guest_id = self.id
-    attend.tenant_id = self.tenant_id
-    attend.checked_in = false
-    attend.visit_expected = true
-    attend.save!
+    Attendee.create!({
+      event_id:       event_id,
+      guest_id:       self.id,
+      tenant_id:      self.tenant_id,
+      checked_in:     false,
+      visit_expected: true,
+    })
   end
 
   # TODO: Update to take tenant_id into account

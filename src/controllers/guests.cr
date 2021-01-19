@@ -8,8 +8,8 @@ class Guests < Application
 
   def index
     query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
-    starting = query_params["period_start"]?
-    if starting
+
+    if starting = query_params["period_start"]?
       period_start = Time.unix(starting.to_i64)
       period_end = Time.unix(query_params["period_end"].to_i64)
 
@@ -127,8 +127,8 @@ class Guests < Application
   end
 
   def show
-    if user_token.scope.includes?("guest")
-      head :forbidden unless guest.email == user_token.sub
+    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+      head :forbidden
     end
 
     # find out if they are attending today
@@ -137,17 +137,15 @@ class Guests < Application
   end
 
   def update
-    if user_token.scope.includes?("guest")
-      head :forbidden unless guest.email == user_token.sub
+    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+      head :forbidden
     end
 
     parsed = JSON.parse(request.body.not_nil!)
     changes = Guest.new(parsed)
     {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
       begin
-        if changes.{{key.id}}_column.defined?
-          guest.{{key.id}} = changes.{{key.id}}
-        end
+        guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
@@ -183,11 +181,13 @@ class Guests < Application
     parsed = JSON.parse(request.body.not_nil!)
     guest = Guest.new(parsed)
     guest.tenant_id = tenant.id
+
     banned = parsed.as_h["banned"]?
     guest.banned = banned ? banned.as_bool : false
     dangerous = parsed.as_h["dangerous"]?
     guest.dangerous = dangerous ? dangerous.as_bool : false
     guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
+
     if guest.save
       attendee = guest.attending_today(tenant.id, get_timezone)
       render :created, json: attending_guest(attendee, guest)
@@ -220,6 +220,7 @@ class Guests < Application
         end
       }
     }).get.compact
+
     render json: events
   end
 
@@ -228,8 +229,6 @@ class Guests < Application
   # ============================================
 
   private def find_guest
-    Guest.query
-      .by_tenant(tenant.id)
-      .find!({email: route_params["id"].downcase})
+    Guest.query.by_tenant(tenant.id).find!({email: route_params["id"].downcase})
   end
 end

@@ -3,6 +3,7 @@ require "http"
 module Utils::Responders
   # Merge fields into object
   def with_fields(model, fields) : Hash
+    # Double serialisation
     attrs = Hash(String, JSON::Any).from_json(model.to_json)
     attrs.merge(fields)
   end
@@ -15,6 +16,7 @@ module Utils::Responders
     fields : Hash? = nil           # Additional fields
   ) : Hash
     # Necessary for fields with converters defined
+    # Double serialisation
     attrs = Hash(String, JSON::Any).from_json(model.to_json)
     attrs.select!(only) if only
     attrs.reject!(except) if except

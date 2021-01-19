@@ -28,27 +28,28 @@ class EventMetadata
     metadata = EventMetadata.new
 
     Clear::SQL.transaction do
-      metadata.ext_data = parent_metadata.ext_data
-      metadata.tenant_id = parent_metadata.tenant_id
-      metadata.system_id = system_id
-      metadata.event_id = recurrance.id.not_nil!
-      metadata.recurring_master_id = recurrance.recurring_event_id
-      metadata.ical_uid = recurrance.ical_uid.not_nil!
-      metadata.event_start = recurrance.event_start.not_nil!.to_unix
-      metadata.event_end = recurrance.event_end.not_nil!.to_unix
-      metadata.resource_calendar = parent_metadata.resource_calendar
-      metadata.host_email = parent_metadata.host_email
-      metadata.save!
+      metadata.update!({
+        ext_data:            parent_metadata.ext_data,
+        tenant_id:           parent_metadata.tenant_id,
+        system_id:           system_id,
+        event_id:            recurrance.id.not_nil!,
+        recurring_master_id: recurrance.recurring_event_id,
+        ical_uid:            recurrance.ical_uid.not_nil!,
+        event_start:         recurrance.event_start.not_nil!.to_unix,
+        event_end:           recurrance.event_end.not_nil!.to_unix,
+        resource_calendar:   parent_metadata.resource_calendar,
+        host_email:          parent_metadata.host_email,
+      })
 
       parent_metadata.attendees.each do |attendee|
         if attendee.visit_expected
-          attend = Attendee.new
-          attend.event_id = metadata.id.not_nil!
-          attend.guest_id = attendee.guest_id
-          attend.tenant_id = attendee.tenant_id
-          attend.visit_expected = true
-          attend.checked_in = false
-          attend.save!
+          Attendee.create!({
+            event_id:       metadata.id.not_nil!,
+            guest_id:       attendee.guest_id,
+            tenant_id:      attendee.tenant_id,
+            visit_expected: true,
+            checked_in:     false,
+          })
         end
       end
     end

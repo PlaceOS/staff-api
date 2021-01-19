@@ -35,17 +35,17 @@ module Utils::PlaceOSHelpers
 
   def matching_calendar_ids(allow_default = false)
     args = CalendarSelection.new(params)
-    # Create a map of calendar ids to systems
-    system_calendars = {} of String => PlaceOS::Client::API::Models::System?
 
-    # only obtain events for calendars the user has access to
     calendars = Set.new((args.calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
     user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase))
-    if calendars.size > 0
-      (calendars & user_calendars).each do |calendar|
-        system_calendars[calendar] = nil
-      end
-    end
+
+    # Create a map of calendar ids to systems
+    # only obtain events for calendars the user has access to
+    system_calendars = if calendars.size > 0
+                         (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                       else
+                         {} of String => PlaceOS::Client::API::Models::System?
+                       end
 
     # Check if we want to grab systems from zones
     zones = (args.zone_ids || "").split(',').map(&.strip).reject(&.empty?).uniq
@@ -89,9 +89,7 @@ module Utils::PlaceOSHelpers
     end
 
     # default to the current user if no params were passed
-    if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
-      system_calendars[user.email] = nil
-    end
+    system_calendars[user.email] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
 
     system_calendars
   end
@@ -111,19 +109,16 @@ module Utils::PlaceOSHelpers
 
     # Returns {permission_found, access_level}
     def has_access?(groups : Array(String)) : Tuple(Bool, Access)
-      if none = deny
-        return {true, Access::None} unless (none & groups).empty?
+      case
+      when (none = deny) && !(none & groups).empty?
+        {true, Access::None}
+      when (can_manage = manage) && !(can_manage & groups).empty?
+        {true, Access::Manage}
+      when (can_admin = admin) && !(can_admin & groups).empty?
+        {true, Access::Admin}
+      else
+        {false, Access::None}
       end
-
-      if can_manage = manage
-        return {true, Access::Manage} unless (can_manage & groups).empty?
-      end
-
-      if can_admin = admin
-        return {true, Access::Admin} unless (can_admin & groups).empty?
-      end
-
-      {false, Access::None}
     end
   end
 
