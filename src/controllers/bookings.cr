@@ -13,6 +13,8 @@ class Bookings < Application
     user_id = query_params["user"]?
     user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty?)
     user_email = query_params["email"]?
+    created_before = query_params["created_before"]?
+    created_after = query_params["created_after"]?
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -20,6 +22,8 @@ class Bookings < Application
       .by_user_id(user_id)
       .by_user_email(user_email)
       .booking_state(booking_state)
+      .created_before(created_before)
+      .created_after(created_after)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         starting: starting, ending: ending, booking_type: booking_type)
@@ -85,6 +89,7 @@ class Bookings < Application
           user_name:     booking.user_name,
           zones:         booking.zones,
           process_state: booking.process_state,
+          last_changed:  booking.last_changed,
         })
       end
 
@@ -120,9 +125,12 @@ class Bookings < Application
     # reset the checked-in state
     reset_state = existing_booking.asset_id_column.changed? || existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
     if reset_state
-      existing_booking.checked_in = false
-      existing_booking.rejected = false
-      existing_booking.approved = false
+      existing_booking.set({
+            checked_in: false,
+            rejected: false,
+            approved: false,
+            last_changed: Time.utc.to_unix,
+      })
     end
 
     # check there isn't a clashing booking
@@ -164,6 +172,7 @@ class Bookings < Application
         user_name:     booking.user_name,
         zones:         booking.zones,
         process_state: booking.process_state,
+        last_changed:  booking.last_changed,
       })
     end
 
@@ -220,6 +229,7 @@ class Bookings < Application
           user_name:     booking.user_name,
           zones:         booking.zones,
           process_state: booking.process_state,
+          last_changed:  booking.last_changed,
         })
       end
 

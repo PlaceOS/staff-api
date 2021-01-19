@@ -30,10 +30,18 @@ class Booking
 
   # used to hold information relating to the state of the booking process
   column process_state : String?
+  column last_changed : Int64?
+  column created : Int64?
 
   column ext_data : JSON::Any?
 
   belongs_to tenant : Tenant
+
+  before :create, :set_created
+
+  def set_created
+    self.last_changed = self.created = Time.utc.to_unix
+  end
 
   scope :by_tenant do |tenant_id|
     where(tenant_id: tenant_id)
@@ -49,6 +57,14 @@ class Booking
 
   scope :booking_state do |state|
     state ? where(process_state: state) : self
+  end
+
+  scope :created_before do |time|
+    time ? where { created < time.not_nil!.to_i64 } : self
+  end
+
+  scope :created_after do |time|
+    time ? where { created > time.not_nil!.to_i64 } : self
   end
 
   # Bookings have the zones in an array.
