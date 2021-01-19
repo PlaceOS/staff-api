@@ -13,6 +13,8 @@ class Bookings < Application
     user_id = query_params["user"]?
     user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty?)
     user_email = query_params["email"]?
+    created_before = query_params["created_before"]?
+    created_after = query_params["created_after"]?
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -20,6 +22,8 @@ class Bookings < Application
       .by_user_id(user_id)
       .by_user_email(user_email)
       .booking_state(booking_state)
+      .created_before(created_before)
+      .created_after(created_after)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         starting: starting, ending: ending, booking_type: booking_type)
