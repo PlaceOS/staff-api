@@ -30,7 +30,7 @@ class Guest
   end
 
   scope :by_tenant do |tenant_id|
-    where { var("guests", "tenant_id") == tenant_id }
+    where(tenant_id: tenant_id)
   end
 
   def validate

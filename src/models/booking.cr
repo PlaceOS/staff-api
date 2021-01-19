@@ -36,19 +36,19 @@ class Booking
   belongs_to tenant : Tenant
 
   scope :by_tenant do |tenant_id|
-    where { var("bookings", "tenant_id") == tenant_id }
+    where(tenant_id: tenant_id)
   end
 
   scope :by_user_id do |user_id|
-    user_id ? where { var("bookings", "user_id") == user_id } : self
+    user_id ? where(user_id: user_id) : self
   end
 
   scope :by_user_email do |user_email|
-    user_email ? where { var("bookings", "user_email") == user_email } : self
+    user_email ? where(user_email: user_email) : self
   end
 
   scope :booking_state do |state|
-    state ? where { var("bookings", "process_state") == state } : self
+    state ? where(process_state: state) : self
   end
 
   # Bookings have the zones in an array.
@@ -60,9 +60,12 @@ class Booking
     return self if zones.empty?
 
     # https://www.postgresql.org/docs/9.1/arrays.html#ARRAYS-SEARCHING
-    query = zones.map { |_zone| "( ? = ANY (zones) )" }.join(" OR ")
+    query = zones.map { |zone|
+      zone = zone.gsub(/[\'\"\)\(\\\/\$\?]/, "")
+      "( '#{zone}' = ANY (zones) )"
+    }.join(" OR ")
 
-    where(query, zones)
+    where("( #{query} )")
   end
 
   # FIXME: Clear models seem to be having trouble when serializing

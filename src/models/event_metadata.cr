@@ -21,7 +21,7 @@ class EventMetadata
   has_many attendees : Attendee, foreign_key: "event_id"
 
   scope :by_tenant do |tenant_id|
-    where { var("event_metadatas", "tenant_id") == tenant_id }
+    where(tenant_id: tenant_id)
   end
 
   def self.migrate_recurring_metadata(system_id : String, recurrance : PlaceCalendar::Event, parent_metadata : EventMetadata)
