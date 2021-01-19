@@ -61,7 +61,7 @@ class Booking
 
     # https://www.postgresql.org/docs/9.1/arrays.html#ARRAYS-SEARCHING
     query = zones.map { |zone|
-      zone = zone.gsub(/[\'\"\)\(\\\/\$\?]/, "")
+      zone = zone.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
       "( '#{zone}' = ANY (zones) )"
     }.join(" OR ")
 
