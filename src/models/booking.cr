@@ -60,9 +60,9 @@ class Booking
     return self if zones.empty?
 
     # https://www.postgresql.org/docs/9.1/arrays.html#ARRAYS-SEARCHING
-    query = zones.map { |_zone| "? = ANY (zones)" }.join(" OR ")
+    query = zones.map { |_zone| "( ? = ANY (zones) )" }.join(" OR ")
 
-    where("( #{query} )", zones)
+    where(query, zones)
   end
 
   # FIXME: Clear models seem to be having trouble when serializing
