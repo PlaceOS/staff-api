@@ -118,9 +118,12 @@ class Bookings < Application
     end
 
     # reset the checked-in state
-    existing_booking.checked_in = false
-    existing_booking.rejected = false
-    existing_booking.approved = false
+    reset_state = existing_booking.asset_id_column.changed? || existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
+    if reset_state
+      existing_booking.checked_in = false
+      existing_booking.rejected = false
+      existing_booking.approved = false
+    end
 
     # check there isn't a clashing booking
     starting = existing_booking.booking_start
@@ -137,7 +140,7 @@ class Bookings < Application
 
     head(:conflict) if existing.count > 0
 
-    update_booking(existing_booking)
+    update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
   end
 
   def show
