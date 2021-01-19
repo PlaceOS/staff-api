@@ -9,8 +9,8 @@ class AddColumnsToEventMetadatas
       execute("CREATE INDEX event_metadatas_event_id_idx ON event_metadatas (event_id)")
 
       # Add the new columns
-      add_column "event_metadatas", "ical_uid", "text"
-      add_column "event_metadatas", "recurring_master_id", "text"
+      execute("ALTER TABLE event_metadatas ADD COLUMN ical_uid TEXT")
+      execute("ALTER TABLE event_metadatas ADD COLUMN recurring_master_id TEXT")
 
       # Create an index on ical_uid
       execute("CREATE INDEX event_metadatas_ical_uid_idx ON event_metadatas (ical_uid)")

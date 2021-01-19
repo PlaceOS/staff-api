@@ -14,4 +14,5 @@ function trap_ctrlc ()
 # when signal 2 (SIGINT) is received
 trap "trap_ctrlc" 2
 
-docker-compose up --build --exit-code-from web && docker-compose down
+docker-compose up --build --exit-code-from web
+docker-compose down
