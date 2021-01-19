@@ -180,8 +180,8 @@ class Bookings < Application
   end
 
   post "/:id/update_state", :update_state do
-    book.process_state = params["state"]?
-    update_booking(book)
+    booking.process_state = params["state"]?
+    update_booking(booking, "process_state")
   end
 
   # ============================================

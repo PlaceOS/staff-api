@@ -611,7 +611,7 @@ class Events < Application
     client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
 
     if system
-      EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete
+      EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete_all
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
