@@ -9,10 +9,6 @@ require "./controllers/*"
 require "./models/*"
 require "./migrations/*"
 
-# # Application code
-# require "granite/adapter/pg"
-# Granite::Connections << Granite::Adapter::Pg.new(name: "pg", url: App::PG_DATABASE_URL)
-
 # Configure Clear ORM
 Clear::SQL.init(App::PG_DATABASE_URL)
 Clear::Migration::Manager.instance.apply_all

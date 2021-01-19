@@ -1,7 +1,6 @@
 class Guests < Application
   base "/api/staff/v1/guests"
 
-  before_action :find_guest, only: [:show, :update, :update_alt, :destroy, :meetings]
   getter guest : Guest { find_guest }
 
   # Skip scope check for relevant routes
@@ -9,8 +8,8 @@ class Guests < Application
 
   def index
     query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
-    starting = query_params["period_start"]?
-    if starting
+
+    if starting = query_params["period_start"]?
       period_start = Time.unix(starting.to_i64)
       period_end = Time.unix(query_params["period_end"].to_i64)
 
@@ -128,53 +127,51 @@ class Guests < Application
   end
 
   def show
-    if user_token.scope.includes?("guest")
-      head :forbidden unless guest.not_nil!.email == user_token.sub
+    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+      head :forbidden
     end
 
     # find out if they are attending today
-    attendee = guest.not_nil!.attending_today(tenant.id, get_timezone)
+    attendee = guest.attending_today(tenant.id, get_timezone)
     render json: attending_guest(attendee, guest)
   end
 
   def update
-    if user_token.scope.includes?("guest")
-      head :forbidden unless guest.not_nil!.email == user_token.sub
+    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+      head :forbidden
     end
 
     parsed = JSON.parse(request.body.not_nil!)
     changes = Guest.new(parsed)
     {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
       begin
-        if changes.{{key.id}}_column.defined?
-          guest.not_nil!.{{key.id}} = changes.{{key.id}}
-        end
+        guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
 
     # For some reason need to manually set the banned and dangerous
     banned = parsed.as_h["banned"]?
-    guest.not_nil!.banned = banned.as_bool if banned
+    guest.banned = banned.as_bool if banned
     dangerous = parsed.as_h["dangerous"]?
-    guest.not_nil!.dangerous = dangerous.as_bool if dangerous
+    guest.dangerous = dangerous.as_bool if dangerous
 
     # merge changes into extension data
     extension_data = parsed.as_h["extension_data"]?
     if extension_data
-      guest_ext_data = guest.not_nil!.ext_data
+      guest_ext_data = guest.ext_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      guest.not_nil!.ext_data_column.clear
-      guest.not_nil!.ext_data = JSON.parse(data.to_json)
+      guest.ext_data_column.clear
+      guest.ext_data = JSON.parse(data.to_json)
     end
 
-    if guest.not_nil!.save
-      attendee = guest.not_nil!.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest), status: HTTP::Status::OK
+    if guest.save
+      attendee = guest.attending_today(tenant.id, get_timezone)
+      render json: attending_guest(attendee, guest)
     else
-      render json: guest.not_nil!.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: guest.errors.map(&.to_s)
     end
   end
 
@@ -184,22 +181,24 @@ class Guests < Application
     parsed = JSON.parse(request.body.not_nil!)
     guest = Guest.new(parsed)
     guest.tenant_id = tenant.id
+
     banned = parsed.as_h["banned"]?
-    guest.not_nil!.banned = banned ? banned.as_bool : false
+    guest.banned = banned ? banned.as_bool : false
     dangerous = parsed.as_h["dangerous"]?
-    guest.not_nil!.dangerous = dangerous ? dangerous.as_bool : false
+    guest.dangerous = dangerous ? dangerous.as_bool : false
     guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
+
     if guest.save
       attendee = guest.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest), status: HTTP::Status::CREATED
+      render :created, json: attending_guest(attendee, guest)
     else
-      render json: guest.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: guest.errors.map(&.to_s)
     end
   end
 
   # TODO: Should we be allowing to delete guests that are associated with attendees?
   def destroy
-    guest.not_nil!.delete
+    guest.delete
     head :accepted
   end
 
@@ -209,7 +208,7 @@ class Guests < Application
 
     placeos_client = get_placeos_client.systems
 
-    events = Promise.all(guest.not_nil!.events(future_only, limit).map { |metadata|
+    events = Promise.all(guest.events(future_only, limit).map { |metadata|
       Promise.defer {
         cal_id = metadata.host_email.not_nil!
         system = placeos_client.fetch(metadata.system_id.not_nil!)
@@ -221,6 +220,7 @@ class Guests < Application
         end
       }
     }).get.compact
+
     render json: events
   end
 
@@ -228,12 +228,7 @@ class Guests < Application
   #              Helper Methods
   # ============================================
 
-  def find_guest
-    guest = Guest.query
-      .by_tenant(tenant.id)
-      .find({email: route_params["id"].downcase})
-    head(:not_found) unless guest
-
-    guest
+  private def find_guest
+    Guest.query.by_tenant(tenant.id).find!({email: route_params["id"].downcase})
   end
 end

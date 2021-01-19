@@ -10,12 +10,12 @@ class Guest
   column organisation : String?
   column notes : String?
   column photo : String?
-  column banned : Bool = false
-  column dangerous : Bool = false
+  column banned : Bool
+  column dangerous : Bool
   column searchable : String?
   column ext_data : JSON::Any?
 
-  belongs_to tenant : Tenant, foreign_key: "tenant_id"
+  belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "guest_id"
 
   # Save searchable information
@@ -76,27 +76,26 @@ class Guest
     if future_only
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
-        .where("attendees.guest_id = :guest_id AND event_metadatas.event_end >= :now", {guest_id: id, now: Time.utc.to_unix})
+        .where("attendees.guest_id = :guest_id AND event_metadatas.event_end >= :now", guest_id: id, now: Time.utc.to_unix)
         .order_by(:event_start, :asc)
         .limit(limit)
     else
       EventMetadata.query
         .inner_join("attendees") { var("attendees", "event_id") == var("event_metadatas", "id") }
-        .where("attendees.guest_id = :guest_id", {guest_id: id})
+        .where("attendees.guest_id = :guest_id", guest_id: id)
         .order_by(:event_start, :asc)
         .limit(limit)
     end
   end
 
   def attendee_for(event_id)
-    attend = Attendee.new
-    attend.event_id = event_id
-    attend.guest_id = self.id
-    attend.tenant_id = self.tenant_id
-    attend.checked_in = false
-    attend.visit_expected = true
-    attend.save!
-    attend
+    Attendee.create!({
+      event_id:       event_id,
+      guest_id:       self.id,
+      tenant_id:      self.tenant_id,
+      checked_in:     false,
+      visit_expected: true,
+    })
   end
 
   # TODO: Update to take tenant_id into account

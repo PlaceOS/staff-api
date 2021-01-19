@@ -14,6 +14,15 @@ Spec.before_suite do
   TenantsHelper.create_tenant
 end
 
+Spec.before_suite do
+  # -Dquiet
+  {% if flag?(:quiet) %}
+    ::Log.setup(:warning)
+  {% else %}
+    ::Log.setup(:debug)
+  {% end %}
+end
+
 def truncate_db
   Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
@@ -140,7 +149,8 @@ module EventMetadatasHelper
                    system_id = "sys_id",
                    room_email = "room@example.com",
                    host = "user@example.com",
-                   ext_data = JSON.parse({"foo": 123}.to_json))
+                   ext_data = JSON.parse({"foo": 123}.to_json),
+                   ical_uid = "random_uid")
     meta = EventMetadata.new
     meta.tenant_id = tenant_id
     meta.system_id = system_id
@@ -150,6 +160,7 @@ module EventMetadatasHelper
     meta.event_start = event_start
     meta.event_end = event_end
     meta.ext_data = ext_data
+    meta.ical_uid = ical_uid
     meta.save!
 
     meta

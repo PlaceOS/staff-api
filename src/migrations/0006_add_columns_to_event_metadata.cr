@@ -1,4 +1,5 @@
-class ICalMetadataMigration
+# Metadata ICAL_UID
+class AddColumnsToEventMetadatas
   include Clear::Migration
 
   def change(direction)

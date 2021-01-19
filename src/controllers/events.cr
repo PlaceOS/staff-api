@@ -60,19 +60,17 @@ class Events < Application
 
     # Don't perform the query if there are no calendar entries
     if !metadata_ids.empty?
-      data = EventMetadata.query.by_tenant(tenant.id).where { event_id.in?(metadata_ids) }
-      data.each { |meta| metadatas[meta.event_id] = meta }
+      EventMetadata.query.by_tenant(tenant.id).where { event_id.in?(metadata_ids) }.each { |meta|
+        metadatas[meta.event_id] = meta
+      }
     end
 
     # Metadata is stored against a resource calendar which in office365 can only
     # be matched by the `ical_uid`
-    if client.client_id == :office365
-      ical_uids.uniq!
-
-      if !ical_uids.empty?
-        data = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?(ical_uids) }
-        data.each { |meta| metadatas[meta.ical_uid] = meta }
-      end
+    if (client.client_id == :office365) && ical_uids.uniq! && !ical_uids.empty?
+      EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?(ical_uids) }.each { |meta|
+        metadatas[meta.ical_uid] = meta
+      }
     end
 
     # return array of standardised events
@@ -97,11 +95,7 @@ class Events < Application
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      system = placeos_client.systems.fetch(system_id)
       system_email = system.email.presence.not_nil!
       system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
       input_event.attendees << system_attendee
@@ -165,22 +159,22 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            existing_guest = Guest.query.find({email: email})
-            if existing_guest
-              guest = existing_guest
-            else
-              guest = Guest.new
-              guest.email = email
-              guest.name = attendee.name
-              guest.preferred_name = attendee.preferred_name
-              guest.phone = attendee.phone
-              guest.organisation = attendee.organisation
-              guest.photo = attendee.photo
-              guest.notes = attendee.notes
-              guest.banned = attendee.banned || false
-              guest.dangerous = attendee.dangerous || false
-              guest.tenant_id = tenant.id
-            end
+            guest = if existing_guest = Guest.query.find({email: email})
+                      existing_guest
+                    else
+                      Guest.new({
+                        email:          email,
+                        name:           attendee.name,
+                        preferred_name: attendee.preferred_name,
+                        phone:          attendee.phone,
+                        organisation:   attendee.organisation,
+                        photo:          attendee.photo,
+                        notes:          attendee.notes,
+                        banned:         attendee.banned || false,
+                        dangerous:      attendee.dangerous || false,
+                        tenant_id:      tenant.id,
+                      })
+                    end
 
             if attendee_ext_data = attendee.extension_data
               guest.ext_data = attendee_ext_data
@@ -189,13 +183,13 @@ class Events < Application
             guest.save!
 
             # Create attendees
-            attend = Attendee.new
-            attend.event_id = meta.id.not_nil!
-            attend.guest_id = guest.id
-            attend.visit_expected = true
-            attend.checked_in = false
-            attend.tenant_id = tenant.id
-            attend.save!
+            Attendee.create!({
+              event_id:       meta.id.not_nil!,
+              guest_id:       guest.id,
+              visit_expected: true,
+              checked_in:     false,
+              tenant_id:      tenant.id,
+            })
 
             spawn do
               placeos_client.root.signal("staff/guest/attending", {
@@ -231,7 +225,6 @@ class Events < Application
     # Guests can update extension_data to indicate their order
     if user_token.scope.includes?("guest")
       guest_event_id, guest_system_id = user.roles
-
       head :forbidden unless changes.extension_data && event_id == guest_event_id && query_params["system_id"]? == guest_system_id
     end
 
@@ -242,11 +235,7 @@ class Events < Application
                head(:not_found) unless found
                user_cal
              elsif system_id = (query_params["system_id"]? || changes.system_id).presence
-               begin
-                 system = placeos_client.systems.fetch(system_id)
-               rescue _ex : ::PlaceOS::Client::API::Error
-                 head(:not_found)
-               end
+               system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
@@ -289,7 +278,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      head(:forbidden) unless system && !check_access(user.roles, system).none?
+      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
     end
 
     # Check if attendees need updating
@@ -326,11 +315,7 @@ class Events < Application
     if changing_room
       new_system_id = changes.system_id.presence.not_nil!
 
-      begin
-        new_system = placeos_client.systems.fetch(new_system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence
       head(:not_found) unless new_sys_cal
 
@@ -402,32 +387,30 @@ class Events < Application
           end
         end
 
-        attending = changes.attendees.try(&.reject { |attendee|
-          # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
-          attendee.visit_expected.nil?
-        })
+        # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
+        attending = changes.attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
 
         if attending
           # Create guests
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            existing_guest = Guest.query.find({email: email})
-            if existing_guest
-              guest = existing_guest
-            else
-              guest = Guest.new
-              guest.email = email
-              guest.name = attendee.name
-              guest.preferred_name = attendee.preferred_name
-              guest.phone = attendee.phone
-              guest.organisation = attendee.organisation
-              guest.photo = attendee.photo
-              guest.notes = attendee.notes
-              guest.banned = attendee.banned || false
-              guest.dangerous = attendee.dangerous || false
-              guest.tenant_id = tenant.id
-            end
+            guest = if existing_guest = Guest.query.find({email: email})
+                      existing_guest
+                    else
+                      Guest.new({
+                        email:          email,
+                        name:           attendee.name,
+                        preferred_name: attendee.preferred_name,
+                        phone:          attendee.phone,
+                        organisation:   attendee.organisation,
+                        photo:          attendee.photo,
+                        notes:          attendee.notes,
+                        banned:         attendee.banned || false,
+                        dangerous:      attendee.dangerous || false,
+                        tenant_id:      tenant.id,
+                      })
+                    end
 
             if attendee_ext_data = attendee.extension_data
               guest.ext_data = attendee_ext_data
@@ -437,18 +420,22 @@ class Events < Application
 
             # Create attendees
             attend = existing_lookup[email]? || Attendee.new
-            if attend.persisted?
-              previously_visiting = attend.visit_expected
-            else
-              previously_visiting = false
-              attend.visit_expected = true
-              attend.checked_in = false
-              attend.tenant_id = tenant.id
-            end
 
-            attend.event_id = meta.id.not_nil!
-            attend.guest_id = guest.id
-            attend.save!
+            previously_visiting = if attend.persisted?
+                                    attend.visit_expected
+                                  else
+                                    attend.set({
+                                      visit_expected: true,
+                                      checked_in:     false,
+                                      tenant_id:      tenant.id,
+                                    })
+                                    false
+                                  end
+
+            attend.update!({
+              event_id: meta.id.not_nil!,
+              guest_id: guest.id,
+            })
 
             if !previously_visiting || changing_room
               spawn do
@@ -525,15 +512,10 @@ class Events < Application
       head :forbidden unless event_id == guest_event_id
 
       # grab the calendar id
-      begin
-        calendar_id = placeos_client.systems.fetch(system_id).email.presence
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      calendar_id = placeos_client.systems.fetch(system_id).email.presence
       head(:not_found) unless calendar_id
 
-      guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-      head(:not_found) unless guest
+      guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
       # Get the event using the admin account
       event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
@@ -548,15 +530,8 @@ class Events < Application
       eventmeta = get_event_metadata(event, system_id)
       head(:not_found) unless eventmeta
 
-      attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.id})
-
-      if attendee
-        begin
-          system = placeos_client.systems.fetch(system_id)
-        rescue _ex : ::PlaceOS::Client::API::Error
-          head(:not_found)
-        end
-
+      if Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.id})
+        system = placeos_client.systems.fetch(system_id)
         render json: StaffApi::Event.augment(event.not_nil!, eventmeta.not_nil!.resource_calendar, system, eventmeta)
       else
         head :not_found
@@ -575,11 +550,7 @@ class Events < Application
       render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     elsif system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
       head(:not_found) unless cal_id
 
@@ -610,11 +581,7 @@ class Events < Application
                head(:not_found) unless found
                user_cal
              elsif system_id = query_params["system_id"]?
-               begin
-                 system = placeos_client.systems.fetch(system_id)
-               rescue _ex : ::PlaceOS::Client::API::Error
-                 head(:not_found)
-               end
+               system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
@@ -632,7 +599,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to delete on behalf of the user
-      head(:forbidden) unless system && !check_access(user.roles, system).none?
+      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
     end
 
     # ensure we have the host event details
@@ -644,7 +611,7 @@ class Events < Application
     client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
 
     if system
-      EventMetadata.query.by_tenant(tenant.id).find({event_id: event_id}).try &.delete
+      EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete_all
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
@@ -668,56 +635,6 @@ class Events < Application
 
   post "/:id/reject", :reject do
     update_status("declined")
-  end
-
-  def update_status(status)
-    event_id = route_params["id"]
-    system_id = query_params["system_id"]
-
-    # Check this system has an associated resource
-    begin
-      system = get_placeos_client.systems.fetch(system_id)
-    rescue _ex : ::PlaceOS::Client::API::Error
-      head(:not_found)
-    end
-    cal_id = system.email
-    head(:not_found) unless cal_id
-
-    # Check the event was in the calendar
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
-
-    # User details
-    user_email = user.email
-    host = event.host || user_email
-
-    # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
-      # may be able to delete on behalf of the user
-      head(:forbidden) unless system && !check_access(user.roles, system).none?
-    end
-
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id
-    end
-
-    # Existing attendees without system
-    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
-    # Adding back system with correct status
-    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
-
-    event.not_nil!.attendees = attendees
-
-    # Update the event (user must be a resource approver)
-    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
-
-    # Return the full event details
-    metadata = get_event_metadata(event, system_id)
-
-    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
 
   #
@@ -751,8 +668,7 @@ class Events < Application
     render(json: [] of Nil) if visitors.empty?
 
     # Grab the guest profiles if they exist
-    guests = {} of String => Guest
-    visitors.each { |visitor| guests[visitor.guest.email.not_nil!] = visitor.guest }
+    guests = visitors.each_with_object({} of String => Guest) { |visitor, obj| obj[visitor.guest.email.not_nil!] = visitor.guest }
 
     # Merge the visitor data with guest profiles
     visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
@@ -775,8 +691,7 @@ class Events < Application
       render :bad_request, json: {error: "missing system_id param"} unless system_id
     end
 
-    guest = Guest.query.by_tenant(tenant.id).find({email: guest_email})
-    head(:not_found) if guest.nil?
+    guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
     cal_id = get_placeos_client.systems.fetch(system_id).email
     head(:not_found) unless cal_id
@@ -793,10 +708,8 @@ class Events < Application
     eventmeta = get_migrated_metadata(event, system_id)
     head(:not_found) unless eventmeta
 
-    attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
-    if attendee
-      attendee.checked_in = checkin
-      attendee.save!
+    if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
+      attendee.update!({checked_in: checkin})
 
       guest_details = attendee.guest
 
@@ -826,5 +739,51 @@ class Events < Application
     else
       head :not_found
     end
+  end
+
+  private def update_status(status)
+    event_id = route_params["id"]
+    system_id = query_params["system_id"]
+
+    # Check this system has an associated resource
+    system = get_placeos_client.systems.fetch(system_id)
+    cal_id = system.email
+    head(:not_found) unless cal_id
+
+    # Check the event was in the calendar
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    head(:not_found) unless event
+
+    # User details
+    user_email = user.email
+    host = event.host || user_email
+
+    # check permisions
+    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+      # may be able to delete on behalf of the user
+      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
+    end
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id
+    end
+
+    # Existing attendees without system
+    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
+    # Adding back system with correct status
+    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
+
+    event.not_nil!.attendees = attendees
+
+    # Update the event (user must be a resource approver)
+    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
+
+    # Return the full event details
+    metadata = get_event_metadata(event, system_id)
+
+    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
 end

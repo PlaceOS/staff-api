@@ -1,7 +1,6 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
-  before_action :find_booking, only: [:show, :update, :update_alt, :destroy, :check_in, :approve, :reject]
   before_action :check_access, only: [:update, :update_alt, :destroy, :check_in]
   getter booking : Booking { find_booking }
 
@@ -35,12 +34,10 @@ class Bookings < Application
     parsed = JSON.parse(request.body.not_nil!).as_h
     booking = Booking.new(parsed)
 
-    unless booking.booking_start_column.defined? &&
-           booking.booking_end_column.defined? &&
-           booking.booking_type_column.defined? &&
-           booking.asset_id_column.defined?
-      head :bad_request
-    end
+    head :bad_request unless booking.booking_start_column.defined? &&
+                             booking.booking_end_column.defined? &&
+                             booking.booking_type_column.defined? &&
+                             booking.asset_id_column.defined?
 
     # check there isn't a clashing booking
     starting = booking.booking_start
@@ -48,14 +45,12 @@ class Bookings < Application
     booking_type = booking.booking_type
     asset_id = booking.asset_id
 
-    existing = Booking.query
-      .by_tenant(tenant.id)
-      .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
-        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-      ).to_a
-
-    head(:conflict) unless existing.empty?
+    head(:conflict) if Booking.query
+                         .by_tenant(tenant.id)
+                         .where(
+                           "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
+                           starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
+                         ).count > 0
 
     # Add the tenant details
     booking.tenant_id = tenant.id
@@ -65,24 +60,12 @@ class Bookings < Application
     booking.booked_by_email = user.email
     booking.booked_by_name = user.name
 
-    booking.user_id = parsed["user_id"]?.try(&.as_s) || booking.booked_by_id
-    booking.user_email = parsed["user_email"]?.try(&.as_s) || booking.booked_by_email
-    booking.user_name = parsed["user_name"]?.try(&.as_s) || booking.booked_by_name
-
-    booking.process_state = parsed["process_state"]?.try(&.as_s)
+    booking.user_id = booking.booked_by_id if !booking.user_id_column.defined?
+    booking.user_email = booking.booked_by_email if !booking.user_email_column.defined?
+    booking.user_name = booking.booked_by_name if !booking.user_name_column.defined?
 
     # Extension data
     booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
-
-    # Add missing defaults if any
-    checked_in = parsed["checked_in"]?
-    booking.not_nil!.checked_in = checked_in ? checked_in.as_bool : false
-    rejected = parsed["rejected"]?
-    booking.not_nil!.rejected = rejected ? rejected.as_bool : false
-    approved = parsed["approved"]?
-    booking.not_nil!.approved = approved ? approved.as_bool : false
-    zones = parsed["zones"]?
-    booking.not_nil!.zones = zones ? zones.as_a.map { |z| z.as_s } : [] of String
 
     if booking.save
       spawn do
@@ -102,22 +85,20 @@ class Bookings < Application
         })
       end
 
-      render json: booking.as_json, status: HTTP::Status::CREATED
+      render :created, json: booking.as_json
     else
-      render json: booking.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: booking.errors.map(&.to_s)
     end
   end
 
   def update
     parsed = JSON.parse(request.body.not_nil!)
     changes = Booking.new(parsed)
-    existing_booking = booking.not_nil!
+    existing_booking = booking
 
     {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
-        if changes.{{key.id}}_column.defined?
-          existing_booking.{{key.id}} = changes.{{key.id}}
-        end
+        existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
@@ -125,7 +106,7 @@ class Bookings < Application
     # merge changes into extension data
     extension_data = parsed.as_h["extension_data"]?
     if extension_data
-      booking_ext_data = booking.not_nil!.ext_data
+      booking_ext_data = booking.ext_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
@@ -149,38 +130,34 @@ class Bookings < Application
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-      ).to_a
+      ).where { id != existing_booking.id }
 
-    # Don't clash with self
-    existing = existing.reject { |b| b.id == existing_booking.id }
-
-    head(:conflict) unless existing.empty?
+    head(:conflict) if existing.count > 0
 
     update_booking(existing_booking)
   end
 
   def show
-    render json: booking.not_nil!.as_json
+    render json: booking.as_json
   end
 
   def destroy
-    booking_ref = booking.not_nil!
-    booking_ref.delete
+    booking.delete
 
     spawn do
       get_placeos_client.root.signal("staff/booking/changed", {
         action:        :cancelled,
-        id:            booking_ref.id,
-        booking_type:  booking_ref.booking_type,
-        booking_start: booking_ref.booking_start,
-        booking_end:   booking_ref.booking_end,
-        timezone:      booking_ref.timezone,
-        resource_id:   booking_ref.asset_id,
-        user_id:       booking_ref.user_id,
-        user_email:    booking_ref.user_email,
-        user_name:     booking_ref.user_name,
-        zones:         booking_ref.zones,
-        process_state: booking_ref.process_state,
+        id:            booking.id,
+        booking_type:  booking.booking_type,
+        booking_start: booking.booking_start,
+        booking_end:   booking.booking_end,
+        timezone:      booking.timezone,
+        resource_id:   booking.asset_id,
+        user_id:       booking.user_id,
+        user_email:    booking.user_email,
+        user_name:     booking.user_name,
+        zones:         booking.zones,
+        process_state: booking.process_state,
       })
     end
 
@@ -188,48 +165,40 @@ class Bookings < Application
   end
 
   post "/:id/approve", :approve do
-    set_approver(booking.not_nil!, true)
-    update_booking(booking.not_nil!, "approved")
+    set_approver(booking, true)
+    update_booking(booking, "approved")
   end
 
   post "/:id/reject", :reject do
-    set_approver(booking.not_nil!, false)
-    update_booking(booking.not_nil!, "rejected")
+    set_approver(booking, false)
+    update_booking(booking, "rejected")
   end
 
   post "/:id/check_in", :check_in do
-    booking.not_nil!.checked_in = params["state"]? != "false"
-    update_booking(booking.not_nil!, "checked_in")
+    booking.checked_in = params["state"]? != "false"
+    update_booking(booking, "checked_in")
   end
 
   post "/:id/update_state", :update_state do
-    book = booking.not_nil!
-    book.process_state = params["state"]?
-    update_booking(book)
+    booking.process_state = params["state"]?
+    update_booking(booking, "process_state")
   end
 
   # ============================================
   #              Helper Methods
   # ============================================
 
-  def find_booking
-    booking = Booking.query
+  private def find_booking
+    Booking.query
       .by_tenant(tenant.id)
-      .find({id: route_params["id"].to_i64})
-
-    render :not_found, json: {error: "booking id #{route_params["id"]} not found"} unless booking
-
-    booking
+      .find!({id: route_params["id"].to_i64})
   end
 
-  def check_access
-    user = user_token
-    if booking && booking.not_nil!.user_id != user.id
-      head :forbidden unless user.is_admin? || user.is_support?
-    end
+  private def check_access
+    head :forbidden if (user = user_token) && (booking && booking.user_id != user.id) && !(user.is_admin? || user.is_support?)
   end
 
-  def update_booking(booking, signal = "changed")
+  private def update_booking(booking, signal = "changed")
     if booking.save
       spawn do
         get_placeos_client.root.signal("staff/booking/changed", {
@@ -250,11 +219,11 @@ class Bookings < Application
 
       render json: booking.as_json
     else
-      render json: booking.errors.map(&.to_s), status: :unprocessable_entity
+      render :unprocessable_entity, json: booking.errors.map(&.to_s)
     end
   end
 
-  def set_approver(booking, approved : Bool)
+  private def set_approver(booking, approved : Bool)
     # In case of rejections reset approver related information
     booking.approver_id = approved ? user_token.id : nil
     booking.approver_email = approved ? user.email : nil

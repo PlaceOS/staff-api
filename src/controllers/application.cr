@@ -24,7 +24,7 @@ abstract class Application < ActionController::Base
 
   # This makes it simple to match client requests with server side logs.
   # When building microservices this ID should be propagated to upstream services.
-  def configure_request_logging
+  protected def configure_request_logging
     @request_id = request_id = UUID.random.to_s
     Log.context.set(
       client_ip: client_ip,
@@ -39,7 +39,7 @@ abstract class Application < ActionController::Base
   # ============================
   before_action :check_jwt_scope
 
-  def check_jwt_scope
+  protected def check_jwt_scope
     unless user_token.scope.includes?("public")
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.host, sub: user_token.sub} }
       raise Error::Unauthorized.new "valid scope required for access"
@@ -51,7 +51,7 @@ abstract class Application < ActionController::Base
   # =========================================
 
   # Grab the users timezone
-  def get_timezone
+  protected def get_timezone
     tz = query_params["timezone"]?
     if tz && !tz.empty?
       Time::Location.load(URI.decode(tz))
@@ -60,7 +60,7 @@ abstract class Application < ActionController::Base
     end
   end
 
-  def attending_guest(visitor : Attendee?, guest : Guest?, is_parent_metadata = false, meeting_details = nil)
+  protected def attending_guest(visitor : Attendee?, guest : Guest?, is_parent_metadata = false, meeting_details = nil)
     if guest
       guest.to_h(visitor, is_parent_metadata, meeting_details)
     elsif visitor
@@ -123,6 +123,11 @@ abstract class Application < ActionController::Base
     end
   end
 
+  rescue_from ::PlaceOS::Client::API::Error do |error|
+    Log.debug { error.message }
+    head :not_found
+  end
+
   # Helpful during dev, see errors from office/google clients
   unless App.running_in_production?
     rescue_from PlaceCalendar::Exception do |error|
@@ -136,7 +141,7 @@ abstract class Application < ActionController::Base
     end
   end
 
-  def get_hosts_event(event : PlaceCalendar::Event) : PlaceCalendar::Event
+  protected def get_hosts_event(event : PlaceCalendar::Event) : PlaceCalendar::Event
     start_time = event.event_start.at_beginning_of_day
     end_time = event.event_end.not_nil!.at_end_of_day
     ical_uid = event.ical_uid.not_nil!
@@ -144,21 +149,17 @@ abstract class Application < ActionController::Base
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
-  def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+      EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
     end
-    meta
   end
 
-  def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
-    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      if original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
-        meta = EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
-      end
+    if (meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id) && (original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id}))
+      EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
     end
-    meta
   end
 end

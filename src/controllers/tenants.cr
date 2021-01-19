@@ -20,16 +20,14 @@ class Tenants < Application
     if tenant.save
       render json: tenant.to_json
     else
-      errors = tenant.errors.map do |e|
-        {column: e.column, reason: e.reason}
-      end
+      errors = tenant.errors.map { |e| {column: e.column, reason: e.reason} }
 
       render :bad_request, json: {errors: errors}
     end
   end
 
   def destroy
-    Tenant.query.find! { id == params["id"].to_i64 }.delete
+    Tenant.find!(params["id"].to_i64).delete
   end
 
   private def admin_only

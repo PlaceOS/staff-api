@@ -1,76 +1,74 @@
 require "../spec_helper"
+require "./helpers/spec_clean_up"
 
 describe Bookings do
-  Spec.after_each do
-    Booking.query.each { |record| record.delete }
-  end
+  describe "#index" do
+    pending "should return a list of bookings" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      BookingsHelper.create_booking(tenant.id)
+      BookingsHelper.create_booking(tenant_id: tenant.id,
+        user_id: "bob@example.com",
+        user_email: "bob@example.com",
+        asset_id: "asset-2",
+        zones: ["zone-4127", "zone-890"],
+        booking_end: 30.minutes.from_now.to_unix)
 
-  it "#index should return a list of bookings" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant.id)
-    BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "bob@example.com",
-      user_email: "bob@example.com",
-      asset_id: "asset-2",
-      zones: ["zone-4127", "zone-890"],
-      booking_end: 30.minutes.from_now.to_unix)
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(2)
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(2)
+      # filter by zones
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    # filter by zones
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(1)
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(1)
+      # More filters by zones
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    # More filters by zones
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      results = JSON.parse(ctx.response.output.to_s)
+      results.as_a.size.should eq(2)
+    end
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(2)
-  end
+    it "should return a list of bookings when filtered by user" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "toby@redant.com.au")
+      BookingsHelper.create_booking(tenant.id)
 
-  it "#index should return a list of bookings when filtered by user" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "toby@redant.com.au")
-    BookingsHelper.create_booking(tenant.id)
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
 
-    starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
+      # Since we are using Toby's token to login, user=current means Toby
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    # Since we are using Toby's token to login, user=current means Toby
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
+      results = JSON.parse(ctx.response.output.to_s)
+      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      booking_user_ids.should eq(["toby@redant.com.au"])
 
-    results = JSON.parse(ctx.response.output.to_s)
-    booking_user_ids = results.as_a.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["toby@redant.com.au"])
+      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
+      ctx = context("GET", route, OFFICE365_HEADERS)
+      ctx.response.output = IO::Memory.new
+      Bookings.new(ctx).index
 
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
-
-    results = JSON.parse(ctx.response.output.to_s)
-    booking_user_ids = results.as_a.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["jon@example.com"])
+      results = JSON.parse(ctx.response.output.to_s)
+      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      booking_user_ids.should eq(["jon@example.com"])
+    end
   end
 
   it "#show should find booking" do
@@ -87,7 +85,7 @@ describe Bookings do
     results.as_h["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
-  it "#destroy should delete a booking" do
+  pending "#destroy should delete a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -159,7 +157,7 @@ describe Bookings do
 
     updated = JSON.parse(ctx.response.output.to_s).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
-    booking = Booking.query.find({id: updated["id"]}).not_nil!
+    booking = Booking.query.find!({id: updated["id"]})
     booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
   end
 
@@ -237,20 +235,26 @@ module BookingsHelper
                      zones = ["zone-1234", "zone-4567", "zone-890"],
                      booking_type = "desk",
                      booking_start = 5.minutes.from_now.to_unix,
-                     booking_end = 1.hour.from_now.to_unix)
-    booking = Booking.new
-    booking.tenant_id = tenant_id
-    booking.user_id = user_id
-    booking.user_email = user_email
-    booking.user_name = user_name
-    booking.asset_id = asset_id
-    booking.zones = zones
-    booking.booking_type = booking_type
-    booking.booking_start = booking_start
-    booking.booking_end = booking_end
-    booking.checked_in = false
-    booking.approved = false
-    booking.rejected = false
-    booking.save!
+                     booking_end = 1.hour.from_now.to_unix,
+                     booked_by_email = "jon@example.com",
+                     booked_by_id = "jon@example.com",
+                     booked_by_name = "Jon Smith")
+    Booking.create!(
+      tenant_id: tenant_id,
+      user_id: user_id,
+      user_email: user_email,
+      user_name: user_name,
+      asset_id: asset_id,
+      zones: zones,
+      booking_type: booking_type,
+      booking_start: booking_start,
+      booking_end: booking_end,
+      checked_in: false,
+      approved: false,
+      rejected: false,
+      booked_by_email: booked_by_email,
+      booked_by_id: booked_by_id,
+      booked_by_name: booked_by_name,
+    )
   end
 end
