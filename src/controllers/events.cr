@@ -95,11 +95,7 @@ class Events < Application
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      system = placeos_client.systems.fetch(system_id)
       system_email = system.email.presence.not_nil!
       system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
       input_event.attendees << system_attendee
@@ -239,11 +235,7 @@ class Events < Application
                head(:not_found) unless found
                user_cal
              elsif system_id = (query_params["system_id"]? || changes.system_id).presence
-               begin
-                 system = placeos_client.systems.fetch(system_id)
-               rescue _ex : ::PlaceOS::Client::API::Error
-                 head(:not_found)
-               end
+               system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
@@ -323,11 +315,7 @@ class Events < Application
     if changing_room
       new_system_id = changes.system_id.presence.not_nil!
 
-      begin
-        new_system = placeos_client.systems.fetch(new_system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence
       head(:not_found) unless new_sys_cal
 
@@ -524,11 +512,7 @@ class Events < Application
       head :forbidden unless event_id == guest_event_id
 
       # grab the calendar id
-      begin
-        calendar_id = placeos_client.systems.fetch(system_id).email.presence
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      calendar_id = placeos_client.systems.fetch(system_id).email.presence
       head(:not_found) unless calendar_id
 
       guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
@@ -547,12 +531,7 @@ class Events < Application
       head(:not_found) unless eventmeta
 
       if Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.id})
-        begin
-          system = placeos_client.systems.fetch(system_id)
-        rescue _ex : ::PlaceOS::Client::API::Error
-          head(:not_found)
-        end
-
+        system = placeos_client.systems.fetch(system_id)
         render json: StaffApi::Event.augment(event.not_nil!, eventmeta.not_nil!.resource_calendar, system, eventmeta)
       else
         head :not_found
@@ -571,11 +550,7 @@ class Events < Application
       render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     elsif system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
-      begin
-        system = placeos_client.systems.fetch(system_id)
-      rescue _ex : ::PlaceOS::Client::API::Error
-        head(:not_found)
-      end
+      system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
       head(:not_found) unless cal_id
 
@@ -606,11 +581,7 @@ class Events < Application
                head(:not_found) unless found
                user_cal
              elsif system_id = query_params["system_id"]?
-               begin
-                 system = placeos_client.systems.fetch(system_id)
-               rescue _ex : ::PlaceOS::Client::API::Error
-                 head(:not_found)
-               end
+               system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
@@ -775,11 +746,7 @@ class Events < Application
     system_id = query_params["system_id"]
 
     # Check this system has an associated resource
-    begin
-      system = get_placeos_client.systems.fetch(system_id)
-    rescue _ex : ::PlaceOS::Client::API::Error
-      head(:not_found)
-    end
+    system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     head(:not_found) unless cal_id
 

@@ -123,6 +123,11 @@ abstract class Application < ActionController::Base
     end
   end
 
+  rescue_from ::PlaceOS::Client::API::Error do |error|
+    Log.debug { error.message }
+    head :not_found
+  end
+
   # Helpful during dev, see errors from office/google clients
   unless App.running_in_production?
     rescue_from PlaceCalendar::Exception do |error|
