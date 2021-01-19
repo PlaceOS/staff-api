@@ -12,7 +12,7 @@ class Attendee
   belongs_to guest : Guest
 
   scope :by_tenant do |tenant_id|
-    where(tenant_id: tenant_id)
+    where { var("attendees", "tenant_id") == tenant_id }
   end
 
   def email
