@@ -55,6 +55,12 @@ psql -c 'create database travis_test;'
 export PG_DATABASE_URL=postgresql://localhost/travis_test
 ```
 
+Alternatively with Docker:
+
+```
+./test
+```
+
 ## Testing
 
 Use the `-Dquiet` flag to silence the SQL loging

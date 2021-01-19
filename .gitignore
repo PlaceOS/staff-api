@@ -10,3 +10,4 @@ bin
 auth_test.cr
 test.cr
 secrets.sh
+data
