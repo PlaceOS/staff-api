@@ -4,4 +4,4 @@ services:
   - docker
 
 script:
-  - ./test
+  - docker-compose up --build --exit-code-from web
