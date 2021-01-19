@@ -15,8 +15,8 @@ class Bookings < Application
     user_email = query_params["email"]?
 
     results = Booking.query
-      .by_zones(zones)
       .by_tenant(tenant.id)
+      .by_zones(zones)
       .by_user_id(user_id)
       .by_user_email(user_email)
       .booking_state(booking_state)
