@@ -125,10 +125,12 @@ class Bookings < Application
     # reset the checked-in state
     reset_state = existing_booking.asset_id_column.changed? || existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
     if reset_state
-      existing_booking.checked_in = false
-      existing_booking.rejected = false
-      existing_booking.approved = false
-      existing_booking.last_changed = Time.utc.to_unix
+      existing_booking.set({
+            checked_in: false,
+            rejected: false,
+            approved: false,
+            last_changed: Time.utc.to_unix,
+      })
     end
 
     # check there isn't a clashing booking
