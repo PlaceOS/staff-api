@@ -14,6 +14,15 @@ Spec.before_suite do
   TenantsHelper.create_tenant
 end
 
+Spec.before_suite do
+  # -Dquiet
+  {% if flag?(:quiet) %}
+    ::Log.setup(:warning)
+  {% else %}
+    ::Log.setup(:debug)
+  {% end %}
+end
+
 def truncate_db
   Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
