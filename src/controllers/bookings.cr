@@ -14,7 +14,7 @@ class Bookings < Application
     user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty?)
     user_email = query_params["email"]?
 
-    results = Booking.query
+    query = Booking.query
       .by_tenant(tenant.id)
       .by_zones(zones)
       .by_user_id(user_id)
@@ -25,7 +25,10 @@ class Bookings < Application
         starting: starting, ending: ending, booking_type: booking_type)
       .order_by(:booking_start, :desc)
       .limit(20000)
-      .to_a.map { |b| b.as_json }
+
+    response.headers["x-placeos-rawsql"] = query.to_sql
+
+    results = query.to_a.map { |b| b.as_json }
 
     render json: results
   end
