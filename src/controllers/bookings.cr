@@ -15,6 +15,8 @@ class Bookings < Application
     user_email = query_params["email"]?
     created_before = query_params["created_before"]?
     created_after = query_params["created_after"]?
+    approved = query_params["approved"]?
+    rejected = query_params["rejected"]?
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -24,6 +26,8 @@ class Bookings < Application
       .booking_state(booking_state)
       .created_before(created_before)
       .created_after(created_after)
+      .is_approved(approved)
+      .is_rejected(rejected)
       .where(
         "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
         starting: starting, ending: ending, booking_type: booking_type)
