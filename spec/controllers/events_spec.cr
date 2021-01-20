@@ -6,7 +6,7 @@ describe Events do
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
   describe "#index" do
-    pending "#index should return a list of events with metadata" do
+    it "#index should return a list of events with metadata" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
@@ -20,23 +20,23 @@ describe Events do
 
       now = 1588407645
       later = 1588422097
+      event_start = 1598832000.to_i64
+      event_end = 1598833800.to_i64
+      id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+      system_id = "sys-rJQQlR4Cn7"
+      room_email = "room1@example.com"
+      host = "dev@acaprojects.onmicrosoft.com"
 
       body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
-        event_start = 1598832000.to_i64
-        event_end = 1598833800.to_i64
-        id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-        system_id = "sys-rJQQlR4Cn7"
-        room_email = "room1@example.com"
-        host = "dev@acaprojects.onmicrosoft.com"
         tenant_id = e.tenant.id
         EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
         e.index
       }[1].as_a
 
-      body.as_a.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
+      body.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
     end
 
-    pending "#index should return a list of events with metadata of master event if event in list is an occurrence" do
+    it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
@@ -50,14 +50,14 @@ describe Events do
 
       now = 1588407645
       later = 1588422097
+      event_start = 1598832000.to_i64
+      event_end = 1598833800.to_i64
+      master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+      system_id = "sys-rJQQlR4Cn7"
+      room_email = "room1@example.com"
+      host = "dev@acaprojects.onmicrosoft.com"
 
-      body = Events.Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
-        event_start = 1598832000.to_i64
-        event_end = 1598833800.to_i64
-        master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-        system_id = "sys-rJQQlR4Cn7"
-        room_email = "room1@example.com"
-        host = "dev@acaprojects.onmicrosoft.com"
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
         tenant_id = e.tenant.id
         EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
         e.index
@@ -72,7 +72,7 @@ describe Events do
   end
 
   describe "#create & #update" do
-    pending "#create should create event with attendees and extension data and #update should update for system" do
+    it "#create should create event with attendees and extension data and #update should update for system" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -150,7 +150,7 @@ describe Events do
       guests.compact_map(&.ext_data).should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
     end
 
-    pending "#create should create event with attendees and extension data and #update should extension data for when guest" do
+    it "#create should create event with attendees and extension data and #update should extension data for when guest" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -183,7 +183,7 @@ describe Events do
       evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
     end
 
-    pending "#create should create event and #update should update for user calendar" do
+    it "#create should create event and #update should update for user calendar" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -221,7 +221,7 @@ describe Events do
   end
 
   describe "#show" do
-    pending "should return details for event with guest access" do
+    it "should return details for event with guest access" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -251,12 +251,12 @@ describe Events do
       # Fetch guest event details
       status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.show)
 
-      sstatus_code.should eq(200)
+      status_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
       event.as_h["event_end"].should eq(1598507160)
     end
 
-    pending "should return details for event with guest access and event is recurring instance" do
+    it "should return details for event with guest access and event is recurring instance" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -298,7 +298,7 @@ describe Events do
       event.as_h["extension_data"].should eq({"foo" => "bar"})
     end
 
-    pending "should return details for event with normal access" do
+    it "should return details for event with normal access" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -338,7 +338,7 @@ describe Events do
       event.as_h["event_end"].should eq(1598507160)
     end
 
-    pending "should return details for event that is an recurring event instance with normal access" do
+    it "should return details for event that is an recurring event instance with normal access" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -391,7 +391,7 @@ describe Events do
     end
   end
 
-  pending "#destroy the event for system" do
+  it "#destroy the event for system" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -423,13 +423,13 @@ describe Events do
     EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
 
     # delete
-    EventMetadata.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    Events.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
   end
 
-  pending "#approve marks room as accepted" do
+  it "#approve marks room as accepted" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -459,13 +459,13 @@ describe Events do
     created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # approve
-    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve).as_h
+    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
 
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
 
-  pending "#reject marks room as declined" do
+  it "#reject marks room as declined" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -499,7 +499,7 @@ describe Events do
   end
 
   describe "#guest_list" do
-    pending "lists guests for an event & guest_checkin checks them in" do
+    it "lists guests for an event & guest_checkin checks them in" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -527,7 +527,7 @@ describe Events do
       # Create event
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create).as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
       # guest_list
       guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
@@ -538,8 +538,7 @@ describe Events do
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &..guest_checkin)[1].as_h
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
@@ -551,7 +550,7 @@ describe Events do
       checked_in_guest["checked_in"].should eq(false)
     end
 
-    pending "lists guests for an event that is an recurring instance & guest_checkin checks them in" do
+    it "lists guests for an event that is an recurring instance & guest_checkin checks them in" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
