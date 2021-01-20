@@ -11,11 +11,8 @@ class StaffApi::Event
     if event.status == "cancelled"
       metadata.try &.delete
       metadata = nil
-    else
-      staff_api_attendees = metadata.try(&.attendees)
-      if staff_api_attendees
-        staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
-      end
+    elsif (staff_api_attendees = metadata.try(&.attendees))
+      staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
     end
 
     # Grab the list of external visitors
