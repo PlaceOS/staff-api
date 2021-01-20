@@ -6,7 +6,7 @@ describe "Authorization" do
       expect_raises(Error::Unauthorized) do
         Calendars.context("GET", Calendars.base_route, {
           "Host"          => "wrong.staff-api.dev",
-          "Authorization" => "Bearer #{office_mock_token}",
+          "Authorization" => "Bearer #{Mock::Token.office}",
         }, &.index)
       end
     end
@@ -15,7 +15,7 @@ describe "Authorization" do
       expect_raises(Error::Unauthorized) do
         Calendars.context("GET", Calendars.base_route, {
           "Host"          => "toby.staff-api.dev",
-          "Authorization" => "Bearer #{office_mock_token}e",
+          "Authorization" => "Bearer #{Mock::Token.office}e",
         }, &.index)
       end
     end

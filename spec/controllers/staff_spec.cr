@@ -8,7 +8,7 @@ describe Staff do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24filter=accountEnabled+eq+true")
         .to_return(body: File.read("./spec/fixtures/staff/index.json"))
 
-      body = Context(Staff, JSON::Any).response("GET", "#{STAFF_BASE}", headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body = Context(Staff, JSON::Any).response("GET", "#{STAFF_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(2)
     end
 
@@ -18,7 +18,7 @@ describe Staff do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24filter=%28accountEnabled+eq+true%29+and+%28startswith%28displayName%2C%27john%27%29+or+startswith%28givenName%2C%27john%27%29+or+startswith%28surname%2C%27john%27%29+or+startswith%28mail%2C%27john%27%29%29")
         .to_return(body: File.read("./spec/fixtures/staff/index_filtered.json"))
 
-      body = Context(Staff, JSON::Any).response("GET", "#{STAFF_BASE}", route_params: {"q" => "john"}, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body = Context(Staff, JSON::Any).response("GET", "#{STAFF_BASE}", route_params: {"q" => "john"}, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(1)
     end
   end
@@ -31,7 +31,7 @@ describe Staff do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{user_id}")
       .to_return(body: File.read("./spec/fixtures/staff/show.json"))
 
-    body = Context(Staff, PlaceCalendar::User).response("GET", "#{STAFF_BASE}/#{user_id}", route_params: {"id" => user_id}, headers: OFFICE365_HEADERS, &.show)[1].as(PlaceCalendar::User)
+    body = Context(Staff, PlaceCalendar::User).response("GET", "#{STAFF_BASE}/#{user_id}", route_params: {"id" => user_id}, headers: Mock::Headers.office365_guest, &.show)[1].as(PlaceCalendar::User)
     body.id.should eq(user_id)
   end
 end

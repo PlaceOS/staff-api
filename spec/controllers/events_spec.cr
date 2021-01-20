@@ -21,7 +21,7 @@ describe Events do
       now = 1588407645
       later = 1588422097
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: OFFICE365_HEADERS) { |e|
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
         event_start = 1598832000.to_i64
         event_end = 1598833800.to_i64
         id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
@@ -51,7 +51,7 @@ describe Events do
       now = 1588407645
       later = 1588422097
 
-      body = Events.Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: OFFICE365_HEADERS) { |e|
+      body = Events.Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
         event_start = 1598832000.to_i64
         event_end = 1598833800.to_i64
         master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
@@ -95,7 +95,7 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
       created_event.should eq(EventsHelper.create_event_output)
 
       # Should have created metadata record
@@ -126,7 +126,7 @@ describe Events do
 
       req_body = EventsHelper.update_event_input
 
-      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: OFFICE365_HEADERS, &.update)[1].as_h
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
       updated_event.should eq(EventsHelper.update_event_output)
 
       # Should have updated metadata record
@@ -170,11 +170,11 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
       # Guest Update
       req_body = EventsHelper.update_event_input
-      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.update)[1].as_h
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.update)[1].as_h
 
       # Should have only updated extension in metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -208,11 +208,11 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
       # Update
       req_body = EventsHelper.update_event_input
-      status_code, event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: OFFICE365_HEADERS, &.update)
+      status_code, event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: Mock::Headers.office365_guest, &.update)
 
       status_code.should eq(200)
       event.as_h["event_start"].should eq(1598504460)
@@ -246,10 +246,10 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
       # Fetch guest event details
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event["id"].to_s}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.show)
 
       sstatus_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
@@ -280,11 +280,11 @@ describe Events do
       # Create event which will create metadata with id that we'll use as seriesMasterId
 
       req_body = EventsHelper.create_event_input
-      Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
+      Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}", route_params: {"id" => event_instance_id}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.show)
 
       status_code.should eq(200)
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
@@ -322,17 +322,17 @@ describe Events do
       # Create event
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
       # Show for calendar
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.show)
 
       status_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
       event.as_h["event_end"].should eq(1598507160)
 
       # Show for room
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.show)
       status_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
       event.as_h["event_end"].should eq(1598507160)
@@ -362,7 +362,7 @@ describe Events do
       # Create event which will create metadata with id that we'll use as seriesMasterId
 
       req_body = EventsHelper.create_event_input
-      Events.context("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
+      Events.context("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
@@ -371,7 +371,7 @@ describe Events do
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
 
       # Show event details for calendar params that is an instance of master event created above
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.com", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.com", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
       status_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
       event.as_h["event_end"].should eq(1598507160)
@@ -380,7 +380,7 @@ describe Events do
       event.as_h["extension_data"]?.should eq(nil)
 
       # Show event details for room/system params that is an instance of master event created above
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.show)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
 
       status_code.should eq(200)
       event.as_h["event_start"].should eq(1598503500)
@@ -417,13 +417,13 @@ describe Events do
     # Create event
 
     req_body = EventsHelper.create_event_input
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # Should have created event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
 
     # delete
-    EventMetadata.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.destroy)
+    EventMetadata.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
@@ -456,10 +456,10 @@ describe Events do
 
     req_body = EventsHelper.create_event_input
 
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # approve
-    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.approve).as_h
+    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve).as_h
 
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
@@ -490,10 +490,10 @@ describe Events do
 
     # Create event
     req_body = EventsHelper.create_event_input
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # reject
-    declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.approve)[1].as_h
+    declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
     room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
@@ -527,27 +527,27 @@ describe Events do
       # Create event
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create).as_h
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create).as_h
 
       # guest_list
-      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.guest_list)[1].as_a
+      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
       guests.should eq(EventsHelper.guests_list_output)
 
       # guest_checkin via system
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &..guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &..guest_checkin)[1].as_h
       ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
 
@@ -579,18 +579,18 @@ describe Events do
       # Create event which will create metadata with id that we'll use as seriesMasterId
 
       req_body = EventsHelper.create_event_input
-      Events.context("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
+      Events.context("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
 
       # guest_list
-      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.guest_list)[1].as_a
+      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
       guests.should eq(EventsHelper.guests_list_output)
 
       # guest_checkin via system
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # We should have created meta by migrating from master event meta
@@ -601,15 +601,15 @@ describe Events do
       meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
 
       # guest_checkin via system state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
   end

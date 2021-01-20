@@ -8,7 +8,7 @@ describe Calendars do
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # instantiate the controller
-    status_code = Context(Calendars, JSON::Any).response("GET", "#{CALENDARS_BASE}", headers: OFFICE365_HEADERS, &.index)[0]
+    status_code = Context(Calendars, JSON::Any).response("GET", "#{CALENDARS_BASE}", headers: Mock::Headers.office365_guest, &.index)[0]
     status_code.should eq(200)
   end
 
@@ -27,7 +27,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
     route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = Context(Calendars, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.availability)[1].as_a
+    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1].as_a
     body.should eq(CalendarsHelper.calendar_list_output)
   end
 
@@ -44,7 +44,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = Context(Calendars, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.free_busy)[1].as_a
+    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.free_busy)[1].as_a
     body.should eq(CalendarsHelper.free_busy_output)
   end
 end

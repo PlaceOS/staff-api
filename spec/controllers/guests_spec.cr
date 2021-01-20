@@ -11,7 +11,7 @@ describe Guests do
       GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
       GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
       body.map(&.["name"]).should eq(["Jon", "Steve"])
@@ -24,7 +24,7 @@ describe Guests do
       GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
       GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}?q=steve", headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}?q=steve", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
       body.map(&.["name"]).should eq(["Steve"])
@@ -55,7 +55,7 @@ describe Guests do
       now = Time.utc.to_unix
       later = 4.hours.from_now.to_unix
       route = "#{GUESTS_BASE}?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
-      body = Context(Guests, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body = Context(Guests, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
       body.map(&.["name"]).should eq(["Toby"])
@@ -74,7 +74,7 @@ describe Guests do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
       guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: OFFICE365_HEADERS, &.show)[1].as_h
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
 
       body["name"].should eq("Toby")
       body["email"].should eq("toby@redant.com.au")
@@ -87,7 +87,7 @@ describe Guests do
       meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
       guest.attendee_for(meta.id.not_nil!)
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: OFFICE365_HEADERS, &.show)[1].as_h
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
       body["name"].should eq("Toby")
       body["email"].should eq("toby@redant.com.au")
       body["visit_expected"].should eq(true)
@@ -99,10 +99,10 @@ describe Guests do
     toby = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
     GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
-    Guests.context("DELETE", "#{GUESTS_BASE}/#{toby.email}/", route_params: {"id" => toby.email.not_nil!}, headers: OFFICE365_HEADERS, &.destroy)
+    Guests.context("DELETE", "#{GUESTS_BASE}/#{toby.email}/", route_params: {"id" => toby.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Check only one is returned
-    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: OFFICE365_HEADERS, &.index)[1].as_a
+    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
     # Only has steve, toby got deleted
     body.map(&.["name"]).should eq(["Steve"])
@@ -111,7 +111,7 @@ describe Guests do
 
   it "#create & #update" do
     req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
-    created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
+    created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
     created["email"].should eq("toby@redant.com.au")
     created["banned"].should eq(true)
@@ -119,7 +119,7 @@ describe Guests do
     created["extension_data"].should eq({"test" => "data"})
 
     req_body = %({"email":"toby@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
-    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby@redant.com.au", route_params: {"id" => "toby@redant.com.au"}, body: req_body, headers: OFFICE365_HEADERS, &.update)[1].as_h
+    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby@redant.com.au", route_params: {"id" => "toby@redant.com.au"}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
 
     updated["email"].should eq("toby@redant.com.au")
     updated["banned"].should eq(true)
@@ -148,7 +148,7 @@ describe Guests do
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
     guest.attendee_for(meta.id.not_nil!)
 
-    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/meetings", route_params: {"id" => guest.email.not_nil!}, headers: OFFICE365_HEADERS, &.meetings)[1].as_a
+    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/meetings", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.meetings)[1].as_a
     # Should get 1 event
     body.size.should eq(1)
   end

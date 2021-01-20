@@ -33,76 +33,87 @@ end
 
 Spec.before_each &->WebMock.reset
 
-def office_mock_token
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "toby.staff-api.dev",
-    sub: "toby@redant.com.au",
-    scope: ["public"],
-    user: UserJWT::Metadata.new(
-      name: "Toby Carvan",
-      email: "dev@acaprojects.com",
-      permissions: UserJWT::Permissions::Admin,
-      roles: ["manage", "admin"]
-    )
-  ).encode
+module Mock
+  extend self
+
+  module Token
+    extend self
+
+    # office_mock_token
+    def office
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        aud: "toby.staff-api.dev",
+        sub: "toby@redant.com.au",
+        scope: ["public"],
+        user: UserJWT::Metadata.new(
+          name: "Toby Carvan",
+          email: "dev@acaprojects.com",
+          permissions: UserJWT::Permissions::Admin,
+          roles: ["manage", "admin"]
+        )
+      ).encode
+    end
+
+    # office_guest_mock_token
+    def office_guest(guest_event_id, system_id)
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        aud: "toby.staff-api.dev",
+        sub: "toby@redant.com.au",
+        scope: ["guest"],
+        user: UserJWT::Metadata.new(
+          name: "Jon Jon",
+          email: "jon@example.com",
+          permissions: UserJWT::Permissions::Admin,
+          roles: [guest_event_id, system_id]
+        )
+      ).encode
+    end
+
+    # google_mock_token
+    def google
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        aud: "google.staff-api.dev",
+        sub: "amit@redant.com.au",
+        scope: ["public", "guest"],
+        user: UserJWT::Metadata.new(
+          name: "Amit Gaur",
+          email: "amit@redant.com.au",
+          permissions: UserJWT::Permissions::Admin,
+          roles: ["manage", "admin"]
+        )
+      ).encode
+    end
+  end
+
+  module Headers
+    extend self
+
+    # Provide some basic headers for office365 auth (office365_guest_headers)
+    def office365_guest(guest_event_id = nil, system_id = nil)
+      auth = (guest_event_id.nil? && system_id.nil?) ? Mock::Token.office : Mock::Token.office_guest(guest_event_id.not_nil!, system_id.not_nil!)
+      {
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def google
+      {
+        "Host"          => "google.staff-api.dev",
+        "Authorization" => "Bearer #{Mock::Token.google}",
+      }
+    end
+  end
 end
-
-def office_guest_mock_token(guest_event_id, system_id)
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "toby.staff-api.dev",
-    sub: "toby@redant.com.au",
-    scope: ["guest"],
-    user: UserJWT::Metadata.new(
-      name: "Jon Jon",
-      email: "jon@example.com",
-      permissions: UserJWT::Permissions::Admin,
-      roles: [guest_event_id, system_id]
-    )
-  ).encode
-end
-
-def google_mock_token
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "google.staff-api.dev",
-    sub: "amit@redant.com.au",
-    scope: ["public", "guest"],
-    user: UserJWT::Metadata.new(
-      name: "Amit Gaur",
-      email: "amit@redant.com.au",
-      permissions: UserJWT::Permissions::Admin,
-      roles: ["manage", "admin"]
-    )
-  ).encode
-end
-
-# Provide some basic headers for office365 auth
-OFFICE365_HEADERS = {
-  "Host"          => "toby.staff-api.dev",
-  "Authorization" => "Bearer #{office_mock_token}",
-}
-
-# Provide some basic headers for office365 auth
-def office365_guest_headers(guest_event_id, system_id)
-  {
-    "Host"          => "toby.staff-api.dev",
-    "Authorization" => "Bearer #{office_guest_mock_token(guest_event_id, system_id)}",
-  }
-end
-
-# Provide some basic headers for google auth
-GOOGLE_HEADERS = {
-  "Host"          => "google.staff-api.dev",
-  "Authorization" => "Bearer #{google_mock_token}",
-}
 
 module EventMetadatasHelper
   extend self

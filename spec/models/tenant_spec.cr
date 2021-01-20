@@ -27,7 +27,7 @@ describe Tenant do
 
     headers = {
       "Host"          => "google.staff-api.dev",
-      "Authorization" => "Bearer #{google_mock_token}",
+      "Authorization" => "Bearer #{Mock::Token.google}",
       "Content-Type"  => "application/json",
     }
 
