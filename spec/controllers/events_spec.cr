@@ -548,8 +548,8 @@ describe Events do
     ctx.response.output = IO::Memory.new
     Events.new(ctx).approve
     accepted_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = accepted_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee["response_status"].as_s.should eq("accepted")
+    room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
+    room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
 
   pending "#reject marks room as declined" do
@@ -590,8 +590,8 @@ describe Events do
     ctx.response.output = IO::Memory.new
     Events.new(ctx).approve
     declined_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = declined_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee["response_status"].as_s.should eq("declined")
+    room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
+    room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
 
   describe "#guest_list" do
