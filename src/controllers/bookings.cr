@@ -59,7 +59,7 @@ class Bookings < Application
     head(:conflict) if Booking.query
                          .by_tenant(tenant.id)
                          .where(
-                           "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
+                           "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
                            starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
                          ).count > 0
 
