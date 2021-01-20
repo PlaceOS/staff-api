@@ -15,31 +15,19 @@ describe Bookings do
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-      ctx = context("GET", route, OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      Bookings.new(ctx).index
-
-      results = JSON.parse(ctx.response.output.to_s)
-      results.as_a.size.should eq(2)
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body.size.should eq(2)
 
       # filter by zones
-      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
-      ctx = context("GET", route, OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      Bookings.new(ctx).index
-
-      results = JSON.parse(ctx.response.output.to_s)
-      results.as_a.size.should eq(1)
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body.size.should eq(1)
 
       # More filters by zones
-      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
-      ctx = context("GET", route, OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      Bookings.new(ctx).index
-
-      results = JSON.parse(ctx.response.output.to_s)
-      results.as_a.size.should eq(2)
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      body.size.should eq(2)
     end
 
     it "should return a list of bookings when filtered by user" do
@@ -49,24 +37,15 @@ describe Bookings do
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-
       # Since we are using Toby's token to login, user=current means Toby
-      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
-      ctx = context("GET", route, OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      Bookings.new(ctx).index
-
-      results = JSON.parse(ctx.response.output.to_s)
-      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq(["toby@redant.com.au"])
 
-      route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
-      ctx = context("GET", route, OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      Bookings.new(ctx).index
-
-      results = JSON.parse(ctx.response.output.to_s)
-      booking_user_ids = results.as_a.map { |r| r["user_id"] }
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+      booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq(["jon@example.com"])
     end
   end
@@ -75,14 +54,9 @@ describe Bookings do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     booking = BookingsHelper.create_booking(tenant.id)
 
-    ctx = context("GET", "/api/staff/v1/bookings/#{booking.id}", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).show
-
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_h["user_id"].should eq("jon@example.com")
-    results.as_h["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: OFFICE365_HEADERS, &.show)[1].as_h
+    body["user_id"].should eq("jon@example.com")
+    body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
   pending "#destroy should delete a booking" do
@@ -90,7 +64,6 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     BookingsHelper.create_booking(tenant.id)
     booking = BookingsHelper.create_booking(tenant_id: tenant.id,
@@ -103,26 +76,16 @@ describe Bookings do
     # Check both are returned in beginning
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).index
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(2)
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+    body.size.should eq(2)
 
-    ctx = context("DELETE", "/api/staff/v1/bookings/#{booking.id}/", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.not_nil!.to_s}
-    Bookings.new(ctx).destroy
+    Context(Bookings, JSON::Any).response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: OFFICE365_HEADERS, &.destroy)[1].as_h
 
     # Check only one is returned after deletion
-    route = "/api/staff/v1/bookings?period_start=#{starting}&period_end=#{ending}&type=desk"
-    ctx = context("GET", route, OFFICE365_HEADERS)
-    ctx.response.output = IO::Memory.new
-
-    Bookings.new(ctx).index
-
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_a.size.should eq(1)
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: OFFICE365_HEADERS, &.index)[1].as_a
+    body.size.should eq(1)
   end
 
   it "#create should create and #update should update a booking" do
@@ -133,29 +96,13 @@ describe Bookings do
 
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
-
-    body = IO::Memory.new
-    body << %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/bookings/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).create
-
-    created = JSON.parse(ctx.response.output.to_s).as_h
+    created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}), headers: OFFICE365_HEADERS, &.create)[1].as_h
     created["asset_id"].should eq("some_desk")
     created["booking_start"].should eq(starting)
     created["booking_end"].should eq(ending)
 
     # instantiate the controller
-    body = IO::Memory.new
-    body << %({"extension_data":{"other":"stuff"}})
-    body.rewind
-    ctx = context("PATCH", "/api/staff/v1/bookings/#{created["id"]}", OFFICE365_HEADERS, body)
-    ctx.route_params = {"id" => created["id"].to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).update
-
-    updated = JSON.parse(ctx.response.output.to_s).as_h
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"extension_data":{"other":"stuff"}}), headers: OFFICE365_HEADERS, &.update)[1].as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
     booking = Booking.query.find!({id: updated["id"]})
     booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
@@ -166,35 +113,24 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     booking = BookingsHelper.create_booking(tenant.id)
 
-    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/approve", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).approve
-
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_h["approved"].should eq(true)
-    results.as_h["approver_id"].should eq("toby@redant.com.au")
-    results.as_h["approver_email"].should eq("dev@acaprojects.com")
-    results.as_h["approver_name"].should eq("Toby Carvan")
-    results.as_h["rejected"].should eq(false)
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/approve", route_params: {"id" => booking.id.to_s}, headers: OFFICE365_HEADERS, &.approve)[1].as_h
+    body["approved"].should eq(true)
+    body["approver_id"].should eq("toby@redant.com.au")
+    body["approver_email"].should eq("dev@acaprojects.com")
+    body["approver_name"].should eq("Toby Carvan")
+    body["rejected"].should eq(false)
 
     # Test rejection
-    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/reject", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).reject
-
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_h["rejected"].should eq(true)
-    results.as_h["approved"].should eq(false)
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: OFFICE365_HEADERS, &.reject)[1].as_h
+    body["rejected"].should eq(true)
+    body["approved"].should eq(false)
     # Reset approver info
-    results.as_h["approver_id"].should eq(nil)
-    results.as_h["approver_email"].should eq(nil)
-    results.as_h["approver_name"].should eq(nil)
+    body["approver_id"].should eq(nil)
+    body["approver_email"].should eq(nil)
+    body["approver_name"].should eq(nil)
   end
 
   it "#check_in should set checked_in state of a booking" do
@@ -202,27 +138,18 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = Tenant.query.find!({domain: "toby.staff-api.dev"})
     booking = BookingsHelper.create_booking(tenant.id)
 
-    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=true", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).check_in
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: OFFICE365_HEADERS, &.check_in)[1].as_h
+    body["checked_in"].should eq(true)
 
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_h["checked_in"].should eq(true)
-
-    ctx = context("POST", "/api/staff/v1/bookings/#{booking.id}/check_in?state=false", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => booking.id.to_s}
-    ctx.response.output = IO::Memory.new
-    Bookings.new(ctx).check_in
-
-    results = JSON.parse(ctx.response.output.to_s)
-    results.as_h["checked_in"].should eq(false)
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: OFFICE365_HEADERS, &.check_in)[1].as_h
+    body["checked_in"].should eq(false)
   end
 end
+
+BOOKINGS_BASE = Bookings.base_route
 
 module BookingsHelper
   extend self

@@ -21,25 +21,19 @@ describe Events do
       now = 1588407645
       later = 1588422097
 
-      ctx = context("GET", "/api/staff/v1/events?zone_ids=z1&period_start=#{now}&period_end=#{later}", OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      events = Events.new(ctx)
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: OFFICE365_HEADERS) { |e|
+        event_start = 1598832000.to_i64
+        event_end = 1598833800.to_i64
+        id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+        system_id = "sys-rJQQlR4Cn7"
+        room_email = "room1@example.com"
+        host = "dev@acaprojects.onmicrosoft.com"
+        tenant_id = e.tenant.id
+        EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
+        e.index
+      }[1].as_a
 
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
-      id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
-      tenant_id = events.tenant.id
-
-      EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
-
-      events.index
-
-      results = JSON.parse(ctx.response.output.to_s)
-
-      results.as_a.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
+      body.as_a.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
     end
 
     pending "#index should return a list of events with metadata of master event if event in list is an occurrence" do
@@ -57,29 +51,23 @@ describe Events do
       now = 1588407645
       later = 1588422097
 
-      ctx = context("GET", "/api/staff/v1/events?zone_ids=z1&period_start=#{now}&period_end=#{later}", OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      events = Events.new(ctx)
-
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
-      master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
-      tenant_id = events.tenant.id
-
-      EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
-
-      events.index
-
-      results = JSON.parse(ctx.response.output.to_s)
+      body = Events.Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: OFFICE365_HEADERS) { |e|
+        event_start = 1598832000.to_i64
+        event_end = 1598833800.to_i64
+        master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+        system_id = "sys-rJQQlR4Cn7"
+        room_email = "room1@example.com"
+        host = "dev@acaprojects.onmicrosoft.com"
+        tenant_id = e.tenant.id
+        EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
+        e.index
+      }[1].as_a
 
       expected_result = EventsHelper.mock_event("event_instance_of_recurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
       expected_result["recurring_event_id"] = master_event_id
       expected_result["recurring_master_id"] = master_event_id
 
-      results.as_a.should contain(expected_result)
+      body.should contain(expected_result)
     end
   end
 
@@ -105,14 +93,9 @@ describe Events do
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
 
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
       created_event.should eq(EventsHelper.create_event_output)
 
       # Should have created metadata record
@@ -128,26 +111,22 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have created guests records
-      guests = evt_meta.attendees.map { |a| a.guest }
-      guests.map { |g| g.name }.should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
-      guests.compact_map { |g| g.email }.should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
-      guests.compact_map { |g| g.preferred_name }.should eq(["Jon"])
-      guests.compact_map { |g| g.phone }.should eq(["012334446"])
-      guests.compact_map { |g| g.organisation }.should eq(["Google inc"])
-      guests.compact_map { |g| g.notes }.should eq(["some notes"])
-      guests.compact_map { |g| g.photo }.should eq(["http://example.com/first.jpg"])
-      guests.compact_map { |g| g.searchable }.should eq(["amit  ", "john jon google inc", "dev@acaprojects.onmicrosoft.com  "])
-      guests.compact_map { |g| g.ext_data }.should eq([{} of String => String?, {"fizz" => "buzz"}, {} of String => String?])
+      guests = evt_meta.attendees.map(&.guest)
+      guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
+      guests.compact_map(&.email).should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
+      guests.compact_map(&.preferred_name).should eq(["Jon"])
+      guests.compact_map(&.phone).should eq(["012334446"])
+      guests.compact_map(&.organisation).should eq(["Google inc"])
+      guests.compact_map(&.notes).should eq(["some notes"])
+      guests.compact_map(&.photo).should eq(["http://example.com/first.jpg"])
+      guests.compact_map(&.searchable).should eq(["amit  ", "john jon google inc", "dev@acaprojects.onmicrosoft.com  "])
+      guests.compact_map(&.ext_data).should eq([{} of String => String?, {"fizz" => "buzz"}, {} of String => String?])
 
       # Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      updated_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.update_event_input
+
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: OFFICE365_HEADERS, &.update)[1].as_h
       updated_event.should eq(EventsHelper.update_event_output)
 
       # Should have updated metadata record
@@ -160,15 +139,15 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have updated guests records
-      guests = evt_meta.attendees.map { |a| a.guest }
-      guests.map { |g| g.name }.should eq(["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"])
-      guests.compact_map { |g| g.email }.should eq(["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"])
-      guests.compact_map { |g| g.preferred_name }.should eq(["bob"])
-      guests.compact_map { |g| g.phone }.should eq(["012333336"])
-      guests.compact_map { |g| g.organisation }.should eq(["Apple inc"])
-      guests.compact_map { |g| g.notes }.should eq(["some updated notes"])
-      guests.compact_map { |g| g.photo }.should eq(["http://example.com/bob.jpg"])
-      guests.compact_map { |g| g.ext_data }.should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
+      guests = evt_meta.attendees.map(&.guest)
+      guests.map(&.name).should eq(["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"])
+      guests.compact_map(&.email).should eq(["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"])
+      guests.compact_map(&.preferred_name).should eq(["bob"])
+      guests.compact_map(&.phone).should eq(["012333336"])
+      guests.compact_map(&.organisation).should eq(["Apple inc"])
+      guests.compact_map(&.notes).should eq(["some updated notes"])
+      guests.compact_map(&.photo).should eq(["http://example.com/bob.jpg"])
+      guests.compact_map(&.ext_data).should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
     end
 
     pending "#create should create event with attendees and extension data and #update should extension data for when guest" do
@@ -190,23 +169,12 @@ describe Events do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
 
       # Guest Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      updated_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.update_event_input
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.update)[1].as_h
 
       # Should have only updated extension in metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -238,26 +206,17 @@ describe Events do
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: OFFICE365_HEADERS, &.create)[1].as_h
 
       # Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?calendar=dev@acaprojects.com", OFFICE365_HEADERS, body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598504460)
-      event["event_end"].should eq(1598508120)
+      req_body = EventsHelper.update_event_input
+      status_code, event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, body: req_body, headers: OFFICE365_HEADERS, &.update)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598504460)
+      event.as_h["event_end"].should eq(1598508120)
     end
   end
 
@@ -284,23 +243,17 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
 
       # Fetch guest event details
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event["id"].to_s}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.show)
+
+      sstatus_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
     end
 
     pending "should return details for event with guest access and event is recurring instance" do
@@ -325,30 +278,24 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_event_input
+      Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}", route_params: {"id" => event_instance_id}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.show)
+
+      status_code.should eq(200)
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
 
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
+      event.as_h["recurring_master_id"].should eq(master_event_id)
       # Should have extension data stored on master event
-      event["extension_data"].should eq({"foo" => "bar"})
+      event.as_h["extension_data"].should eq({"foo" => "bar"})
     end
 
     pending "should return details for event with normal access" do
@@ -373,33 +320,22 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
 
       # Show for calendar
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}?calendar=dev@acaprojects.com", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?calendar=dev@acaprojects.com", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.show)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
 
       # Show for room
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.show)
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
     end
 
     pending "should return details for event that is an recurring event instance with normal access" do
@@ -424,12 +360,9 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_event_input
+      Events.context("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
@@ -438,30 +371,23 @@ describe Events do
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
 
       # Show event details for calendar params that is an instance of master event created above
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}?calendar=dev@acaprojects.com", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.com", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.show)
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
+      event.as_h["recurring_master_id"].should eq(master_event_id)
       # Should not have any exetension information
-      event["extension_data"]?.should eq(nil)
+      event.as_h["extension_data"]?.should eq(nil)
 
       # Show event details for room/system params that is an instance of master event created above
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.show)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
+      event.as_h["recurring_master_id"].should eq(master_event_id)
       # Should have extension data stored on master event
-      event["extension_data"].should eq({"foo" => "bar"})
+      event.as_h["extension_data"].should eq({"foo" => "bar"})
     end
   end
 
@@ -489,22 +415,15 @@ describe Events do
       .to_return(body: "")
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+    req_body = EventsHelper.create_event_input
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
 
     # Should have created event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
 
     # delete
-    ctx.response.output = IO::Memory.new
-    ctx = context("DELETE", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    Events.new(ctx).destroy
+    EventMetadata.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.destroy)
 
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
@@ -534,20 +453,14 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+    req_body = EventsHelper.create_event_input
+
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
 
     # approve
-    ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).approve
-    accepted_event = JSON.parse(ctx.response.output.to_s).as_h
+    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.approve).as_h
+
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
@@ -576,20 +489,11 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+    req_body = EventsHelper.create_event_input
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)[1].as_h
 
     # reject
-    ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).approve
-    declined_event = JSON.parse(ctx.response.output.to_s).as_h
+    declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.approve)[1].as_h
     room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
@@ -621,52 +525,29 @@ describe Events do
         .to_return(body: "")
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create).as_h
 
       # guest_list
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_list
-      guests = JSON.parse(ctx.response.output.to_s).as_a
+      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: OFFICE365_HEADERS, &.guest_list)[1].as_a
       guests.should eq(EventsHelper.guests_list_output)
 
       # guest_checkin via system
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &..guest_checkin)[1].as_h
       ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
 
@@ -696,32 +577,22 @@ describe Events do
         .to_return(body: "")
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_event_input
+      Events.context("POST", "#{EVENTS_BASE}/", headers: OFFICE365_HEADERS, body: req_body, &.create)
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
 
       # guest_list
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_list
-      guests = JSON.parse(ctx.response.output.to_s).as_a
+      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: OFFICE365_HEADERS, &.guest_list)[1].as_a
       guests.should eq(EventsHelper.guests_list_output)
 
       # guest_checkin via system
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
+
       # We should have created meta by migrating from master event meta
       meta_after_checkin = EventMetadata.query.find!({event_id: event_instance_id})
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
@@ -730,31 +601,21 @@ describe Events do
       meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
 
       # guest_checkin via system state = false
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: OFFICE365_HEADERS, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
   end
 end
+
+EVENTS_BASE = Events.base_route
 
 module EventsHelper
   extend self

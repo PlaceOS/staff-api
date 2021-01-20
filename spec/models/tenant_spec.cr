@@ -2,19 +2,17 @@ require "../spec_helper"
 
 describe Tenant do
   it "valid input raises no errors" do
-    params = {
+    a = TenantsHelper.create_tenant({
       name:        "Jon",
       platform:    "google",
       domain:      "google.staff-api.dev",
       credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
-    }
-    a = TenantsHelper.create_tenant(params)
+    })
     a.errors.size.should eq 0
   end
 
   it "should accept JSON params" do
-    body = IO::Memory.new
-    body << %({
+    body = %({
       "name":        "Bob",
       "platform":    "google",
       "domain":      "club-bob.staff-api.dev",
@@ -26,17 +24,15 @@ describe Tenant do
         "sub":         "bob@example.com.au"
       }
     })
-    body.rewind
 
-    headers = HTTP::Headers{
+    headers = {
       "Host"          => "google.staff-api.dev",
       "Authorization" => "Bearer #{google_mock_token}",
       "Content-Type"  => "application/json",
     }
 
-    ctx = context("POST", "/api/staff/v1/tenants", headers, body)
-    Tenants.new(ctx).create
-    ctx.response.status_code.should eq(200)
+    res = Tenants.context("POST", "/api/staff/v1/tenants", body: body, headers: headers, &.create)
+    res.status_code.should eq(200)
   end
 
   it "takes JSON credentials and returns a PlaceCalendar::Client" do
@@ -46,8 +42,22 @@ describe Tenant do
 
   it "should validate credentials based on platform" do
     a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    a.platform = "google"
-    a.save
+    a.update({platform: "google"})
     a.errors.size.should be > 0
+  end
+end
+
+module TenantsHelper
+  extend self
+
+  MOCK_TENANT_PARAMS = {
+    name:        "Toby",
+    platform:    "office365",
+    domain:      "toby.staff-api.dev",
+    credentials: %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"}),
+  }
+
+  def create_tenant(params = MOCK_TENANT_PARAMS)
+    Tenant.create(params)
   end
 end
