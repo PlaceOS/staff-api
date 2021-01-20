@@ -17,13 +17,9 @@ class Tenants < Application
       credentials: args["credentials"].to_json,
     })
 
-    if tenant.save
-      render json: tenant.to_json
-    else
-      errors = tenant.errors.map { |e| {column: e.column, reason: e.reason} }
+    render :bad_request, json: {errors: tenant.errors.map { |e| {column: e.column, reason: e.reason} }} if !tenant.save
 
-      render :bad_request, json: {errors: errors}
-    end
+    render json: tenant.to_json
   end
 
   def destroy

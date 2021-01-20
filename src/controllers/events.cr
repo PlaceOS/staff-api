@@ -139,18 +139,18 @@ class Events < Application
       # Save custom data
       ext_data = input_event.extension_data
       if ext_data || (attending && !attending.empty?)
-        meta = EventMetadata.new
-        meta.system_id = sys.id.not_nil!
-        meta.event_id = created_event.id.not_nil!
-        meta.recurring_master_id = created_event.recurring_event_id || created_event.id if created_event.recurring
-        meta.event_start = created_event.event_start.not_nil!.to_unix
-        meta.event_end = created_event.event_end.not_nil!.to_unix
-        meta.resource_calendar = sys.email.not_nil!
-        meta.host_email = host
-        meta.ext_data = ext_data
-        meta.tenant_id = tenant.id
-        meta.ical_uid = created_event.ical_uid.not_nil!
-        meta.save!
+        meta = EventMetadata.create!({
+          system_id:           sys.id.not_nil!,
+          event_id:            created_event.id.not_nil!,
+          recurring_master_id: (created_event.recurring_event_id || created_event.id if created_event.recurring),
+          event_start:         created_event.event_start.not_nil!.to_unix,
+          event_end:           created_event.event_end.not_nil!.to_unix,
+          resource_calendar:   sys.email.not_nil!,
+          host_email:          host,
+          ext_data:            ext_data,
+          tenant_id:           tenant.id,
+          ical_uid:            created_event.ical_uid.not_nil!,
+        })
 
         Log.info { "saving extension data for event #{created_event.id} in #{sys.id}" }
 
