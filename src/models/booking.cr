@@ -60,11 +60,11 @@ class Booking
   end
 
   scope :created_before do |time|
-    time ? where { created < time.not_nil!.to_i64 } : self
+    time ? where { last_changed < time.not_nil!.to_i64 } : self
   end
 
   scope :created_after do |time|
-    time ? where { created > time.not_nil!.to_i64 } : self
+    time ? where { last_changed > time.not_nil!.to_i64 } : self
   end
 
   scope :is_approved do |value|
