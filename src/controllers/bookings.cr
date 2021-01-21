@@ -79,7 +79,7 @@ class Bookings < Application
     booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
 
     if booking.save
-      spawn do
+      #spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
             action:        :create,
@@ -99,7 +99,7 @@ class Bookings < Application
         rescue error
           Log.error(exception: error) { "while signaling booking created" }
         end
-      end
+      #end
 
       render :created, json: booking.as_json
     else
@@ -166,7 +166,7 @@ class Bookings < Application
   def destroy
     booking.delete
 
-    spawn do
+    #spawn do
       begin
         get_placeos_client.root.signal("staff/booking/changed", {
           action:        :cancelled,
@@ -186,7 +186,7 @@ class Bookings < Application
       rescue error
         Log.error(exception: error) { "while signaling booking cancelled" }
       end
-    end
+    #end
 
     head :accepted
   end
@@ -227,7 +227,7 @@ class Bookings < Application
 
   private def update_booking(booking, signal = "changed")
     if booking.save
-      spawn do
+      #spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
             action:        signal,
@@ -247,7 +247,7 @@ class Bookings < Application
         rescue error
           Log.error(exception: error) { "while signaling booking #{signal}" }
         end
-      end
+      #end
 
       render json: booking.as_json
     else
