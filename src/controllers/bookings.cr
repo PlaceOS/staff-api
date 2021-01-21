@@ -80,21 +80,25 @@ class Bookings < Application
 
     if booking.save
       spawn do
-        get_placeos_client.root.signal("staff/booking/changed", {
-          action:        :create,
-          id:            booking.id,
-          booking_type:  booking.booking_type,
-          booking_start: booking.booking_start,
-          booking_end:   booking.booking_end,
-          timezone:      booking.timezone,
-          resource_id:   booking.asset_id,
-          user_id:       booking.user_id,
-          user_email:    booking.user_email,
-          user_name:     booking.user_name,
-          zones:         booking.zones,
-          process_state: booking.process_state,
-          last_changed:  booking.last_changed,
-        })
+        begin
+          get_placeos_client.root.signal("staff/booking/changed", {
+            action:        :create,
+            id:            booking.id,
+            booking_type:  booking.booking_type,
+            booking_start: booking.booking_start,
+            booking_end:   booking.booking_end,
+            timezone:      booking.timezone,
+            resource_id:   booking.asset_id,
+            user_id:       booking.user_id,
+            user_email:    booking.user_email,
+            user_name:     booking.user_name,
+            zones:         booking.zones,
+            process_state: booking.process_state,
+            last_changed:  booking.last_changed,
+          })
+        rescue error
+          Log.error(exception: error) { "while signaling booking created" }
+        end
       end
 
       render :created, json: booking.as_json
@@ -163,21 +167,25 @@ class Bookings < Application
     booking.delete
 
     spawn do
-      get_placeos_client.root.signal("staff/booking/changed", {
-        action:        :cancelled,
-        id:            booking.id,
-        booking_type:  booking.booking_type,
-        booking_start: booking.booking_start,
-        booking_end:   booking.booking_end,
-        timezone:      booking.timezone,
-        resource_id:   booking.asset_id,
-        user_id:       booking.user_id,
-        user_email:    booking.user_email,
-        user_name:     booking.user_name,
-        zones:         booking.zones,
-        process_state: booking.process_state,
-        last_changed:  booking.last_changed,
-      })
+      begin
+        get_placeos_client.root.signal("staff/booking/changed", {
+          action:        :cancelled,
+          id:            booking.id,
+          booking_type:  booking.booking_type,
+          booking_start: booking.booking_start,
+          booking_end:   booking.booking_end,
+          timezone:      booking.timezone,
+          resource_id:   booking.asset_id,
+          user_id:       booking.user_id,
+          user_email:    booking.user_email,
+          user_name:     booking.user_name,
+          zones:         booking.zones,
+          process_state: booking.process_state,
+          last_changed:  booking.last_changed,
+        })
+      rescue error
+        Log.error(exception: error) { "while signaling booking cancelled" }
+      end
     end
 
     head :accepted
@@ -220,21 +228,25 @@ class Bookings < Application
   private def update_booking(booking, signal = "changed")
     if booking.save
       spawn do
-        get_placeos_client.root.signal("staff/booking/changed", {
-          action:        signal,
-          id:            booking.id,
-          booking_type:  booking.booking_type,
-          booking_start: booking.booking_start,
-          booking_end:   booking.booking_end,
-          timezone:      booking.timezone,
-          resource_id:   booking.asset_id,
-          user_id:       booking.user_id,
-          user_email:    booking.user_email,
-          user_name:     booking.user_name,
-          zones:         booking.zones,
-          process_state: booking.process_state,
-          last_changed:  booking.last_changed,
-        })
+        begin
+          get_placeos_client.root.signal("staff/booking/changed", {
+            action:        signal,
+            id:            booking.id,
+            booking_type:  booking.booking_type,
+            booking_start: booking.booking_start,
+            booking_end:   booking.booking_end,
+            timezone:      booking.timezone,
+            resource_id:   booking.asset_id,
+            user_id:       booking.user_id,
+            user_email:    booking.user_email,
+            user_name:     booking.user_name,
+            zones:         booking.zones,
+            process_state: booking.process_state,
+            last_changed:  booking.last_changed,
+          })
+        rescue error
+          Log.error(exception: error) { "while signaling booking #{signal}" }
+        end
       end
 
       render json: booking.as_json
