@@ -10,9 +10,9 @@ class Bookings < Application
     booking_type = query_params["type"]
     booking_state = query_params["state"]?
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
-    user_id = query_params["user"]?
-    user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty?)
     user_email = query_params["email"]?
+    user_id = query_params["user"]?
+    user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
     created_before = query_params["created_before"]?
     created_after = query_params["created_after"]?
     approved = query_params["approved"]?
@@ -79,7 +79,7 @@ class Bookings < Application
     booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
 
     if booking.save
-      #spawn do
+      spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
             action:        :create,
@@ -99,7 +99,7 @@ class Bookings < Application
         rescue error
           Log.error(exception: error) { "while signaling booking created" }
         end
-      #end
+      end
 
       render :created, json: booking.as_json
     else
@@ -166,7 +166,7 @@ class Bookings < Application
   def destroy
     booking.delete
 
-    #spawn do
+    spawn do
       begin
         get_placeos_client.root.signal("staff/booking/changed", {
           action:        :cancelled,
@@ -186,7 +186,7 @@ class Bookings < Application
       rescue error
         Log.error(exception: error) { "while signaling booking cancelled" }
       end
-    #end
+    end
 
     head :accepted
   end
@@ -227,7 +227,7 @@ class Bookings < Application
 
   private def update_booking(booking, signal = "changed")
     if booking.save
-      #spawn do
+      spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
             action:        signal,
@@ -247,7 +247,7 @@ class Bookings < Application
         rescue error
           Log.error(exception: error) { "while signaling booking #{signal}" }
         end
-      #end
+      end
 
       render json: booking.as_json
     else
