@@ -236,19 +236,21 @@ class Bookings < Application
       spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
-            action:        signal,
-            id:            booking.id,
-            booking_type:  booking.booking_type,
-            booking_start: booking.booking_start,
-            booking_end:   booking.booking_end,
-            timezone:      booking.timezone,
-            resource_id:   booking.asset_id,
-            user_id:       booking.user_id,
-            user_email:    booking.user_email,
-            user_name:     booking.user_name,
-            zones:         booking.zones,
-            process_state: booking.process_state,
-            last_changed:  booking.last_changed,
+            action:         signal,
+            id:             booking.id,
+            booking_type:   booking.booking_type,
+            booking_start:  booking.booking_start,
+            booking_end:    booking.booking_end,
+            timezone:       booking.timezone,
+            resource_id:    booking.asset_id,
+            user_id:        booking.user_id,
+            user_email:     booking.user_email,
+            user_name:      booking.user_name,
+            zones:          booking.zones,
+            process_state:  booking.process_state,
+            last_changed:   booking.last_changed,
+            approver_name:  booking.approver_name,
+            approver_email: booking.approver_email,
           })
         rescue error
           Log.error(exception: error) { "while signaling booking #{signal}" }
