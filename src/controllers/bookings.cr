@@ -1,7 +1,7 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
-  before_action :check_access, only: [:update, :update_alt, :destroy, :check_in]
+  before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
   getter booking : Booking { find_booking }
 
   def index
@@ -191,6 +191,7 @@ class Bookings < Application
     head :accepted
   end
 
+  # we don't enforce permissions on these as peoples managers can perform these actions
   post "/:id/approve", :approve do
     set_approver(booking, true)
     update_booking(booking, "approved")
@@ -221,8 +222,13 @@ class Bookings < Application
       .find!({id: route_params["id"].to_i64})
   end
 
-  private def check_access
-    head :forbidden if (user = user_token) && (booking && booking.user_id != user.id) && !(user.is_admin? || user.is_support?)
+  private def confirm_access
+    if (user = user_token) &&
+       (booking && booking.user_id != user.id) &&
+       !(user.is_admin? || user.is_support?) &&
+       !check_access(user.user.roles, booking.zones || [] of String).none?
+      head :forbidden
+    end
   end
 
   private def update_booking(booking, signal = "changed")

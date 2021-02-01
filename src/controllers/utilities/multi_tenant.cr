@@ -20,7 +20,7 @@ module Utils::MultiTenant
   private def determine_tenant_from_domain
     # Token and authority domains must match
     token_domain_host = user_token.domain
-    authority_domain_host = request.host.as(String)
+    authority_domain_host = request.hostname.as(String)
 
     unless token_domain_host == authority_domain_host
       ::Log.with_context do

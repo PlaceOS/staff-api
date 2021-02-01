@@ -17,7 +17,7 @@ Clear::Migration::Manager.instance.apply_all
 require "action-controller/server"
 
 # Configure logging
-Log.builder.bind "*", :warning, App::LOG_BACKEND
+Log.builder.bind "*", :warn, App::LOG_BACKEND
 Log.builder.bind "action-controller.*", :info, App::LOG_BACKEND
 Log.builder.bind "#{App::NAME}.*", :info, App::LOG_BACKEND
 
