@@ -32,7 +32,6 @@ development_dependencies:
     github: veelenga/ameba
   webmock:
     github: manastech/webmock.cr
-    version: 0.13.0 # remove once 0.36.0 released
   faker:
     github: askn/faker
 

@@ -8,6 +8,7 @@ class Staff < Application
 
   def show
     id = params["id"]
-    render json: client.get_user(id)
+    # NOTE:: works for ids and email addresses
+    render json: client.get_user_by_email(id)
   end
 end
