@@ -2,6 +2,9 @@ FROM crystallang/crystal:0.36.0-alpine
 ADD . /src
 WORKDIR /src
 
+# Set the commit through a build arg
+ARG PLACE_COMMIT="DEV"
+
 # Install any additional dependencies
 # RUN apk update
 # RUN apk add libssh2 libssh2-dev
@@ -26,7 +29,8 @@ RUN adduser \
     "${USER}"
 
 # Build App
-RUN shards build --error-trace --production
+RUN PLACE_COMMIT=$PLACE_COMMIT \
+    shards build --error-trace --production
 
 # Extract dependencies
 RUN ldd bin/app | tr -s '[:blank:]' '\n' | grep '^/' | \
