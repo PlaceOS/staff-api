@@ -95,6 +95,9 @@ class Bookings < Application
             zones:         booking.zones,
             process_state: booking.process_state,
             last_changed:  booking.last_changed,
+            title:         booking.title,
+            checked_in:    booking.checked_in,
+            description:   booking.description,
           })
         rescue error
           Log.error(exception: error) { "while signaling booking created" }
@@ -182,6 +185,9 @@ class Bookings < Application
           zones:         booking.zones,
           process_state: booking.process_state,
           last_changed:  booking.last_changed,
+          title:         booking.title,
+          checked_in:    booking.checked_in,
+          description:   booking.description,
         })
       rescue error
         Log.error(exception: error) { "while signaling booking cancelled" }
@@ -251,6 +257,9 @@ class Bookings < Application
             last_changed:   booking.last_changed,
             approver_name:  booking.approver_name,
             approver_email: booking.approver_email,
+            title:          booking.title,
+            checked_in:     booking.checked_in,
+            description:    booking.description,
           })
         rescue error
           Log.error(exception: error) { "while signaling booking #{signal}" }
