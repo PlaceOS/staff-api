@@ -6,6 +6,8 @@ port = App::DEFAULT_PORT
 host = App::DEFAULT_HOST
 process_count = App::DEFAULT_PROCESS_COUNT
 
+require "./config"
+
 # Command line options
 OptionParser.parse(ARGV.dup) do |parser|
   parser.banner = "Usage: #{PROGRAM_NAME} [arguments]"
@@ -31,6 +33,28 @@ OptionParser.parse(ARGV.dup) do |parser|
     puts parser
     exit 0
   end
+
+  parser.on("-f", "--fix", "Fixes booking asset IDs as a once off") do
+    success = 0
+    failed = 0
+    Booking.by_zones(["zone-G5o6CPdNWUc"]).each do |booking|
+      if booking.asset_id.starts_with? "area-F"
+        # ID looks like: area-F.16.30-status
+        puts "updating booking #{booking.id} for #{booking.asset_id}"
+        parts = booking.asset_id.split('-')[1].split('.')
+        level_id = parts[1]
+        desk_id = parts[2]
+        booking.asset_id = "desk-BR#{level_id}.#{desk_id.rjust(3,'0')}F"
+        if booking.save
+          success += 1
+        else
+          failed += 1
+        end
+      end
+    end
+    puts "found #{success + failed} successfully updated #{success} bookings"
+    exit 0
+  end
 end
 
 # Load the routes
@@ -38,7 +62,7 @@ puts "Launching #{App::NAME} v#{App::VERSION}"
 
 # Requiring config here ensures that the option parser runs before
 # attempting to connect to databases etc.
-require "./config"
+
 server = ActionController::Server.new(port, host)
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate
