@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 3.5.2
+    version: 4.1.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -15,7 +15,7 @@ shards:
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
-    version: 1.11.2+git.commit.c3c3467953654554b72c24e7b853d6fbb23f10c0
+    version: 1.11.2+git.commit.91df71243271debfeb46fe751b4b9d8892ab6f2d
 
   ameba:
     git: https://github.com/veelenga/ameba.git
@@ -27,11 +27,11 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.9+git.commit.795df3c57e1adc6a03798d14092cf444c7e6fe75
+    version: 0.9+git.commit.35ce5ff09671bde9ccb94e60e784d31fdbca921c
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
-    version: 1.1.0
+    version: 1.2.0
 
   cron_parser:
     git: https://github.com/kostya/cron_parser.git
@@ -63,7 +63,7 @@ shards:
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
-    version: 0.4.4
+    version: 0.4.5
 
   http-params-serializable:
     git: https://github.com/caspiano/http-params-serializable.git
@@ -83,7 +83,7 @@ shards:
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
-    version: 0.4.0
+    version: 0.4.1
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
@@ -111,7 +111,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 4.10.2
+    version: 4.12.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -123,7 +123,7 @@ shards:
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 3.2.1
+    version: 3.2.2
 
   retriable: # Overridden
     git: https://github.com/sija/retriable.cr.git
