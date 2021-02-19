@@ -37,7 +37,8 @@ OptionParser.parse(ARGV.dup) do |parser|
   parser.on("-f", "--fix", "Fixes booking asset IDs as a once off") do
     success = 0
     failed = 0
-    Booking.by_zones(["zone-G5o6CPdNWUc"]).each do |booking|
+    clash_check = [] of Tuple(String, Int64, String)
+    Booking.query.by_zones(["zone-G5o6CPdNWUc"]).each do |booking|
       if booking.asset_id.starts_with? "area-F"
         # ID looks like: area-F.16.30-status
         puts "updating booking #{booking.id} for #{booking.asset_id}"
@@ -47,12 +48,28 @@ OptionParser.parse(ARGV.dup) do |parser|
         booking.asset_id = "desk-BR#{level_id}.#{desk_id.rjust(3,'0')}F"
         if booking.save
           success += 1
+          clash_check << {booking.user_email, booking.booking_start, booking.asset_id}
         else
           failed += 1
         end
       end
     end
     puts "found #{success + failed} successfully updated #{success} bookings"
+
+    puts "checking for clashes..."
+    puts "asset_id, user_email, booking_start"
+    clashes = 0
+    clash_check.each do |(user_email, booking_start, asset_id)|
+      if Booking.query.where(
+          "booking_start = :starting AND asset_id = :asset",
+          starting: booking_start, asset: asset_id
+        ).count > 1_i64
+        clashes += 1
+        puts "#{asset_id}, #{user_email}, #{booking_start}"
+      end
+    end
+    puts "found #{clashes} clashes"
+
     exit 0
   end
 end
