@@ -51,17 +51,8 @@ class Bookings < Application
                              booking.asset_id_column.defined?
 
     # check there isn't a clashing booking
-    starting = booking.booking_start
-    ending = booking.booking_end
-    booking_type = booking.booking_type
-    asset_id = booking.asset_id
-
-    head(:conflict) if Booking.query
-                         .by_tenant(tenant.id)
-                         .where(
-                           "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
-                           starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-                         ).count > 0
+    clashing_bookings = check_clashing(booking)
+    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
     # Add the tenant details
     booking.tenant_id = tenant.id
@@ -145,19 +136,8 @@ class Bookings < Application
     end
 
     # check there isn't a clashing booking
-    starting = existing_booking.booking_start
-    ending = existing_booking.booking_end
-    booking_type = existing_booking.booking_type
-    asset_id = existing_booking.asset_id
-
-    existing = Booking.query
-      .by_tenant(tenant.id)
-      .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id",
-        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
-      ).where { id != existing_booking.id }
-
-    head(:conflict) if existing.count > 0
+    clashing_bookings = check_clashing(existing_booking)
+    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
     update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
   end
@@ -200,6 +180,10 @@ class Bookings < Application
   # we don't enforce permissions on these as peoples managers can perform these actions
   post "/:id/approve", :approve do
     set_approver(booking, true)
+
+    clashing_bookings = check_clashing(booking)
+    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+
     update_booking(booking, "approved")
   end
 
@@ -221,6 +205,22 @@ class Bookings < Application
   # ============================================
   #              Helper Methods
   # ============================================
+  private def check_clashing(new_booking)
+    # check there isn't a clashing booking
+    starting = new_booking.booking_start
+    ending = new_booking.booking_end
+    booking_type = new_booking.booking_type
+    asset_id = new_booking.asset_id
+
+    query = Booking.query
+      .by_tenant(tenant.id)
+      .where(
+        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
+        starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
+      )
+    query = query.where { id != new_booking.id } if new_booking.id_column.defined?
+    query.to_a
+  end
 
   private def find_booking
     Booking.query
