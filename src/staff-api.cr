@@ -45,7 +45,9 @@ OptionParser.parse(ARGV.dup) do |parser|
         # ID looks like: area-F.16.30-status
         puts "updating booking #{booking.id} for #{booking.asset_id}"
         booking.asset_id = booking.asset_id.gsub("desk-KG", "desk-KG0")
-        booking.description = booking.description.split("-")[0] + "-#{booking.asset_id}"
+        if description = booking.description
+          booking.description = description.split("-")[0] + "-#{booking.asset_id}"
+        end
         if booking.save
           success += 1
           clash_check << {booking.user_email, booking.booking_start, booking.asset_id}
