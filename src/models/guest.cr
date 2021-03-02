@@ -21,6 +21,7 @@ class Guest
   # Save searchable information
   before(:save) do |m|
     guest_model = m.as(Guest)
+    guest_model.email = guest_model.email.downcase
     searchable_string = ""
     searchable_string += guest_model.name.to_s if guest_model.name_column.defined?
     searchable_string += " #{guest_model.preferred_name}" if guest_model.preferred_name_column.defined?
