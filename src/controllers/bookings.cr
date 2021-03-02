@@ -10,7 +10,7 @@ class Bookings < Application
     booking_type = query_params["type"]
     booking_state = query_params["state"]?
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
-    user_email = query_params["email"]?
+    user_email = query_params["email"]?.try(&.downcase)
     user_id = query_params["user"]?
     user_id = user_token.id if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
     created_before = query_params["created_before"]?

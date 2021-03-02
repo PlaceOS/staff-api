@@ -38,9 +38,16 @@ class Booking
   belongs_to tenant : Tenant
 
   before :create, :set_created
+  before :save, :downcase_emails
 
   def set_created
     self.last_changed = self.created = Time.utc.to_unix
+  end
+
+  def downcase_emails
+    self.user_email = self.user_email.downcase
+    self.booked_by_email = self.booked_by_email.downcase
+    self.approver_email = self.approver_email.try(&.downcase)
   end
 
   scope :by_tenant do |tenant_id|
