@@ -47,7 +47,7 @@ class Booking
   def downcase_emails
     self.user_email = self.user_email.downcase
     self.booked_by_email = self.booked_by_email.downcase
-    self.approver_email = self.approver_email.try(&.downcase)
+    self.approver_email = self.approver_email.try(&.downcase) if self.approver_email_column.defined?
   end
 
   scope :by_tenant do |tenant_id|
