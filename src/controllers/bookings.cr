@@ -7,11 +7,11 @@ class Bookings < Application
   def index
     starting = query_params["period_start"].to_i64
     ending = query_params["period_end"].to_i64
-    booking_type = query_params["type"]
-    booking_state = query_params["state"]?
+    booking_type = query_params["type"].presence.not_nil!
+    booking_state = query_params["state"]?.presence
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
-    user_email = query_params["email"]?.try(&.downcase)
-    user_id = query_params["user"]?
+    user_email = query_params["email"]?.presence.try(&.downcase)
+    user_id = query_params["user"]?.presence
 
     # We want to do a special current user query if no user details are provided
     if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
@@ -19,10 +19,10 @@ class Bookings < Application
       user_email = user_token.user.email.downcase
     end
 
-    created_before = query_params["created_before"]?
-    created_after = query_params["created_after"]?
-    approved = query_params["approved"]?
-    rejected = query_params["rejected"]?
+    created_before = query_params["created_before"]?.presence
+    created_after = query_params["created_after"]?.presence
+    approved = query_params["approved"]?.presence
+    rejected = query_params["rejected"]?.presence
 
     query = Booking.query
       .by_tenant(tenant.id)

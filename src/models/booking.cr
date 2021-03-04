@@ -62,16 +62,13 @@ class Booking
     user_email ? where(user_email: user_email) : self
   end
 
-  scope :by_user_or_email do |user_id, user_email|
-    if user_id && user_email
-      where("user_id = :user_id OR user_email = :user_email", {
-        user_id:    user_id,
-        user_email: user_email,
-      })
-    elsif user_id
-      where(user_id: user_id)
-    elsif user_email
-      where(user_email: user_email)
+  scope :by_user_or_email do |user_id_value, user_email_value|
+    if user_id_value && user_email_value
+      where { user_id == user_id_value || user_email == user_email_value }
+    elsif user_id_value
+      where(user_id: user_id_value)
+    elsif user_email_value
+      where(user_email: user_email_value)
     else
       self
     end
