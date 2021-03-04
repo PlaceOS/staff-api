@@ -67,7 +67,7 @@ class Booking
       # TODO:: interpolate these values properly
       user_id_value = user_id_value.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
       user_email_value = user_email_value.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
-      where(%("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}'))
+      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}')))
     elsif user_id_value
       where(user_id: user_id_value)
     elsif user_email_value

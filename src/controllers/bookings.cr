@@ -34,7 +34,7 @@ class Bookings < Application
       .is_approved(approved)
       .is_rejected(rejected)
       .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type",
+        %("booking_start" <= :ending AND "booking_end" >= :starting AND "booking_type" = :booking_type),
         starting: starting, ending: ending, booking_type: booking_type)
       .order_by(:booking_start, :desc)
       .limit(20000)
