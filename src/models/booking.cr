@@ -77,6 +77,10 @@ class Booking
     end
   end
 
+  scope :booked_by do |include_booked_by, user_id|
+    (include_booked_by && user_id) ? where(booked_by_id: user_id) : self
+  end
+
   scope :booking_state do |state|
     state ? where(process_state: state) : self
   end
