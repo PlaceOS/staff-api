@@ -236,7 +236,7 @@ class Bookings < Application
 
   private def confirm_access
     if (user = user_token) &&
-       (booking && booking.user_id != user.id) &&
+       (booking && !({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user_token.user.email.downcase))) &&
        !(user.is_admin? || user.is_support?) &&
        !check_access(user.user.roles, booking.zones || [] of String).none?
       head :forbidden
