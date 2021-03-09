@@ -62,23 +62,25 @@ class Booking
     user_email ? where(user_email: user_email) : self
   end
 
-  scope :by_user_or_email do |user_id_value, user_email_value|
+  scope :by_user_or_email do |user_id_value, user_email_value, include_booked_by|
+    # TODO:: interpolate these values properly
+    booked_by = include_booked_by ? %( OR "booked_by_id" = '#{user_id_value}') : ""
+    user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
+    user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
+
     if user_id_value && user_email_value
-      # TODO:: interpolate these values properly
-      user_id_value = user_id_value.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
-      user_email_value = user_email_value.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
-      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}')))
+      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}'#{booked_by})))
     elsif user_id_value
-      where(user_id: user_id_value)
+      # Not sure how to do OR's in clear
+      where(%(("user_id" = '#{user_id_value}'#{booked_by})))
+      # where(user_id: user_id_value)
     elsif user_email_value
-      where(user_email: user_email_value)
+      booked_by = include_booked_by ? %( OR "booked_by_email" = '#{user_email_value}') : ""
+      where(%(("user_email" = '#{user_email_value}'#{booked_by})))
+      # where(user_email: user_email_value)
     else
       self
     end
-  end
-
-  scope :booked_by do |include_booked_by, user_id|
-    (include_booked_by && user_id) ? where(booked_by_id: user_id) : self
   end
 
   scope :booking_state do |state|

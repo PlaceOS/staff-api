@@ -28,8 +28,7 @@ class Bookings < Application
     query = Booking.query
       .by_tenant(tenant.id)
       .by_zones(zones)
-      .by_user_or_email(user_id, user_email)
-      .booked_by(include_booked_by, user_id)
+      .by_user_or_email(user_id, user_email, include_booked_by)
       .booking_state(booking_state)
       .created_before(created_before)
       .created_after(created_after)
