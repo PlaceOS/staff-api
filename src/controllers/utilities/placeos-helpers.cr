@@ -25,9 +25,9 @@ module Utils::PlaceOSHelpers
   end
 
   class CalendarSelection < Params
-    attribute calendars : String?
-    attribute zone_ids : String?
-    attribute system_ids : String?
+    attribute calendars : String = ""
+    attribute zone_ids : String = ""
+    attribute system_ids : String = ""
     attribute features : String?
     attribute capacity : Int32?
     attribute bookable : Bool?
@@ -36,20 +36,19 @@ module Utils::PlaceOSHelpers
   def matching_calendar_ids(allow_default = false)
     args = CalendarSelection.new(params)
 
-    calendars = Set.new((args.calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
+    calendars = Set.new(args.calendars.split(',').compact_map(&.strip.downcase.presence))
     user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase))
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
-    system_calendars = if calendars.size > 0
-                         (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
-                       else
-                         {} of String => PlaceOS::Client::API::Models::System?
-                       end
+    system_calendars = (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) do |calendar, cals|
+      cals[calendar] = nil
+    end
 
-    # Check if we want to grab systems from zones
-    zones = (args.zone_ids || "").split(',').map(&.strip).reject(&.empty?).uniq
-    if zones.size > 0
+    # Check if we systems via their associated zones were requested
+    zones = args.zone_ids.split(',').compact_map(&.strip.presence).uniq!
+
+    unless zones.empty?
       systems = get_placeos_client.systems
 
       # perform requests in parallel (map-reduce)
@@ -72,9 +71,10 @@ module Utils::PlaceOSHelpers
       end
     end
 
-    # Check if we want to grab individual systems
-    system_ids = (args.system_ids || "").split(',').map(&.strip).reject(&.empty?).uniq
-    if system_ids.size > 0
+    # Check if individual systems were requested
+    system_ids = args.system_ids.split(',').compact_map(&.strip.presence).uniq!
+
+    unless system_ids.empty?
       systems = get_placeos_client.systems
 
       # perform requests in parallel (map-reduce)
@@ -88,8 +88,10 @@ module Utils::PlaceOSHelpers
       end
     end
 
-    # default to the current user if no params were passed
-    system_calendars[user.email] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
+    # Default to the current user if no params were passed
+    if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
+      system_calendars[user.email] = nil
+    end
 
     system_calendars
   end
