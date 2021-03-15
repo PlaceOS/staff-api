@@ -2,6 +2,7 @@ FROM crystallang/crystal:0.35.1-alpine
 WORKDIR /app
 
 COPY shard.yml /app
+COPY shard.override.yml /app
 COPY shard.lock /app
 RUN shards install
 
