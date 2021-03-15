@@ -17,7 +17,7 @@ class Bookings < Application
     # We want to do a special current user query if no user details are provided
     if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
       user_id = user_token.id
-      user_email = user_token.user.email.downcase
+      user_email = user.email.downcase
     end
 
     created_before = query_params["created_before"]?.presence
@@ -78,22 +78,25 @@ class Bookings < Application
       spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
-            action:        :create,
-            id:            booking.id,
-            booking_type:  booking.booking_type,
-            booking_start: booking.booking_start,
-            booking_end:   booking.booking_end,
-            timezone:      booking.timezone,
-            resource_id:   booking.asset_id,
-            user_id:       booking.user_id,
-            user_email:    booking.user_email,
-            user_name:     booking.user_name,
-            zones:         booking.zones,
-            process_state: booking.process_state,
-            last_changed:  booking.last_changed,
-            title:         booking.title,
-            checked_in:    booking.checked_in,
-            description:   booking.description,
+            action:          :create,
+            id:              booking.id,
+            booking_type:    booking.booking_type,
+            booking_start:   booking.booking_start,
+            booking_end:     booking.booking_end,
+            timezone:        booking.timezone,
+            resource_id:     booking.asset_id,
+            user_id:         booking.user_id,
+            user_email:      booking.user_email,
+            user_name:       booking.user_name,
+            zones:           booking.zones,
+            process_state:   booking.process_state,
+            last_changed:    booking.last_changed,
+            title:           booking.title,
+            checked_in:      booking.checked_in,
+            description:     booking.description,
+            extension_data:  booking.ext_data,
+            booked_by_email: booking.booked_by_email,
+            booked_by_name:  booking.booked_by_name,
           })
         rescue error
           Log.error(exception: error) { "while signaling booking created" }
@@ -157,22 +160,27 @@ class Bookings < Application
     spawn do
       begin
         get_placeos_client.root.signal("staff/booking/changed", {
-          action:        :cancelled,
-          id:            booking.id,
-          booking_type:  booking.booking_type,
-          booking_start: booking.booking_start,
-          booking_end:   booking.booking_end,
-          timezone:      booking.timezone,
-          resource_id:   booking.asset_id,
-          user_id:       booking.user_id,
-          user_email:    booking.user_email,
-          user_name:     booking.user_name,
-          zones:         booking.zones,
-          process_state: booking.process_state,
-          last_changed:  booking.last_changed,
-          title:         booking.title,
-          checked_in:    booking.checked_in,
-          description:   booking.description,
+          action:          :cancelled,
+          id:              booking.id,
+          booking_type:    booking.booking_type,
+          booking_start:   booking.booking_start,
+          booking_end:     booking.booking_end,
+          timezone:        booking.timezone,
+          resource_id:     booking.asset_id,
+          user_id:         booking.user_id,
+          user_email:      booking.user_email,
+          user_name:       booking.user_name,
+          zones:           booking.zones,
+          process_state:   booking.process_state,
+          last_changed:    booking.last_changed,
+          approver_name:   user.name,
+          approver_email:  user.email.downcase,
+          title:           booking.title,
+          checked_in:      booking.checked_in,
+          description:     booking.description,
+          extension_data:  booking.ext_data,
+          booked_by_email: booking.booked_by_email,
+          booked_by_name:  booking.booked_by_name,
         })
       rescue error
         Log.error(exception: error) { "while signaling booking cancelled" }
@@ -247,24 +255,27 @@ class Bookings < Application
       spawn do
         begin
           get_placeos_client.root.signal("staff/booking/changed", {
-            action:         signal,
-            id:             booking.id,
-            booking_type:   booking.booking_type,
-            booking_start:  booking.booking_start,
-            booking_end:    booking.booking_end,
-            timezone:       booking.timezone,
-            resource_id:    booking.asset_id,
-            user_id:        booking.user_id,
-            user_email:     booking.user_email,
-            user_name:      booking.user_name,
-            zones:          booking.zones,
-            process_state:  booking.process_state,
-            last_changed:   booking.last_changed,
-            approver_name:  booking.approver_name,
-            approver_email: booking.approver_email,
-            title:          booking.title,
-            checked_in:     booking.checked_in,
-            description:    booking.description,
+            action:          signal,
+            id:              booking.id,
+            booking_type:    booking.booking_type,
+            booking_start:   booking.booking_start,
+            booking_end:     booking.booking_end,
+            timezone:        booking.timezone,
+            resource_id:     booking.asset_id,
+            user_id:         booking.user_id,
+            user_email:      booking.user_email,
+            user_name:       booking.user_name,
+            zones:           booking.zones,
+            process_state:   booking.process_state,
+            last_changed:    booking.last_changed,
+            approver_name:   booking.approver_name,
+            approver_email:  booking.approver_email,
+            title:           booking.title,
+            checked_in:      booking.checked_in,
+            description:     booking.description,
+            extension_data:  booking.ext_data,
+            booked_by_email: booking.booked_by_email,
+            booked_by_name:  booking.booked_by_name,
           })
         rescue error
           Log.error(exception: error) { "while signaling booking #{signal}" }
@@ -279,9 +290,9 @@ class Bookings < Application
 
   private def set_approver(booking, approved : Bool)
     # In case of rejections reset approver related information
-    booking.approver_id = approved ? user_token.id : nil
-    booking.approver_email = approved ? user.email : nil
-    booking.approver_name = approved ? user.name : nil
+    booking.approver_id = user_token.id
+    booking.approver_email = user.email.downcase
+    booking.approver_name = user.name
     booking.approved = approved
     booking.rejected = !approved
   end
