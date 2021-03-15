@@ -136,10 +136,13 @@ class Bookings < Application
     reset_state = existing_booking.asset_id_column.changed? || existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
     if reset_state
       existing_booking.set({
-        checked_in:   false,
-        rejected:     false,
-        approved:     false,
-        last_changed: Time.utc.to_unix,
+        booked_by_id:    user_token.id,
+        booked_by_email: user.email,
+        booked_by_name:  user.name,
+        checked_in:      false,
+        rejected:        false,
+        approved:        false,
+        last_changed:    Time.utc.to_unix,
       })
     end
 
