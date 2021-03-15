@@ -560,7 +560,6 @@ class Events < Application
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != calendar_id
         event = get_hosts_event(event)
-        event_id = event.id.not_nil!
       end
 
       metadata = get_event_metadata(event, system_id)
@@ -655,7 +654,6 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id
     end
 
     # Grab meeting metadata if it exists
@@ -768,7 +766,6 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id
     end
 
     # Existing attendees without system
