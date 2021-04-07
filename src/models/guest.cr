@@ -77,7 +77,7 @@ class Guest
       .inner_join("attendees") { var("event_metadatas", "id") == var("attendees", "event_id") }
       .where { var("attendees", "tenant_id") == tenant_id }
       .where("attendees.guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
-      .map(&.id).flatten
+      .map(&.id).flatten # ameba:disable Performance/FlattenAfterMap
 
     Attendee.query.find { var("attendees", "event_id").in?(eventmetadatas) }
   end

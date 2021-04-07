@@ -4,6 +4,7 @@ class Events < Application
   # Skip scope check for a single route
   skip_action :check_jwt_scope, only: [:show, :guest_checkin]
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def index
     period_start = Time.unix(query_params["period_start"].to_i64)
     period_end = Time.unix(query_params["period_end"].to_i64)
@@ -87,6 +88,7 @@ class Events < Application
     }
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def create
     input_event = PlaceCalendar::Event.from_json(request.body.as(IO))
     placeos_client = get_placeos_client
@@ -218,6 +220,7 @@ class Events < Application
     render json: StaffApi::Event.augment(created_event, host)
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def update
     event_id = route_params["id"]
     changes = PlaceCalendar::Event.from_json(request.body.as(IO))
@@ -560,7 +563,7 @@ class Events < Application
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != calendar_id
         event = get_hosts_event(event)
-        event_id = event.id.not_nil!
+        event_id = event.id.not_nil! # ameba:disable Lint/UselessAssign
       end
 
       metadata = get_event_metadata(event, system_id)
@@ -571,6 +574,7 @@ class Events < Application
     head :bad_request
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def destroy
     event_id = route_params["id"]
     notify_guests = query_params["notify"]? != "false"
@@ -655,7 +659,7 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id
+      event_id = event.id # ameba:disable Lint/UselessAssign
     end
 
     # Grab meeting metadata if it exists
@@ -768,7 +772,7 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id
+      event_id = event.id # ameba:disable Lint/UselessAssign
     end
 
     # Existing attendees without system

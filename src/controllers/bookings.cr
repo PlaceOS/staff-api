@@ -46,6 +46,7 @@ class Bookings < Application
     render json: results
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def create
     parsed = JSON.parse(request.body.not_nil!).as_h
     booking = Booking.new(parsed)
