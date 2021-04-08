@@ -1,4 +1,4 @@
-FROM crystallang/crystal:0.35.1-alpine
+FROM crystallang/crystal:1.0.0-alpine
 WORKDIR /app
 
 RUN apk add --no-cache bash
@@ -7,6 +7,7 @@ RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watc
 COPY entrypoint.sh /app/entrypoint.sh
 
 COPY shard.yml /app
+COPY shard.override.yml /app
 COPY shard.lock /app
 RUN shards install --ignore-crystal-version
 
