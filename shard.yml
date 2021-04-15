@@ -22,12 +22,16 @@ dependencies:
   secrets-env:
     github: place-labs/secrets-env
 
+  # TODO:: remove in future
+  http-params-serializable:
+    github: caspiano/http-params-serializable
+    branch: chore/0.36.0
+
 development_dependencies:
   ameba:
     github: veelenga/ameba
   webmock:
     github: manastech/webmock.cr
-    branch: master
   faker:
     github: askn/faker
 

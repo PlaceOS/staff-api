@@ -278,7 +278,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
+      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # Check if attendees need updating
@@ -599,7 +599,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to delete on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
+      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # ensure we have the host event details
@@ -762,7 +762,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to delete on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, system).none?)
+      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # ensure we have the host event details

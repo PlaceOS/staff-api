@@ -38,21 +38,49 @@ class Booking
   belongs_to tenant : Tenant
 
   before :create, :set_created
+  before :save, :downcase_emails
 
   def set_created
     self.last_changed = self.created = Time.utc.to_unix
   end
 
+  def downcase_emails
+    self.user_email = self.user_email.downcase
+    self.booked_by_email = self.booked_by_email.downcase
+    self.approver_email = self.approver_email.try(&.downcase) if self.approver_email_column.defined?
+  end
+
   scope :by_tenant do |tenant_id|
-    where { var("bookings", "tenant_id") == tenant_id }
+    where(tenant_id: tenant_id)
   end
 
   scope :by_user_id do |user_id|
-    user_id ? where { var("bookings", "user_id") == user_id } : self
+    user_id ? where(user_id: user_id) : self
   end
 
   scope :by_user_email do |user_email|
-    user_email ? where { var("bookings", "user_email") == user_email } : self
+    user_email ? where(user_email: user_email) : self
+  end
+
+  scope :by_user_or_email do |user_id_value, user_email_value, include_booked_by|
+    # TODO:: interpolate these values properly
+    booked_by = include_booked_by ? %( OR "booked_by_id" = '#{user_id_value}') : ""
+    user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
+    user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
+
+    if user_id_value && user_email_value
+      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}'#{booked_by})))
+    elsif user_id_value
+      # Not sure how to do OR's in clear
+      where(%(("user_id" = '#{user_id_value}'#{booked_by})))
+      # where(user_id: user_id_value)
+    elsif user_email_value
+      booked_by = include_booked_by ? %( OR "booked_by_email" = '#{user_email_value}') : ""
+      where(%(("user_email" = '#{user_email_value}'#{booked_by})))
+      # where(user_email: user_email_value)
+    else
+      self
+    end
   end
 
   scope :booking_state do |state|
