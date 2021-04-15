@@ -114,6 +114,9 @@ class Bookings < Application
     changes = Booking.new(parsed)
     existing_booking = booking
 
+    original_start = existing_booking.booking_start
+    original_end = existing_booking.booking_end
+
     {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
@@ -132,8 +135,12 @@ class Bookings < Application
       existing_booking.ext_data = JSON.parse(data.to_json)
     end
 
-    # reset the checked-in state
-    reset_state = existing_booking.asset_id_column.changed? || existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
+    # reset the checked-in state if asset is different, or booking times are outside the originally approved window
+    reset_state = existing_booking.asset_id_column.changed?
+    if existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
+      reset_state = true if existing_booking.booking_start < original_start || existing_booking.booking_end > original_end
+    end
+
     if reset_state
       existing_booking.set({
         booked_by_id:    user_token.id,
@@ -196,6 +203,7 @@ class Bookings < Application
   # we don't enforce permissions on these as peoples managers can perform these actions
   post "/:id/approve", :approve do
     set_approver(booking, true)
+    booking.approved_at = Time.utc.to_unix
 
     clashing_bookings = check_clashing(booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
@@ -205,11 +213,18 @@ class Bookings < Application
 
   post "/:id/reject", :reject do
     set_approver(booking, false)
+    booking.rejected_at = Time.utc.to_unix
+
     update_booking(booking, "rejected")
   end
 
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
+    if booking.checked_in
+      booking.checked_in_at = Time.utc.to_unix
+    else
+      booking.checked_out_at = Time.utc.to_unix
+    end
     update_booking(booking, "checked_in")
   end
 
