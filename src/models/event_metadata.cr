@@ -41,7 +41,7 @@ class EventMetadata
         host_email:          parent_metadata.host_email,
       })
 
-      parent_metadata.attendees.where { var("aattendees", "visit_expected") }.each do |attendee|
+      parent_metadata.attendees.where { var("attendees", "visit_expected") }.each do |attendee|
         Attendee.create!({
           event_id:       metadata.id.not_nil!,
           guest_id:       attendee.guest_id,
