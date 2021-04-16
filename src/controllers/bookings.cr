@@ -74,39 +74,37 @@ class Bookings < Application
     # Extension data
     booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
 
-    if booking.save
-      spawn do
-        begin
-          get_placeos_client.root.signal("staff/booking/changed", {
-            action:          :create,
-            id:              booking.id,
-            booking_type:    booking.booking_type,
-            booking_start:   booking.booking_start,
-            booking_end:     booking.booking_end,
-            timezone:        booking.timezone,
-            resource_id:     booking.asset_id,
-            user_id:         booking.user_id,
-            user_email:      booking.user_email,
-            user_name:       booking.user_name,
-            zones:           booking.zones,
-            process_state:   booking.process_state,
-            last_changed:    booking.last_changed,
-            title:           booking.title,
-            checked_in:      booking.checked_in,
-            description:     booking.description,
-            extension_data:  booking.ext_data,
-            booked_by_email: booking.booked_by_email,
-            booked_by_name:  booking.booked_by_name,
-          })
-        rescue error
-          Log.error(exception: error) { "while signaling booking created" }
-        end
-      end
+    render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
-      render :created, json: booking.as_json
-    else
-      render :unprocessable_entity, json: booking.errors.map(&.to_s)
+    spawn do
+      begin
+        get_placeos_client.root.signal("staff/booking/changed", {
+          action:          :create,
+          id:              booking.id,
+          booking_type:    booking.booking_type,
+          booking_start:   booking.booking_start,
+          booking_end:     booking.booking_end,
+          timezone:        booking.timezone,
+          resource_id:     booking.asset_id,
+          user_id:         booking.user_id,
+          user_email:      booking.user_email,
+          user_name:       booking.user_name,
+          zones:           booking.zones,
+          process_state:   booking.process_state,
+          last_changed:    booking.last_changed,
+          title:           booking.title,
+          checked_in:      booking.checked_in,
+          description:     booking.description,
+          extension_data:  booking.ext_data,
+          booked_by_email: booking.booked_by_email,
+          booked_by_name:  booking.booked_by_name,
+        })
+      rescue error
+        Log.error(exception: error) { "while signaling booking created" }
+      end
     end
+
+    render :created, json: booking.as_json
   end
 
   def update
@@ -254,49 +252,49 @@ class Bookings < Application
   end
 
   private def update_booking(booking, signal = "changed")
-    if booking.save
-      spawn do
-        begin
-          get_placeos_client.root.signal("staff/booking/changed", {
-            action:          signal,
-            id:              booking.id,
-            booking_type:    booking.booking_type,
-            booking_start:   booking.booking_start,
-            booking_end:     booking.booking_end,
-            timezone:        booking.timezone,
-            resource_id:     booking.asset_id,
-            user_id:         booking.user_id,
-            user_email:      booking.user_email,
-            user_name:       booking.user_name,
-            zones:           booking.zones,
-            process_state:   booking.process_state,
-            last_changed:    booking.last_changed,
-            approver_name:   booking.approver_name,
-            approver_email:  booking.approver_email,
-            title:           booking.title,
-            checked_in:      booking.checked_in,
-            description:     booking.description,
-            extension_data:  booking.ext_data,
-            booked_by_email: booking.booked_by_email,
-            booked_by_name:  booking.booked_by_name,
-          })
-        rescue error
-          Log.error(exception: error) { "while signaling booking #{signal}" }
-        end
-      end
+    render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
-      render json: booking.as_json
-    else
-      render :unprocessable_entity, json: booking.errors.map(&.to_s)
+    spawn do
+      begin
+        get_placeos_client.root.signal("staff/booking/changed", {
+          action:          signal,
+          id:              booking.id,
+          booking_type:    booking.booking_type,
+          booking_start:   booking.booking_start,
+          booking_end:     booking.booking_end,
+          timezone:        booking.timezone,
+          resource_id:     booking.asset_id,
+          user_id:         booking.user_id,
+          user_email:      booking.user_email,
+          user_name:       booking.user_name,
+          zones:           booking.zones,
+          process_state:   booking.process_state,
+          last_changed:    booking.last_changed,
+          approver_name:   booking.approver_name,
+          approver_email:  booking.approver_email,
+          title:           booking.title,
+          checked_in:      booking.checked_in,
+          description:     booking.description,
+          extension_data:  booking.ext_data,
+          booked_by_email: booking.booked_by_email,
+          booked_by_name:  booking.booked_by_name,
+        })
+      rescue error
+        Log.error(exception: error) { "while signaling booking #{signal}" }
+      end
     end
+
+    render json: booking.as_json
   end
 
   private def set_approver(booking, approved : Bool)
     # In case of rejections reset approver related information
-    booking.approver_id = user_token.id
-    booking.approver_email = user.email.downcase
-    booking.approver_name = user.name
-    booking.approved = approved
-    booking.rejected = !approved
+    booking.set({
+      approver_id:    user_token.id,
+      approver_email: user.email.downcase,
+      approver_name:  user.name,
+      approved:       approved,
+      rejected:       !approved,
+    })
   end
 end

@@ -167,12 +167,10 @@ class Guests < Application
       guest.ext_data = JSON.parse(data.to_json)
     end
 
-    if guest.save
-      attendee = guest.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest)
-    else
-      render :unprocessable_entity, json: guest.errors.map(&.to_s)
-    end
+    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
+
+    attendee = guest.attending_today(tenant.id, get_timezone)
+    render json: attending_guest(attendee, guest)
   end
 
   put "/:id", :update_alt { update }
@@ -188,12 +186,10 @@ class Guests < Application
     guest.dangerous = dangerous ? dangerous.as_bool : false
     guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
 
-    if guest.save
-      attendee = guest.attending_today(tenant.id, get_timezone)
-      render :created, json: attending_guest(attendee, guest)
-    else
-      render :unprocessable_entity, json: guest.errors.map(&.to_s)
-    end
+    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
+
+    attendee = guest.attending_today(tenant.id, get_timezone)
+    render :created, json: attending_guest(attendee, guest)
   end
 
   # TODO: Should we be allowing to delete guests that are associated with attendees?

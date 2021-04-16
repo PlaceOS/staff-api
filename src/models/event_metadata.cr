@@ -41,16 +41,14 @@ class EventMetadata
         host_email:          parent_metadata.host_email,
       })
 
-      parent_metadata.attendees.each do |attendee|
-        if attendee.visit_expected
-          Attendee.create!({
-            event_id:       metadata.id.not_nil!,
-            guest_id:       attendee.guest_id,
-            tenant_id:      attendee.tenant_id,
-            visit_expected: true,
-            checked_in:     false,
-          })
-        end
+      parent_metadata.attendees.where { var("attendees", "visit_expected") }.each do |attendee|
+        Attendee.create!({
+          event_id:       metadata.id.not_nil!,
+          guest_id:       attendee.guest_id,
+          tenant_id:      attendee.tenant_id,
+          visit_expected: true,
+          checked_in:     false,
+        })
       end
     end
 
