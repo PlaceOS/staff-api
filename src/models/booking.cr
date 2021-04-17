@@ -16,10 +16,15 @@ class Booking
 
   column title : String?
   column description : String?
+
   column checked_in : Bool? # default in migration
+  column checked_in_at : Int64?
+  column checked_out_at : Int64?
 
   column rejected : Bool? # default in migration
+  column rejected_at : Int64?
   column approved : Bool? # default in migration
+  column approved_at : Int64?
   column approver_id : String?
   column approver_email : String?
   column approver_name : String?
@@ -27,6 +32,10 @@ class Booking
   column booked_by_id : String
   column booked_by_email : String
   column booked_by_name : String
+
+  # if we want to record the system that performed the bookings
+  # (kiosk, mobile, swipe etc)
+  column booked_from : String?
 
   # used to hold information relating to the state of the booking process
   column process_state : String?
