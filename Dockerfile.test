@@ -3,7 +3,7 @@ WORKDIR /app
 
 COPY shard.yml /app
 COPY shard.lock /app
-RUN shards install
+RUN shards install --ignore-crystal-version
 
 COPY spec /app/spec
 COPY src /app/src
