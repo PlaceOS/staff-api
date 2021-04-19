@@ -1,4 +1,4 @@
-class AddTimestampsToBookings
+class AddTimestampsToBookingEvents
   include Clear::Migration
 
   def change(direction)
