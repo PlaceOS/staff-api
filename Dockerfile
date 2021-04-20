@@ -1,4 +1,4 @@
-FROM crystallang/crystal:0.36.1-alpine
+FROM crystallang/crystal:1.0.0-alpine
 ADD . /src
 WORKDIR /src
 
@@ -30,7 +30,7 @@ RUN adduser \
 
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --error-trace --production
+    shards build --error-trace --production --ignore-crystal-version
 
 # Extract dependencies
 RUN ldd bin/app | tr -s '[:blank:]' '\n' | grep '^/' | \
