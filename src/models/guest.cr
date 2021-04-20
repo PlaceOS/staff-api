@@ -66,6 +66,7 @@ class Guest
     morning = now.at_beginning_of_day.to_unix
     tonight = now.at_end_of_day.to_unix
 
+    # # TO FIX: Should run the following query and do a single query instead of doing two queries below
     # Attendee.query
     #   .by_tenant(tenant_id)
     #   .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
