@@ -78,7 +78,7 @@ class Guest
       .where("attendees.guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
       .map(&.id).flatten
 
-    Attendee.query.where { var("attendees", "event_id").in?(eventmetadatas) }
+    Attendee.query.find { var("attendees", "event_id").in?(eventmetadatas) }
   end
 
   def events(future_only = true, limit = 10)
