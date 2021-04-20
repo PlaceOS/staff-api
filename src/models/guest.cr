@@ -68,7 +68,7 @@ class Guest
 
     Attendee.query
       .by_tenant(tenant_id)
-      .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
+      .inner_join("event_metadatas") { var("event_metadatas", "event_id") == var("attendees", "event_metadata_id") }
       .where("guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
       .first
   end

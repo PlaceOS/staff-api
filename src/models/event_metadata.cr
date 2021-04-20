@@ -18,7 +18,7 @@ class EventMetadata
   column ext_data : JSON::Any?
 
   belongs_to tenant : Tenant
-  has_many attendees : Attendee, foreign_key: "event_metadata_id"
+  has_many attendees : Attendee, foreign_key: "event_metadata_id", own_key: "event_id"
 
   scope :by_tenant do |tenant_id|
     where { var("event_metadatas", "tenant_id") == tenant_id }
