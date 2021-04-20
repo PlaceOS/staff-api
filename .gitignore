@@ -11,3 +11,4 @@ auth_test.cr
 test.cr
 secrets.sh
 data
+staff-api

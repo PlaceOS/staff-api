@@ -66,11 +66,20 @@ class Guest
     morning = now.at_beginning_of_day.to_unix
     tonight = now.at_end_of_day.to_unix
 
-    Attendee.query
-      .by_tenant(tenant_id)
-      .inner_join("event_metadatas") { var("event_metadatas", "event_id") == var("attendees", "event_id") }
-      .where("guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
-      .first
+    # # TO FIX: Should run the following query and do a single query instead of doing two queries below
+    # Attendee.query
+    #   .by_tenant(tenant_id)
+    #   .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
+    #   .where("guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
+    #   .first
+
+    eventmetadatas = EventMetadata.query
+      .inner_join("attendees") { var("event_metadatas", "id") == var("attendees", "event_id") }
+      .where { var("attendees", "tenant_id") == tenant_id }
+      .where("attendees.guest_id = :guest_id AND event_metadatas.event_start >= :morning AND event_metadatas.event_end <= :tonight", guest_id: id, morning: morning, tonight: tonight)
+      .map(&.id).flatten
+
+    Attendee.query.find { var("attendees", "event_id").in?(eventmetadatas) }
   end
 
   def events(future_only = true, limit = 10)
