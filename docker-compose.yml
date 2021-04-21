@@ -3,7 +3,7 @@ version: "3.7"
 services:
   db:
     image: postgres
-    container_name: staff_api_db
+    hostname: staff_api_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -17,13 +17,12 @@ services:
       test: /usr/bin/pg_isready
       interval: 5s
     ports:
-      - "5432:5432"
-  web:
+      - 5432:5432
+  app:
     build:
       context: ./
       dockerfile: Dockerfile.test
-    container_name: staff_api
-    restart: always
+    hostname: staff_api
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
       PLACE_URI: http://toby.dev.place.tech
@@ -33,5 +32,3 @@ services:
       PLACE_AUTH_SECRET: abc123
     depends_on:
       - db
-    ports:
-      - 4000:8080

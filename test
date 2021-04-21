@@ -14,5 +14,14 @@ function trap_ctrlc ()
 # when signal 2 (SIGINT) is received
 trap "trap_ctrlc" 2
 
-docker-compose up --build --exit-code-from web
+docker-compose pull
+
+docker-compose build
+
+exit_code="0"
+
+docker-compose run --rm app /app/entrypoint.sh "$@" || exit_code="$?"
+
 docker-compose down
+
+exit ${exit_code}

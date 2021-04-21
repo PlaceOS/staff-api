@@ -1,6 +1,11 @@
 FROM crystallang/crystal:0.35.1-alpine
 WORKDIR /app
 
+RUN apk add --no-cache bash
+RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watchexec
+
+COPY entrypoint.sh /app/entrypoint.sh
+
 COPY shard.yml /app
 COPY shard.lock /app
 RUN shards install --ignore-crystal-version
@@ -8,6 +13,4 @@ RUN shards install --ignore-crystal-version
 COPY spec /app/spec
 COPY src /app/src
 
-RUN crystal tool format --check
-
-ENTRYPOINT ["crystal", "spec", "--error-trace", "-v"]
+CMD /app/entrypoint.sh
