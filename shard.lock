@@ -65,8 +65,8 @@ shards:
     git: https://github.com/luckyframework/habitat.git
     version: 0.4.7
 
-  http-params-serializable:
-    git: https://github.com/caspiano/http-params-serializable.git
+  http-params-serializable: # Overridden
+    git: https://github.com/place-labs/http-params-serializable.git
     version: 0.4.1+git.commit.c87119117af3d2db11af22ad799ccf77072e6a8b
 
   inflector:

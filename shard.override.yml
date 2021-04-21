@@ -2,3 +2,6 @@
 dependencies:
   retriable:
     git: https://github.com/sija/retriable.cr.git
+  http-params-serializable:
+    github: place-labs/http-params-serializable
+    branch: chore/0.36.0
