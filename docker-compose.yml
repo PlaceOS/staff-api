@@ -30,5 +30,6 @@ services:
       PLACE_PASSWORD: password
       PLACE_AUTH_CLIENT_ID: abc123
       PLACE_AUTH_SECRET: abc123
+      GITHUB_ACTION: ${GITHUB_ACTION-}
     depends_on:
       - db
