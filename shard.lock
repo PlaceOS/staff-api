@@ -27,7 +27,7 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.9+git.commit.b0aaf1a3066b226d8e6a8768e90b0f899d26f5a2
+    version: 0.9+git.commit.548195e70d3ebc16fbdd2e803d85088456b13392
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
