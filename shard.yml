@@ -1,20 +1,32 @@
 name: staff-api
 version: 1.0
 
+targets:
+  app:
+    main: src/staff-api.cr
+
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
+
+  clear:
+    github: place-labs/clear
+    branch: master
+
+  # TODO:: remove in future
+  http-params-serializable:
+    github: place-labs/http-params-serializable
+    branch: chore/0.36.0
 
   placeos:
     github: placeos/crystal-client
     branch: master
 
+  placeos-log-backend:
+    github: place-labs/log-backend
+
   place_calendar:
     github: PlaceOS/calendar
-
-  clear:
-    github: place-labs/clear
-    branch: master
 
   promise:
     github: spider-gazelle/promise
@@ -22,19 +34,10 @@ dependencies:
   secrets-env:
     github: place-labs/secrets-env
 
-  # TODO:: remove in future
-  http-params-serializable:
-    github: caspiano/http-params-serializable
-    branch: chore/0.36.0
-
 development_dependencies:
   ameba:
     github: veelenga/ameba
-  webmock:
-    github: manastech/webmock.cr
   faker:
     github: askn/faker
-
-targets:
-  app:
-    main: src/staff-api.cr
+  webmock:
+    github: manastech/webmock.cr

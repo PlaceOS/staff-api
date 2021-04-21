@@ -6,6 +6,7 @@ class Guests < Application
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :update]
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def index
     query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
 

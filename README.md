@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/red-ant/staff-api.svg?token=RzVfSpK1WxvVvMdpTs99&branch=master)](https://travis-ci.com/red-ant/staff-api)
+[![CI](https://github.com/place-labs/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/place-labs/staff-api/actions/workflows/ci.yml)
 
 # PlaceOS Staff API
 

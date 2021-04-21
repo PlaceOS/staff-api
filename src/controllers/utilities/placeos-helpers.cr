@@ -33,11 +33,12 @@ module Utils::PlaceOSHelpers
     attribute bookable : Bool?
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def matching_calendar_ids(allow_default = false)
     args = CalendarSelection.new(params)
 
-    calendars = Set.new((args.calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
-    user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase))
+    calendars = Set.new((args.calendars || "").split(',').compact_map(&.strip.downcase.presence))
+    user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
@@ -48,7 +49,7 @@ module Utils::PlaceOSHelpers
                        end
 
     # Check if we want to grab systems from zones
-    zones = (args.zone_ids || "").split(',').map(&.strip).reject(&.empty?).uniq
+    zones = (args.zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if zones.size > 0
       systems = get_placeos_client.systems
 
@@ -73,7 +74,7 @@ module Utils::PlaceOSHelpers
     end
 
     # Check if we want to grab individual systems
-    system_ids = (args.system_ids || "").split(',').map(&.strip).reject(&.empty?).uniq
+    system_ids = (args.system_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if system_ids.size > 0
       systems = get_placeos_client.systems
 
@@ -82,8 +83,7 @@ module Utils::PlaceOSHelpers
         Promise.defer { systems.fetch(system_id) }
       }).get.each do |system|
         calendar = system.email
-        next unless calendar
-        next if calendar.empty?
+        next if !calendar || calendar.empty?
         system_calendars[calendar] = system
       end
     end

@@ -3,6 +3,7 @@ require "action-controller"
 require "active-model"
 require "clear"
 require "./constants"
+require "./logging"
 require "./error"
 require "./controllers/application"
 require "./controllers/*"
@@ -15,11 +16,6 @@ Clear::Migration::Manager.instance.apply_all
 
 # Server required after application controllers
 require "action-controller/server"
-
-# Configure logging
-Log.builder.bind "*", :warn, App::LOG_BACKEND
-Log.builder.bind "action-controller.*", :info, App::LOG_BACKEND
-Log.builder.bind "#{App::NAME}.*", :info, App::LOG_BACKEND
 
 # Filter out sensitive params that shouldn't be logged
 filter_params = ["password", "bearer_token"]
