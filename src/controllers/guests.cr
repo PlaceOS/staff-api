@@ -207,18 +207,22 @@ class Guests < Application
 
     events = Promise.all(guest.events(future_only, limit).map { |metadata|
       Promise.defer {
-        cal_id = metadata.host_email.not_nil!
-        system = placeos_client.fetch(metadata.system_id.not_nil!)
-        sys_cal = system.email.presence
-        event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
-        if event
-          if sys_cal && client.client_id == :office365 && event.host != sys_cal
-            event = get_hosts_event(event, sys_cal)
-            event_id = event.id
-          end
+        begin
+          cal_id = metadata.host_email.not_nil!
+          system = placeos_client.fetch(metadata.system_id.not_nil!)
+          sys_cal = system.email.presence
+          event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
+          if event
+            if sys_cal && client.client_id == :office365 && event.host != sys_cal
+              event = get_hosts_event(event, sys_cal)
+            end
 
-          StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
-        else
+            StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
+          else
+            nil
+          end
+        rescue error
+          Log.warn(exception: error) { error.message }
           nil
         end
       }
