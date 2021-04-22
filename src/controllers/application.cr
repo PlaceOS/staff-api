@@ -141,11 +141,11 @@ abstract class Application < ActionController::Base
     end
   end
 
-  protected def get_hosts_event(event : PlaceCalendar::Event) : PlaceCalendar::Event
+  protected def get_hosts_event(event : PlaceCalendar::Event, host : String? = nil) : PlaceCalendar::Event
     start_time = event.event_start.at_beginning_of_day
     end_time = event.event_end.not_nil!.at_end_of_day
     ical_uid = event.ical_uid.not_nil!
-    host_cal = event.host.not_nil!
+    host_cal = host || event.host.not_nil!
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
