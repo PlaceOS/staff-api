@@ -30,7 +30,17 @@ module Utils::MultiTenant
       raise Error::Unauthorized.new "domain does not match token's"
     end
 
-    @tenant = Tenant.query.find { domain == authority_domain_host }
-    Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
+    begin
+      @tenant = Tenant.query.find { domain == authority_domain_host }
+      Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
+    rescue error
+      respond_with(:not_found) do
+        text "tenant lookup failed on #{authority_domain_host} with #{error.inspect_with_backtrace}"
+        json({
+          error:     "tenant lookup failed on #{authority_domain_host} with #{error.message}",
+          backtrace: error.backtrace?,
+        })
+      end
+    end
   end
 end
