@@ -65,6 +65,15 @@ class Tenant
     validate_credentials_for_platform
   end
 
+  def as_json
+    {
+      id:       self.id,
+      name:     self.name,
+      domain:   self.domain,
+      platform: self.platform,
+    }
+  end
+
   def valid_json?(value : String)
     true if JSON.parse(value)
   rescue JSON::ParseException
