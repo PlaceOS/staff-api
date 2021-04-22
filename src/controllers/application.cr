@@ -128,6 +128,17 @@ abstract class Application < ActionController::Base
     head :not_found
   end
 
+  rescue_from ::Enumerable::EmptyError do |error|
+    Log.warn(exception: error) { error.message }
+    respond_with(:not_found) do
+      text error.inspect_with_backtrace
+      json({
+        error:     error.message,
+        backtrace: error.backtrace?,
+      })
+    end
+  end
+
   # Helpful during dev, see errors from office/google clients
   unless App.running_in_production?
     rescue_from PlaceCalendar::Exception do |error|
