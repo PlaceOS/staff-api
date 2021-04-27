@@ -91,7 +91,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.13.2
+    version: 1.13.3
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
