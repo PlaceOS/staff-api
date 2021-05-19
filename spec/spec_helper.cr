@@ -45,8 +45,8 @@ module Mock
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
-        aud: "toby.staff-api.dev",
-        sub: "toby@redant.com.au",
+        domain: "toby.staff-api.dev",
+        id: "toby@redant.com.au",
         scope: ["public"],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
@@ -63,8 +63,8 @@ module Mock
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
-        aud: "toby.staff-api.dev",
-        sub: "toby@redant.com.au",
+        domain: "toby.staff-api.dev",
+        id: "toby@redant.com.au",
         scope: ["guest"],
         user: UserJWT::Metadata.new(
           name: "Jon Jon",
@@ -81,8 +81,8 @@ module Mock
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
-        aud: "google.staff-api.dev",
-        sub: "amit@redant.com.au",
+        domain: "google.staff-api.dev",
+        id: "amit@redant.com.au",
         scope: ["public", "guest"],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
