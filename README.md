@@ -3,7 +3,7 @@
 
 # PlaceOS Staff API
 
-## Env Vars
+## Environment Variables
 
 ```
 # Default Timezone
@@ -27,6 +27,13 @@ STAFF_DOMAINS=admin.org.com,org.com
 
 # Database config:
 PG_DATABASE_URL=postgresql://localhost/travis_test
+
+# Sentry monitoring
+SENTRY_DSN=<sentry dsn>
+
+# Logstash log ingest
+LOGSTASH_HOST=example.com
+LOGSTASH_PORT=12345
 ```
 
 ## Local development
