@@ -1,12 +1,14 @@
 name: CI
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0" # Sunday at midnight
 jobs:
-  test:
+  style:
     runs-on: ubuntu-latest
     steps:
       - uses: oprypin/install-crystal@v1
-        with:
-          crystal: latest
       - uses: actions/checkout@v2
       - name: Crystal Format
         run: crystal tool format --check
@@ -14,5 +16,18 @@ jobs:
         uses: crystal-ameba/github-action@v0.2.12
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crystal:
+          - latest
+          - nightly
+          - 1.0.0
+    steps:
+      - uses: actions/checkout@v2
       - name: Run docker-compose test environment
         run: ./test
+        env:
+          CRYSTAL_VERSION: ${{ matrix.crystal }}
