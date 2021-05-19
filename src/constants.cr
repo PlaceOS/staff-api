@@ -22,9 +22,7 @@ module App
   PG_DATABASE_URL         = TEST ? ENV["PG_TEST_DATABASE_URL"] : ENV["PG_DATABASE_URL"]
   PG_CONNECTION_POOL_SIZE = 5
 
-  PLACE_URI = ENV["PLACE_URI"]
+  PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
 
-  def self.running_in_production?
-    PRODUCTION
-  end
+  class_getter? running_in_production : Bool = PRODUCTION
 end
