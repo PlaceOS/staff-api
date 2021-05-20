@@ -10,6 +10,9 @@ module App::Logging
   standard_sentry = Raven::LogBackend.new
   comprehensive_sentry = Raven::LogBackend.new(capture_all: true)
 
+  # Configure Sentry
+  Raven.configure &.async=(true)
+
   # Logging configuration
   log_backend = PlaceOS::LogBackend.log_backend
   log_level = App.running_in_production? ? ::Log::Severity::Info : ::Log::Severity::Debug
