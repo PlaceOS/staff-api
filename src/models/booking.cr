@@ -122,6 +122,15 @@ class Booking
     end
   end
 
+  scope :is_checked_in do |value|
+    if value
+      check = value == "true"
+      where { checked_in == check }
+    else
+      self
+    end
+  end
+
   # Bookings have the zones in an array.
   #
   # In case of multiple zones as input,

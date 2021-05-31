@@ -11,6 +11,7 @@ class Bookings < Application
     booking_state = query_params["state"]?.presence
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
     user_email = query_params["email"]?.presence.try(&.downcase)
+    checked_in = query_params["checked_in"]?.presence
     user_id = query_params["user"]?.presence
     include_booked_by = query_params["include_booked_by"]?.presence.try(&.strip.downcase) == "true"
 
@@ -34,6 +35,7 @@ class Bookings < Application
       .created_after(created_after)
       .is_approved(approved)
       .is_rejected(rejected)
+      .is_checked_in(checked_in)
       .where(
         %("booking_start" <= :ending AND "booking_end" >= :starting AND "booking_type" = :booking_type),
         starting: starting, ending: ending, booking_type: booking_type)
