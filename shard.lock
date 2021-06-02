@@ -35,7 +35,7 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.9+git.commit.548195e70d3ebc16fbdd2e803d85088456b13392
+    version: 0.9+git.commit.529ec7e6d9689a1a4efa17e0d2649d6a7ec32c94
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
@@ -99,7 +99,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.13.3
+    version: 1.13.4
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
@@ -115,7 +115,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.2.0+git.commit.fdf12272a3b4783e7aee2482495c1af98b76aa0c
+    version: 2.4.0+git.commit.8b8d6669bef0aa618854062ebdc4e755a47b145e
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -123,7 +123,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 4.18.2
+    version: 5.1.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -151,7 +151,7 @@ shards:
 
   tasker:
     git: https://github.com/spider-gazelle/tasker.git
-    version: 2.0.3
+    version: 2.0.5
 
   webmock:
     git: https://github.com/manastech/webmock.cr.git
