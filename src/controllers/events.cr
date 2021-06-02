@@ -111,7 +111,7 @@ class Events < Application
     input_event.attendees << host_attendee
 
     # Default to system timezone if not passed in
-    zone = input_event.timezone ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
+    zone = input_event.timezone.presence ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
 
     input_event.event_start = input_event.event_start.in(zone)
     input_event.event_end = input_event.event_end.not_nil!.in(zone)
