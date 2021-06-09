@@ -73,6 +73,7 @@ abstract class Application < ActionController::Base
   # =========================================
   # ERROR HANDLERS
   # =========================================
+
   # 401 if no bearer token
   rescue_from Error::Unauthorized do |error|
     Log.debug { error.message }
@@ -92,14 +93,7 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from Clear::SQL::Error do |error|
-    Log.debug { error.inspect_with_backtrace }
-    respond_with(:internal_server_error) do
-      text error.inspect_with_backtrace
-      json({
-        error:     error.message,
-        backtrace: error.backtrace?,
-      })
-    end
+    render_error(HTTP::Status::InternalServerError, error)
   end
 
   rescue_from KeyError do |error|
@@ -128,29 +122,38 @@ abstract class Application < ActionController::Base
     head :not_found
   end
 
+  # TODO: Should be caught where it's happening, or the code refactored.
   rescue_from ::Enumerable::EmptyError do |error|
-    Log.warn(exception: error) { error.message }
-    respond_with(:not_found) do
-      text error.inspect_with_backtrace
-      json({
-        error:     error.message,
-        backtrace: error.backtrace?,
-      })
-    end
+    render_error(HTTP::Status::NotFound, error)
   end
 
-  # Helpful during dev, see errors from office/google clients
-  unless App.running_in_production?
-    rescue_from PlaceCalendar::Exception do |error|
-      respond_with(:internal_server_error) do
-        text "#{error.http_body} \n #{error.inspect_with_backtrace}"
+  rescue_from PlaceCalendar::Exception do |error|
+    # Adding `http_body` during dev to inspect errors from office/google clients
+    render_error(
+      HTTP::Status::InternalServerError,
+      error,
+      "#{error.http_body} \n #{error.inspect_with_backtrace}"
+    )
+  end
+
+  protected def render_error(code : HTTP::Status, error, message = nil)
+    Log.warn(exception: error) { error.message }
+    message = error.inspect_with_backtrace if message.nil?
+
+    if App.running_in_production?
+      head code
+    else
+      respond_with(code) do
+        text message
         json({
-          error:     error.message,
+          error:     message,
           backtrace: error.backtrace?,
         })
       end
     end
   end
+
+  # TODO: Refactor the following methods into a module
 
   protected def get_hosts_event(event : PlaceCalendar::Event, host : String? = nil) : PlaceCalendar::Event
     start_time = event.event_start.at_beginning_of_day
