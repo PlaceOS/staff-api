@@ -93,7 +93,7 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from Clear::SQL::Error do |error|
-    render_error(HTTP::Status::InternalServerError, error)
+    render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
   end
 
   rescue_from KeyError do |error|
@@ -124,13 +124,13 @@ abstract class Application < ActionController::Base
 
   # TODO: Should be caught where it's happening, or the code refactored.
   rescue_from ::Enumerable::EmptyError do |error|
-    render_error(HTTP::Status::NotFound, error)
+    render_error(HTTP::Status::NOT_FOUND, error)
   end
 
   rescue_from PlaceCalendar::Exception do |error|
     # Adding `http_body` during dev to inspect errors from office/google clients
     render_error(
-      HTTP::Status::InternalServerError,
+      HTTP::Status::INTERNAL_SERVER_ERROR,
       error,
       "#{error.http_body} \n #{error.inspect_with_backtrace}"
     )
