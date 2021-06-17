@@ -16,7 +16,6 @@ class Tenants < Application
       platform:    args["platform"],
       credentials: args["credentials"].to_json,
     })
-    tenant.encrypt!
 
     render :bad_request, json: {errors: tenant.errors.map { |e| {column: e.column, reason: e.reason} }} if !tenant.save
     render json: tenant.as_json
@@ -40,7 +39,6 @@ class Tenants < Application
       end
     {% end %}
 
-    tenant.encrypt!
     render :bad_request, json: {errors: tenant.errors.map { |e| {column: e.column, reason: e.reason} }} if !tenant.save
     render json: tenant.as_json
   end
