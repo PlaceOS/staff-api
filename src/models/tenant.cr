@@ -1,5 +1,6 @@
 require "clear"
 require "json"
+require "placeos-models/utilities/encryption"
 
 struct Office365Config
   include JSON::Serializable
@@ -54,13 +55,14 @@ class Tenant
   has_many guests : Guest, foreign_key: "tenant_id"
   has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
 
+  before :save, :encrypt!
+
   def validate
     add_error("domain", "must be defined") unless domain_column.defined?
     add_error("platform", "must be defined") unless platform_column.defined?
     add_error("credentials", "must be defined") unless credentials_column.defined?
 
     add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
-    add_error("credentials", "must be valid JSON") unless valid_json?(credentials)
     validate_domain_uniqueness
     validate_credentials_for_platform
   end
@@ -90,9 +92,9 @@ class Tenant
   private def validate_credentials_for_platform
     case platform
     when "google"
-      GoogleConfig.from_json(credentials)
+      GoogleConfig.from_json(decrypt)
     when "office365"
-      Office365Config.from_json(credentials)
+      Office365Config.from_json(decrypt)
     end
   rescue e : JSON::MappingError
     add_error("credentials", e.message.to_s)
@@ -101,11 +103,48 @@ class Tenant
   def place_calendar_client
     case platform
     when "office365"
-      params = Office365Config.from_json(credentials).params
+      params = Office365Config.from_json(decrypt).params
       ::PlaceCalendar::Client.new(**params)
     when "google"
-      params = GoogleConfig.from_json(credentials).params
+      params = GoogleConfig.from_json(decrypt).params
       ::PlaceCalendar::Client.new(**params)
     end
+  end
+
+  # Encryption
+  ###########################################################################
+
+  protected def encrypt(string : String)
+    raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
+
+    PlaceOS::Encryption.encrypt(string, id: encryption_id, level: PlaceOS::Encryption::Level::Support)
+  end
+
+  # Encrypts credentials
+  #
+  protected def encrypt_creds
+    # new_credentials =
+    self.credentials = encrypt(self.credentials)
+  end
+
+  # Encrypt in place
+  #
+  def encrypt!
+    encrypt_creds
+    self
+  end
+
+  # Decrypts the tenants's credentials string
+  #
+  protected def decrypt
+    raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
+
+    PlaceOS::Encryption.decrypt(string: self.credentials, id: encryption_id, level: PlaceOS::Encryption::Level::Support)
+  end
+
+  # Determine if credentials is encrypted
+  #
+  def is_encrypted? : Bool
+    PlaceOS::Encryption.is_encrypted?(self.credentials)
   end
 end

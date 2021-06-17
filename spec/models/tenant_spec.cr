@@ -1,4 +1,5 @@
 require "../spec_helper"
+require "placeos-models/utilities/encryption"
 
 describe Tenant do
   it "valid input raises no errors" do
@@ -35,6 +36,11 @@ describe Tenant do
     res.status_code.should eq(200)
   end
 
+  it "check encryption" do
+    t = TenantsHelper.create_tenant
+    t.is_encrypted?.should be_true
+  end
+
   it "takes JSON credentials and returns a PlaceCalendar::Client" do
     a = Tenant.query.find! { domain == "toby.staff-api.dev" }
     a.place_calendar_client.class.should eq(PlaceCalendar::Client)
@@ -42,7 +48,13 @@ describe Tenant do
 
   it "should validate credentials based on platform" do
     a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    a.update({platform: "google"})
+    a.update({platform: "google", credentials: %({
+      "issuer":      "1122121212",
+      "scopes":      ["http://example.com"],
+      "signing_key": "-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----",
+      "domain":      "example.com.au",
+      "sub":         "bob@example.com.au"
+    })})
     a.errors.size.should be > 0
   end
 end
