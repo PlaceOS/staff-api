@@ -127,7 +127,6 @@ class Tenant
   # Encrypts credentials
   #
   protected def encrypt_creds
-    # new_credentials =
     self.credentials = encrypt(self.credentials)
   end
 
