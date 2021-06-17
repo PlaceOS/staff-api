@@ -63,7 +63,7 @@ class Tenant
     add_error("credentials", "must be defined") unless credentials_column.defined?
     add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
     validate_domain_uniqueness
-    validate_creds
+    validate_credentials
     validate_credentials_for_platform
   end
 
@@ -82,7 +82,7 @@ class Tenant
     false
   end
 
-  private def validate_creds
+  private def validate_credentials
     add_error("credentials", "must be valid JSON") unless valid_json?(decrypt)
   end
 

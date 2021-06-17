@@ -1,5 +1,4 @@
 require "../spec_helper"
-require "placeos-models/utilities/encryption"
 
 describe Tenant do
   it "valid input raises no errors" do
@@ -48,13 +47,7 @@ describe Tenant do
 
   it "should validate credentials based on platform" do
     a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    a.update({platform: "google", credentials: %({
-      "issuer":      "1122121212",
-      "scopes":      ["http://example.com"],
-      "signing_key": "-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----",
-      "domain":      "example.com.au",
-      "sub":         "bob@example.com.au"
-    })})
+    a.update({platform: "google"})
     a.errors.size.should be > 0
   end
 end
