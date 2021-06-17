@@ -61,9 +61,9 @@ class Tenant
     add_error("domain", "must be defined") unless domain_column.defined?
     add_error("platform", "must be defined") unless platform_column.defined?
     add_error("credentials", "must be defined") unless credentials_column.defined?
-
     add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
     validate_domain_uniqueness
+    validate_creds
     validate_credentials_for_platform
   end
 
@@ -80,6 +80,10 @@ class Tenant
     true if JSON.parse(value)
   rescue JSON::ParseException
     false
+  end
+
+  private def validate_creds
+    add_error("credentials", "must be valid JSON") unless valid_json?(decrypt)
   end
 
   private def validate_domain_uniqueness
