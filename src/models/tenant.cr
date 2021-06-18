@@ -83,7 +83,7 @@ class Tenant
   end
 
   private def validate_credentials
-    add_error("credentials", "must be valid JSON") unless valid_json?(decrypt)
+    add_error("credentials", "must be valid JSON") unless valid_json?(decrypt_credentials)
   end
 
   private def validate_domain_uniqueness
@@ -96,9 +96,9 @@ class Tenant
   private def validate_credentials_for_platform
     case platform
     when "google"
-      GoogleConfig.from_json(decrypt)
+      GoogleConfig.from_json(decrypt_credentials)
     when "office365"
-      Office365Config.from_json(decrypt)
+      Office365Config.from_json(decrypt_credentials)
     end
   rescue e : JSON::MappingError
     add_error("credentials", e.message.to_s)
@@ -107,10 +107,10 @@ class Tenant
   def place_calendar_client
     case platform
     when "office365"
-      params = Office365Config.from_json(decrypt).params
+      params = Office365Config.from_json(decrypt_credentials).params
       ::PlaceCalendar::Client.new(**params)
     when "google"
-      params = GoogleConfig.from_json(decrypt).params
+      params = GoogleConfig.from_json(decrypt_credentials).params
       ::PlaceCalendar::Client.new(**params)
     end
   end
@@ -126,23 +126,36 @@ class Tenant
 
   # Encrypts credentials
   #
-  protected def encrypt_creds
+  protected def encrypt_credentials
     self.credentials = encrypt(self.credentials)
   end
 
   # Encrypt in place
   #
   def encrypt!
-    encrypt_creds
+    encrypt_credentials
     self
   end
 
   # Decrypts the tenants's credentials string
   #
-  protected def decrypt
+  protected def decrypt_credentials
     raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
 
     PlaceOS::Encryption.decrypt(string: self.credentials, id: encryption_id, level: PlaceOS::Encryption::Level::Support)
+  end
+
+  def decrypt_for!(user)
+    self.credentials = decrypt_for(user)
+    self
+  end
+
+  # Decrypts (if user has correct privilege) and returns the credentials string
+  #
+  def decrypt_for(user) : String
+    raise PlaceOS::Model::NoParentError.new unless (encryption_id = self.domain)
+
+    PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::Support, id: encryption_id)
   end
 
   # Determine if credentials is encrypted

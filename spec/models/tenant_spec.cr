@@ -1,4 +1,5 @@
 require "../spec_helper"
+require "placeos-models/spec/generator"
 
 describe Tenant do
   it "valid input raises no errors" do
@@ -38,6 +39,20 @@ describe Tenant do
   it "check encryption" do
     t = TenantsHelper.create_tenant
     t.is_encrypted?.should be_true
+  end
+
+  describe "#decrypt_for" do
+    user = PlaceOS::Model::Generator.user
+    support = PlaceOS::Model::Generator.user(support: true)
+    admin = PlaceOS::Model::Generator.user(admin: true)
+    string = %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
+    t = TenantsHelper.create_tenant
+    t.decrypt_for(user).should_not eq string
+    t.decrypt_for(support).should eq string
+    t.decrypt_for(admin).should eq string
+    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(user)).should be_true
+    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(support)).should be_false
+    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(admin)).should be_false
   end
 
   it "takes JSON credentials and returns a PlaceCalendar::Client" do
