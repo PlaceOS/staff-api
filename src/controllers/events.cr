@@ -700,14 +700,18 @@ class Events < Application
     cal_id = get_placeos_client.systems.fetch(system_id).email
     head(:not_found) unless cal_id
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) if event.nil?
-
     # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id.not_nil!
+    if client.client_id == :office365
+      event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+      if event && event.host != cal_id
+        event = get_hosts_event(event)
+        event_id = event.id.not_nil!
+      end
+    else
+      event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     end
+
+    head(:not_found) if event.nil?
 
     eventmeta = get_migrated_metadata(event, system_id)
     head(:not_found) unless eventmeta
