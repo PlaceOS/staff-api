@@ -25,6 +25,12 @@ jobs:
           - latest
           - nightly
           - 1.0.0
+    services:
+      rethink:
+        image: rethinkdb:2.4
+        ports:
+        - 29015:29015
+        - 28015:28015
     steps:
       - uses: actions/checkout@v2
       - name: Run docker-compose test environment
