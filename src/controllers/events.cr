@@ -99,7 +99,7 @@ class Events < Application
     if system_id
       system = placeos_client.systems.fetch(system_id)
       system_email = system.email.presence.not_nil!
-      system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
+      system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
     end
 
@@ -334,14 +334,14 @@ class Events < Application
       attendees_without_old_room = changes.attendees.uniq.reject { |attendee| attendee.email == sys_cal }
       changes.attendees = attendees_without_old_room
       # Add the updated system attendee to the payload for update
-      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_sys_cal, email: new_sys_cal)
+      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_system.display_name.presence || new_system.name, email: new_sys_cal, resource: true)
 
       new_sys_cal # cal_id
       system = new_system
     else
       # If room is not changing and it is not an attendee, add it.
       if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
-        changes.attendees << PlaceCalendar::Event::Attendee.new(name: sys_cal.not_nil!, email: sys_cal.not_nil!)
+        changes.attendees << PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: sys_cal.not_nil!, resource: true)
       end
     end
 
