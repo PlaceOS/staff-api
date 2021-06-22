@@ -698,10 +698,10 @@ class Events < Application
     guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
     cal_id = get_placeos_client.systems.fetch(system_id).email
-    head(:not_found) unless cal_id
+    render :not_found, json: {error: "system #{system_id} missing resource email"} unless cal_id
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) if event.nil?
+    render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -710,7 +710,7 @@ class Events < Application
     end
 
     eventmeta = get_migrated_metadata(event, system_id)
-    head(:not_found) unless eventmeta
+    render :not_found, json: {error: "metadata for event #{event_id} not found, no visitors expected"} unless eventmeta
 
     if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
       attendee.update!({checked_in: checkin})
@@ -720,7 +720,7 @@ class Events < Application
       # Check the event is still on
       host_email = eventmeta.not_nil!.host_email
       event = client.get_event(host_email, id: event_id)
-      head(:not_found) unless event && event.status != "cancelled"
+      render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{host_email} is cancelled"} unless event && event.status != "cancelled"
 
       # Update PlaceOS with an signal "staff/guest/checkin"
       spawn do
@@ -741,7 +741,7 @@ class Events < Application
 
       render json: attending_guest(attendee, attendee.guest)
     else
-      head :not_found
+      render :not_found, json: {error: "the attendee #{guest.email} was not found to be attending this event"}
     end
   end
 
