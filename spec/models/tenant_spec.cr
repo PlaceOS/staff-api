@@ -41,10 +41,10 @@ describe Tenant do
     t.is_encrypted?.should be_true
   end
 
-  describe "#decrypt_for" do
-    user = PlaceOS::Model::Generator.user
-    support = PlaceOS::Model::Generator.user(support: true)
-    admin = PlaceOS::Model::Generator.user(admin: true)
+  it "#decrypt_for" do
+    user = TenantsHelper.create_token
+    support = TenantsHelper.create_token(UserJWT::Permissions::Support)
+    admin = TenantsHelper.create_token(UserJWT::Permissions::Admin)
     string = %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
     t = TenantsHelper.create_tenant
     t.decrypt_for(user).should_not eq string
@@ -79,5 +79,20 @@ module TenantsHelper
 
   def create_tenant(params = MOCK_TENANT_PARAMS)
     Tenant.create(params)
+  end
+
+  def create_token(level : UserJWT::Permissions = UserJWT::Permissions::User)
+    UserJWT.new(
+      "Staff-API App",
+      Time.local,
+      Time.local + 24.hours,
+      "redant.staff-api.dev",
+      "123",
+      UserJWT::Metadata.new(
+        "Toby Carvan",
+        "toby@redant.com.au",
+        level
+      )
+    )
   end
 end
