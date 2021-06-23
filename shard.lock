@@ -107,7 +107,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.9.3
+    version: 4.9.4
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -119,7 +119,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.1.1
+    version: 5.5.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
