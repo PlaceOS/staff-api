@@ -41,18 +41,17 @@ describe Tenant do
     t.is_encrypted?.should be_true
   end
 
-  it "#decrypt_for" do
-    user = TenantsHelper.create_token
-    support = TenantsHelper.create_token(UserJWT::Permissions::Support)
-    admin = TenantsHelper.create_token(UserJWT::Permissions::Admin)
+  describe "#decrypt_for" do
     string = %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
-    t = TenantsHelper.create_tenant
-    t.decrypt_for(user).should_not eq string
-    t.decrypt_for(support).should eq string
-    t.decrypt_for(admin).should eq string
-    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(user)).should be_true
-    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(support)).should be_false
-    PlaceOS::Encryption.is_encrypted?(t.decrypt_for(admin)).should be_false
+    tenant = TenantsHelper.create_tenant
+    UserJWT::Permissions.each do |permission|
+      decrypts = permission > UserJWT::Permissions::User
+      it "#{decrypts ? "decrypts" : "does not decrypt"} #{permission.to_json}" do
+        token = TenantsHelper.create_token(permission)
+        tenant.decrypt_for(token).should_not eq string unless decrypts
+        PlaceOS::Encryption.is_encrypted?(t.decrypt_for(token)).should_not eq decrypts
+      end
+    end
   end
 
   it "takes JSON credentials and returns a PlaceCalendar::Client" do
@@ -83,14 +82,14 @@ module TenantsHelper
 
   def create_token(level : UserJWT::Permissions = UserJWT::Permissions::User)
     UserJWT.new(
-      "Staff-API App",
+      Faker::Lorem.word,
       Time.local,
       Time.local + 24.hours,
-      "redant.staff-api.dev",
+      Faker::Internet.domain_name,
       "123",
       UserJWT::Metadata.new(
-        "Toby Carvan",
-        "toby@redant.com.au",
+        Faker::Name.name,
+        Faker::Internet.email,
         level
       )
     )
