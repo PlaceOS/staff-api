@@ -162,6 +162,7 @@ class Events < Application
             email = attendee.email.strip.downcase
 
             guest = if existing_guest = Guest.query.find({email: email})
+                      existing_guest.name = attendee.name if existing_guest.name != attendee.name
                       existing_guest
                     else
                       Guest.new({
@@ -181,7 +182,6 @@ class Events < Application
             if attendee_ext_data = attendee.extension_data
               guest.ext_data = attendee_ext_data
             end
-
             guest.save!
 
             # Create attendees
