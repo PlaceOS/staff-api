@@ -81,8 +81,10 @@ class Tenant
   end
 
   private def validate_domain_uniqueness
-    if Tenant.query.find { raw("domain = '#{self.domain}'") }
-      add_error("domain", "duplicate error. A tenant with this domain already exists")
+    if tenant = Tenant.query.find { raw("domain = '#{self.domain}'") }
+      if tenant.id != self.id
+        add_error("domain", "duplicate error. A tenant with this domain already exists")
+      end
     end
   end
 
