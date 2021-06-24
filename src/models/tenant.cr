@@ -55,12 +55,7 @@ class Tenant
   has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
 
   def validate
-    add_error("domain", "must be defined") unless domain_column.defined?
-    add_error("platform", "must be defined") unless platform_column.defined?
-    add_error("credentials", "must be defined") unless credentials_column.defined?
-
-    add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
-    add_error("credentials", "must be valid JSON") unless valid_json?(credentials)
+    validate_columns
     validate_domain_uniqueness
     validate_credentials_for_platform
   end
@@ -80,6 +75,13 @@ class Tenant
     false
   end
 
+  private def validate_columns
+    add_error("domain", "must be defined") unless domain_column.defined?
+    add_error("platform", "must be defined") unless platform_column.defined?
+    add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
+    add_error("credentials", "must be defined") unless credentials_column.defined?
+  end
+
   private def validate_domain_uniqueness
     if Tenant.query.find { raw("domain = '#{self.domain}'") }
       add_error("domain", "duplicate error. A tenant with this domain already exists")
@@ -88,6 +90,7 @@ class Tenant
 
   # Try parsing the JSON for the relevant platform to make sure it works
   private def validate_credentials_for_platform
+    add_error("credentials", "must be valid JSON") unless valid_json?(credentials)
     case platform
     when "google"
       GoogleConfig.from_json(credentials)
