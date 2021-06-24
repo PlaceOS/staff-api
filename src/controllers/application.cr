@@ -141,7 +141,10 @@ abstract class Application < ActionController::Base
     message = error.inspect_with_backtrace if message.nil?
 
     if App.running_in_production?
-      head code
+      respond_with(code) do
+        text message
+        json({error: message})
+      end
     else
       respond_with(code) do
         text message
