@@ -684,6 +684,7 @@ class Events < Application
     checkin = (query_params["state"]? || "true") == "true"
     event_id = route_params["id"]
     guest_email = route_params["guest_id"].downcase
+    host_mailbox = query_params["host_mailbox"]?.try &.downcase
 
     if user_token.scope.includes?("guest")
       guest_event_id, system_id = user.roles
@@ -697,8 +698,12 @@ class Events < Application
 
     guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
-    cal_id = get_placeos_client.systems.fetch(system_id).email
-    render :not_found, json: {error: "system #{system_id} missing resource email"} unless cal_id
+    sys_email = get_placeos_client.systems.fetch(system_id).email
+    render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
+
+    # The provided event id defaults to the system ID however for office365
+    # we may need to explicitly provide the hosts mailbox if the rooms event id is unknown
+    cal_id = host_mailbox || sys_email
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
