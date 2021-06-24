@@ -11,7 +11,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 3.0.0
+    version: 3.1.1
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
@@ -95,7 +95,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.13.5
+    version: 1.13.6
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
