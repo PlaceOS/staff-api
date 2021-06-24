@@ -118,8 +118,7 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from ::PlaceOS::Client::API::Error do |error|
-    Log.debug { error.message }
-    head :not_found
+    render_error(HTTP::Status::NOT_FOUND, error)
   end
 
   # TODO: Should be caught where it's happening, or the code refactored.
