@@ -99,7 +99,7 @@ class Events < Application
     if system_id
       system = placeos_client.systems.fetch(system_id)
       system_email = system.email.presence.not_nil!
-      system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
+      system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
     end
 
@@ -162,6 +162,7 @@ class Events < Application
             email = attendee.email.strip.downcase
 
             guest = if existing_guest = Guest.query.find({email: email})
+                      existing_guest.name = attendee.name if existing_guest.name != attendee.name
                       existing_guest
                     else
                       Guest.new({
@@ -181,7 +182,6 @@ class Events < Application
             if attendee_ext_data = attendee.extension_data
               guest.ext_data = attendee_ext_data
             end
-
             guest.save!
 
             # Create attendees
@@ -334,14 +334,14 @@ class Events < Application
       attendees_without_old_room = changes.attendees.uniq.reject { |attendee| attendee.email == sys_cal }
       changes.attendees = attendees_without_old_room
       # Add the updated system attendee to the payload for update
-      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_sys_cal, email: new_sys_cal)
+      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_system.display_name.presence || new_system.name, email: new_sys_cal, resource: true)
 
       new_sys_cal # cal_id
       system = new_system
     else
       # If room is not changing and it is not an attendee, add it.
       if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
-        changes.attendees << PlaceCalendar::Event::Attendee.new(name: sys_cal.not_nil!, email: sys_cal.not_nil!)
+        changes.attendees << PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: sys_cal.not_nil!, resource: true)
       end
     end
 
@@ -684,6 +684,7 @@ class Events < Application
     checkin = (query_params["state"]? || "true") == "true"
     event_id = route_params["id"]
     guest_email = route_params["guest_id"].downcase
+    host_mailbox = query_params["host_mailbox"]?.try &.downcase
 
     if user_token.scope.includes?("guest")
       guest_event_id, system_id = user.roles
@@ -697,11 +698,15 @@ class Events < Application
 
     guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
 
-    cal_id = get_placeos_client.systems.fetch(system_id).email
-    head(:not_found) unless cal_id
+    sys_email = get_placeos_client.systems.fetch(system_id).email
+    render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
+
+    # The provided event id defaults to the system ID however for office365
+    # we may need to explicitly provide the hosts mailbox if the rooms event id is unknown
+    cal_id = host_mailbox || sys_email
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) if event.nil?
+    render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -710,7 +715,7 @@ class Events < Application
     end
 
     eventmeta = get_migrated_metadata(event, system_id)
-    head(:not_found) unless eventmeta
+    render :not_found, json: {error: "metadata for event #{event_id} not found, no visitors expected"} unless eventmeta
 
     if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
       attendee.update!({checked_in: checkin})
@@ -720,7 +725,7 @@ class Events < Application
       # Check the event is still on
       host_email = eventmeta.not_nil!.host_email
       event = client.get_event(host_email, id: event_id)
-      head(:not_found) unless event && event.status != "cancelled"
+      render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{host_email} is cancelled"} unless event && event.status != "cancelled"
 
       # Update PlaceOS with an signal "staff/guest/checkin"
       spawn do
@@ -741,7 +746,7 @@ class Events < Application
 
       render json: attending_guest(attendee, attendee.guest)
     else
-      head :not_found
+      render :not_found, json: {error: "the attendee #{guest.email} was not found to be attending this event"}
     end
   end
 

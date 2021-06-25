@@ -24,5 +24,7 @@ module App
 
   PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
 
+  SSL_VERIFY_NONE = ENV["SSL_VERIFY_NONE"]? || false
+
   class_getter? running_in_production : Bool = PRODUCTION
 end

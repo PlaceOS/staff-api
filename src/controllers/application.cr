@@ -118,8 +118,7 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from ::PlaceOS::Client::API::Error do |error|
-    Log.debug { error.message }
-    head :not_found
+    render_error(HTTP::Status::NOT_FOUND, error)
   end
 
   # TODO: Should be caught where it's happening, or the code refactored.
@@ -141,7 +140,10 @@ abstract class Application < ActionController::Base
     message = error.inspect_with_backtrace if message.nil?
 
     if App.running_in_production?
-      head code
+      respond_with(code) do
+        text message
+        json({error: message})
+      end
     else
       respond_with(code) do
         text message
@@ -167,6 +169,8 @@ abstract class Application < ActionController::Base
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
       EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+    else
+      meta
     end
   end
 
@@ -174,6 +178,8 @@ abstract class Application < ActionController::Base
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if (meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id) && (original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id}))
       EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
+    else
+      meta
     end
   end
 end

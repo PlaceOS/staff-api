@@ -12,7 +12,8 @@ module Utils::PlaceOSHelpers
     @placeos_client ||= if App.running_in_production?
                           PlaceOS::Client.new(
                             PLACE_URI,
-                            token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil)
+                            token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
+                            host_header: request.headers["Host"]?
                           )
                         else
                           PlaceOS::Client.from_environment_user
