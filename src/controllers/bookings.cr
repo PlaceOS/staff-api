@@ -117,6 +117,7 @@ class Bookings < Application
 
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
+    original_asset = existing_booking.asset_id
 
     {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
@@ -137,7 +138,7 @@ class Bookings < Application
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
-    reset_state = existing_booking.asset_id_column.changed?
+    reset_state = existing_booking.asset_id_column.changed? && original_asset != existing_booking.asset_id
     if existing_booking.booking_start_column.changed? || existing_booking.booking_end_column.changed?
       reset_state = true if existing_booking.booking_start < original_start || existing_booking.booking_end > original_end
     end
