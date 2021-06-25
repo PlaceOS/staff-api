@@ -12,6 +12,9 @@ dependencies:
   clear:
     github: place-labs/clear
     branch: master
+  
+  placeos-models:
+    github: placeos/models
 
   # TODO:: remove in future
   http-params-serializable:
