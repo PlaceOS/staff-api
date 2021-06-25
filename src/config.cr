@@ -35,17 +35,3 @@ ActionController::Session.configure do |settings|
   # HTTPS only:
   settings.secure = App.running_in_production?
 end
-
-# Ignore certificate errors for CABS
-class OpenSSL::SSL::Context::Client
-  def initialize(method : LibSSL::SSLMethod = Context.default_method)
-    super(method)
-
-    if ::App::SSL_VERIFY_NONE
-      self.verify_mode = OpenSSL::SSL::VerifyMode::NONE
-      {% if compare_versions(LibSSL::OPENSSL_VERSION, "1.0.2") >= 0 %}
-        self.default_verify_param = "ssl_server"
-      {% end %}
-    end
-  end
-end

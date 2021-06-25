@@ -13,7 +13,8 @@ module Utils::PlaceOSHelpers
                           PlaceOS::Client.new(
                             PLACE_URI,
                             token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
-                            host_header: request.headers["Host"]?
+                            host_header: request.headers["Host"]?,
+                            insecure: ::App::SSL_VERIFY_NONE
                           )
                         else
                           PlaceOS::Client.from_environment_user

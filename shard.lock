@@ -111,7 +111,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.4.0+git.commit.8b8d6669bef0aa618854062ebdc4e755a47b145e
+    version: 2.4.1+git.commit.d1b8e83888f420af3fcb4419b4340ad49c66b6ee
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
