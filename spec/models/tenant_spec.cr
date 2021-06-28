@@ -45,11 +45,11 @@ describe Tenant do
     string = %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
     tenant = TenantsHelper.create_tenant
     UserJWT::Permissions.each do |permission|
-      decrypts = permission > UserJWT::Permissions::User
+      decrypts = permission > UserJWT::Permissions::AdminSupport
       it "#{decrypts ? "decrypts" : "does not decrypt"} #{permission.to_json}" do
         token = TenantsHelper.create_token(permission)
         tenant.decrypt_for(token).should_not eq string unless decrypts
-        PlaceOS::Encryption.is_encrypted?(t.decrypt_for(token)).should_not eq decrypts
+        PlaceOS::Encryption.is_encrypted?(tenant.decrypt_for(token)).should_not eq decrypts
       end
     end
   end
