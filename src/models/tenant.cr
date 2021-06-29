@@ -160,7 +160,7 @@ class Tenant
     PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::NeverDisplay, id: encryption_id)
   end
 
-  # Determine if credentials is encrypted
+  # Determine if attributes are encrypted
   #
   def is_encrypted? : Bool
     PlaceOS::Encryption.is_encrypted?(self.credentials)
