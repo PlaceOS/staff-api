@@ -236,6 +236,11 @@ class Guests < Application
   # ============================================
 
   private def find_guest
-    Guest.query.by_tenant(tenant.id).find!({email: route_params["id"].downcase})
+    guest_id = route_params["id"]
+    if guest_id.includes?('@')
+      Guest.query.by_tenant(tenant.id).find!({email: guest_id.downcase})
+    else
+      Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64)
+    end
   end
 end

@@ -40,6 +40,7 @@ class Guest
 
   def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
     result = {
+      id:             id,
       email:          email,
       name:           name,
       preferred_name: preferred_name,
