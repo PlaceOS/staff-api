@@ -17,8 +17,10 @@ JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 # Location of PlaceOS API
 PLACE_URI=https://example.place.technology
 ```
+
+
 ## Optional environment variables
-``
+```
 # Default Timezone
 STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
