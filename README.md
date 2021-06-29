@@ -3,10 +3,10 @@
 
 # PlaceOS Staff API
 
-## Environment Variables required for PRODUCTION use
+## Environment Variables required for Production/Staging and local development use, e.g. [partner-environment](https://github.com/place-labs/partner-environment/)
 
 ```
-SG_ENV=production
+SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
 
 # Database config:
 PG_DATABASE_URL=postgresql://user:password@hostname/placeos
