@@ -696,7 +696,11 @@ class Events < Application
       render :bad_request, json: {error: "missing system_id param"} unless system_id
     end
 
-    guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
+    guest = if guest_email.includes?('@')
+              Guest.query.by_tenant(tenant.id).find!({email: guest_email})
+            else
+              Guest.query.by_tenant(tenant.id).find!(guest_email.to_i64)
+            end
 
     sys_email = get_placeos_client.systems.fetch(system_id).email
     render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
