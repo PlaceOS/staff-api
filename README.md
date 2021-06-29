@@ -3,30 +3,26 @@
 
 # PlaceOS Staff API
 
-## Environment Variables
+## Environment Variables required for PRODUCTION use
 
 ```
-# Default Timezone
-STAFF_TIME_ZONE=Australia/Sydney
+SG_ENV=production
 
-# Google calendar credentials
-GOOGLE_PRIVATE_KEY=base64
-GOOGLE_ISSUER=placeos@organisation.iam.gserviceaccount.com
-GOOGLE_ADMIN_ACCOUNT=placeos_service_account@admin.org.com
-GOOGLE_DIRECTORY_DOMAIN=example.com
+# Database config:
+PG_DATABASE_URL=postgresql://user:password@hostname/placeos
 
 # Public key for decrypting and validating JWT tokens
-SECRET_KEY_BASE=base64-public-key
+JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 
 # Location of PlaceOS API
 PLACE_URI=https://example.place.technology
+```
+## Optional environment variables
+``
+# Default Timezone
+STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
-# Comma separated list of staff email domains
-# for determining who is a potential guest
-STAFF_DOMAINS=admin.org.com,org.com
-
-# Database config:
-PG_DATABASE_URL=postgresql://localhost/travis_test
+SSL_VERIFY_NONE=true # Whether staff-api should verify the SSL cert that PlaceOS rest-api presents
 
 # Sentry monitoring
 SENTRY_DSN=<sentry dsn>
@@ -34,7 +30,14 @@ SENTRY_DSN=<sentry dsn>
 # Logstash log ingest
 LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
-```
+
+# Sentry monitoring
+SENTRY_DSN=<sentry dsn>
+
+# Logstash log ingest
+LOGSTASH_HOST=example.com
+LOGSTASH_PORT=12345
+``
 
 ## Local development
 
