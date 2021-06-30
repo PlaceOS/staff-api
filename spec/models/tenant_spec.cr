@@ -42,7 +42,6 @@ describe Tenant do
   end
 
   describe "#decrypt_for" do
-    string = %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"})
     tenant = TenantsHelper.create_tenant
     UserJWT::Permissions.each do |permission|
       it "does not decrypt for #{permission.to_json}" do
@@ -57,7 +56,7 @@ describe Tenant do
     a.place_calendar_client.class.should eq(PlaceCalendar::Client)
   end
 
-  it "should validate credentials based on platform", focus: true do
+  it "should validate credentials based on platform" do
     a = Tenant.query.find! { domain == "toby.staff-api.dev" }
     a.update({platform: "google"})
     a.errors.size.should be > 0
