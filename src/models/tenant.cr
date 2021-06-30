@@ -95,14 +95,15 @@ class Tenant
 
   # Try parsing the JSON for the relevant platform to make sure it works
   private def validate_credentials_for_platform
-    add_error("credentials", "must be valid JSON") unless valid_json?(credentials)
+    creds = decrypt_credentials
+    add_error("credentials", "must be valid JSON") unless valid_json?(creds)
     case platform
     when "google"
-      GoogleConfig.from_json(decrypt_credentials)
+      GoogleConfig.from_json(creds)
     when "office365"
-      Office365Config.from_json(decrypt_credentials)
+      Office365Config.from_json(creds)
     end
-  rescue e : JSON::MappingError
+  rescue e : JSON::MappingError | JSON::SerializableError
     add_error("credentials", e.message.to_s)
   end
 
@@ -123,7 +124,7 @@ class Tenant
   protected def encrypt(string : String)
     raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
 
-    PlaceOS::Encryption.encrypt(string, id: encryption_id, level: PlaceOS::Encryption::Level::Support)
+    PlaceOS::Encryption.encrypt(string, id: encryption_id, level: PlaceOS::Encryption::Level::NeverDisplay)
   end
 
   # Encrypts credentials
@@ -144,7 +145,7 @@ class Tenant
   protected def decrypt_credentials
     raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
 
-    PlaceOS::Encryption.decrypt(string: self.credentials, id: encryption_id, level: PlaceOS::Encryption::Level::Support)
+    PlaceOS::Encryption.decrypt(string: self.credentials, id: encryption_id, level: PlaceOS::Encryption::Level::NeverDisplay)
   end
 
   def decrypt_for!(user)
@@ -157,10 +158,10 @@ class Tenant
   def decrypt_for(user) : String
     raise PlaceOS::Model::NoParentError.new unless (encryption_id = self.domain)
 
-    PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::Support, id: encryption_id)
+    PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::NeverDisplay, id: encryption_id)
   end
 
-  # Determine if credentials is encrypted
+  # Determine if attributes are encrypted
   #
   def is_encrypted? : Bool
     PlaceOS::Encryption.is_encrypted?(self.credentials)
