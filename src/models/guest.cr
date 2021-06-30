@@ -22,10 +22,11 @@ class Guest
   before(:save) do |m|
     guest_model = m.as(Guest)
     guest_model.email = guest_model.email.downcase
-    searchable_string = ""
-    searchable_string += guest_model.name.to_s if guest_model.name_column.defined?
+    searchable_string = guest_model.email
+    searchable_string += " #{guest_model.name}" if guest_model.name_column.defined?
     searchable_string += " #{guest_model.preferred_name}" if guest_model.preferred_name_column.defined?
     searchable_string += " #{guest_model.organisation}" if guest_model.organisation_column.defined?
+    searchable_string += " #{guest_model.phone}" if guest_model.phone_column.defined?
     searchable_string += " #{guest_model.id}" if guest_model.id_column.defined?
     guest_model.searchable = searchable_string.downcase
   end
