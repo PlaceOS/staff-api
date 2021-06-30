@@ -95,12 +95,13 @@ class Tenant
 
   # Try parsing the JSON for the relevant platform to make sure it works
   private def validate_credentials_for_platform
-    add_error("credentials", "must be valid JSON") unless valid_json?(decrypt_credentials)
+    creds = decrypt_credentials
+    add_error("credentials", "must be valid JSON") unless valid_json?(creds)
     case platform
     when "google"
-      GoogleConfig.from_json(decrypt_credentials)
+      GoogleConfig.from_json(creds)
     when "office365"
-      Office365Config.from_json(decrypt_credentials)
+      Office365Config.from_json(creds)
     end
   rescue e : JSON::MappingError | JSON::SerializableError
     add_error("credentials", e.message.to_s)
