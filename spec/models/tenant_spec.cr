@@ -57,12 +57,10 @@ describe Tenant do
     a.place_calendar_client.class.should eq(PlaceCalendar::Client)
   end
 
-  it "should validate credentials based on platform" do
-    expect_raises(JSON::SerializableError) do
-      a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      a.update({platform: "google"})
-      # a.errors.size.should be > 0
-    end
+  it "should validate credentials based on platform", focus: true do
+    a = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    a.update({platform: "google"})
+    a.errors.size.should be > 0
   end
 end
 
