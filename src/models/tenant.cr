@@ -59,6 +59,7 @@ class Tenant
 
   def validate
     validate_columns
+    assign_id
     validate_domain_uniqueness
     validate_credentials_for_platform
   end
@@ -83,6 +84,16 @@ class Tenant
     add_error("platform", "must be defined") unless platform_column.defined?
     add_error("platform", "must be a valid platform name") unless VALID_PLATFORMS.includes?(platform)
     add_error("credentials", "must be defined") unless credentials_column.defined?
+  end
+
+  private def assign_id
+    id = rand(Int64)
+    tenant = Tenant.query.find { raw("id = '#{id}'") }
+    if tenant.nil?
+      self.id = id
+    else
+      assign_id
+    end
   end
 
   private def validate_domain_uniqueness
