@@ -50,8 +50,8 @@ class Bookings < Application
 
   # ameba:disable Metrics/CyclomaticComplexity
   def create
-    parsed = JSON.parse(request.body.not_nil!).as_h
-    booking = Booking.new(parsed)
+    hashed = Hash(String, String | Int32 | JSON::Any).from_json(request.body.not_nil!)
+    booking = Booking.new(hashed)
 
     head :bad_request unless booking.booking_start_column.defined? &&
                              booking.booking_end_column.defined? &&
@@ -75,7 +75,8 @@ class Bookings < Application
     booking.user_name = booking.booked_by_name if !booking.user_name_column.defined?
 
     # Extension data
-    booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
+    extension_data = hashed["extension_data"]?
+    booking.ext_data = extension_data if extension_data.is_a?(JSON::Any)
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -111,8 +112,8 @@ class Bookings < Application
   end
 
   def update
-    parsed = JSON.parse(request.body.not_nil!)
-    changes = Booking.new(parsed)
+    hashed = Hash(String, String | Int32 | JSON::Any).from_json(request.body.not_nil!)
+    changes = Booking.new(hashed)
     existing_booking = booking
 
     original_start = existing_booking.booking_start
@@ -127,11 +128,11 @@ class Bookings < Application
     {% end %}
 
     # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]?
+    extension_data = hashed["extension_data"]?
     if extension_data
       booking_ext_data = booking.ext_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
-      extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
+      extension_data.not_nil!.as_h.each { |key, value| data[key] = value } if extension_data.is_a?(JSON::Any)
       # Needed for clear to assign the updated json correctly
       existing_booking.ext_data_column.clear
       existing_booking.ext_data = JSON.parse(data.to_json)
