@@ -142,8 +142,8 @@ class Guests < Application
       head :forbidden
     end
 
-    parsed = JSON.parse(request.body.not_nil!)
-    changes = Guest.new(parsed)
+    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
+    changes = Guest.new(hashed)
     {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
@@ -151,18 +151,17 @@ class Guests < Application
       end
     {% end %}
 
-    # For some reason need to manually set the banned and dangerous
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned.as_bool if banned
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous.as_bool if dangerous
+    banned = hashed["banned"]?
+    guest.banned = !!banned if banned
+    dangerous = hashed["dangerous"]?
+    guest.dangerous = !!dangerous if dangerous
 
     # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]?
+    extension_data = hashed["extension_data"]?
     if extension_data
       guest_ext_data = guest.ext_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
-      extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
+      extension_data.not_nil!.as_h.each { |key, value| data[key] = value } if extension_data.is_a?(JSON::Any)
       # Needed for clear to assign the updated json correctly
       guest.ext_data_column.clear
       guest.ext_data = JSON.parse(data.to_json)
@@ -177,15 +176,15 @@ class Guests < Application
   put "/:id", :update_alt { update }
 
   def create
-    parsed = JSON.parse(request.body.not_nil!)
-    guest = Guest.new(parsed)
+    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
+    guest = Guest.new(hashed)
     guest.tenant_id = tenant.id
 
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned ? banned.as_bool : false
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous ? dangerous.as_bool : false
-    guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
+    guest.banned = !!hashed["banned"]?
+    guest.dangerous = !!hashed["dangerous"]?
+
+    extension_data = hashed["extension_data"]?
+    guest.ext_data = extension_data if extension_data.is_a?(JSON::Any)
 
     render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
 
