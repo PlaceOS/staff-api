@@ -148,13 +148,35 @@ class Booking
     where("( #{query} )")
   end
 
-  # FIXME: Clear models seem to be having trouble when serializing
-  # to json from render inside controller, hence this dance
   def as_json
-    result = JSON.parse(self.to_json).as_h
-    # FE only cares about extension_data not ext_data
-    result.reject!("ext_data")
-    result["extension_data"] = ext_data || JSON.parse("{}")
-    result
+    {
+      id:              self.id,
+      booking_type:    self.booking_type,
+      booking_start:   self.booking_start,
+      booking_end:     self.booking_end,
+      timezone:        self.timezone,
+      asset_id:        self.asset_id,
+      user_id:         self.user_id,
+      user_email:      self.user_email,
+      user_name:       self.user_name,
+      zones:           self.zones,
+      process_state:   self.process_state,
+      last_changed:    self.last_changed,
+      approved:        self.approved,
+      approved_at:     self.approved_at,
+      rejected:        self.rejected,
+      rejected_at:     self.rejected_at,
+      approver_id:     self.approver_id,
+      approver_name:   self.approver_name,
+      approver_email:  self.approver_email,
+      title:           self.title,
+      checked_in:      self.checked_in,
+      checked_in_at:   self.checked_in_at,
+      checked_out_at:  self.checked_out_at,
+      description:     self.description,
+      extension_data:  self.ext_data,
+      booked_by_email: self.booked_by_email,
+      booked_by_name:  self.booked_by_name,
+    }
   end
 end
