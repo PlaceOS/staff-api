@@ -8,14 +8,9 @@ class Tenants < Application
   end
 
   def create
-    args = JSON.parse(request.body.not_nil!)
-
-    tenant = Tenant.new({
-      name:        args["name"],
-      domain:      args["domain"],
-      platform:    args["platform"],
-      credentials: args["credentials"].to_json,
-    })
+    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
+    tenant = Tenant.new(hashed)
+    tenant.credentials = hashed["credentials"]?.to_json
 
     render :bad_request, json: {errors: tenant.errors.map { |e| {column: e.column, reason: e.reason} }} if !tenant.save
     render json: tenant.as_json
@@ -23,14 +18,9 @@ class Tenants < Application
 
   def update
     tenant = Tenant.find!(params["id"].to_i64)
-    args = JSON.parse(request.body.not_nil!)
-
-    changes = Tenant.new({
-      name:        args["name"],
-      domain:      args["domain"],
-      platform:    args["platform"],
-      credentials: args["credentials"].to_json,
-    })
+    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
+    changes = Tenant.new(hashed)
+    changes.credentials = hashed["credentials"]?.to_json
 
     {% for key in [:name, :domain, :platform, :credentials] %}
       begin
