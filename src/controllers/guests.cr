@@ -143,7 +143,7 @@ class Guests < Application
     end
 
     hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
-    changes = Guest.new(hashed)
+    changes = Guest.from_json(request.body.not_nil!.to_s)
     {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
@@ -177,7 +177,7 @@ class Guests < Application
 
   def create
     hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
-    guest = Guest.new(hashed)
+    guest = Guest.from_json(request.body.not_nil!.to_s)
     guest.tenant_id = tenant.id
 
     guest.banned = !!hashed["banned"]?

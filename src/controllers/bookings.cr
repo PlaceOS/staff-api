@@ -51,7 +51,7 @@ class Bookings < Application
   # ameba:disable Metrics/CyclomaticComplexity
   def create
     hashed = Hash(String, String | Int32 | JSON::Any).from_json(request.body.not_nil!)
-    booking = Booking.new(hashed)
+    booking = Booking.from_json(request.body.not_nil!.to_s)
 
     head :bad_request unless booking.booking_start_column.defined? &&
                              booking.booking_end_column.defined? &&
@@ -113,7 +113,7 @@ class Bookings < Application
 
   def update
     hashed = Hash(String, String | Int32 | JSON::Any).from_json(request.body.not_nil!)
-    changes = Booking.new(hashed)
+    changes = Booking.from_json(request.body.not_nil!.to_s)
     existing_booking = booking
 
     original_start = existing_booking.booking_start
