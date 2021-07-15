@@ -16,7 +16,7 @@ class CreateGuestMigration
         t.column :banned, :boolean, default: "false"
         t.column :dangerous, :boolean, default: "false"
         t.column :searchable, :string
-        t.column :ext_data, :jsonb
+        t.column :ext_data, :jsonb, default: "'{}'"
 
         t.timestamps
       end

@@ -44,7 +44,7 @@ class Bookings < Application
 
     response.headers["x-placeos-rawsql"] = query.to_sql
 
-    results = query.to_a.map { |b| b.as_json }
+    results = query.to_a.map { |b| b.as_h }
     render json: results
   end
 
@@ -102,7 +102,7 @@ class Bookings < Application
       end
     end
 
-    render :created, json: booking.as_json
+    render :created, json: booking.as_h
   end
 
   def update
@@ -156,7 +156,7 @@ class Bookings < Application
   end
 
   def show
-    render json: booking.as_json
+    render json: booking.as_h
   end
 
   def destroy
@@ -296,7 +296,7 @@ class Bookings < Application
       end
     end
 
-    render json: booking.as_json
+    render json: booking.as_h
   end
 
   private def set_approver(booking, approved : Bool)

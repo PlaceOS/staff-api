@@ -107,7 +107,7 @@ describe Bookings do
     booking = Booking.query.find!({id: updated["id"]})
     booking.extension_data.not_nil!.as_h.should eq({"other" => "stuff"})
     updated["title"].should eq("new title")
-    booking = Booking.query.find!({id: updated["id"]})
+    booking = Booking.query.find!(updated["id"])
     booking.title.not_nil!.should eq("new title")
   end
 

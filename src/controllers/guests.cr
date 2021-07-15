@@ -143,7 +143,7 @@ class Guests < Application
     end
 
     changes = Guest.from_json(request.body.as(IO))
-    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo, :dangerous, :banned] %}
+    {% for key in %i(name preferred_name phone organisation notes photo dangerous banned) %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError

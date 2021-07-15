@@ -148,7 +148,7 @@ class Booking
     where("( #{query} )")
   end
 
-  def as_json
+  def as_h
     {
       id:              id,
       booking_type:    booking_type,
