@@ -44,7 +44,7 @@ class Bookings < Application
 
     response.headers["x-placeos-rawsql"] = query.to_sql
 
-    results = query.to_a.map { |b| b.as_h }
+    results = query.to_a.map &.as_h
     render json: results
   end
 
