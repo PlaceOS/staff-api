@@ -142,29 +142,22 @@ class Guests < Application
       head :forbidden
     end
 
-    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
-    changes = Guest.from_json(request.body.not_nil!.to_s)
-    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
+    changes = Guest.from_json(request.body.as(IO))
+    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo, :dangerous, :banned] %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
 
-    banned = hashed["banned"]?
-    guest.banned = !!banned if banned
-    dangerous = hashed["dangerous"]?
-    guest.dangerous = !!dangerous if dangerous
-
-    # merge changes into extension data
-    extension_data = hashed["extension_data"]?
+    extension_data = changes.extension_data if changes.extension_data_column.defined?
     if extension_data
-      guest_ext_data = guest.ext_data
+      guest_ext_data = guest.extension_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
-      extension_data.not_nil!.as_h.each { |key, value| data[key] = value } if extension_data.is_a?(JSON::Any)
+      extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      guest.ext_data_column.clear
-      guest.ext_data = JSON.parse(data.to_json)
+      guest.extension_data_column.clear
+      guest.extension_data = JSON::Any.new(data)
     end
 
     render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
@@ -176,15 +169,9 @@ class Guests < Application
   put "/:id", :update_alt { update }
 
   def create
-    hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
-    guest = Guest.from_json(request.body.not_nil!.to_s)
+    # hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
+    guest = Guest.from_json(request.body.as(IO))
     guest.tenant_id = tenant.id
-
-    guest.banned = !!hashed["banned"]?
-    guest.dangerous = !!hashed["dangerous"]?
-
-    extension_data = hashed["extension_data"]?
-    guest.ext_data = extension_data if extension_data.is_a?(JSON::Any)
 
     render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
 

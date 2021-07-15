@@ -113,12 +113,22 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_asset = existing_booking.asset_id
 
-    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description, :extension_data] %}
+    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
+
+    extension_data = changes.extension_data if changes.extension_data_column.defined?
+    if extension_data
+      booking_ext_data = booking.extension_data
+      data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
+      extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
+      # Needed for clear to assign the updated json correctly
+      booking.extension_data_column.clear
+      booking.extension_data = JSON::Any.new(data)
+    end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
     reset_state = existing_booking.asset_id_column.changed? && original_asset != existing_booking.asset_id

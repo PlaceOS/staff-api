@@ -127,7 +127,7 @@ describe Guests do
     updated["extension_data"].should eq({"test" => "data", "other" => "info"})
 
     guest = Guest.query.find!({email: updated["email"]})
-    guest.ext_data.not_nil!.as_h.should eq({"test" => "data", "other" => "info"})
+    guest.extension_data.not_nil!.as_h.should eq({"test" => "data", "other" => "info"})
   end
 
   it "#meetings should show meetings for guest" do

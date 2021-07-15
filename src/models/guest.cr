@@ -13,7 +13,7 @@ class Guest
   column banned : Bool
   column dangerous : Bool
   column searchable : String?
-  column ext_data : JSON::Any?
+  column extension_data : JSON::Any?
 
   belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "guest_id"
@@ -37,6 +37,7 @@ class Guest
 
   def validate
     validate_email_uniqueness
+    set_booleans
   end
 
   def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
@@ -51,7 +52,7 @@ class Guest
       photo:          photo,
       banned:         banned,
       dangerous:      dangerous,
-      extension_data: ext_data,
+      extension_data: extension_data,
       checked_in:     is_parent_metadata ? false : visitor.try(&.checked_in) || false,
       visit_expected: visitor.try(&.visit_expected) || false,
     }
@@ -108,6 +109,11 @@ class Guest
       checked_in:     false,
       visit_expected: true,
     })
+  end
+
+  private def set_booleans
+    self.dangerous = false if !dangerous_column.defined?
+    self.banned = false if !banned_column.defined?
   end
 
   # TODO: Update to take tenant_id into account

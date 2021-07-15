@@ -23,7 +23,7 @@ class StaffApi::Event
       if visitor = visitors[attendee.email]?
         attendee.checked_in = is_parent_metadata ? false : visitor.checked_in
         attendee.visit_expected = visitor.visit_expected
-        attendee.extension_data = visitor.try(&.guest).try(&.ext_data) || JSON.parse("{}")
+        attendee.extension_data = visitor.try(&.guest).try(&.extension_data) || JSON.parse("{}")
       end
 
       attendee
