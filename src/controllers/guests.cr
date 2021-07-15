@@ -169,7 +169,6 @@ class Guests < Application
   put "/:id", :update_alt { update }
 
   def create
-    # hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
     guest = Guest.from_json(request.body.as(IO))
     guest.tenant_id = tenant.id
 
