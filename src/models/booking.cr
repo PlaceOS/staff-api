@@ -42,7 +42,7 @@ class Booking
   column last_changed : Int64?
   column created : Int64?
 
-  column ext_data : JSON::Any?
+  column extension_data : JSON::Any?
 
   belongs_to tenant : Tenant
 
@@ -149,34 +149,40 @@ class Booking
   end
 
   def as_json
-    {
-      id:              self.id,
-      booking_type:    self.booking_type,
-      booking_start:   self.booking_start,
-      booking_end:     self.booking_end,
-      timezone:        self.timezone,
-      asset_id:        self.asset_id,
-      user_id:         self.user_id,
-      user_email:      self.user_email,
-      user_name:       self.user_name,
-      zones:           self.zones,
-      process_state:   self.process_state,
-      last_changed:    self.last_changed,
-      approved:        self.approved,
-      approved_at:     self.approved_at,
-      rejected:        self.rejected,
-      rejected_at:     self.rejected_at,
-      approver_id:     self.approver_id,
-      approver_name:   self.approver_name,
-      approver_email:  self.approver_email,
-      title:           self.title,
-      checked_in:      self.checked_in,
-      checked_in_at:   self.checked_in_at,
-      checked_out_at:  self.checked_out_at,
-      description:     self.description,
-      extension_data:  self.ext_data,
-      booked_by_email: self.booked_by_email,
-      booked_by_name:  self.booked_by_name,
-    }
+    # result = {
+    #   id:              self.id,
+    #   booking_type:    self.booking_type,
+    #   booking_start:   self.booking_start,
+    #   booking_end:     self.booking_end,
+    #   timezone:        self.timezone,
+    #   asset_id:        self.asset_id,
+    #   user_id:         self.user_id,
+    #   user_email:      self.user_email,
+    #   user_name:       self.user_name,
+    #   zones:           self.zones,
+    #   process_state:   self.process_state,
+    #   last_changed:    self.last_changed,
+    #   approved:        self.approved,
+    #   approved_at:     self.approved_at,
+    #   rejected:        self.rejected,
+    #   rejected_at:     self.rejected_at,
+    #   approver_id:     self.approver_id,
+    #   approver_name:   self.approver_name,
+    #   approver_email:  self.approver_email,
+    #   title:           self.title,
+    #   checked_in:      self.checked_in,
+    #   checked_in_at:   self.checked_in_at,
+    #   checked_out_at:  self.checked_out_at,
+    #   description:     self.description,
+    #   booked_by_email: self.booked_by_email,
+    #   booked_by_name:  self.booked_by_name,
+    # }
+    # # if self.extension_data_json_column.defined?
+    # #   result = result.merge({extension_data: self.extension_data_json})
+    # # end
+    # result
+    result = JSON.parse(self.to_json).as_h
+    # result["extension_data"] = extension_data || JSON.parse("{}")
+    result
   end
 end

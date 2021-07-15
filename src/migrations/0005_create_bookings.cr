@@ -27,8 +27,7 @@ class CreateBookingsMigration
         t.column :approver_email, :string
         t.column :approver_name, :string
 
-        t.column :ext_data, :jsonb
-
+        t.column :extension_data, :jsonb
         t.timestamps
       end
     end
