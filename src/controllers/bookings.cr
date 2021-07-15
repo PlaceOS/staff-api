@@ -113,17 +113,12 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_asset = existing_booking.asset_id
 
-    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
+    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description, :extension_data] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
-
-    if changes.extension_data_column.defined?
-      existing_booking.extension_data_column.clear if existing_booking.extension_data_column.defined?
-      existing_booking.extension_data = changes.extension_data
-    end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
     reset_state = existing_booking.asset_id_column.changed? && original_asset != existing_booking.asset_id
