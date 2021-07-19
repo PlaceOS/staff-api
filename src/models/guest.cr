@@ -13,7 +13,7 @@ class Guest
   column banned : Bool
   column dangerous : Bool
   column searchable : String?
-  column extension_data : JSON::Any?
+  column extension_data : JSON::Any, presence: false
 
   belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "guest_id"

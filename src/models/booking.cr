@@ -17,13 +17,13 @@ class Booking
   column title : String?
   column description : String?
 
-  column checked_in : Bool? # default in migration
+  column checked_in : Bool, presence: false
   column checked_in_at : Int64?
   column checked_out_at : Int64?
 
-  column rejected : Bool? # default in migration
+  column rejected : Bool, presence: false
   column rejected_at : Int64?
-  column approved : Bool? # default in migration
+  column approved : Bool, presence: false
   column approved_at : Int64?
   column approver_id : String?
   column approver_email : String?
@@ -42,21 +42,26 @@ class Booking
   column last_changed : Int64?
   column created : Int64?
 
-  column extension_data : JSON::Any?
+  column extension_data : JSON::Any, presence: false
 
   belongs_to tenant : Tenant
 
   before :create, :set_created
-  before :save, :downcase_emails
+
+  before(:save) do |m|
+    booking_model = m.as(Booking)
+
+    booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
+    booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
+    booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
+
+    booking_model.user_email = booking_model.user_email.downcase
+    booking_model.booked_by_email = booking_model.booked_by_email.downcase
+    booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
+  end
 
   def set_created
     self.last_changed = self.created = Time.utc.to_unix
-  end
-
-  def downcase_emails
-    self.user_email = self.user_email.downcase
-    self.booked_by_email = self.booked_by_email.downcase
-    self.approver_email = self.approver_email.try(&.downcase) if self.approver_email_column.defined?
   end
 
   scope :by_tenant do |tenant_id|

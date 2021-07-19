@@ -48,7 +48,6 @@ class Bookings < Application
     render json: results
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def create
     booking = Booking.from_json(request.body.as(IO))
     head :bad_request unless booking.booking_start_column.defined? &&
@@ -67,10 +66,6 @@ class Bookings < Application
     booking.booked_by_id = user_token.id
     booking.booked_by_email = user.email
     booking.booked_by_name = user.name
-
-    booking.user_id = booking.booked_by_id if !booking.user_id_column.defined?
-    booking.user_email = booking.booked_by_email if !booking.user_email_column.defined?
-    booking.user_name = booking.booked_by_name if !booking.user_name_column.defined?
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 

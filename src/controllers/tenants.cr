@@ -2,6 +2,7 @@ class Tenants < Application
   base "/api/staff/v1/tenants"
 
   before_action :admin_only
+  getter tenant : Tenant { find_tenant }
 
   def index
     render json: Tenant.query.select("id, name, domain, platform").to_a
@@ -17,7 +18,6 @@ class Tenants < Application
   end
 
   def update
-    tenant = Tenant.find!(params["id"].to_i64)
     hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
     changes = Tenant.new(hashed)
     changes.credentials = hashed["credentials"]?.to_json
@@ -41,5 +41,9 @@ class Tenants < Application
 
   private def admin_only
     head(:forbidden) unless is_admin?
+  end
+
+  private def find_tenant
+    Tenant.find!(params["id"].to_i64)
   end
 end
