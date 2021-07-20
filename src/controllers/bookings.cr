@@ -44,15 +44,12 @@ class Bookings < Application
 
     response.headers["x-placeos-rawsql"] = query.to_sql
 
-    results = query.to_a.map { |b| b.as_json }
+    results = query.to_a.map &.as_h
     render json: results
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def create
-    parsed = JSON.parse(request.body.not_nil!).as_h
-    booking = Booking.new(parsed)
-
+    booking = Booking.from_json(request.body.as(IO))
     head :bad_request unless booking.booking_start_column.defined? &&
                              booking.booking_end_column.defined? &&
                              booking.booking_type_column.defined? &&
@@ -69,13 +66,6 @@ class Bookings < Application
     booking.booked_by_id = user_token.id
     booking.booked_by_email = user.email
     booking.booked_by_name = user.name
-
-    booking.user_id = booking.booked_by_id if !booking.user_id_column.defined?
-    booking.user_email = booking.booked_by_email if !booking.user_email_column.defined?
-    booking.user_name = booking.booked_by_name if !booking.user_name_column.defined?
-
-    # Extension data
-    booking.ext_data = parsed["extension_data"]? || JSON.parse("{}")
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -98,7 +88,7 @@ class Bookings < Application
           title:           booking.title,
           checked_in:      booking.checked_in,
           description:     booking.description,
-          extension_data:  booking.ext_data,
+          extension_data:  booking.extension_data,
           booked_by_email: booking.booked_by_email,
           booked_by_name:  booking.booked_by_name,
         })
@@ -107,12 +97,11 @@ class Bookings < Application
       end
     end
 
-    render :created, json: booking.as_json
+    render :created, json: booking.as_h
   end
 
   def update
-    parsed = JSON.parse(request.body.not_nil!)
-    changes = Booking.new(parsed)
+    changes = Booking.from_json(request.body.as(IO))
     existing_booking = booking
 
     original_start = existing_booking.booking_start
@@ -126,15 +115,14 @@ class Bookings < Application
       end
     {% end %}
 
-    # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]?
+    extension_data = changes.extension_data if changes.extension_data_column.defined?
     if extension_data
-      booking_ext_data = booking.ext_data
+      booking_ext_data = booking.extension_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      existing_booking.ext_data_column.clear
-      existing_booking.ext_data = JSON.parse(data.to_json)
+      booking.extension_data_column.clear
+      booking.extension_data = JSON::Any.new(data)
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
@@ -163,7 +151,7 @@ class Bookings < Application
   end
 
   def show
-    render json: booking.as_json
+    render json: booking.as_h
   end
 
   def destroy
@@ -190,7 +178,7 @@ class Bookings < Application
           title:           booking.title,
           checked_in:      booking.checked_in,
           description:     booking.description,
-          extension_data:  booking.ext_data,
+          extension_data:  booking.extension_data,
           booked_by_email: booking.booked_by_email,
           booked_by_name:  booking.booked_by_name,
         })
@@ -294,7 +282,7 @@ class Bookings < Application
           title:           booking.title,
           checked_in:      booking.checked_in,
           description:     booking.description,
-          extension_data:  booking.ext_data,
+          extension_data:  booking.extension_data,
           booked_by_email: booking.booked_by_email,
           booked_by_name:  booking.booked_by_name,
         })
@@ -303,7 +291,7 @@ class Bookings < Application
       end
     end
 
-    render json: booking.as_json
+    render json: booking.as_h
   end
 
   private def set_approver(booking, approved : Bool)

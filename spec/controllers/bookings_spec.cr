@@ -102,10 +102,13 @@ describe Bookings do
     created["booking_end"].should eq(ending)
 
     # instantiate the controller
-    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"extension_data":{"other":"stuff"}}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"title":"new title","extension_data":{"other":"stuff"}}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
     booking = Booking.query.find!({id: updated["id"]})
-    booking.ext_data.not_nil!.as_h.should eq({"other" => "stuff"})
+    booking.extension_data.as_h.should eq({"other" => "stuff"})
+    updated["title"].should eq("new title")
+    booking = Booking.query.find!(updated["id"])
+    booking.title.not_nil!.should eq("new title")
   end
 
   it "#approve should approve a booking and #reject should reject meeting" do

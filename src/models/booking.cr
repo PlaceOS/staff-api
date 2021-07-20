@@ -17,13 +17,13 @@ class Booking
   column title : String?
   column description : String?
 
-  column checked_in : Bool? # default in migration
+  column checked_in : Bool, presence: false
   column checked_in_at : Int64?
   column checked_out_at : Int64?
 
-  column rejected : Bool? # default in migration
+  column rejected : Bool, presence: false
   column rejected_at : Int64?
-  column approved : Bool? # default in migration
+  column approved : Bool, presence: false
   column approved_at : Int64?
   column approver_id : String?
   column approver_email : String?
@@ -42,21 +42,24 @@ class Booking
   column last_changed : Int64?
   column created : Int64?
 
-  column ext_data : JSON::Any?
+  column extension_data : JSON::Any, presence: false
 
   belongs_to tenant : Tenant
 
   before :create, :set_created
-  before :save, :downcase_emails
+
+  before(:save) do |m|
+    booking_model = m.as(Booking)
+
+    booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
+    booking_model.booked_by_email = booking_model.booked_by_email.downcase
+    booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
+    booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
+    booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
+  end
 
   def set_created
     self.last_changed = self.created = Time.utc.to_unix
-  end
-
-  def downcase_emails
-    self.user_email = self.user_email.downcase
-    self.booked_by_email = self.booked_by_email.downcase
-    self.approver_email = self.approver_email.try(&.downcase) if self.approver_email_column.defined?
   end
 
   scope :by_tenant do |tenant_id|
@@ -148,13 +151,35 @@ class Booking
     where("( #{query} )")
   end
 
-  # FIXME: Clear models seem to be having trouble when serializing
-  # to json from render inside controller, hence this dance
-  def as_json
-    result = JSON.parse(self.to_json).as_h
-    # FE only cares about extension_data not ext_data
-    result.reject!("ext_data")
-    result["extension_data"] = ext_data || JSON.parse("{}")
-    result
+  def as_h
+    {
+      id:              id,
+      booking_type:    booking_type,
+      booking_start:   booking_start,
+      booking_end:     booking_end,
+      timezone:        timezone,
+      asset_id:        asset_id,
+      user_id:         user_id,
+      user_email:      user_email,
+      user_name:       user_name,
+      zones:           zones,
+      process_state:   process_state,
+      last_changed:    last_changed,
+      approved:        approved,
+      approved_at:     approved_at,
+      rejected:        rejected,
+      rejected_at:     rejected_at,
+      approver_id:     approver_id,
+      approver_name:   approver_name,
+      approver_email:  approver_email,
+      title:           title,
+      checked_in:      checked_in,
+      checked_in_at:   checked_in_at,
+      checked_out_at:  checked_out_at,
+      description:     description,
+      booked_by_email: booked_by_email,
+      booked_by_name:  booked_by_name,
+      extension_data:  extension_data,
+    }
   end
 end

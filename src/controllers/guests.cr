@@ -142,30 +142,22 @@ class Guests < Application
       head :forbidden
     end
 
-    parsed = JSON.parse(request.body.not_nil!)
-    changes = Guest.new(parsed)
-    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
+    changes = Guest.from_json(request.body.as(IO))
+    {% for key in %i(name preferred_name phone organisation notes photo dangerous banned) %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
 
-    # For some reason need to manually set the banned and dangerous
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned.as_bool if banned
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous.as_bool if dangerous
-
-    # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]?
+    extension_data = changes.extension_data if changes.extension_data_column.defined?
     if extension_data
-      guest_ext_data = guest.ext_data
+      guest_ext_data = guest.extension_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      guest.ext_data_column.clear
-      guest.ext_data = JSON.parse(data.to_json)
+      guest.extension_data_column.clear
+      guest.extension_data = JSON::Any.new(data)
     end
 
     render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
@@ -177,15 +169,8 @@ class Guests < Application
   put "/:id", :update_alt { update }
 
   def create
-    parsed = JSON.parse(request.body.not_nil!)
-    guest = Guest.new(parsed)
+    guest = Guest.from_json(request.body.as(IO))
     guest.tenant_id = tenant.id
-
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned ? banned.as_bool : false
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous ? dangerous.as_bool : false
-    guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
 
     render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
 
