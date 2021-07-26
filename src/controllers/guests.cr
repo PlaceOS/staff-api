@@ -8,7 +8,7 @@ class Guests < Application
 
   # ameba:disable Metrics/CyclomaticComplexity
   def index
-    query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
+    query = (query_params["q"]? || "").gsub(/[^\w\s\@\-\.\~\_]/, "").strip.downcase
 
     if starting = query_params["period_start"]?
       period_start = Time.unix(starting.to_i64)
