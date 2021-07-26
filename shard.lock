@@ -2,12 +2,12 @@
 version: 2.0
 shards:
   CrystalEmail:
-    git: https://github.com/nephos/crystalemail.git
-    version: 0.2.4
+    git: https://github.com/place-labs/crystalemail.git
+    version: 0.2.6
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 4.5.0
+    version: 4.5.1
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -15,7 +15,7 @@ shards:
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
-    version: 1.11.4
+    version: 1.12.1
 
   ameba:
     git: https://github.com/veelenga/ameba.git
@@ -39,7 +39,7 @@ shards:
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
-    version: 1.4.0
+    version: 1.4.1
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -87,11 +87,11 @@ shards:
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
-    version: 0.4.2
+    version: 0.5.0
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
-    version: 1.7.1
+    version: 1.8.0
 
   office365:
     git: https://github.com/placeos/office365.git
@@ -101,13 +101,13 @@ shards:
     git: https://github.com/spider-gazelle/openssl_ext.git
     version: 2.1.5
 
-  pg:
+  pg: # Overridden
     git: https://github.com/will/crystal-pg.git
     version: 0.23.2
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.9.4
+    version: 4.9.6
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -119,7 +119,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.6.0
+    version: 5.8.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -135,9 +135,9 @@ shards:
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 4.1.0
+    version: 5.0.0
 
-  retriable: # Overridden
+  retriable:
     git: https://github.com/sija/retriable.cr.git
     version: 0.2.4
 
