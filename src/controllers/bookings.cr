@@ -25,6 +25,7 @@ class Bookings < Application
     created_after = query_params["created_after"]?.presence
     approved = query_params["approved"]?.presence
     rejected = query_params["rejected"]?.presence
+    extension_data = query_params["extension_data"]?.presence
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -36,6 +37,7 @@ class Bookings < Application
       .is_approved(approved)
       .is_rejected(rejected)
       .is_checked_in(checked_in)
+      .by_ext(extension_data)
       .where(
         %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
         starting: starting, ending: ending, booking_type: booking_type)
@@ -43,7 +45,6 @@ class Bookings < Application
       .limit(20000)
 
     response.headers["x-placeos-rawsql"] = query.to_sql
-
     results = query.to_a.map &.as_h
     render json: results
   end

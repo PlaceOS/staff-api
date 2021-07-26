@@ -95,6 +95,19 @@ class Booking
     end
   end
 
+  scope :by_ext do |value|
+    if value
+      parse = value.delete &.in?('{', '}')
+      array = parse.split(",")
+      array.each do |entry|
+        split_entry = entry.split(":")
+        where(%((extension_data->>'#{split_entry[0]}' = '#{split_entry[1]}')))
+      end
+    else
+      self
+    end
+  end
+
   scope :booking_state do |state|
     state ? where(process_state: state) : self
   end
