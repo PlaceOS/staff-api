@@ -101,7 +101,7 @@ class Booking
       array = parse.split(",")
       array.each do |entry|
         split_entry = entry.split(":")
-        where(%((extension_data->>'#{split_entry[0]}' = '#{split_entry[1]}')))
+        where { extension_data.jsonb(split_entry[0]) == split_entry[1] }
       end
     else
       self
