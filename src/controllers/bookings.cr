@@ -49,6 +49,7 @@ class Bookings < Application
     render json: results
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def create
     bytes_read, body_io = body_io(request)
 
@@ -109,7 +110,7 @@ class Bookings < Application
         end
         guest.save!
         # Create attendees
-        att = Attendee.create!({
+        Attendee.create!({
           booking_id:     booking.id.not_nil!,
           guest_id:       guest.id,
           visit_expected: true,
@@ -163,6 +164,7 @@ class Bookings < Application
     render :created, json: booking.as_h
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def update
     bytes_read, body_io = body_io(request)
 
