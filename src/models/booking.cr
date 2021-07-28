@@ -1,5 +1,6 @@
 class Booking
   include Clear::Model
+  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any)
 
   column id : Int64, primary: true, presence: false
 
@@ -45,6 +46,7 @@ class Booking
   column extension_data : JSON::Any, presence: false
 
   belongs_to tenant : Tenant
+  has_many attendees : Attendee, foreign_key: "booking_id"
 
   before :create, :set_created
 
@@ -63,7 +65,7 @@ class Booking
   end
 
   scope :by_tenant do |tenant_id|
-    where(tenant_id: tenant_id)
+    where { var("bookings", "tenant_id") == tenant_id }
   end
 
   scope :by_user_id do |user_id|
@@ -105,6 +107,12 @@ class Booking
 
   scope :created_after do |time|
     time ? where { last_changed > time.not_nil!.to_i64 } : self
+  end
+
+  scope :booked_between do |tenant_id, period_start, period_end|
+    by_tenant(tenant_id)
+      .inner_join("attendees") { var("bookings", "id") == var("attendees", "booking_id") }
+      .where("bookings.booking_start >= :period_start AND bookings.booking_end <= :period_end", period_start: period_start, period_end: period_end)
   end
 
   scope :is_approved do |value|
@@ -151,7 +159,7 @@ class Booking
     where("( #{query} )")
   end
 
-  def as_h
+  def as_h : AsHNamedTuple
     {
       id:              id,
       booking_type:    booking_type,
@@ -182,4 +190,11 @@ class Booking
       extension_data:  extension_data,
     }
   end
+end
+
+class StaffApi::BookingWithAttendees
+  include JSON::Serializable
+  include JSON::Serializable::Unmapped
+
+  property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end

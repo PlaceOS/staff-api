@@ -180,7 +180,7 @@ class Events < Application
                     end
 
             if attendee_ext_data = attendee.extension_data
-              guest.ext_data = attendee_ext_data
+              guest.extension_data = attendee_ext_data
             end
             guest.save!
 
@@ -416,7 +416,7 @@ class Events < Application
                     end
 
             if attendee_ext_data = attendee.extension_data
-              guest.ext_data = attendee_ext_data
+              guest.extension_data = attendee_ext_data
             end
 
             guest.save!

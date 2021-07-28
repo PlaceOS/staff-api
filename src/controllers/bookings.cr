@@ -1,5 +1,6 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
+  FIFTY_MB = 50 * 1024 * 1024
 
   before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
   getter booking : Booking { find_booking }
@@ -49,7 +50,13 @@ class Bookings < Application
   end
 
   def create
-    booking = Booking.from_json(request.body.as(IO))
+    bytes_read, body_io = body_io(request)
+
+    head :bad_request if bytes_read > FIFTY_MB
+    booking = Booking.from_json(body_io)
+    body_io.rewind
+    booking_with_attendees = StaffApi::BookingWithAttendees.from_json(body_io)
+
     head :bad_request unless booking.booking_start_column.defined? &&
                              booking.booking_end_column.defined? &&
                              booking.booking_type_column.defined? &&
@@ -68,6 +75,62 @@ class Bookings < Application
     booking.booked_by_name = user.name
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
+
+    # Grab the list of attendees
+    attending = booking_with_attendees.booking_attendees.try(&.select { |attendee|
+      attendee.visit_expected
+    })
+
+    if attending && !attending.empty?
+      # Create guests
+      attending.each do |attendee|
+        email = attendee.email.strip.downcase
+
+        guest = if existing_guest = Guest.query.find({email: email})
+                  existing_guest.name = attendee.name if existing_guest.name != attendee.name
+                  existing_guest
+                else
+                  Guest.new({
+                    email:          email,
+                    name:           attendee.name,
+                    preferred_name: attendee.preferred_name,
+                    phone:          attendee.phone,
+                    organisation:   attendee.organisation,
+                    photo:          attendee.photo,
+                    notes:          attendee.notes,
+                    banned:         attendee.banned || false,
+                    dangerous:      attendee.dangerous || false,
+                    tenant_id:      tenant.id,
+                  })
+                end
+
+        if attendee_ext_data = attendee.extension_data
+          guest.extension_data = attendee_ext_data
+        end
+        guest.save!
+        # Create attendees
+        att = Attendee.create!({
+          booking_id:     booking.id.not_nil!,
+          guest_id:       guest.id,
+          visit_expected: true,
+          checked_in:     false,
+          tenant_id:      tenant.id,
+        })
+
+        spawn do
+          get_placeos_client.root.signal("staff/guest/attending", {
+            action:         :booking_created,
+            id:             guest.id,
+            booking_id:     booking.id,
+            resource_id:    booking.asset_id,
+            title:          booking.title,
+            booking_start:  booking.booking_start,
+            attendee_name:  attendee.name,
+            attendee_email: attendee.email,
+          })
+        end
+      end
+    end
 
     spawn do
       begin
@@ -101,7 +164,14 @@ class Bookings < Application
   end
 
   def update
-    changes = Booking.from_json(request.body.as(IO))
+    bytes_read, body_io = body_io(request)
+
+    head :bad_request if bytes_read > FIFTY_MB
+
+    changes = Booking.from_json(body_io)
+    body_io.rewind
+    booking_with_attendees = StaffApi::BookingWithAttendees.from_json(body_io)
+
     existing_booking = booking
 
     original_start = existing_booking.booking_start
@@ -146,6 +216,94 @@ class Bookings < Application
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(existing_booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+
+    if existing_booking.valid?
+      existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
+      # Check if attendees need updating
+      update_attendees = !booking_with_attendees.booking_attendees.nil?
+      attendees = booking_with_attendees.booking_attendees.try(&.map { |a| a.email }) || existing_attendees
+      attendees.uniq!
+
+      if update_attendees
+        existing_lookup = {} of String => Attendee
+        existing = existing_booking.attendees.to_a
+        existing.each { |a| existing_lookup[a.email] = a }
+
+        # Attendees that need to be deleted:
+        remove_attendees = existing_attendees - attendees
+        if !remove_attendees.empty?
+          remove_attendees.each do |email|
+            existing.select { |attend| attend.guest.email == email }.each do |attend|
+              attend.delete
+            end
+          end
+        end
+
+        # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
+        attending = booking_with_attendees.booking_attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
+        if attending
+          # Create guests
+          attending.each do |attendee|
+            email = attendee.email.strip.downcase
+
+            guest = if existing_guest = Guest.query.find({email: email})
+                      existing_guest
+                    else
+                      Guest.new({
+                        email:          email,
+                        name:           attendee.name,
+                        preferred_name: attendee.preferred_name,
+                        phone:          attendee.phone,
+                        organisation:   attendee.organisation,
+                        photo:          attendee.photo,
+                        notes:          attendee.notes,
+                        banned:         attendee.banned || false,
+                        dangerous:      attendee.dangerous || false,
+                        tenant_id:      tenant.id,
+                      })
+                    end
+
+            if attendee_ext_data = attendee.extension_data
+              guest.extension_data = attendee_ext_data
+            end
+
+            guest.save!
+            # Create attendees
+            attend = existing_lookup[email]? || Attendee.new
+
+            previously_visiting = if attend.persisted?
+                                    attend.visit_expected
+                                  else
+                                    attend.set({
+                                      visit_expected: true,
+                                      checked_in:     false,
+                                      tenant_id:      tenant.id,
+                                    })
+                                    false
+                                  end
+            attend.update!({
+              booking_id: existing_booking.id.not_nil!,
+              guest_id:   guest.id,
+            })
+
+            if !previously_visiting
+              spawn do
+                get_placeos_client.root.signal("staff/guest/attending", {
+                  action:         :booking_updated,
+                  id:             guest.id,
+                  booking_id:     existing_booking.id,
+                  resource_id:    existing_booking.asset_id,
+                  title:          existing_booking.title,
+                  booking_start:  existing_booking.booking_start,
+                  attendee_name:  attendee.name,
+                  attendee_email: attendee.email,
+                })
+              end
+            end
+          end
+        end
+      end
+    end
 
     update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
   end
@@ -223,6 +381,24 @@ class Bookings < Application
     update_booking(booking, "process_state")
   end
 
+  #
+  # Booking guests list
+  #
+  get("/:id/guests", :guest_list) do
+    head(:not_found) unless booking
+
+    # Find anyone who is attending
+    visitors = booking.attendees.to_a
+    render(json: [] of Nil) if visitors.empty?
+
+    # Merge the visitor data with guest profiles
+    visitors = visitors.map do |visitor|
+      visitor.guest.for_booking_to_h(visitor, booking.as_h)
+    end
+
+    render json: visitors
+  end
+
   # ============================================
   #              Helper Methods
   # ============================================
@@ -236,7 +412,7 @@ class Bookings < Application
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
@@ -303,5 +479,13 @@ class Bookings < Application
       approved:       approved,
       rejected:       !approved,
     })
+  end
+
+  private def body_io(request)
+    body_io = IO::Memory.new
+    bytes_read = IO.copy(request.body.as(IO), body_io, limit: FIFTY_MB)
+    body_io.rewind
+
+    return bytes_read, body_io
   end
 end
