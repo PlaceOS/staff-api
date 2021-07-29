@@ -113,8 +113,8 @@ class Bookings < Application
         Attendee.create!({
           booking_id:     booking.id.not_nil!,
           guest_id:       guest.id,
-          visit_expected: true,
-          checked_in:     false,
+          visit_expected: attendee.visit_expected || true,
+          checked_in:     attendee.checked_in || false,
           tenant_id:      tenant.id,
         })
 
@@ -164,7 +164,6 @@ class Bookings < Application
     render :created, json: booking.as_h
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def update
     bytes_read, body_io = body_io(request)
 

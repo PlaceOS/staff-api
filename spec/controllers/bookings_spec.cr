@@ -59,6 +59,21 @@ describe Bookings do
     body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
+  it "#guest_list should list guests for a booking" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    guest = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+    booking = BookingsHelper.create_booking(tenant.id)
+    Attendee.create!({booking_id:     booking.id,
+                      guest_id:       guest.id,
+                      tenant_id:      guest.tenant_id,
+                      checked_in:     false,
+                      visit_expected: true,
+    })
+
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}/guests", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+    body.map(&.["name"]).should eq(["Jon"])
+  end
+
   pending "#destroy should delete a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -93,22 +108,58 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
 
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
-    created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}), headers: Mock::Headers.office365_guest, &.create)[1].as_h
+    created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+      {
+          "name": "test",
+          "email": "test@example.com",
+          "checked_in": true,
+          "visit_expected": true
+      }]}), headers: Mock::Headers.office365_guest, &.create)[1].as_h
     created["asset_id"].should eq("some_desk")
     created["booking_start"].should eq(starting)
     created["booking_end"].should eq(ending)
 
+    # Testing attendees / guests data creation
+    attendees = Booking.query.find! { id == created["id"] }.attendees.to_a
+    attendees.size.should eq(1)
+    attendee = attendees.first
+    attendee.checked_in.should eq(true)
+    attendee.visit_expected.should eq(true)
+
+    guest = attendee.guest
+    guest.name.should eq("test")
+    guest.email.should eq("test@example.com")
+
     # instantiate the controller
-    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"title":"new title","extension_data":{"other":"stuff"}}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"title":"new title","extension_data":{"other":"stuff"},"booking_attendees": [
+      {
+          "name": "jon",
+          "email": "jon@example.com",
+          "checked_in": false,
+          "visit_expected": true
+      }]}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
     booking = Booking.query.find!({id: updated["id"]})
     booking.extension_data.as_h.should eq({"other" => "stuff"})
     updated["title"].should eq("new title")
     booking = Booking.query.find!(updated["id"])
     booking.title.not_nil!.should eq("new title")
+
+    # Testing attendees / guests data updates
+    attendees = Booking.query.find! { id == updated["id"] }.attendees.to_a
+    attendees.size.should eq(1)
+    attendee = attendees.first
+    attendee.checked_in.should eq(false)
+    attendee.visit_expected.should eq(true)
+
+    guest = attendee.guest
+    guest.name.should eq("jon")
+    guest.email.should eq("jon@example.com")
   end
 
   it "#approve should approve a booking and #reject should reject meeting" do
