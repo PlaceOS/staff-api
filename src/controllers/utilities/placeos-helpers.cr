@@ -10,12 +10,21 @@ module Utils::PlaceOSHelpers
 
   def get_placeos_client : PlaceOS::Client
     @placeos_client ||= if App.running_in_production?
-                          PlaceOS::Client.new(
-                            PLACE_URI,
-                            token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
-                            host_header: request.headers["Host"]?,
-                            insecure: ::App::SSL_VERIFY_NONE
-                          )
+                          if key = request.headers["X-API-Key"]?
+                            PlaceOS::Client.new(
+                              PLACE_URI,
+                              host_header: request.headers["Host"]?,
+                              insecure: ::App::SSL_VERIFY_NONE,
+                              x_api_key: key
+                            )
+                          else
+                            PlaceOS::Client.new(
+                              PLACE_URI,
+                              token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
+                              host_header: request.headers["Host"]?,
+                              insecure: ::App::SSL_VERIFY_NONE
+                            )
+                          end
                         else
                           PlaceOS::Client.from_environment_user
                         end
