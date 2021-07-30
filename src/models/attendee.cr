@@ -8,11 +8,20 @@ class Attendee
   column guest_id : Int64
 
   belongs_to tenant : Tenant
-  belongs_to event_metadata : EventMetadata, foreign_key: "event_id"
+  belongs_to event_metadata : EventMetadata?, foreign_key: "event_id"
+  belongs_to booking : Booking?, foreign_key: "booking_id"
   belongs_to guest : Guest
 
   scope :by_tenant do |tenant_id|
     where { var("attendees", "tenant_id") == tenant_id }
+  end
+
+  scope :by_bookings do |tenant_id, booking_ids|
+    with_guest
+      .by_tenant(tenant_id)
+      .inner_join("bookings") { var("bookings", "id") == var("attendees", "booking_id") }
+      .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
+      .where { var("attendees", "booking_id").in?(booking_ids) }
   end
 
   def email
@@ -31,5 +40,9 @@ class Attendee
     end
 
     result
+  end
+
+  def for_booking?
+    !booking_id.nil?
   end
 end

@@ -32,7 +32,7 @@ describe Guests do
       body.map(&.["email"]).should eq(["steve@example.com"])
     end
 
-    pending "should return guests visiting today in a subset of rooms" do
+    pending "should return guests visiting today in a subset of rooms and bookings" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
       {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
@@ -52,15 +52,24 @@ describe Guests do
       meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
       guest.attendee_for(meta.id.not_nil!)
 
+      guest2 = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+      booking = BookingsHelper.create_booking(tenant.id)
+      Attendee.create!({booking_id:     booking.id,
+                        guest_id:       guest2.id,
+                        tenant_id:      guest2.tenant_id,
+                        checked_in:     false,
+                        visit_expected: true,
+      })
+
       now = Time.utc.to_unix
       later = 4.hours.from_now.to_unix
       route = "#{GUESTS_BASE}?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
       body = Context(Guests, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
-      body.map(&.["name"]).should eq(["Toby"])
+      body.map(&.["name"]).should eq(["Toby", "Jon"])
       # Guest emails
-      body.map(&.["email"]).should eq(["toby@redant.com.au"])
+      body.map(&.["email"]).should eq(["toby@redant.com.au", "jon@example.com"])
       # Event info
       body.map(&.["event"]).should eq(GuestsHelper.guest_events_output)
     end
@@ -91,6 +100,41 @@ describe Guests do
       body["name"].should eq("Toby")
       body["email"].should eq("toby@redant.com.au")
       body["visit_expected"].should eq(true)
+    end
+
+    it "should show a guest with booking details when visting today for a booking" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      booking = BookingsHelper.create_booking(tenant.id)
+      Attendee.create!({booking_id:     booking.id,
+                        guest_id:       guest.id,
+                        tenant_id:      guest.tenant_id,
+                        checked_in:     false,
+                        visit_expected: true,
+      })
+
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["name"].should eq("Toby")
+      body["email"].should eq("toby@redant.com.au")
+      body["visit_expected"].should eq(true)
+      body["booking"]["id"].should eq(booking.id)
+    end
+  end
+
+  describe "#bookings" do
+    it "should show bookings for a guest when visting" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      booking = BookingsHelper.create_booking(tenant.id)
+      Attendee.create!({booking_id:     booking.id,
+                        guest_id:       guest.id,
+                        tenant_id:      guest.tenant_id,
+                        checked_in:     false,
+                        visit_expected: true,
+      })
+
+      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/bookings", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.bookings)[1].as_a
+      body.map(&.["id"]).should eq([booking.id])
     end
   end
 

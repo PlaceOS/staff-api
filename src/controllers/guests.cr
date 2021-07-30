@@ -14,9 +14,17 @@ class Guests < Application
       period_start = Time.unix(starting.to_i64)
       period_end = Time.unix(query_params["period_end"].to_i64)
 
+      # Grab the bookings
+      booking_lookup = {} of Int64 => Booking::AsHNamedTuple
+      booking_ids = Set(Int64).new
+      Booking.booked_between(tenant.id, starting.to_i64, query_params["period_end"].to_i64).each do |booking|
+        booking_ids << booking.id
+        booking_lookup[booking.id] = booking.as_h
+      end
+
       # We want a subset of the calendars
       calendars = matching_calendar_ids
-      render(json: [] of Nil) if calendars.empty?
+      render(json: [] of Nil) if calendars.empty? && booking_ids.empty?
 
       # Grab events in batches
       requests = [] of HTTP::Request
@@ -70,8 +78,8 @@ class Guests < Application
         end
       }
 
-      # Don't perform the query if there are no calendar entries
-      render(json: [] of Nil) if metadata_ids.empty?
+      # Don't perform the query if there are no calendar or booking entries
+      render(json: [] of Nil) if metadata_ids.empty? && booking_ids.empty?
 
       # Return the guests visiting today
       attendees = {} of String => Attendee
@@ -90,7 +98,12 @@ class Guests < Application
       end
 
       query.each do |attend|
-        attend.checked_in = false if attend.event_metadata.event_id.in?(metadata_recurring_ids)
+        attend.checked_in = false if attend.event_metadata.try &.event_id.try &.in?(metadata_recurring_ids)
+        attendees[attend.guest.email] = attend
+      end
+
+      booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
+      booking_attendees.each do |attend|
         attendees[attend.guest.email] = attend
       end
 
@@ -103,13 +116,20 @@ class Guests < Application
         .each { |guest| guests[guest.email.not_nil!] = guest }
 
       render json: attendees.map { |email, visitor|
-        attending_guest(visitor, guests[email]?)
         # Prevent a database lookup
         meeting_event = nil
-        if meet = (meeting_lookup[visitor.event_metadata.event_id]? || meeting_lookup[visitor.event_metadata.ical_uid]?)
+        if meet = (meeting_lookup[visitor.event_metadata.try &.event_id]? || meeting_lookup[visitor.event_metadata.try &.ical_uid]?)
           _calendar_id, _system, meeting_event = meet
         end
-        attending_guest(visitor, guests[email]?, meeting_details: meeting_event)
+
+        guest = guests[email]?
+        if visitor.for_booking?
+          if !guest.nil?
+            guest.for_booking_to_h(visitor, booking_lookup[visitor.booking_id]?)
+          end
+        else
+          attending_guest(visitor, guest, meeting_details: meeting_event)
+        end
       }
     elsif query.empty?
       # Return the first 1500 guests
@@ -134,7 +154,8 @@ class Guests < Application
 
     # find out if they are attending today
     attendee = guest.attending_today(tenant.id, get_timezone)
-    render json: attending_guest(attendee, guest)
+    result = !attendee.nil? && attendee.for_booking? ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest)
+    render json: result
   end
 
   def update
@@ -214,6 +235,17 @@ class Guests < Application
     }).get.compact
 
     render json: events
+  end
+
+  get("/:id/bookings", :bookings) do
+    if user_token.scope.includes?("guest") && (guest.email != user_token.id)
+      head :forbidden
+    end
+
+    future_only = query_params["include_past"]? != "true"
+    limit = (query_params["limit"]? || "10").to_i
+
+    render json: guest.bookings(future_only, limit).map { |booking| booking.as_h }
   end
 
   # ============================================
