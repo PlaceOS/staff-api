@@ -364,7 +364,9 @@ class Bookings < Application
   post "/:id/reject", :reject do
     set_approver(booking, false)
     booking.rejected_at = Time.utc.to_unix
-
+    booking.approver_id = nil
+    booking.approver_email = nil
+    booking.approver_name = nil
     update_booking(booking, "rejected")
   end
 
