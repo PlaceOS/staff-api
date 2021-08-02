@@ -87,7 +87,7 @@ class Tenant
   end
 
   private def assign_id
-    id = rand(Int64)
+    id = Random.new.rand(0..9999).to_i64
     tenant = Tenant.query.find { raw("id = '#{id}'") }
     if tenant.nil?
       self.id = id
