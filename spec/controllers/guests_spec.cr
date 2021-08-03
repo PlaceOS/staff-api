@@ -187,6 +187,9 @@ describe Guests do
         .to_return(body: systems_resp[index])
     end
 
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room2@example.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+      .to_return(GuestsHelper.mock_event_query_json)
+
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
@@ -238,5 +241,27 @@ module GuestsHelper
       "attachments" => [] of String,
       "status"      => "confirmed",
       "creator"     => "dev@acaprojects.onmicrosoft.com"}]
+  end
+
+  def mock_event
+    Office365::Event.new(**{
+      starts_at:       Time.local,
+      ends_at:         Time.local + 30.minutes,
+      subject:         "My Unique Event Subject",
+      rooms:           ["Red Room"],
+      attendees:       ["elon@musk.com", Office365::EmailAddress.new(address: "david@bowie.net", name: "David Bowie"), Office365::Attendee.new(email: "the@goodies.org")],
+      response_status: Office365::ResponseStatus.new(response: Office365::ResponseStatus::Response::Organizer, time: "0001-01-01T00:00:00Z"),
+    })
+  end
+
+  def with_tz(event, tz : String = "UTC")
+    event_response = JSON.parse(event).as_h
+    event_response.merge({"originalStartTimeZone" => tz}).to_json
+  end
+
+  def mock_event_query_json
+    {
+      "value" => [JSON.parse(with_tz(mock_event.to_json))],
+    }.to_json
   end
 end

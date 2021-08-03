@@ -79,7 +79,7 @@ class Booking
   scope :by_user_or_email do |user_id_value, user_email_value, include_booked_by|
     # TODO:: interpolate these values properly
     booked_by = include_booked_by ? %( OR "booked_by_id" = '#{user_id_value}') : ""
-    user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\.\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
+    user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
     user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
 
     if user_id_value && user_email_value
