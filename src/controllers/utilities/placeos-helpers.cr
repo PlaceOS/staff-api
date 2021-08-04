@@ -49,11 +49,11 @@ module Utils::PlaceOSHelpers
     args = CalendarSelection.new(params)
 
     calendars = Set.new((args.calendars || "").split(',').compact_map(&.strip.downcase.presence))
-    user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
     system_calendars = if calendars.size > 0
+                         user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
                          (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
                        else
                          {} of String => PlaceOS::Client::API::Models::System?
