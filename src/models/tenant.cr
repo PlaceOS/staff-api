@@ -59,7 +59,6 @@ class Tenant
 
   def validate
     validate_columns
-    assign_id
     validate_domain_uniqueness
     validate_credentials_for_platform
   end
@@ -86,20 +85,17 @@ class Tenant
     add_error("credentials", "must be defined") unless credentials_column.defined?
   end
 
-  private def assign_id
-    id = Random.new.rand(0..9999).to_i64
-    tenant = Tenant.query.find { raw("id = '#{id}'") }
-    if tenant.nil?
-      self.id = id
-    else
-      assign_id
-    end
-  end
-
   private def validate_domain_uniqueness
-    if tenant = Tenant.query.find { raw("domain = '#{self.domain}'") }
-      if tenant.id != self.id
+    tenant = Tenant.query.where(domain: self.domain).first
+    if !id_column.defined? # on tenant creation
+      if !tenant.nil?
         add_error("domain", "duplicate error. A tenant with this domain already exists")
+      end
+    else # on tenant update
+      if tenant
+        if tenant.id != self.id
+          add_error("domain", "duplicate error. A tenant with this domain already exists")
+        end
       end
     end
   end

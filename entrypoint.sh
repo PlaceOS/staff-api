@@ -7,8 +7,8 @@ then
   echo '### `crystal tool format --check`'
   crystal tool format --check
 
-  # echo '### `ameba`'
-  # crystal lib/ameba/bin/ameba.cr
+  echo '### `ameba`'
+  crystal lib/ameba/bin/ameba.cr
 fi
 
 
