@@ -9,7 +9,7 @@ Service for integrating [PlaceOS](https://place.technology/) with the workplace.
 
 These environment variables are required for configuring an instance of Staff API
 
-```shell-session
+```console
 SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
 
 # Database config:
