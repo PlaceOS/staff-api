@@ -3,7 +3,7 @@
 [![Build Dev Image](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml)
 [![CI](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml)
 
-Service for integrating [PlaceOS](https://place.technology/) with the workplace.
+Service for integrating [PlaceOS](https://placeos.com/) with the workplace.
 
 ## Environment
 
