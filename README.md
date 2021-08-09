@@ -1,11 +1,15 @@
-[![Build Status](https://travis-ci.com/red-ant/staff-api.svg?token=RzVfSpK1WxvVvMdpTs99&branch=master)](https://travis-ci.com/red-ant/staff-api)
-[![CI](https://github.com/place-labs/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/place-labs/staff-api/actions/workflows/ci.yml)
-
 # PlaceOS Staff API
 
-## Environment Variables required for Production/Staging and local development use, e.g. [partner-environment](https://github.com/place-labs/partner-environment/)
+[![Build Dev Image](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml)
+[![CI](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml)
 
-```
+Service for integrating [PlaceOS](https://place.technology/) with the workplace.
+
+## Environment
+
+These environment variables are required for configuring an instance of Staff API
+
+```shell-session
 SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
 
 # Database config:
@@ -18,8 +22,8 @@ JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 PLACE_URI=https://example.place.technology
 ```
 
+### Optional
 
-## Optional environment variables
 ```
 # Default Timezone
 STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
@@ -44,36 +48,19 @@ LOGSTASH_PORT=12345
 ## Local development
 
 ```
-brew install postgres
 
-# Setup the data store
-sudo su
-mkdir -p /usr/local/pgsql
-chown steve /usr/local/pgsql
-exit
+## Development
 
-initdb /usr/local/pgsql/data
-
-# Then can start the service in the background
-pg_ctl -D /usr/local/pgsql/data start
-
-# Or start it in the foreground
-postgres -D /usr/local/pgsql/data
-
-# This seems to be required
-createdb
-
-# Now the server is running with default user the same as your Mac login
-psql -c 'create database travis_test;'
-export PG_DATABASE_URL=postgresql://localhost/travis_test
-```
-
-Alternatively with Docker:
+The `test` script spins up a configured development environment, and can be used like so...
 
 ```
 ./test
 ```
 
-## Testing
+or, to run specs as you make changes...
 
-Use the `-Dquiet` flag to silence the SQL loging
+```shell-session
+./test --watch
+```
+
+**Note:** pass the `-Dquiet` flag to silence the SQL loging
