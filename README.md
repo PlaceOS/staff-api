@@ -24,7 +24,7 @@ PLACE_URI=https://example.place.technology
 
 ### Optional
 
-```
+```console
 # Default Timezone
 STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
@@ -43,23 +43,19 @@ SENTRY_DSN=<sentry dsn>
 # Logstash log ingest
 LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
-``
-
-## Local development
-
 ```
 
 ## Development
 
 The `test` script spins up a configured development environment, and can be used like so...
 
-```
+```console
 ./test
 ```
 
 or, to run specs as you make changes...
 
-```shell-session
+```console
 ./test --watch
 ```
 
