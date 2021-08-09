@@ -1,7 +1,0 @@
-language: crystal
-
-services:
-  - docker
-
-script:
-  - docker-compose run --rm web
