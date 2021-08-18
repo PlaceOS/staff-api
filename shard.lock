@@ -31,7 +31,7 @@ shards:
 
   bindata:
     git: https://github.com/spider-gazelle/bindata.git
-    version: 1.9.0
+    version: 1.9.1
 
   clear:
     git: https://github.com/place-labs/clear.git
@@ -63,7 +63,7 @@ shards:
 
   google:
     git: https://github.com/placeos/google.git
-    version: 3.0.6
+    version: 3.1.4
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -95,7 +95,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.13.6
+    version: 1.13.10
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
@@ -107,7 +107,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.9.6
+    version: 4.10.1
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -119,7 +119,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.8.0
+    version: 5.9.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -131,7 +131,7 @@ shards:
 
   rethinkdb:
     git: https://github.com/kingsleyh/crystal-rethinkdb.git
-    version: 0.2.3
+    version: 0.3.0
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
