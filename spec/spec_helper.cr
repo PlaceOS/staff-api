@@ -48,7 +48,7 @@ module Mock
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
         id: "toby@redant.com.au",
-        scope: ["public"],
+        scope: [PlaceOS::Model::UserJWT::PUBLIC],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
           email: "dev@acaprojects.com",
@@ -66,7 +66,7 @@ module Mock
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
         id: "toby@redant.com.au",
-        scope: ["guest"],
+        scope: [PlaceOS::Model::UserJWT::GUEST],
         user: UserJWT::Metadata.new(
           name: "Jon Jon",
           email: "jon@example.com",
@@ -84,7 +84,7 @@ module Mock
         exp: Time.local + 1.week,
         domain: "google.staff-api.dev",
         id: "amit@redant.com.au",
-        scope: ["public", "guest"],
+        scope: [PlaceOS::Model::UserJWT::PUBLIC, PlaceOS::Model::UserJWT::GUEST],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
           email: "amit@redant.com.au",
