@@ -683,26 +683,27 @@ class Events < Application
   post("/:id/guests/:guest_id/checkin", :guest_checkin) do
     checkin = (query_params["state"]? || "true") == "true"
     event_id = route_params["id"]
-    guest_email = route_params["guest_id"].downcase
+    guest_id = route_params["guest_id"].downcase
     host_mailbox = query_params["host_mailbox"]?.try &.downcase
 
     if user_token.scope.includes?("guest")
       guest_event_id, system_id = user.roles
       guest_token_email = user.email.downcase
 
-      head :forbidden unless event_id == guest_event_id && guest_email == guest_token_email
+      head :forbidden unless event_id == guest_event_id && guest_id == guest_token_email
     else
       system_id = query_params["system_id"]?
       render :bad_request, json: {error: "missing system_id param"} unless system_id
     end
 
-    guest = if guest_email.includes?('@')
-              Guest.query.by_tenant(tenant.id).find!({email: guest_email})
-            else
-              Guest.query.by_tenant(tenant.id).find!(guest_email.to_i64)
-            end
+    guest_email = if guest_id.includes?('@')
+                    guest_id.strip.downcase
+                  else
+                    Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64).email
+                  end
 
-    sys_email = get_placeos_client.systems.fetch(system_id).email
+    system = get_placeos_client.systems.fetch(system_id)
+    sys_email = system.email
     render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
 
     # The provided event id defaults to the system ID however for office365
@@ -712,46 +713,74 @@ class Events < Application
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
 
+    # Check the guest email is in the event
+    attendee = event.attendees.find { |attending| attending.email.downcase == guest_email }
+    head(:not_found) unless attendee
+
+    # Create the guest model if not already in the database
+    guest = begin
+      Guest.query.by_tenant(tenant.id).find!({email: guest_email})
+    rescue Clear::SQL::RecordNotFoundError
+      g = Guest.new({
+        tenant_id: tenant.id,
+        email:     guest_email,
+        name:      attendee.name,
+      })
+      render :unprocessable_entity, json: g.errors.map(&.to_s) if !g.save
+      g
+    end
+
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
       event_id = event.id.not_nil!
     end
 
-    eventmeta = get_migrated_metadata(event, system_id)
-    render :not_found, json: {error: "metadata for event #{event_id} not found, no visitors expected"} unless eventmeta
+    eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!({
+      system_id:           system.id.not_nil!,
+      event_id:            event.id.not_nil!,
+      recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
+      event_start:         event.event_start.not_nil!.to_unix,
+      event_end:           event.event_end.not_nil!.to_unix,
+      resource_calendar:   sys_email,
+      host_email:          event.host.not_nil!,
+      tenant_id:           tenant.id,
+      ical_uid:            event.ical_uid.not_nil!,
+    })
 
     if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
       attendee.update!({checked_in: checkin})
-
-      guest_details = attendee.guest
-
-      # Check the event is still on
-      host_email = eventmeta.not_nil!.host_email
-      event = client.get_event(host_email, id: event_id)
-      render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{host_email} is cancelled"} unless event && event.status != "cancelled"
-
-      # Update PlaceOS with an signal "staff/guest/checkin"
-      spawn do
-        get_placeos_client.root.signal("staff/guest/checkin", {
-          action:         :checkin,
-          checkin:        checkin,
-          system_id:      system_id,
-          event_id:       event_id,
-          host:           host_email,
-          resource:       eventmeta.not_nil!.resource_calendar,
-          event_summary:  event.not_nil!.body,
-          event_starting: eventmeta.not_nil!.event_start,
-          attendee_name:  guest_details.name,
-          attendee_email: guest_details.email,
-          ext_data:       eventmeta.try &.ext_data,
-        })
-      end
-
-      render json: attending_guest(attendee, attendee.guest)
     else
-      render :not_found, json: {error: "the attendee #{guest.email} was not found to be attending this event"}
+      attendee = Attendee.create!({
+        event_id:       eventmeta.id.not_nil!,
+        guest_id:       guest.id,
+        visit_expected: true,
+        checked_in:     checkin,
+        tenant_id:      tenant.id,
+      })
     end
+
+    # Check the event is still on
+    render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{event.host} is cancelled"} unless event && event.status != "cancelled"
+
+    # Update PlaceOS with an signal "staff/guest/checkin"
+    spawn do
+      get_placeos_client.root.signal("staff/guest/checkin", {
+        action:         :checkin,
+        checkin:        checkin,
+        system_id:      system_id,
+        event_id:       event_id,
+        host:           event.host,
+        resource:       eventmeta.resource_calendar,
+        event_summary:  event.not_nil!.body,
+        event_starting: eventmeta.event_start,
+        attendee_name:  guest.name,
+        attendee_email: guest.email,
+        ext_data:       eventmeta.ext_data,
+      })
+    end
+
+    render json: attending_guest(attendee, attendee.guest)
   end
 
   private def update_status(status)
