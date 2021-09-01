@@ -722,9 +722,12 @@ class Events < Application
       Guest.query.by_tenant(tenant.id).find!({email: guest_email})
     rescue Clear::SQL::RecordNotFoundError
       g = Guest.new({
-        tenant_id: tenant.id,
-        email:     guest_email,
-        name:      attendee.name,
+        tenant_id:      tenant.id,
+        email:          guest_email,
+        name:           attendee.name,
+        banned:         false,
+        dangerous:      false,
+        extension_data: JSON::Any.new({} of String => JSON::Any),
       })
       render :unprocessable_entity, json: g.errors.map(&.to_s) if !g.save
       g
