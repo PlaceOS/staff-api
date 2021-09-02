@@ -1,3 +1,5 @@
+require "csv"
+
 class Guests < Application
   base "/api/staff/v1/guests"
 
@@ -8,7 +10,7 @@ class Guests < Application
 
   # ameba:disable Metrics/CyclomaticComplexity
   def index
-    query = (query_params["q"]? || "").gsub(/[^\w\s\@\-\.\~\_]/, "").strip.downcase
+    query = (query_params["q"]? || "").gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
     if starting = query_params["period_start"]?
       period_start = Time.unix(starting.to_i64)
@@ -139,11 +141,17 @@ class Guests < Application
         .limit(1500).map { |g| attending_guest(nil, g) }
     else
       # Return guests based on the filter query
-      query = "%#{query}%"
-      render json: Guest.query
-        .by_tenant(tenant.id)
-        .where("searchable LIKE :query", query: query)
-        .limit(1500).map { |g| attending_guest(nil, g) }
+      csv = CSV.new(query, strip: true, separator: ' ')
+      csv.next
+      parts = csv.row.to_a
+
+      sql_query = Guest.query.by_tenant(tenant.id)
+      parts.each do |part|
+        next if part.empty?
+        sql_query = sql_query.where("searchable LIKE :query", query: "%#{part}%")
+      end
+
+      render json: sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g) }
     end
   end
 
