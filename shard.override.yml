@@ -6,5 +6,8 @@ dependencies:
 
   # TODO:: resolve compile issues with newer versions
   pg:
-    git: https://github.com/will/crystal-pg.git
-    version: 0.23.2
+    github: place-labs/crystal-pg
+    branch: master
+  db:
+    github: place-labs/crystal-db
+    branch: master

@@ -35,15 +35,15 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.9+git.commit.529ec7e6d9689a1a4efa17e0d2649d6a7ec32c94
+    version: 0.9+git.commit.00bca4f784e879ece3932927448f446b28a442e5
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
     version: 1.4.1
 
-  db:
-    git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.10.1
+  db: # Overridden
+    git: https://github.com/place-labs/crystal-db.git
+    version: 0.10.1+git.commit.157438a0d60249be0273765563a3b6e29b022a1b
 
   email:
     git: https://github.com/arcage/crystal-email.git
@@ -83,7 +83,7 @@ shards:
 
   jwt:
     git: https://github.com/crystal-community/jwt.git
-    version: 1.5.1
+    version: 1.6.0
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
@@ -102,12 +102,12 @@ shards:
     version: 2.1.5
 
   pg: # Overridden
-    git: https://github.com/will/crystal-pg.git
-    version: 0.23.2
+    git: https://github.com/place-labs/crystal-pg.git
+    version: 0.23.2+git.commit.838f8718993555ed165dcc2b1d6ebfdc6bbf68e4
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.10.1
+    version: 4.10.2
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -115,11 +115,11 @@ shards:
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
-    version: 0.4.0
+    version: 0.5.1
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.9.1
+    version: 5.10.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -135,7 +135,7 @@ shards:
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 5.0.0
+    version: 5.0.1
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
