@@ -20,7 +20,7 @@ module App
   LOG_BACKEND = ActionController.default_backend
 
   PG_DATABASE_URL         = TEST ? ENV["PG_TEST_DATABASE_URL"] : ENV["PG_DATABASE_URL"]
-  PG_CONNECTION_POOL_SIZE = 5
+  PG_CONNECTION_POOL_SIZE = ENV["PG_CONNECTION_POOL_SIZE"]?.presence.try(&.to_i?) || 5
 
   PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
 

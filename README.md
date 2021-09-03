@@ -15,6 +15,9 @@ SG_ENV=production  # When set to production, the auth token in the request heade
 # Database config:
 PG_DATABASE_URL=postgresql://user:password@hostname/placeos
 
+# Size of the connection pool
+PG_CONNECTION_POOL_SIZE=5
+
 # Public key for decrypting and validating JWT tokens
 JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 
