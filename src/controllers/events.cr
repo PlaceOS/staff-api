@@ -93,9 +93,10 @@ class Events < Application
     input_event = PlaceCalendar::Event.from_json(request.body.as(IO))
     placeos_client = get_placeos_client
 
-    user_email.downcase
+    # get_user_calendars returns only calendars where the user has write access
+    user_email = user.email.downcase
     host = input_event.host.try(&.downcase) || user_email
-    head :forbidden unless host == user_email || get_user_calendars.find { |cal| cal.id.downcase == host }
+    head :forbidden unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
