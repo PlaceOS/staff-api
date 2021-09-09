@@ -94,6 +94,7 @@ class Events < Application
     placeos_client = get_placeos_client
 
     host = input_event.host || user.email
+    head :forbidden unless host == user.email || get_user_calendars.find { |cal| cal.id == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
