@@ -1,5 +1,5 @@
 ARG CRYSTAL_VERSION=1.1.1
-FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine
+FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine as build
 WORKDIR /app
 
 # Set the commit through a build arg
