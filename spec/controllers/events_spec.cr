@@ -785,7 +785,7 @@ module EventsHelper
          "resource"        => false,
          "checked_in"      => false,
          "visit_expected"  => true,
-         "extension_data":    {
+         "extension_data"  => {
            "fuzz" => "bizz",
          },
         },
