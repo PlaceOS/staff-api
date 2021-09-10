@@ -17,14 +17,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test:
+    name: "crystal: ${{ matrix.crystal }}, stable: ${{ matrix.stable }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        stable: [true]
         crystal:
+          - 1.1.1
           - latest
-          - nightly
-          - 1.0.0
+        include:
+          - crystal: nightly
+            stable: false
+    continue-on-error: ${{ !matrix.stable }}
     steps:
       - uses: actions/checkout@v2
       - name: Run docker-compose test environment
