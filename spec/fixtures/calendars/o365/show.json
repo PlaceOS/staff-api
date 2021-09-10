@@ -1,18 +1,20 @@
-{
-    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendar/$entity",
-    "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAEGAAB08dwEuoS_QYSBDzuv558sAAAKe1yoAAA=",
-    "name": "Calendar",
-    "color": "auto",
-    "changeKey": "dPHcBLqEvkGEgQ87r+efLAAACntKaQ==",
-    "canShare": true,
-    "canViewPrivateItems": true,
-    "canEdit": true,
-    "allowedOnlineMeetingProviders": ["teamsForBusiness"],
-    "defaultOnlineMeetingProvider": "teamsForBusiness",
-    "isTallyingResponses": true,
-    "isRemovable": false,
-    "owner": {
-        "name": "Developer",
-        "address": "dev@acaprojects.onmicrosoft.com"
-    }
-}
+[
+  {
+      "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendar/$entity",
+      "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAEGAAB08dwEuoS_QYSBDzuv558sAAAKe1yoAAA=",
+      "name": "Calendar",
+      "color": "auto",
+      "changeKey": "dPHcBLqEvkGEgQ87r+efLAAACntKaQ==",
+      "canShare": true,
+      "canViewPrivateItems": true,
+      "canEdit": true,
+      "allowedOnlineMeetingProviders": ["teamsForBusiness"],
+      "defaultOnlineMeetingProvider": "teamsForBusiness",
+      "isTallyingResponses": true,
+      "isRemovable": false,
+      "owner": {
+          "name": "Developer",
+          "address": "dev@acaprojects.onmicrosoft.com"
+      }
+  }
+]
