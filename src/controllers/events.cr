@@ -544,17 +544,7 @@ class Events < Application
       end
     end
 
-    if user_cal = query_params["calendar"]?
-      # Need to confirm the user can access this calendar
-      found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-      head(:not_found) unless found
-
-      # Grab the event details
-      event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
-      head(:not_found) unless event
-
-      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
-    elsif system_id = query_params["system_id"]?
+    if system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
       system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
@@ -572,6 +562,23 @@ class Events < Application
       metadata = get_event_metadata(event, system_id)
       parent_meta = metadata && metadata.event_id != event.id
       render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
+    else
+      user_cal = query_params["calendar"]?.try(&.downcase)
+
+      # Need to confirm the user can access this calendar
+      if user_cal
+        found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
+      else
+        user_cal = user.email
+        found = true
+      end
+      head(:not_found) unless found
+
+      # Grab the event details
+      event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
+      head(:not_found) unless event
+
+      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     end
 
     head :bad_request
@@ -583,17 +590,17 @@ class Events < Application
     notify_guests = query_params["notify"]? != "false"
     placeos_client = get_placeos_client
 
-    cal_id = if user_cal = query_params["calendar"]?
-               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-               head(:not_found) unless found
-               user_cal
-             elsif system_id = query_params["system_id"]?
+    cal_id = if system_id = query_params["system_id"]?
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
+             elsif user_cal = query_params["calendar"]?.try(&.downcase)
+               found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
+               head(:not_found) unless found
+               user_cal
              else
-               head :bad_request
+               user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     head(:not_found) unless event
