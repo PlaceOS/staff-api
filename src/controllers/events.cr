@@ -253,12 +253,13 @@ class Events < Application
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
-      sys_cal = system.email.presence
-      event = if sys_cal
-                get_hosts_event(event, system.email)
-              else
-                get_hosts_event(event)
-              end
+      if system_id = (query_params["system_id"]? || changes.system_id).presence
+        system = placeos_client.systems.fetch(system_id)
+        sys_cal = system.email.presence
+        get_hosts_event(event, system.email)
+      else
+        get_hosts_event(event)
+      end
       event_id = event.id.not_nil!
     end
 
