@@ -562,7 +562,7 @@ class Events < Application
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != calendar_id
         event = get_hosts_event(event)
-        event_id = event.id.not_nil! # ameba:disable Lint/UselessAssign
+        event_id = event.id.not_nil!
       end
 
       metadata = get_event_metadata(event, system_id)
