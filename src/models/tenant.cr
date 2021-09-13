@@ -8,12 +8,14 @@ struct Office365Config
   property tenant : String
   property client_id : String
   property client_secret : String
+  property conference_type : String? = PlaceCalendar::Office365::DEFAULT_CONFERENCE
 
   def params
     {
-      tenant:        @tenant,
-      client_id:     @client_id,
-      client_secret: @client_secret,
+      tenant:          @tenant,
+      client_id:       @client_id,
+      client_secret:   @client_secret,
+      conference_type: @conference_type,
     }
   end
 end
@@ -27,15 +29,17 @@ struct GoogleConfig
   property domain : String
   property sub : String = ""
   property user_agent : String = "PlaceOS"
+  property conference_type : String? = PlaceCalendar::Google::DEFAULT_CONFERENCE
 
   def params
     {
-      issuer:      @issuer,
-      signing_key: @signing_key,
-      scopes:      @scopes,
-      domain:      @domain,
-      sub:         @sub,
-      user_agent:  @user_agent,
+      issuer:          @issuer,
+      signing_key:     @signing_key,
+      scopes:          @scopes,
+      domain:          @domain,
+      sub:             @sub,
+      user_agent:      @user_agent,
+      conference_type: @conference_type,
     }
   end
 end
