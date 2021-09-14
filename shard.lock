@@ -107,7 +107,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.11.1
+    version: 4.11.2
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -131,7 +131,7 @@ shards:
 
   rethinkdb:
     git: https://github.com/place-labs/crystal-rethinkdb.git
-    version: 0.3.1+git.commit.bd193b6fed95619da3d963267bf61ed35b1fd7f5
+    version: 0.3.1+git.commit.af92ace5eb60e861a41b93456ac5d73b80feb7bb
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
