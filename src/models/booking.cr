@@ -50,6 +50,10 @@ class Booking
 
   before :create, :set_created
 
+  def validate
+    validate_booking_time
+  end
+
   before(:save) do |m|
     booking_model = m.as(Booking)
 
@@ -62,6 +66,10 @@ class Booking
 
   def set_created
     self.last_changed = self.created = Time.utc.to_unix
+  end
+
+  private def validate_booking_time
+    add_error("booking_end", "must be after booking_start") if booking_end <= booking_start
   end
 
   scope :by_tenant do |tenant_id|
