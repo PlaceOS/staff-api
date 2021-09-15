@@ -194,6 +194,22 @@ describe Bookings do
     guest.email.should eq("jon@example.com")
   end
 
+  it "#prevents a booking being saved with an end time before the start time" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    expect_raises(Clear::Model::InvalidError) do
+      BookingsHelper.create_booking(tenant_id: tenant.id, booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 3.minutes.from_now.to_unix)
+    end
+  end
+
+  it "#prevents a booking being saved with an end time the same as the start time" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    expect_raises(Clear::Model::InvalidError) do
+      BookingsHelper.create_booking(tenant_id: tenant.id, booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 5.minutes.from_now.to_unix)
+    end
+  end
+
   it "#approve should approve a booking and #reject should reject meeting" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
