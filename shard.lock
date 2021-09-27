@@ -35,7 +35,7 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.9+git.commit.00bca4f784e879ece3932927448f446b28a442e5
+    version: 0.9+git.commit.e8bad234b512f4327691498e1e05851a81756d1e
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
@@ -87,7 +87,7 @@ shards:
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
-    version: 0.5.0
+    version: 0.5.1
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
@@ -111,19 +111,19 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.4.3+git.commit.120519e3cdfb993f9ee0cc3b3fe3f1ef019c5f43
+    version: 2.4.3+git.commit.1442b8dd35eca298388cc7f4d3da5d9f622de71f
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
-    version: 0.5.1
+    version: 0.6.0
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.10.1
+    version: 5.11.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
-    version: 2.2.3
+    version: 3.0.0
 
   raven:
     git: https://github.com/sija/raven.cr.git
