@@ -446,7 +446,7 @@ class Events < Application
             attend.update!({
               event_id:       meta.id.not_nil!,
               guest_id:       guest.id,
-              visit_expected: attendee.visit_expected,
+              visit_expected: attendee.visit_expected.not_nil!,
             })
 
             next unless attend.visit_expected
