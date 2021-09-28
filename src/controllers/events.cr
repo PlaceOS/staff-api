@@ -437,17 +437,19 @@ class Events < Application
                                     attend.visit_expected
                                   else
                                     attend.set({
-                                      visit_expected: true,
-                                      checked_in:     false,
-                                      tenant_id:      tenant.id,
+                                      checked_in: false,
+                                      tenant_id:  tenant.id,
                                     })
                                     false
                                   end
 
             attend.update!({
-              event_id: meta.id.not_nil!,
-              guest_id: guest.id,
+              event_id:       meta.id.not_nil!,
+              guest_id:       guest.id,
+              visit_expected: attendee.visit_expected,
             })
+
+            next unless attend.visit_expected
 
             if !previously_visiting || changing_room
               spawn do
