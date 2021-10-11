@@ -5,14 +5,23 @@ class Bookings < Application
   before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
   getter booking : Booking { find_booking }
 
+  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state)
+
   def index
     starting = query_params["period_start"].to_i64
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
-    booking_state = query_params["state"]?.presence
+
+    query = Booking.query.where(
+      %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
+      starting: starting, ending: ending, booking_type: booking_type).by_tenant(tenant.id)
+
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
+    if !zones.empty?
+      query = query.by_zones(zones)
+    end
+
     user_email = query_params["email"]?.presence.try(&.downcase)
-    checked_in = query_params["checked_in"]?.presence
     user_id = query_params["user"]?.presence
     include_booked_by = query_params["include_booked_by"]?.presence.try(&.strip.downcase) == "true"
 
@@ -22,26 +31,15 @@ class Bookings < Application
       user_email = user.email.downcase
     end
 
-    created_before = query_params["created_before"]?.presence
-    created_after = query_params["created_after"]?.presence
-    approved = query_params["approved"]?.presence
-    rejected = query_params["rejected"]?.presence
-    extension_data = query_params["extension_data"]?.presence
+    query = query.by_user_or_email(user_id, user_email, include_booked_by)
 
-    query = Booking.query
-      .by_tenant(tenant.id)
-      .by_zones(zones)
-      .by_user_or_email(user_id, user_email, include_booked_by)
-      .booking_state(booking_state)
-      .created_before(created_before)
-      .created_after(created_after)
-      .is_approved(approved)
-      .is_rejected(rejected)
-      .is_checked_in(checked_in)
-      .by_ext(extension_data)
-      .where(
-        %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
-        starting: starting, ending: ending, booking_type: booking_type)
+    {% for param in PARAMS %}
+      if query_params.has_key?({{param}})
+        query = query.is_{{param.id}}(query_params[{{param}}])
+      end
+    {% end %}
+
+    query = query
       .order_by(:booking_start, :desc)
       .limit(20000)
 

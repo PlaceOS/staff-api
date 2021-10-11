@@ -56,7 +56,6 @@ class Booking
 
   before(:save) do |m|
     booking_model = m.as(Booking)
-
     booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
     booking_model.booked_by_email = booking_model.booked_by_email.downcase
     booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
@@ -105,7 +104,7 @@ class Booking
     end
   end
 
-  scope :by_ext do |value|
+  scope :is_extension_data do |value|
     if value
       parse = value.delete &.in?('{', '}')
       array = parse.split(",")
@@ -118,15 +117,15 @@ class Booking
     end
   end
 
-  scope :booking_state do |state|
+  scope :is_state do |state|
     state ? where(process_state: state) : self
   end
 
-  scope :created_before do |time|
+  scope :is_created_before do |time|
     time ? where { last_changed < time.not_nil!.to_i64 } : self
   end
 
-  scope :created_after do |time|
+  scope :is_created_after do |time|
     time ? where { last_changed > time.not_nil!.to_i64 } : self
   end
 
