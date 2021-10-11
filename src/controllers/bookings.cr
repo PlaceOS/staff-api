@@ -12,14 +12,12 @@ class Bookings < Application
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
 
-    query = Booking.query.where(
+    query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
-      starting: starting, ending: ending, booking_type: booking_type).by_tenant(tenant.id)
+      starting: starting, ending: ending, booking_type: booking_type)
 
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
-    if !zones.empty?
-      query = query.by_zones(zones)
-    end
+    query = query.by_zones(zones) unless zones.empty?
 
     user_email = query_params["email"]?.presence.try(&.downcase)
     user_id = query_params["user"]?.presence
