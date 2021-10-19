@@ -2,8 +2,8 @@ version: "3.7"
 
 services:
   db:
-    image: postgres
     hostname: staff_api_db
+    image: postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -18,13 +18,19 @@ services:
       interval: 5s
     ports:
       - 5432:5432
+
   test:
+    hostname: staff_api
     build:
       context: ./
       dockerfile: Dockerfile.test
       args:
         CRYSTAL_VERSION: ${CRYSTAL_VERSION:-latest}
-    hostname: staff_api
+    depends_on:
+      - db
+    volumes:
+      - ./spec:/app/spec
+      - ./src:/app/src
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
       PLACE_URI: http://toby.dev.place.tech
@@ -33,5 +39,3 @@ services:
       PLACE_AUTH_CLIENT_ID: abc123
       PLACE_AUTH_SECRET: abc123
       GITHUB_ACTION: ${GITHUB_ACTION-}
-    depends_on:
-      - db

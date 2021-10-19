@@ -217,22 +217,29 @@ module GuestsHelper
   end
 
   def guest_events_output
-    [{"event_start" => 1598832000,
+    [{
+      "event_start" => 1598832000,
       "event_end"   => 1598833800,
       "id"          => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
       "host"        => "dev@acaprojects.onmicrosoft.com",
       "title"       => "My new meeting",
       "body"        => "The quick brown fox jumps over the lazy dog",
-      "attendees"   => [{"name" => "Toby Carvan",
-                       "email" => "testing@redant.com.au",
-                       "response_status" => "needsAction",
-                       "resource" => false,
-                       "extension_data" => {} of String => String?},
-      {"name"            => "Amit Gaur",
-       "email"           => "amit@redant.com.au",
-       "response_status" => "needsAction",
-       "resource"        => false,
-       "extension_data"  => {} of String => String?}],
+      "attendees"   => [
+        {
+          "name"            => "Toby Carvan",
+          "email"           => "testing@redant.com.au",
+          "response_status" => "needsAction",
+          "resource"        => false,
+          "extension_data"  => {} of String => String?,
+        },
+        {
+          "name"            => "Amit Gaur",
+          "email"           => "amit@redant.com.au",
+          "response_status" => "needsAction",
+          "resource"        => false,
+          "extension_data"  => {} of String => String?,
+        },
+      ],
       "location"    => "",
       "private"     => true,
       "all_day"     => false,
@@ -240,7 +247,8 @@ module GuestsHelper
       "recurring"   => false,
       "attachments" => [] of String,
       "status"      => "confirmed",
-      "creator"     => "dev@acaprojects.onmicrosoft.com"}]
+      "creator"     => "dev@acaprojects.onmicrosoft.com",
+    }]
   end
 
   def mock_event

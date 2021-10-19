@@ -6,7 +6,10 @@ WORKDIR /app
 ARG PLACE_COMMIT="DEV"
 
 # Add trusted CAs for communicating with external services
-RUN apk add --no-cache ca-certificates && update-ca-certificates
+RUN apk add --no-cache \
+        ca-certificates \
+    && \
+    update-ca-certificates
 
 # Create a non-privileged user
 # defaults are appuser:10001
@@ -36,7 +39,13 @@ COPY ./src src
 
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    crystal build --release --error-trace src/staff-api.cr -o staff-api
+    crystal build \
+    --error-trace \
+    --release \
+    -o staff-api \
+    src/staff-api.cr
+
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # Extract dependencies
 RUN ldd staff-api | tr -s '[:blank:]' '\n' | grep '^/' | \
