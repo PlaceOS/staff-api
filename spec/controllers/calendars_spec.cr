@@ -12,33 +12,32 @@ describe Calendars do
     status_code.should eq(200)
   end
 
-  pending "#availability should return list of available calendars" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
-      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
-      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
-
-    now = Time.local.to_unix
-    later = (Time.local + 1.hour).to_unix
-    route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1].as_a
-    body.should eq(CalendarsHelper.calendar_list_output)
-  end
-
   describe "#availability" do
     it "should not return a calendar if it is busy at given time" do
       CalendarsHelper.stub_cal_endpoints
       time = Time.utc(2019, 3, 15, 10).to_unix
       time2 = Time.utc(2019, 3, 15, 11).to_unix
-      route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7"
+      route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
       body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
       body.to_s.includes?("room1@example.com").should be_false
+    end
+
+    it "should not return a calendar if it is busy some of the given time" do
+      CalendarsHelper.stub_cal_endpoints
+      time = Time.utc(2020, 3, 15, 10).to_unix
+      time2 = Time.utc(2020, 3, 15, 12).to_unix
+      route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
+      body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
+      body.to_s.includes?("room2@example.com").should be_false
+    end
+
+    it "should return list of available calendars" do
+      CalendarsHelper.stub_cal_endpoints
+      time = Time.utc(2021, 3, 15, 10).to_unix
+      time2 = Time.utc(2021, 3, 15, 11).to_unix
+      route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
+      body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
+      body.should eq(CalendarsHelper.calendar_list_output)
     end
   end
 
@@ -67,9 +66,8 @@ module CalendarsHelper
 
   def calendar_list_output
     [{"id" => "dev@acaprojects.com"},
-     {"id" => "room2@example.com", "system" => {"created_at" => 1562041127, "updated_at" => 1562041137, "id" => "sys_id", "name" => "Room 2", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRJOM27Kb", "mod-rJRLE4_PQ7", "mod-rJRLwe72Mo"], "email" => "room2@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 4}},
-     {"id" => "room3@example.com", "system" => {"created_at" => 1562041145, "updated_at" => 1562041155, "id" => "sys-rJQVPIR9Uf", "name" => "Room 3", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRNrLDPNz", "mod-rJRQ~JwE7U", "mod-rJRV1qokbH"], "email" => "room3@example.com", "capacity" => 4, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 4}},
-     {"id" => "room4@example.com", "system" => {"created_at" => 1562041145, "updated_at" => 1562041155, "id" => "sys-AAJQVPIR9Uf", "name" => "Room 4", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRNrLDPNz", "mod-rJRQ~JwE7U", "mod-rJRV1qokbH"], "email" => "room4@example.com", "capacity" => 20, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 4}}]
+     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}},
+     {"id" => "room2@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rHQQlR4Cn7", "name" => "Room 2", "zones" => ["zone-rGfCRp_aUD"], "modules" => ["mod-rJRCVFDVuB", "mod-rJRWE21pya", "mod-rJBGYsZExU"], "email" => "room2@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}}]
   end
 
   def free_busy_output
@@ -87,10 +85,13 @@ module CalendarsHelper
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
-      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule2.json"))
+      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule_avail.json"))
 
     WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rJQQlR4Cn7")
-      .to_return(body: File.read("./spec/fixtures/placeos/system.json"))
+      .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
+
+    WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rHQQlR4Cn7")
+      .to_return(body: File.read("./spec/fixtures/placeos/systemH.json"))
 
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))

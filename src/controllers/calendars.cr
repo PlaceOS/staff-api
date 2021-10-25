@@ -20,7 +20,6 @@ class Calendars < Application
     # perform availability request
     period_start = Time.unix(query_params["period_start"].to_i64)
     period_end = Time.unix(query_params["period_end"].to_i64)
-
     busy = client.get_availability(user.email, calendars, period_start, period_end)
 
     # Remove any rooms that have overlapping bookings
