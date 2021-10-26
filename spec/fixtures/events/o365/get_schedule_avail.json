@@ -1,0 +1,73 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.scheduleInformation)",
+    "value": [
+        {
+            "scheduleId": "room1@example.com",
+            "availabilityView": "000220000",
+            "scheduleItems": [
+                {
+                    "isPrivate": false,
+                    "status": "busy",
+                    "subject": "Let's go for lunch",
+                    "location": "Harry's Bar",
+                    "start": {
+                        "dateTime": "2019-03-15T10:00:00.0000000",
+                        "timeZone": "Coordinated Universal Time"
+                    },
+                    "end": {
+                        "dateTime": "2019-03-15T10:30:00.0000000",
+                        "timeZone": "Coordinated Universal Time"
+                    }
+                }
+            ],
+            "workingHours": {
+                "daysOfWeek": [
+                    "monday",
+                    "tuesday",
+                    "wednesday",
+                    "thursday",
+                    "friday"
+                ],
+                "startTime": "08:00:00.0000000",
+                "endTime": "17:00:00.0000000",
+                "timeZone": {
+                    "name": "Coordinated Universal Time"
+                }
+            }
+        },
+        {
+            "scheduleId": "room2@example.com",
+            "availabilityView": "000220000",
+            "scheduleItems": [
+                {
+                    "isPrivate": false,
+                    "status": "busy",
+                    "subject": "Meeting",
+                    "location": "Orange Room",
+                    "start": {
+                        "dateTime": "2020-03-15T11:00:00.0000000",
+                        "timeZone": "Coordinated Universal Time"
+                    },
+                    "end": {
+                        "dateTime": "2020-03-15T12:30:00.0000000",
+                        "timeZone": "Coordinated Universal Time"
+                    }
+                }
+            ],
+            "workingHours": {
+                "daysOfWeek": [
+                    "monday",
+                    "tuesday",
+                    "wednesday",
+                    "thursday",
+                    "friday"
+                ],
+                "startTime": "08:00:00.0000000",
+                "endTime": "17:00:00.0000000",
+                "timeZone": {
+                    "name": "Coordinated Universal Time"
+                }
+            }
+        }
+    ]
+}
