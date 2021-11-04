@@ -9,7 +9,7 @@ struct Office365Config
   property client_id : String
   property client_secret : String
   property conference_type : String? = PlaceCalendar::Office365::DEFAULT_CONFERENCE
-  property scopes : String? = PlaceCalendar::Office365::DEFAULT_SCOPE
+  property scopes : String = PlaceCalendar::Office365::DEFAULT_SCOPE
 
   def params
     {
