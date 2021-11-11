@@ -106,6 +106,19 @@ describe Bookings do
     body.map(&.["name"]).should eq(["Jon"])
   end
 
+  it "#ensures case insensitivity in user emails" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "dave", user_email: "DAVE@example.com", booked_by_email: "toby@redant.com.au")
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 40.minutes.from_now.to_unix
+
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=dave@example.com"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    booking_user_ids = body.map { |r| r["user_id"] }
+    booking_user_ids.should eq(["dave"])
+  end
+
   pending "#destroy should delete a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))

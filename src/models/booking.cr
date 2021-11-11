@@ -59,6 +59,7 @@ class Booking
     booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
     booking_model.booked_by_email = booking_model.booked_by_email.downcase
     booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
+    booking_model.user_email = booking_model.user_email.downcase
     booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
     booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
   end
