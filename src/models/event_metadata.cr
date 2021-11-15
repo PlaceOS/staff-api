@@ -24,6 +24,10 @@ class EventMetadata
     where { var("event_metadatas", "tenant_id") == tenant_id }
   end
 
+  scope :by_ext_data do |field_name, value|
+    where { (ext_data.jsonb(field_name) == value) }
+  end
+
   def self.migrate_recurring_metadata(system_id : String, recurrance : PlaceCalendar::Event, parent_metadata : EventMetadata)
     metadata = EventMetadata.new
 
