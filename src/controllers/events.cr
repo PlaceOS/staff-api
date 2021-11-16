@@ -698,10 +698,10 @@ class Events < Application
     render json: visitors
   end
 
-  # example route: /ext_metadata?field_name=colour&value=blue
-  get("ext_metadata", :event_metadata) do
-    field_name = route_params["field_name"]
-    value = route_params["value"]
+  # example route: /extension_metadata?field_name=colour&value=blue
+  get("extension_metadata", :extension_metadata) do
+    field_name = query_params["field_name"]
+    value = query_params["value"]
 
     query = EventMetadata.by_ext_data(field_name, value)
 

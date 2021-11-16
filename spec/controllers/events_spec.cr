@@ -36,7 +36,7 @@ describe Events do
       body.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
     end
 
-    it "endpoint should return metadata" do
+    it "metadata extension endpoint should filter by extension data" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
@@ -57,7 +57,7 @@ describe Events do
       field_name = "colour"
       value = "blue"
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/ext_metadata?field_name=#{field_name}&value=#{value}", route_params: {"field_name" => field_name, "value" => value}, headers: Mock::Headers.office365_guest, &.event_metadata)[1]
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: Mock::Headers.office365_guest, &.extension_metadata)[1]
       body.to_s.includes?("red").should be_false
     end
 
