@@ -36,6 +36,31 @@ describe Events do
       body.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
     end
 
+    it "metadata extension endpoint should filter by extension data" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      id = "test_id"
+      EventMetadatasHelper.create_event(tenant.id, id + "1", ext_data: JSON.parse({"colour": "blue"}.to_json))
+      EventMetadatasHelper.create_event(tenant.id, id + "2")
+      EventMetadatasHelper.create_event(tenant.id, id + "3", ext_data: JSON.parse({"colour": "red"}.to_json))
+
+      field_name = "colour"
+      value = "blue"
+
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: Mock::Headers.office365_guest, &.extension_metadata)[1]
+      body.to_s.includes?("red").should be_false
+    end
+
     pending "#index should return a list of events with metadata of master event if event in list is an occurrence" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
