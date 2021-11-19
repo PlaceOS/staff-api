@@ -95,7 +95,7 @@ class Events < Application
 
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
-    host = input_event.host.try(&.downcase) || user_email
+    host = (input_event.host || user_email.downcase).try(&.downcase) 
     head :forbidden unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
