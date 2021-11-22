@@ -5,14 +5,18 @@ describe Events do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
+  before_each do
+    EventsHelper.stub_event_tokens
+  end
+
   describe "#index" do
-    pending "#index should return a list of events with metadata" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    it "#index should return a list of events with metadata" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
         .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
@@ -33,16 +37,13 @@ describe Events do
         e.index
       }[1].as_a
 
-      body.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
+      body.includes?("sys-rJQQlR4Cn7")
+      body.includes?(%("host" => "dev@acaprojects.onmicrosoft.com"))
+      body.includes?(%("id" => "sys-rJQQlR4Cn7"))
+      body.includes?(%("extension_data" => {"foo" => 123}))
     end
 
     it "metadata extension endpoint should filter by extension data" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
         .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
@@ -62,8 +63,6 @@ describe Events do
     end
 
     pending "#index should return a list of events with metadata of master event if event in list is an occurrence" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
@@ -98,10 +97,6 @@ describe Events do
 
   describe "#create & #update" do
     pending "#create should create event with attendees and extension data and #update should update for system" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -176,10 +171,6 @@ describe Events do
     end
 
     pending "#create should create event with attendees and extension data and #update should extension data for when guest" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -209,10 +200,6 @@ describe Events do
     end
 
     pending "#create should create event and #update should update for user calendar" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -247,10 +234,6 @@ describe Events do
 
   describe "#show" do
     pending "should return details for event with guest access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -282,10 +265,6 @@ describe Events do
     end
 
     pending "should return details for event with guest access and event is recurring instance" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -324,10 +303,6 @@ describe Events do
     end
 
     pending "should return details for event with normal access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -364,10 +339,6 @@ describe Events do
     end
 
     pending "should return details for event that is an recurring event instance with normal access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -417,10 +388,6 @@ describe Events do
   end
 
   pending "#destroy the event for system" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
       WebMock
         .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -455,10 +422,6 @@ describe Events do
   end
 
   pending "#approve marks room as accepted" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
       WebMock
         .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -491,10 +454,6 @@ describe Events do
   end
 
   pending "#reject marks room as declined" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
       WebMock
         .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -525,10 +484,6 @@ describe Events do
 
   describe "#guest_list" do
     pending "lists guests for an event & guest_checkin checks them in" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -576,10 +531,6 @@ describe Events do
     end
 
     pending "lists guests for an event that is an recurring instance & guest_checkin checks them in" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
         WebMock
           .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
@@ -643,6 +594,13 @@ EVENTS_BASE = Events.base_route
 
 module EventsHelper
   extend self
+
+  def stub_event_tokens
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+  end
 
   def mock_event(id, event_start, event_end, system_id, room_email, host, ext_data)
     {
