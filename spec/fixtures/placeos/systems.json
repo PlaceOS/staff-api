@@ -40,7 +40,7 @@
     "created_at": 1562041127,
     "updated_at": 1562041137,
     "support_url": null,
-    "version": 4,
+    "version": 5,
     "id": "sys_id"
 },
 {
@@ -48,7 +48,7 @@
     "name": "Room 3",
     "description": null,
     "email": "room3@example.com",
-    "capacity": 4,
+    "capacity": 5,
     "features": [],
     "bookable": true,
     "installed_ui_devices": 0,
@@ -63,7 +63,7 @@
     "created_at": 1562041145,
     "updated_at": 1562041155,
     "support_url": null,
-    "version": 4,
+    "version": 5,
     "id": "sys-rJQVPIR9Uf"
 },
 {
@@ -86,7 +86,7 @@
     "created_at": 1562041145,
     "updated_at": 1562041155,
     "support_url": null,
-    "version": 4,
+    "version": 5,
     "id": "sys-AAJQVPIR9Uf"
 }
 ]
