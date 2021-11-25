@@ -1,7 +1,6 @@
 {
   "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.onmicrosoft.com')/calendar/events/$entity",
   "@odata.etag": "W/\"dPHcBLqEvkGEgQ87r+efLAAAhk36bA==\"",
-  "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
   "id": "event_instance_of_recurrence_id",
   "createdDateTime": "2020-09-13T22:44:39.7263717Z",
   "lastModifiedDateTime": "2020-09-13T22:44:40.4089746Z",

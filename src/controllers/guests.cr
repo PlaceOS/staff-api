@@ -156,7 +156,7 @@ class Guests < Application
   end
 
   def show
-    if user_token.scope.includes?("guest") && (guest.email != user_token.id)
+    if user_token.guest_scope? && (guest.email != user_token.id)
       head :forbidden
     end
 
@@ -167,7 +167,7 @@ class Guests < Application
   end
 
   def update
-    if user_token.scope.includes?("guest") && (guest.email != user_token.id)
+    if user_token.guest_scope? && (guest.email != user_token.id)
       head :forbidden
     end
 
@@ -246,7 +246,7 @@ class Guests < Application
   end
 
   get("/:id/bookings", :bookings) do
-    if user_token.scope.includes?("guest") && (guest.email != user_token.id)
+    if user_token.guest_scope? && (guest.email != user_token.id)
       head :forbidden
     end
 
