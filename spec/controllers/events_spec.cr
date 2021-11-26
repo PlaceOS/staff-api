@@ -63,9 +63,6 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      # WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-      #   .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
         .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
@@ -82,19 +79,7 @@ describe Events do
         count = count + 1
       end
 
-      # body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=zone-EzcsmWbvUG6&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
-      #   tenant_id = e.tenant.id
-      #   EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
-      #   e.index
-      # }[1].as_a
-
       body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest, &.index)[1].to_s
-
-      # expected_result = EventsHelper.mock_event("event_instance_of_recurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
-      # expected_result["recurring_event_id"] = master_event_id
-      # expected_result["recurring_master_id"] = master_event_id
-
-      # body.should contain(expected_result)
 
       body.includes?(%("recurring_event_id" => "#{master_event_id}"))
       body.includes?(%("recurring_master_id" => "#{master_event_id}"))
