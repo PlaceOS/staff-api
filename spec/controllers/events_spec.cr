@@ -404,7 +404,7 @@ describe Events do
     end
   end
 
-  pending "#destroy the event for system" do
+  it "#destroy the event for system" do
     # EventsHelper.stub_create_endpoints
 
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
@@ -433,8 +433,19 @@ describe Events do
     # Should have created event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
 
-    # WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
-    #   .to_return(body: %({"permissions":{"admin": ["sys-rJQQlR4Cn7"]}}))
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
+      .to_return(body: %({"permissions":
+      {"name":"permissions",
+        "parent_id": "22",
+        "description" : "grant access",
+      "details":{"admin": ["admin"]}}}))
+
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
+      .to_return(body: %({"permissions":
+         {"name":"permissions",
+           "parent_id": "22",
+           "description" : "grant access",
+         "details":{"admin": ["admin"]}}}))
 
     # delete
     Events.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
