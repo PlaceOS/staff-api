@@ -29,7 +29,17 @@
   "isOnlineMeeting": false,
   "onlineMeetingProvider": "unknown",
   "allowNewTimeProposals": true,
-  "recurrence": null,
+  "recurrence": {
+    "pattern":{
+        "type": "daily",
+        "interval": 2
+      },
+    "range":
+    {
+      "type": "daily",
+      "startDate": "2020-08-27T14:45:00.0000000",
+      "endDate":"2020-11-27T15:46:00.0000000"
+    }},
   "onlineMeeting": null,
   "responseStatus": {
     "response": "organizer",

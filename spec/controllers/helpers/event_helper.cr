@@ -43,6 +43,7 @@ module EventsHelper
       rooms:           ["Red Room"],
       attendees:       ["elon@musk.com", Office365::EmailAddress.new(address: "david@bowie.net", name: "David Bowie"), Office365::Attendee.new(email: "the@goodies.org")],
       response_status: Office365::ResponseStatus.new(response: Office365::ResponseStatus::Response::Organizer, time: "0001-01-01T00:00:00Z"),
+      recurrence:      Office365::RecurrenceParam.new(pattern: "daily", range_end: Time.unix(1598508160)),
     })
   end
 
@@ -52,16 +53,11 @@ module EventsHelper
     }.to_json
   end
 
-  def event_query_response2(id)
-    {
-      "value" => [EventsHelper.create_event_output(id)],
-    }.to_json
-  end
-
   def create_event_input
     %({
     "event_start": 1598503500,
     "event_end": 1598507160,
+    "recurrence": {"range_start":1637825922,"range_end":1639035522,"interval":2,"pattern":"daily"},
     "attendees": [
          {
             "name": "Amit",
@@ -111,6 +107,7 @@ module EventsHelper
     %({
     "event_start": 1598503500,
     "event_end": 1598507160,
+    "recurrence": {"range_start":1637825922,"range_end":1639035522,"interval":2,"pattern":"daily"},
     "attendees": [
          {
             "name": "Amit",
@@ -141,7 +138,6 @@ module EventsHelper
     ],
     "private": false,
     "all_day": false,
-    "recurring": true,
     "host": "dev@acaprojects.onmicrosoft.com",
     "title": "tentative event response status and default timezone trial updated",
     "body": "yeehaw hiya",
@@ -206,88 +202,6 @@ module EventsHelper
       "fizz": "buzz"
     }
     })
-  end
-
-  def update_event_input1
-    %({
-    "event_start": 1598503500,
-    "event_end": 1598507160,
-    "extension_data": {
-      "fizz": "buzz"
-    }
-    })
-  end
-
-  def create_event_output(id)
-    {
-      "event_start"         => 1598503500,
-      "event_end"           => 1598507160,
-      "id"                  => id,
-      "host"                => "dev@acaprojects.onmicrosoft.com",
-      "title"               => "tentative event response status and default timezone trial updated",
-      "body"                => "yeehaw hiya",
-      "recurring_master_id" => id,
-      "attendees"           => [
-        {
-          "name"            => "Amit",
-          "email"           => "amit@redant.com.au",
-          "response_status" => "accepted",
-          "resource"        => false,
-          "checked_in"      => false,
-          "visit_expected"  => true,
-          "extension_data"  => {} of String => String?,
-        },
-        {
-          "name"            => "John",
-          "email"           => "jon@example.com",
-          "response_status" => "tentative",
-          "resource"        => false,
-          "checked_in"      => false,
-          "visit_expected"  => true,
-          "extension_data"  => {"fizz" => "buzz"},
-        },
-        {
-          "name"            => "RM-AU-DP-L105-Swiss-Alps",
-          "email"           => "rmaudpswissalps@booking.demo.acaengine.com",
-          "response_status" => "needsAction",
-          "resource"        => false,
-          "extension_data"  => {} of String => String?,
-        },
-        {
-          "name"            => "Developer",
-          "email"           => "dev@acaprojects.onmicrosoft.com",
-          "response_status" => "accepted",
-          "resource"        => false,
-          "checked_in"      => false,
-          "visit_expected"  => true,
-          "extension_data"  => {} of String => String?,
-        },
-      ],
-      "location"    => "",
-      "private"     => true,
-      "all_day"     => false,
-      "timezone"    => "Australia/Sydney",
-      "recurring"   => false,
-      "attachments" => [] of String,
-      "status"      => "confirmed",
-      "creator"     => "dev@acaprojects.onmicrosoft.com",
-      "calendar"    => "room1@example.com",
-      "system"      => {
-        "created_at"           => 1562041110,
-        "updated_at"           => 1562041120,
-        "id"                   => "sys-rJQQlR4Cn7",
-        "name"                 => "Room 1",
-        "zones"                => ["zone-rGhCRp_aUD"],
-        "modules"              => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"],
-        "email"                => "room1@example.com",
-        "capacity"             => 10,
-        "features"             => [] of String,
-        "bookable"             => true,
-        "installed_ui_devices" => 0,
-        "version"              => 5,
-      },
-      "extension_data" => {"foo" => "bar"},
-    }
   end
 
   def update_event_output
