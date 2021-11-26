@@ -5,9 +5,6 @@ require "./helpers/spec_clean_up"
 EVENTS_BASE = Events.base_route
 
 describe Events do
-  systems_json = File.read("./spec/fixtures/placeos/systems.json")
-  systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
-
   before_each do
     EventsHelper.stub_event_tokens
   end
@@ -76,12 +73,7 @@ describe Events do
 
       now = 1588407645
       later = 1588422097
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
 
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
       count = 1
@@ -531,7 +523,7 @@ describe Events do
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # guest_list
-      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+      Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
       # guests.should eq(EventsHelper.guests_list_output)
       # guests.to_s.includes?(%("id" => "sys-rJQQlR4Cn7"))
 
