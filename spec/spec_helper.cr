@@ -160,4 +160,12 @@ module Context(T, M)
 
     {ctx.response.status_code, body}
   end
+
+  def delete_response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
+    ctx = instantiate_context(method, route, route_params, headers, body)
+    instance = T.new(ctx)
+    yield instance
+    ctx.response.output.rewind
+    {ctx.response.status_code}
+  end
 end

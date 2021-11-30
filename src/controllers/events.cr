@@ -229,7 +229,7 @@ class Events < Application
     changes = PlaceCalendar::Event.from_json(request.body.as(IO))
 
     # Guests can update extension_data to indicate their order
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, guest_system_id = user.roles
       head :forbidden unless changes.extension_data && event_id == guest_event_id && query_params["system_id"]? == guest_system_id
     end
@@ -264,7 +264,7 @@ class Events < Application
     end
 
     # Guests can only update the extension_data
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       # We expect the metadata to exist when a guest is accessing
       meta = get_migrated_metadata(event, system_id.not_nil!).not_nil!
 
@@ -519,7 +519,7 @@ class Events < Application
     placeos_client = get_placeos_client
 
     # Guest access
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, system_id = user.roles
       guest_email = user.email.downcase
 
@@ -562,7 +562,7 @@ class Events < Application
       head(:not_found) unless event
 
       # ensure we have the host event details
-      if client.client_id == :office365 && event.host != calendar_id
+      if client.client_id == :office365 && event.host != cal_id
         event = get_hosts_event(event)
         event_id = event.id.not_nil!
       end
@@ -715,7 +715,7 @@ class Events < Application
     guest_id = route_params["guest_id"].downcase
     host_mailbox = query_params["host_mailbox"]?.try &.downcase
 
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, system_id = user.roles
       guest_token_email = user.email.downcase
 

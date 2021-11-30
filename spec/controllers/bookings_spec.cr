@@ -3,7 +3,7 @@ require "./helpers/spec_clean_up"
 
 describe Bookings do
   describe "#index" do
-    pending "should return a list of bookings" do
+    it "should return a list of bookings" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
       BookingsHelper.create_booking(tenant.id)
       BookingsHelper.create_booking(tenant_id: tenant.id,
@@ -14,20 +14,20 @@ describe Bookings do
         booking_end: 30.minutes.from_now.to_unix)
 
       starting = 5.minutes.from_now.to_unix
-      ending = 40.minutes.from_now.to_unix
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+      ending = 90.minutes.from_now.to_unix
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=jon@example.com&type=desk"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
-      body.size.should eq(2)
+      body.size.should eq(1)
 
       # filter by zones
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
-      body.size.should eq(1)
+      body.size.should eq(2)
 
       # More filters by zones
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-4127"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
-      body.size.should eq(2)
+      body.size.should eq(1)
     end
 
     it "should filter by ext data" do
@@ -119,28 +119,30 @@ describe Bookings do
     booking_user_ids.should eq(["dave"])
   end
 
-  pending "#destroy should delete a booking" do
+  it "#destroy should delete a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant.id)
+    BookingsHelper.create_booking(
+      tenant.id, user_id: "toby@redant.com.au",
+      user_email: "toby@redant.com.au")
     booking = BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "bob@example.com",
-      user_email: "bob@example.com",
+      user_id: "toby@redant.com.au",
+      user_email: "toby@redant.com.au",
       asset_id: "asset-2",
       zones: ["zone-4127", "zone-890"],
       booking_end: 30.minutes.from_now.to_unix)
 
     # Check both are returned in beginning
     starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
+    ending = 80.minutes.from_now.to_unix
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
 
-    Context(Bookings, JSON::Any).response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)[1].as_h
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Check only one is returned after deletion
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
