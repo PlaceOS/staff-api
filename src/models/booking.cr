@@ -10,6 +10,9 @@ class Booking
   column asset_id : String
   column zones : Array(String)? # default in migration
 
+  # column email : PlaceOS::Model::Email?
+  column email_digest : String?
+
   column booking_type : String
   column booking_start : Int64
   column booking_end : Int64
@@ -32,6 +35,8 @@ class Booking
 
   column booked_by_id : String
   column booked_by_email : String
+
+  column booked_by_email_digest : String?
   column booked_by_name : String
 
   # if we want to record the system that performed the bookings
@@ -57,11 +62,15 @@ class Booking
   before(:save) do |m|
     booking_model = m.as(Booking)
     booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
-    booking_model.booked_by_email = booking_model.booked_by_email.downcase
+    booking_model.booked_by_email = booking_model.booked_by_email
+
     booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
-    booking_model.user_email = booking_model.user_email.downcase
     booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
-    booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
+    booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
+
+    booking_model.email_digest = Digest::MD5.hexdigest(booking_model.user_email.downcase)
+
+    booking_model.booked_by_email_digest = Digest::MD5.hexdigest(booking_model.booked_by_email.downcase)
   end
 
   def set_created
@@ -90,15 +99,19 @@ class Booking
     user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
     user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
 
-    if user_id_value && user_email_value
-      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}'#{booked_by})))
+    # with email digest
+
+    email_digest = Digest::MD5.hexdigest(user_email_value.to_s.strip.downcase) if user_email_value
+
+    if user_id_value && email_digest
+      where(%(("user_id" = '#{user_id_value}' OR "email_digest" = '#{email_digest}'#{booked_by})))
     elsif user_id_value
       # Not sure how to do OR's in clear
       where(%(("user_id" = '#{user_id_value}'#{booked_by})))
       # where(user_id: user_id_value)
-    elsif user_email_value
-      booked_by = include_booked_by ? %( OR "booked_by_email" = '#{user_email_value}') : ""
-      where(%(("user_email" = '#{user_email_value}'#{booked_by})))
+    elsif email_digest
+      booked_by = include_booked_by ? %( OR "booked_by_email_digest" = '#{email_digest}') : ""
+      where(%(("email_digest" = '#{email_digest}'#{booked_by})))
       # where(user_email: user_email_value)
     else
       self

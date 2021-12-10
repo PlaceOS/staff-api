@@ -117,6 +117,11 @@ describe Bookings do
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     booking_user_ids = body.map { |r| r["user_id"] }
     booking_user_ids.should eq(["dave"])
+
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=DAVE@example.com"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    booking_user_ids = body.map { |r| r["user_id"] }
+    booking_user_ids.should eq(["dave"])
   end
 
   it "#destroy should delete a booking" do

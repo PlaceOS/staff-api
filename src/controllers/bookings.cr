@@ -19,14 +19,14 @@ class Bookings < Application
     zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
     query = query.by_zones(zones) unless zones.empty?
 
-    user_email = query_params["email"]?.presence.try(&.downcase)
+    user_email = query_params["email"]?.presence
     user_id = query_params["user"]?.presence
-    include_booked_by = query_params["include_booked_by"]?.presence.try(&.strip.downcase) == "true"
+    include_booked_by = query_params["include_booked_by"]?.presence.try(&.strip) == "true"
 
     # We want to do a special current user query if no user details are provided
     if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
       user_id = user_token.id
-      user_email = user.email.downcase
+      user_email = user.email
     end
 
     query = query.by_user_or_email(user_id, user_email, include_booked_by)
