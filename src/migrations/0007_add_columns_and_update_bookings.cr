@@ -10,7 +10,6 @@ class AddColumnsAndUpdateBookingsToEventMetadatas
       execute("ALTER TABLE bookings ADD COLUMN process_state TEXT")
 
       execute("ALTER TABLE bookings ADD COLUMN email_digest TEXT")
-
       execute("ALTER TABLE bookings ADD COLUMN booked_by_email_digest TEXT")
 
       execute("CREATE INDEX bookings_process_state_idx ON bookings (process_state)")

@@ -291,7 +291,7 @@ module BookingsHelper
     Booking.create!(
       tenant_id: tenant_id,
       user_id: user_id,
-      user_email: user_email,
+      user_email: PlaceOS::Model::Email.new(user_email),
       user_name: user_name,
       asset_id: asset_id,
       zones: zones,
@@ -301,7 +301,7 @@ module BookingsHelper
       checked_in: false,
       approved: false,
       rejected: false,
-      booked_by_email: booked_by_email,
+      booked_by_email: PlaceOS::Model::Email.new(booked_by_email),
       booked_by_id: booked_by_id,
       booked_by_name: booked_by_name,
     )
