@@ -39,6 +39,7 @@ class Bookings < Application
 
     query = query
       .order_by(:booking_start, :desc)
+      .where(deleted: false)
       .limit(20000)
 
     response.headers["x-placeos-rawsql"] = query.to_sql
@@ -311,7 +312,10 @@ class Bookings < Application
   end
 
   def destroy
-    booking.delete
+    booking.set({
+      deleted:    true,
+      deleted_at: Time.local,
+    }).save!
 
     spawn do
       begin

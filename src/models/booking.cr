@@ -18,6 +18,9 @@ class Booking
   column title : String?
   column description : String?
 
+  column deleted : Bool, presence: false
+  column deleted_at : Time?
+
   column checked_in : Bool, presence: false
   column checked_in_at : Int64?
   column checked_out_at : Int64?

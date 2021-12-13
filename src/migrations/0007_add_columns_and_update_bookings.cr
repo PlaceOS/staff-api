@@ -8,6 +8,7 @@ class AddColumnsAndUpdateBookingsToEventMetadatas
       execute("ALTER TABLE bookings ADD COLUMN booked_by_email TEXT")
       execute("ALTER TABLE bookings ADD COLUMN booked_by_name TEXT")
       execute("ALTER TABLE bookings ADD COLUMN process_state TEXT")
+      execute("ALTER TABLE bookings ADD COLUMN deleted_at TEXT")
 
       execute("CREATE INDEX bookings_process_state_idx ON bookings (process_state)")
 
@@ -22,6 +23,7 @@ class AddColumnsAndUpdateBookingsToEventMetadatas
       execute("ALTER TABLE bookings DROP COLUMN booked_by_id")
       execute("ALTER TABLE bookings DROP COLUMN booked_by_email")
       execute("ALTER TABLE bookings DROP COLUMN booked_by_name")
+      execute("ALTER TABLE bookings DROP COLUMN deleted_at")
 
       execute("DROP INDEX IF EXISTS bookings_process_state_idx")
       execute("ALTER TABLE bookings DROP COLUMN process_state")
