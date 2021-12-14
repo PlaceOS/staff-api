@@ -170,7 +170,7 @@ describe Guests do
     updated["dangerous"].should eq(true)
     updated["extension_data"].should eq({"test" => "data", "other" => "info"})
 
-    guest = Guest.query.find!({email: updated["email"]})
+    guest = Guest.query.by_tenant(tenant.id).find!({email: updated["email"]})
     guest.extension_data.as_h.should eq({"test" => "data", "other" => "info"})
   end
 

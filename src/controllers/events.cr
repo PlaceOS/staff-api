@@ -164,7 +164,7 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.find({email: email})
+            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
                       existing_guest.name = attendee.name if existing_guest.name != attendee.name
                       existing_guest
                     else
@@ -407,7 +407,7 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.find({email: email})
+            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
                       existing_guest
                     else
                       Guest.new({
