@@ -20,6 +20,9 @@ class Booking
   column title : String?
   column description : String?
 
+  column deleted : Bool, presence: false
+  column deleted_at : Time
+
   column checked_in : Bool, presence: false
   column checked_in_at : Int64?
   column checked_out_at : Int64?
@@ -63,6 +66,7 @@ class Booking
     booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
     booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
     booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
+    booking_model.deleted_at = Time.unix(0) if !booking_model.deleted_at_column.defined?
     booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest

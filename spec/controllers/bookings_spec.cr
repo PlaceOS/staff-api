@@ -155,6 +155,47 @@ describe Bookings do
     body.size.should eq(1)
   end
 
+  it "#true query param should return deleted bookings" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    booking1 = BookingsHelper.create_booking(
+      tenant.id, user_id: "toby@redant.com.au",
+      user_email: "toby@redant.com.au")
+    booking2 = booking = BookingsHelper.create_booking(tenant_id: tenant.id,
+      user_id: "toby@redant.com.au",
+      user_email: "toby@redant.com.au",
+      asset_id: "asset-2",
+      zones: ["zone-4127", "zone-890"],
+      booking_end: 30.minutes.from_now.to_unix)
+
+    # Check both are returned in beginning
+    starting = 5.minutes.from_now.to_unix
+    ending = 80.minutes.from_now.to_unix
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body.size.should eq(2)
+
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking1.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+
+    # Return one deleted booking
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body.size.should eq(1)
+    body.first["id"].should eq(booking1.id)
+
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking2.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+
+    # Return both deleted bookings
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body.size.should eq(2)
+    booking_user_ids = body.map { |r| r["id"] }
+    booking_user_ids.should eq([booking1.id, booking2.id])
+  end
+
   it "#create should create and #update should update a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
