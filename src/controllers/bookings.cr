@@ -11,6 +11,7 @@ class Bookings < Application
     starting = query_params["period_start"].to_i64
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
+    deleted_flag = query_params["deleted"]? || false
 
     query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
@@ -39,7 +40,7 @@ class Bookings < Application
 
     query = query
       .order_by(:booking_start, :desc)
-      .where(deleted: false)
+      .where(deleted: deleted_flag)
       .limit(20000)
 
     response.headers["x-placeos-rawsql"] = query.to_sql

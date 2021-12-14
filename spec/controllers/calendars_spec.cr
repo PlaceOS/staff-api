@@ -50,6 +50,8 @@ describe Calendars do
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: "")
 
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
