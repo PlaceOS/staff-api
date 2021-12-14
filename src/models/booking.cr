@@ -5,10 +5,12 @@ class Booking
   column id : Int64, primary: true, presence: false
 
   column user_id : String
-  column user_email : String
+  column user_email : PlaceOS::Model::Email
   column user_name : String
   column asset_id : String
   column zones : Array(String)? # default in migration
+
+  column email_digest : String?
 
   column booking_type : String
   column booking_start : Int64
@@ -31,7 +33,9 @@ class Booking
   column approver_name : String?
 
   column booked_by_id : String
-  column booked_by_email : String
+  column booked_by_email : PlaceOS::Model::Email
+
+  column booked_by_email_digest : String?
   column booked_by_name : String
 
   # if we want to record the system that performed the bookings
@@ -57,11 +61,11 @@ class Booking
   before(:save) do |m|
     booking_model = m.as(Booking)
     booking_model.user_id = booking_model.booked_by_id if !booking_model.user_id_column.defined?
-    booking_model.booked_by_email = booking_model.booked_by_email.downcase
     booking_model.user_email = booking_model.booked_by_email if !booking_model.user_email_column.defined?
-    booking_model.user_email = booking_model.user_email.downcase
     booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
-    booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
+    booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
+    booking_model.email_digest = booking_model.user_email.digest
+    booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
   end
 
   def set_created
@@ -80,26 +84,21 @@ class Booking
     user_id ? where(user_id: user_id) : self
   end
 
-  scope :by_user_email do |user_email|
-    user_email ? where(user_email: user_email) : self
-  end
-
   scope :by_user_or_email do |user_id_value, user_email_value, include_booked_by|
     # TODO:: interpolate these values properly
     booked_by = include_booked_by ? %( OR "booked_by_id" = '#{user_id_value}') : ""
     user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
     user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
 
-    if user_id_value && user_email_value
-      where(%(("user_id" = '#{user_id_value}' OR "user_email" = '#{user_email_value}'#{booked_by})))
+    user_email_digest = PlaceOS::Model::Email.new(user_email_value.to_s).digest if user_email_value
+
+    if user_id_value && user_email_digest
+      where(%(("user_id" = '#{user_id_value}' OR "email_digest" = '#{user_email_digest}'#{booked_by})))
     elsif user_id_value
-      # Not sure how to do OR's in clear
       where(%(("user_id" = '#{user_id_value}'#{booked_by})))
-      # where(user_id: user_id_value)
-    elsif user_email_value
-      booked_by = include_booked_by ? %( OR "booked_by_email" = '#{user_email_value}') : ""
-      where(%(("user_email" = '#{user_email_value}'#{booked_by})))
-      # where(user_email: user_email_value)
+    elsif user_email_digest
+      booked_by = include_booked_by ? %( OR "booked_by_email_digest" = '#{user_email_digest}') : ""
+      where(%(("email_digest" = '#{user_email_digest}'#{booked_by})))
     else
       self
     end
@@ -189,7 +188,7 @@ class Booking
       timezone:        timezone,
       asset_id:        asset_id,
       user_id:         user_id,
-      user_email:      user_email,
+      user_email:      user_email.to_s,
       user_name:       user_name,
       zones:           zones,
       process_state:   process_state,
@@ -206,7 +205,7 @@ class Booking
       checked_in_at:   checked_in_at,
       checked_out_at:  checked_out_at,
       description:     description,
-      booked_by_email: booked_by_email,
+      booked_by_email: booked_by_email.to_s,
       booked_by_name:  booked_by_name,
       extension_data:  extension_data,
     }

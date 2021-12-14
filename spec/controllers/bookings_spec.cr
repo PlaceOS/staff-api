@@ -117,6 +117,11 @@ describe Bookings do
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     booking_user_ids = body.map { |r| r["user_id"] }
     booking_user_ids.should eq(["dave"])
+
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=DAVE@example.com"
+    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    booking_user_ids = body.map { |r| r["user_id"] }
+    booking_user_ids.should eq(["dave"])
   end
 
   it "#destroy should delete a booking" do
@@ -286,7 +291,7 @@ module BookingsHelper
     Booking.create!(
       tenant_id: tenant_id,
       user_id: user_id,
-      user_email: user_email,
+      user_email: PlaceOS::Model::Email.new(user_email),
       user_name: user_name,
       asset_id: asset_id,
       zones: zones,
@@ -296,7 +301,7 @@ module BookingsHelper
       checked_in: false,
       approved: false,
       rejected: false,
-      booked_by_email: booked_by_email,
+      booked_by_email: PlaceOS::Model::Email.new(booked_by_email),
       booked_by_id: booked_by_id,
       booked_by_name: booked_by_name,
     )
