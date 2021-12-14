@@ -19,7 +19,7 @@ class Booking
   column description : String?
 
   column deleted : Bool, presence: false
-  column deleted_at : Time?
+  column deleted_at : Time
 
   column checked_in : Bool, presence: false
   column checked_in_at : Int64?
@@ -65,6 +65,7 @@ class Booking
     booking_model.user_email = booking_model.user_email.downcase
     booking_model.user_name = booking_model.booked_by_name if !booking_model.user_name_column.defined?
     booking_model.approver_email = booking_model.approver_email.try(&.downcase) if booking_model.approver_email_column.defined?
+    booking_model.deleted_at = Time.unix(0) if !booking_model.deleted_at_column.defined?
   end
 
   def set_created
