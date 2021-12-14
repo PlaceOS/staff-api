@@ -154,6 +154,7 @@ describe Guests do
   end
 
   it "#create & #update" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
     created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
