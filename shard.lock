@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 4.5.1
+    version: 4.7.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -91,7 +91,7 @@ shards:
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
-    version: 1.8.0
+    version: 1.10.0
 
   office365:
     git: https://github.com/placeos/office365.git
@@ -111,7 +111,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.4.3+git.commit.1442b8dd35eca298388cc7f4d3da5d9f622de71f
+    version: 2.5.0+git.commit.6717bcb51fe10d113a7a36c9f2308130973c26dc
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -119,7 +119,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.14.0
+    version: 5.15.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -131,7 +131,7 @@ shards:
 
   rethinkdb:
     git: https://github.com/place-labs/crystal-rethinkdb.git
-    version: 0.3.1+git.commit.af92ace5eb60e861a41b93456ac5d73b80feb7bb
+    version: 0.3.1+git.commit.07ce7c694a367efe3af9f8cb5670bc4bff5b6df0
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
