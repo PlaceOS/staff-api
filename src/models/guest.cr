@@ -160,7 +160,7 @@ class Guest
 
   # TODO: Update to take tenant_id into account
   private def validate_email_uniqueness
-    if (!persisted? && email_column.defined? && Guest.query.find { raw("email = '#{self.email}'") }) || (persisted? && Guest.query.find { raw("email = '#{self.email}'") & raw("id != '#{self.id}'") })
+    if (!persisted? && email_column.defined? && Guest.query.by_tenant(tenant.id).find { raw("email = '#{self.email}'") }) || (persisted? && Guest.query.by_tenant(tenant.id).find { raw("email = '#{self.email}'") & raw("id != '#{self.id}'") })
       add_error("email", "duplicate error. A guest with this email already exists")
     end
   end
