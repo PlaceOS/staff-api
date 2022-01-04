@@ -209,6 +209,8 @@ class Booking
       checked_in_at:   checked_in_at,
       checked_out_at:  checked_out_at,
       description:     description,
+      deleted:         deleted,
+      deleted_at:      deleted_at,
       booked_by_email: booked_by_email.to_s,
       booked_by_name:  booked_by_name,
       extension_data:  extension_data,
