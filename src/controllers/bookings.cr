@@ -417,7 +417,7 @@ class Bookings < Application
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE",
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
