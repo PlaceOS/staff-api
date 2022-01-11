@@ -27,7 +27,6 @@ class CreateBookingsMigration
         t.column :approver_email, :string
         t.column :approver_name, :string
 
-        t.column :deleted, :boolean, default: "false"
         t.column :ext_data, :jsonb, default: "'{}'"
         t.timestamps
       end

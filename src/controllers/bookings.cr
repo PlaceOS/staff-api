@@ -315,7 +315,7 @@ class Bookings < Application
   def destroy
     booking.set({
       deleted:    true,
-      deleted_at: Time.local,
+      deleted_at: Time.local.to_unix,
     }).save!
 
     spawn do
