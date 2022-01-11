@@ -23,9 +23,6 @@ class AddColumnsAndUpdateBookingsToEventMetadatas
       execute("ALTER TABLE bookings DROP COLUMN booked_by_email")
       execute("ALTER TABLE bookings DROP COLUMN booked_by_name")
 
-      execute("ALTER TABLE bookings DROP COLUMN email_digest")
-      execute("ALTER TABLE bookings DROP COLUMN booked_by_email_digest")
-
       execute("DROP INDEX IF EXISTS bookings_process_state_idx")
       execute("ALTER TABLE bookings DROP COLUMN process_state")
     end
