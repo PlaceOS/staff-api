@@ -1,4 +1,4 @@
-class AssociateAttendeeWithBooking
+class AddDeletedAtAndEmailDigest
   include Clear::Migration
 
   def change(direction)
