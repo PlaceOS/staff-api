@@ -74,6 +74,10 @@ class Bookings < Application
     booking.booked_by_email = PlaceOS::Model::Email.new(user.email)
     booking.booked_by_name = user.name
 
+    # check concurrent bookings don't exceed booking limits
+    concurrent_bookings = check_concurrent_bookings(booking)
+    render :conflict, json: concurrent_bookings.first if concurrent_bookings.size >= 2 # TODO: Change the limit to be configurable
+
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
     # Grab the list of attendees
@@ -419,6 +423,23 @@ class Bookings < Application
       .where(
         "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
+      )
+    query = query.where { id != new_booking.id } if new_booking.id_column.defined?
+    query.to_a
+  end
+
+  private def check_concurrent_bookings(new_booking)
+    # check for concurrent bookings
+    starting = new_booking.booking_start
+    ending = new_booking.booking_end
+    booking_type = new_booking.booking_type
+    booked_by_id = new_booking.booked_by_id
+
+    query = Booking.query
+      .by_tenant(tenant.id)
+      .where(
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND booked_by_id = :booked_by_id AND rejected = FALSE AND deleted <> TRUE",
+        starting: starting, ending: ending, booking_type: booking_type, booked_by_id: booked_by_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
     query.to_a
