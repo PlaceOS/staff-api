@@ -433,13 +433,13 @@ class Bookings < Application
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    booked_by_id = new_booking.booked_by_id
+    user_id = new_booking.user_id
 
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND booked_by_id = :booked_by_id AND rejected = FALSE AND deleted <> TRUE",
-        starting: starting, ending: ending, booking_type: booking_type, booked_by_id: booked_by_id
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND user_id = :user_id AND rejected = FALSE AND deleted <> TRUE",
+        starting: starting, ending: ending, booking_type: booking_type, user_id: user_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
     query.to_a
