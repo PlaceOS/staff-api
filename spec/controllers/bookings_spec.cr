@@ -256,7 +256,7 @@ describe Bookings do
   end
 
   # add support for configurable booking limits on resources
-  it "#create and #update should respect booking limits", focus: true do
+  it "#create and #update should respect booking limits" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")

@@ -433,7 +433,7 @@ class Bookings < Application
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    user_id = new_booking.user_id
+    user_id = new_booking.user_id_column.defined? ? new_booking.user_id : new_booking.booked_by_id
 
     query = Booking.query
       .by_tenant(tenant.id)
