@@ -80,6 +80,20 @@ describe Bookings do
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq(["jon@example.com"])
     end
+
+    it "should return a list of bookings filtered current user when no zones or user is specified" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "toby@redant.com.au")
+      BookingsHelper.create_booking(tenant.id)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+      # Since we are using Toby's token to login, user=current means Toby
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      booking_user_ids = body.map { |r| r["user_id"] }
+      booking_user_ids.should eq(["toby@redant.com.au"])
+    end
   end
 
   it "#show should find booking" do
