@@ -56,6 +56,7 @@ class Tenant
   column domain : String
   column platform : String
   column credentials : String
+  column booking_limits : JSON::Any, presence: false
 
   has_many attendees : Attendee, foreign_key: "tenant_id"
   has_many guests : Guest, foreign_key: "tenant_id"

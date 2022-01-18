@@ -75,8 +75,12 @@ class Bookings < Application
     booking.booked_by_name = user.name
 
     # check concurrent bookings don't exceed booking limits
-    concurrent_bookings = check_concurrent_bookings(booking)
-    render :conflict, json: concurrent_bookings.first if concurrent_bookings.size >= 2 # TODO: Change the limit to be configurable
+    if booking_limits = tenant.booking_limits.as_h?
+      if limit = booking_limits[booking.booking_type]?
+        concurrent_bookings = check_concurrent_bookings(booking)
+        render :conflict, json: concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
+      end
+    end
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -220,6 +224,14 @@ class Bookings < Application
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(existing_booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+
+    # check concurrent bookings don't exceed booking limits
+    if booking_limits = tenant.booking_limits.as_h?
+      if limit = booking_limits[booking.booking_type]?
+        concurrent_bookings = check_concurrent_bookings(booking)
+        render :conflict, json: concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
+      end
+    end
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
