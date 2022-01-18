@@ -304,6 +304,42 @@ describe Bookings do
     not_updated.should eq(409)
   end
 
+  it "#update limit check can't clash with itself when updating a booking" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    # Set booking limit
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant.booking_limits = JSON.parse(%({"desk": 2}))
+    tenant.save!
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 40.minutes.from_now.to_unix
+    different_starting = 20.minutes.from_now.to_unix
+    different_ending = 60.minutes.from_now.to_unix
+
+    first_booking = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/",
+      body: %({"asset_id":"first_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}),
+      headers: Mock::Headers.office365_guest, &.create)[1].as_h
+    first_booking["asset_id"].should eq("first_desk")
+
+    second_booking = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/",
+      body: %({"asset_id":"second_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}),
+      headers: Mock::Headers.office365_guest, &.create)[1].as_h
+    second_booking["asset_id"].should eq("second_desk")
+
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{second_booking["id"]}",
+      route_params: {"id" => second_booking["id"].to_s},
+      body: %({"booking_start":#{different_starting},"booking_end":#{different_ending}}),
+      headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    updated["booking_start"].should eq(different_starting)
+    updated["booking_end"].should eq(different_ending)
+  end
+
   it "#prevents a booking being saved with an end time before the start time" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     expect_raises(Clear::Model::InvalidError) do

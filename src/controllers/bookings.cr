@@ -227,8 +227,8 @@ class Bookings < Application
 
     # check concurrent bookings don't exceed booking limits
     if booking_limits = tenant.booking_limits.as_h?
-      if limit = booking_limits[booking.booking_type]?
-        concurrent_bookings = check_concurrent_bookings(booking)
+      if limit = booking_limits[existing_booking.booking_type]?
+        concurrent_bookings = check_concurrent_bookings(existing_booking)
         render :conflict, json: concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
       end
     end
