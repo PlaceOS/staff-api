@@ -340,7 +340,7 @@ describe Bookings do
     updated["booking_end"].should eq(different_ending)
   end
 
-  it "#create and #update should respect booking limits when booking on behalf of other users", focus: true do
+  it "#create and #update should respect booking limits when booking on behalf of other users" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
