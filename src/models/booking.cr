@@ -1,6 +1,17 @@
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any)
+  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any, current_state: State)
+
+  enum State
+    Reserved    # booking starts in the future, no one has checked-in and it hasn't been deleted
+    Checked_In  # booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
+    Checked_Out # the user checked out during the start and end times
+    No_Show     # it's past the end time of the booking and it was never checked in
+    Rejected    # someone rejected the booking before it started
+    Canceled    # the booking was deleted before the booking start time
+    Ended       # the current time is past the end of the booking, the user checked-in however never checked-out
+    Unknown
+  end
 
   column id : Int64, primary: true, presence: false
 
@@ -182,6 +193,38 @@ class Booking
     where("( #{query} )")
   end
 
+  def current_state : State
+    if booking_start > Time.local.to_unix && !checked_in && !deleted && !rejected
+      State::Reserved
+    elsif booking_start <= Time.local.to_unix && booking_end >= Time.local.to_unix && checked_in
+      State::Checked_In
+    elsif out_at = checked_out_at
+      if booking_start <= out_at && booking_end >= out_at
+        State::Checked_Out
+      else
+        State::Unknown
+      end
+    elsif !checked_in_at && booking_end < Time.local.to_unix
+      State::No_Show
+    elsif r_at = rejected_at
+      if booking_start > r_at && rejected
+        State::Rejected
+      else
+        State::Unknown
+      end
+    elsif del_at = deleted_at
+      if booking_start > del_at && deleted
+        State::Canceled
+      else
+        State::Unknown
+      end
+    elsif booking_end < Time.local.to_unix && checked_in && !checked_out_at
+      State::Ended
+    else
+      State::Unknown
+    end
+  end
+
   def as_h : AsHNamedTuple
     {
       id:              id,
@@ -213,6 +256,7 @@ class Booking
       booked_by_email: booked_by_email.to_s,
       booked_by_name:  booked_by_name,
       extension_data:  extension_data,
+      current_state:   current_state,
     }
   end
 end

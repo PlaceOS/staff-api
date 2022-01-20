@@ -105,6 +105,56 @@ describe Bookings do
     body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
+  it "#show should include the current state" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+    booking = BookingsHelper.create_booking(tenant.id)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("reserved")
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.ago.to_unix,
+      booking_end: 1.hour.from_now.to_unix)
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("checked_in")
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.ago.to_unix,
+      booking_end: 1.hour.from_now.to_unix)
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("checked_out")
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 45.minutes.ago.to_unix,
+      booking_end: 5.minutes.ago.to_unix)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("no_show")
+
+    booking = BookingsHelper.create_booking(tenant.id)
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("rejected")
+
+    booking = BookingsHelper.create_booking(tenant.id)
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("canceled")
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 20.minutes.ago.to_unix,
+      booking_end: 5.minutes.ago.to_unix)
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["current_state"].should eq("ended")
+  end
+
   it "#guest_list should list guests for a booking" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
