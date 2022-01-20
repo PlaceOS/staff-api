@@ -66,9 +66,9 @@ class Tenant
 
   def validate
     validate_columns
+    validate_booking_limits
     validate_domain_uniqueness
     validate_credentials_for_platform
-    validate_booking_limits
   end
 
   def as_json
