@@ -125,7 +125,7 @@ class Tenant
   # Try parsing the JSON for booking limits to test that it works
   private def validate_booking_limits
     if booking_limits_column.defined?
-      Hash(String, Int32).from_json booking_limits.to_json
+      Hash(String, Int32).from_json(booking_limits.to_json)
     end
   rescue e : JSON::ParseException
     add_error("booking_limits", e.message.to_s)
