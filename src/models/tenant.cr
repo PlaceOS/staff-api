@@ -68,6 +68,7 @@ class Tenant
     validate_columns
     validate_domain_uniqueness
     validate_credentials_for_platform
+    validate_booking_limits
   end
 
   def as_json
@@ -119,6 +120,15 @@ class Tenant
     end
   rescue e : JSON::MappingError | JSON::SerializableError
     add_error("credentials", e.message.to_s)
+  end
+
+  # Try parsing the JSON for booking limits to test that it works
+  private def validate_booking_limits
+    if booking_limits_column.defined?
+      Hash(String, Int32).from_json booking_limits.to_json
+    end
+  rescue e : JSON::ParseException
+    add_error("booking_limits", e.message.to_s)
   end
 
   def place_calendar_client

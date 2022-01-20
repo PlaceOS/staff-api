@@ -48,6 +48,17 @@ describe Tenant do
     a.booking_limits.should eq({"desk" => 2})
   end
 
+  it "should validate booking limits" do
+    a = TenantsHelper.create_tenant({
+      name:           "Jon2",
+      platform:       "google",
+      domain:         "google.staff-api.dev",
+      credentials:    %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+      booking_limits: %({"desk": "2"}),
+    })
+    a.errors.size.should eq 1
+  end
+
   it "check encryption" do
     t = TenantsHelper.create_tenant
     t.is_encrypted?.should be_true
