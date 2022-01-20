@@ -122,7 +122,7 @@ class Tenant
     add_error("credentials", e.message.to_s)
   end
 
-  # Try parsing the JSON for booking limits to test that it works
+  # Try parsing the JSON for booking limits in lieu of a stronger column type
   private def validate_booking_limits
     if booking_limits_column.defined?
       Hash(String, Int32).from_json(booking_limits.to_json)
