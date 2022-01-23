@@ -269,6 +269,145 @@ describe Bookings do
     guest.email.should eq("jon@example.com")
   end
 
+  # add support for configurable booking limits on resources
+  it "#create and #update should respect booking limits" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    # Set booking limit
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant.booking_limits = JSON.parse(%({"desk": 2}))
+    tenant.save!
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 40.minutes.from_now.to_unix
+    common = {
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end:   40.minutes.from_now.to_unix,
+      booking_type:  "desk",
+    }
+    different_starting = 45.minutes.from_now.to_unix
+    different_ending = 55.minutes.from_now.to_unix
+
+    first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+    first_booking["asset_id"].should eq("first_desk")
+
+    second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+    second_booking["asset_id"].should eq("second_desk")
+
+    # Fail to create booking due to limit
+    not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
+    not_created.should eq(409)
+
+    # Create third booking at a different time
+    third_booking = BookingsHelper.http_create_booking(
+      booking_start: different_starting,
+      booking_end: different_ending,
+      booking_type: "desk",
+      asset_id: "third_desk")[1].as_h
+    third_booking["asset_id"].should eq("third_desk")
+
+    # Fail to change booking due to limit
+    not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
+      route_params: {"id" => third_booking["id"].to_s},
+      body: %({"booking_start":#{starting},"booking_end":#{ending}}),
+      headers: Mock::Headers.office365_guest, &.update)[0]
+    not_updated.should eq(409)
+  end
+
+  it "#update limit check can't clash with itself when updating a booking" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    # Set booking limit
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant.booking_limits = JSON.parse(%({"desk": 2}))
+    tenant.save!
+
+    common = {
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end:   40.minutes.from_now.to_unix,
+      booking_type:  "desk",
+    }
+    different_starting = 20.minutes.from_now.to_unix
+    different_ending = 60.minutes.from_now.to_unix
+
+    first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+    first_booking["asset_id"].should eq("first_desk")
+
+    second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+    second_booking["asset_id"].should eq("second_desk")
+
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{second_booking["id"]}",
+      route_params: {"id" => second_booking["id"].to_s},
+      body: %({"booking_start":#{different_starting},"booking_end":#{different_ending}}),
+      headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    updated["booking_start"].should eq(different_starting)
+    updated["booking_end"].should eq(different_ending)
+  end
+
+  it "#create and #update should respect booking limits when booking on behalf of other users" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    # Set booking limit
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant.booking_limits = JSON.parse(%({"desk": 2}))
+    tenant.save!
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 40.minutes.from_now.to_unix
+    different_starting = 45.minutes.from_now.to_unix
+    different_ending = 55.minutes.from_now.to_unix
+
+    common = {
+      booking_start: starting,
+      booking_end:   ending,
+      booking_type:  "desk",
+      user_id:       "bob@example.com",
+      user_email:    "bob@example.com",
+    }
+
+    first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+    first_booking["asset_id"].should eq("first_desk")
+
+    second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+    second_booking["asset_id"].should eq("second_desk")
+
+    # Fail to create booking due to limit
+    not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
+    not_created.should eq(409)
+
+    # Create third booking at a different time
+    third_booking = BookingsHelper.http_create_booking(
+      booking_start: different_starting,
+      booking_end: different_ending,
+      booking_type: "desk",
+      user_id: "bob@example.com",
+      user_email: "bob@example.com",
+      asset_id: "third_desk")[1].as_h
+    third_booking["asset_id"].should eq("third_desk")
+
+    # Fail to change booking due to limit
+    not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
+      route_params: {"id" => third_booking["id"].to_s},
+      body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
+      headers: Mock::Headers.office365_guest, &.update)[0]
+    not_updated.should eq(409)
+  end
+
   it "#prevents a booking being saved with an end time before the start time" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     expect_raises(Clear::Model::InvalidError) do
@@ -360,5 +499,37 @@ module BookingsHelper
       booked_by_id: booked_by_id,
       booked_by_name: booked_by_name,
     )
+  end
+
+  def http_create_booking(
+    user_id = nil,
+    user_email = nil,
+    user_name = nil,
+    asset_id = nil,
+    zones = nil,
+    booking_type = nil,
+    booking_start = 5.minutes.from_now.to_unix,
+    booking_end = 1.hour.from_now.to_unix,
+    booked_by_email = nil,
+    booked_by_id = nil,
+    booked_by_name = nil
+  )
+    body = {
+      user_id:         user_id,
+      user_email:      user_email ? PlaceOS::Model::Email.new(user_email) : nil,
+      user_name:       user_name,
+      asset_id:        asset_id,
+      zones:           zones,
+      booking_type:    booking_type,
+      booking_start:   booking_start,
+      booking_end:     booking_end,
+      booked_by_email: booked_by_email ? PlaceOS::Model::Email.new(booked_by_email) : nil,
+      booked_by_id:    booked_by_id,
+      booked_by_name:  booked_by_name,
+    }.to_h.compact!.to_json
+
+    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/",
+      body: body,
+      headers: Mock::Headers.office365_guest, &.create)
   end
 end

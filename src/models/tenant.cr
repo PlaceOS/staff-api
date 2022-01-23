@@ -56,6 +56,7 @@ class Tenant
   column domain : String
   column platform : String
   column credentials : String
+  column booking_limits : JSON::Any, presence: false
 
   has_many attendees : Attendee, foreign_key: "tenant_id"
   has_many guests : Guest, foreign_key: "tenant_id"
@@ -65,6 +66,7 @@ class Tenant
 
   def validate
     validate_columns
+    validate_booking_limits
     validate_domain_uniqueness
     validate_credentials_for_platform
   end
@@ -118,6 +120,15 @@ class Tenant
     end
   rescue e : JSON::MappingError | JSON::SerializableError
     add_error("credentials", e.message.to_s)
+  end
+
+  # Try parsing the JSON for booking limits in lieu of a stronger column type
+  private def validate_booking_limits
+    if booking_limits_column.defined?
+      Hash(String, Int32).from_json(booking_limits.to_json)
+    end
+  rescue e : JSON::ParseException
+    add_error("booking_limits", e.message.to_s)
   end
 
   def place_calendar_client
