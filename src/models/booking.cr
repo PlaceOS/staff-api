@@ -199,30 +199,16 @@ class Booking
     elsif booking_start <= Time.local.to_unix && booking_end >= Time.local.to_unix && checked_in
       State::Checked_In
     elsif out_at = checked_out_at
-      if booking_start <= out_at && booking_end >= out_at
-        State::Checked_Out
-      else
-        State::Unknown
-      end
+      State::Checked_Out if booking_start <= out_at && booking_end >= out_at
     elsif !checked_in_at && booking_end < Time.local.to_unix
       State::No_Show
     elsif r_at = rejected_at
-      if booking_start > r_at && rejected
-        State::Rejected
-      else
-        State::Unknown
-      end
+      State::Rejected if booking_start > r_at && rejected
     elsif del_at = deleted_at
-      if booking_start > del_at && deleted
-        State::Canceled
-      else
-        State::Unknown
-      end
+      State::Canceled if booking_start > del_at && deleted
     elsif booking_end < Time.local.to_unix && checked_in && !checked_out_at
       State::Ended
-    else
-      State::Unknown
-    end
+    end || State::Unknown
   end
 
   def as_h : AsHNamedTuple
