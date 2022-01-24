@@ -193,22 +193,75 @@ class Booking
     where("( #{query} )")
   end
 
+  # Booking starts in the future, no one has checked-in and it hasn't been deleted
+  protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
+    booking_start > current_time &&
+      !checked_in &&
+      !deleted &&
+      !rejected
+  end
+
+  # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
+  protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
+    checked_in &&
+      booking_start <= current_time &&
+      booking_end >= current_time
+  end
+
+  # The user checked out during the start and end times
+  protected def is_checked_out?
+    (co_at = checked_out_at) &&
+      booking_start <= co_at &&
+      booking_end >= co_at
+  end
+
+  # It's past the end time of the booking and it was never checked in
+  protected def is_no_show?(current_time : Int64 = Time.local.to_unix)
+    !checked_in_at &&
+      booking_end < current_time
+  end
+
+  # Someone rejected the booking before it started
+  protected def is_rejected?
+    rejected &&
+      (r_at = rejected_at) &&
+      booking_start > r_at
+  end
+
+  # The booking was deleted before the booking start time
+  protected def is_cancelled?
+    deleted &&
+      (del_at = deleted_at) &&
+      booking_start > del_at
+  end
+
+  # The current time is past the end of the booking, the user checked-in but never checked-out
+  protected def is_ended?(current_time : Int64 = Time.local.to_unix)
+    !checked_out_at &&
+      checked_in &&
+      booking_end < current_time
+  end
+
   def current_state : State
-    if booking_start > Time.local.to_unix && !checked_in && !deleted && !rejected
+    current_time = Time.local.to_unix # Are bookings normalised as UTC?
+
+    if is_reserved?(current_time)
       State::Reserved
-    elsif booking_start <= Time.local.to_unix && booking_end >= Time.local.to_unix && checked_in
-      State::Checked_In
-    elsif out_at = checked_out_at
-      State::Checked_Out if booking_start <= out_at && booking_end >= out_at
-    elsif !checked_in_at && booking_end < Time.local.to_unix
-      State::No_Show
-    elsif r_at = rejected_at
-      State::Rejected if booking_start > r_at && rejected
-    elsif del_at = deleted_at
-      State::Canceled if booking_start > del_at && deleted
-    elsif booking_end < Time.local.to_unix && checked_in && !checked_out_at
+    elsif is_checked_in?(current_time)
+      State::CheckedIn
+    elsif is_checked_out?
+      State::CheckedOut
+    elsif is_no_show?(current_time)
+      State::NoShow
+    elsif is_rejected?
+      State::Rejected
+    elsif is_cancelled?
+      State::Canceled
+    elsif is_ended?(current_time)
       State::Ended
-    end || State::Unknown
+    else
+      State::Unknown
+    end
   end
 
   def as_h : AsHNamedTuple
