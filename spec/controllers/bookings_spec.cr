@@ -145,7 +145,7 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id)
     Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("canceled")
+    body["current_state"].should eq("cancelled")
 
     booking = BookingsHelper.create_booking(tenant.id,
       booking_start: 20.minutes.ago.to_unix,

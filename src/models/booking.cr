@@ -243,22 +243,16 @@ class Booking
   end
 
   def current_state : State
-    current_time = Time.local.to_unix # Are bookings normalised as UTC?
+    current_time = Time.local.to_unix
 
-    if is_reserved?(current_time)
-      State::Reserved
-    elsif is_checked_in?(current_time)
-      State::CheckedIn
-    elsif is_checked_out?
-      State::CheckedOut
-    elsif is_no_show?(current_time)
-      State::NoShow
-    elsif is_rejected?
-      State::Rejected
-    elsif is_cancelled?
-      State::Canceled
-    elsif is_ended?(current_time)
-      State::Ended
+    case self
+    when .is_reserved?(current_time)   then State::Reserved
+    when .is_checked_in?(current_time) then State::CheckedIn
+    when .is_checked_out?              then State::CheckedOut
+    when .is_no_show?(current_time)    then State::NoShow
+    when .is_rejected?                 then State::Rejected
+    when .is_cancelled?                then State::Cancelled
+    when .is_ended?                    then State::Ended
     else
       State::Unknown
     end
