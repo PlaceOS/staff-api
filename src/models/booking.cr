@@ -1,6 +1,43 @@
+require "json"
+
+struct History
+  include JSON::Serializable
+
+  property state : Booking::State
+  property time : Int64
+  property source : String?
+
+  def initialize(@state : Booking::State, @time : Int64, @source : String? = nil)
+  end
+
+  # def self.from_json_any(any : JSON::Any) : History
+  #   History.new(any["state"].to_s, any["time"].to_i, any["source"].to_s)
+  # end
+end
+
+class HistoryConverter
+  def self.to_column(x) : Array(History)?
+    case x
+    when Nil
+      nil
+    when JSON::Any
+      Array(History).from_json x.to_json
+      # x.as_a.map { |history| History.from_json_any(history) }
+    else
+      raise "Cannot convert from #{x.class} to Array(History)"
+    end
+  end
+
+  def self.to_db(x : Array(History)?)
+    x.to_json
+  end
+end
+
+Clear::Model::Converter.add_converter("Array(History)", HistoryConverter)
+
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any, current_state: State)
+  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any, current_state: State, history: Array(History)?)
 
   enum State
     Reserved   # Booking starts in the future, no one has checked-in and it hasn't been deleted
@@ -62,6 +99,7 @@ class Booking
   column created : Int64?
 
   column extension_data : JSON::Any, presence: false
+  column history : Array(History), presence: false
 
   belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "booking_id"
@@ -80,6 +118,17 @@ class Booking
     booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
+    booking_model.history = booking_model.current_history
+  end
+
+  def current_history : Array(History)
+    hist = history_column.value([] of History)
+    if hist.size > 0
+      hist << History.new(current_state, Time.local.to_unix) unless hist.last.state == current_state
+    else
+      hist << History.new(current_state, Time.local.to_unix)
+    end
+    hist
   end
 
   def set_created
@@ -196,9 +245,9 @@ class Booking
   # Booking starts in the future, no one has checked-in and it hasn't been deleted
   protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
     booking_start > current_time &&
-      !checked_in &&
-      !deleted &&
-      !rejected
+      !checked_in_column.value(false) &&
+      !deleted_column.value(false) &&
+      !rejected_column.value(false)
   end
 
   # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
@@ -210,14 +259,14 @@ class Booking
 
   # The user checked out during the start and end times
   protected def is_checked_out?
-    (co_at = checked_out_at) &&
+    (co_at = checked_out_at_column.value(nil)) &&
       booking_start <= co_at &&
       booking_end >= co_at
   end
 
   # It's past the end time of the booking and it was never checked in
   protected def is_no_show?(current_time : Int64 = Time.local.to_unix)
-    !checked_in_at &&
+    !checked_in_at_column.value(nil) &&
       booking_end < current_time
   end
 
@@ -230,14 +279,14 @@ class Booking
 
   # The booking was deleted before the booking start time
   protected def is_cancelled?
-    deleted &&
+    deleted_column.value(false) &&
       (del_at = deleted_at) &&
       booking_start > del_at
   end
 
   # The current time is past the end of the booking, the user checked-in but never checked-out
   protected def is_ended?(current_time : Int64 = Time.local.to_unix)
-    !checked_out_at &&
+    !checked_out_at_column.value(nil) &&
       checked_in &&
       booking_end < current_time
   end
@@ -290,6 +339,7 @@ class Booking
       booked_by_name:  booked_by_name,
       extension_data:  extension_data,
       current_state:   current_state,
+      history:         history,
     }
   end
 end

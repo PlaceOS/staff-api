@@ -155,6 +155,22 @@ describe Bookings do
     body["current_state"].should eq("ended")
   end
 
+  it "#show should include history of state changes" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+    booking = BookingsHelper.create_booking(tenant.id)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["history"][0]["state"].should eq("reserved")
+
+    # pp "-----"
+    # pp body["history"]
+    # pp "-----"
+  end
+
   it "#guest_list should list guests for a booking" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     guest = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
