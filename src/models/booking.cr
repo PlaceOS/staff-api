@@ -32,7 +32,7 @@ Clear::Model::Converter.add_converter("Array(History)", HistoryConverter)
 
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any, current_state: State, history: Array(History)?)
+  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, booked_from: String?, extension_data: JSON::Any, current_state: State, history: Array(History)?)
 
   enum State
     Reserved   # Booking starts in the future, no one has checked-in and it hasn't been deleted
@@ -96,6 +96,8 @@ class Booking
   column extension_data : JSON::Any, presence: false
   column history : Array(History), presence: false
 
+  property utm_source : String? = nil
+
   belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "booking_id"
 
@@ -113,6 +115,7 @@ class Booking
     booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
+    booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
     booking_model.history = booking_model.current_history
   end
 
@@ -120,7 +123,7 @@ class Booking
     state = current_state
     history_column.value([] of History).dup.tap do |booking_history|
       if booking_history.empty? || booking_history.last.state != state
-        booking_history << History.new(state, Time.local.to_unix)
+        booking_history << History.new(state, Time.local.to_unix, @utm_source)
       end
     end
   end
@@ -331,6 +334,7 @@ class Booking
       deleted_at:      deleted_at,
       booked_by_email: booked_by_email.to_s,
       booked_by_name:  booked_by_name,
+      booked_from:     booked_from,
       extension_data:  extension_data,
       current_state:   current_state,
       history:         history,
