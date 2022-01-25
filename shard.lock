@@ -145,6 +145,10 @@ shards:
     git: https://github.com/place-labs/secrets-env.git
     version: 1.3.1
 
+  timecop:
+    git: https://github.com/crystal-community/timecop.cr.git
+    version: 0.4.1
+
   webmock:
     git: https://github.com/manastech/webmock.cr.git
     version: 0.14.0

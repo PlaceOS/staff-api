@@ -155,20 +155,39 @@ describe Bookings do
     body["current_state"].should eq("ended")
   end
 
-  it "#show should include history of state changes" do
+  it "#show should include history of state changes", focus: true do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
-    booking = BookingsHelper.create_booking(tenant.id)
+    Timecop.scale(600) # 1 second == 10 minutes
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end: 1.hour.from_now.to_unix)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
     body["history"][0]["state"].should eq("reserved")
 
-    # pp "-----"
-    # pp body["history"]
-    # pp "-----"
+    sleep(600.milliseconds) # advance time 6 minutes
+
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    body["history"].as_a.last["state"].should eq("checked_in")
+    body["history"].as_a.size.should eq(2)
+
+    sleep(1.second) # advance time 10 minutes
+
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    # body["history"].as_a.last["state"].should eq("checked_out")
+    # body["history"].as_a.size.should eq(3)
+
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    pp "-----"
+    pp! body["current_state"]
+    pp! body["history"]
+    pp! Time.local
+    pp "-----"
   end
 
   it "#guest_list should list guests for a booking" do

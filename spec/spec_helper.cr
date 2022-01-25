@@ -1,5 +1,6 @@
 require "spec"
 require "faker"
+require "timecop"
 
 # Your application config
 # If you have a testing environment, replace this with a test config file

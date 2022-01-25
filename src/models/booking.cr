@@ -119,6 +119,12 @@ class Booking
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.history = booking_model.current_history
+
+    pp "-----"
+    pp! booking_model.current_state
+    pp! booking_model.history
+    pp! Time.local
+    pp "-----"
   end
 
   def current_history : Array(History)

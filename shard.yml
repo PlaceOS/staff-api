@@ -50,3 +50,5 @@ development_dependencies:
     github: askn/faker
   webmock:
     github: manastech/webmock.cr
+  timecop:
+    github: crystal-community/timecop.cr
