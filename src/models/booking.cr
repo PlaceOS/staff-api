@@ -9,10 +9,6 @@ struct History
 
   def initialize(@state : Booking::State, @time : Int64, @source : String? = nil)
   end
-
-  # def self.from_json_any(any : JSON::Any) : History
-  #   History.new(any["state"].to_s, any["time"].to_i, any["source"].to_s)
-  # end
 end
 
 class HistoryConverter
@@ -22,7 +18,6 @@ class HistoryConverter
       nil
     when JSON::Any
       Array(History).from_json x.to_json
-      # x.as_a.map { |history| History.from_json_any(history) }
     else
       raise "Cannot convert from #{x.class} to Array(History)"
     end
@@ -119,22 +114,15 @@ class Booking
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.history = booking_model.current_history
-
-    pp "-----"
-    pp! booking_model.current_state
-    pp! booking_model.history
-    pp! Time.local
-    pp "-----"
   end
 
   def current_history : Array(History)
-    hist = history_column.value([] of History)
-    if hist.size > 0
-      hist << History.new(current_state, Time.local.to_unix) unless hist.last.state == current_state
-    else
-      hist << History.new(current_state, Time.local.to_unix)
+    state = current_state
+    history_column.value([] of History).dup.tap do |booking_history|
+      if booking_history.empty? || booking_history.last.state != state
+        booking_history << History.new(state, Time.local.to_unix)
+      end
     end
-    hist
   end
 
   def set_created

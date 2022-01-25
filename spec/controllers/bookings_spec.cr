@@ -155,7 +155,7 @@ describe Bookings do
     body["current_state"].should eq("ended")
   end
 
-  it "#show should include history of state changes", focus: true do
+  it "#show should include history of state changes" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -165,29 +165,57 @@ describe Bookings do
     Timecop.scale(600) # 1 second == 10 minutes
 
     booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.from_now.to_unix,
-      booking_end: 1.hour.from_now.to_unix)
+      booking_start: 1.minutes.from_now.to_unix,
+      booking_end: 15.minutes.from_now.to_unix)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
     body["history"][0]["state"].should eq("reserved")
 
-    sleep(600.milliseconds) # advance time 6 minutes
+    sleep(200.milliseconds) # advance time 2 minutes
 
     body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
     body["history"].as_a.last["state"].should eq("checked_in")
     body["history"].as_a.size.should eq(2)
 
-    sleep(1.second) # advance time 10 minutes
+    sleep(500.milliseconds) # advance time 5 minutes
 
     body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
-    # body["history"].as_a.last["state"].should eq("checked_out")
-    # body["history"].as_a.size.should eq(3)
+    body["history"].as_a.last["state"].should eq("checked_out")
+    body["history"].as_a.size.should eq(3)
 
+    # TODO: Add NoShow to history
+    # booking = BookingsHelper.create_booking(tenant.id,
+    #   booking_start: 1.minutes.from_now.to_unix,
+    #   booking_end: 5.minutes.from_now.to_unix)
+    # sleep(600.milliseconds) # advance time 6 minutes
+    # body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    # body["history"][0]["state"].should eq("no_show")
+    # body["history"].as_a.size.should eq(2)
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end: 25.minutes.from_now.to_unix)
+    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)[1].as_h
+    body["history"].as_a.last["state"].should eq("rejected")
+    body["history"].as_a.size.should eq(2)
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end: 25.minutes.from_now.to_unix)
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    pp "-----"
-    pp! body["current_state"]
-    pp! body["history"]
-    pp! Time.local
-    pp "-----"
+    body["history"].as_a.last["state"].should eq("cancelled")
+    body["history"].as_a.size.should eq(2)
+
+    # TODO: Add Ended to history
+    # booking = BookingsHelper.create_booking(tenant.id,
+    #   booking_start: 1.minutes.from_now.to_unix,
+    #   booking_end: 10.minutes.from_now.to_unix)
+    # sleep(200.milliseconds) # advance time 2 minutes
+    # Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    # sleep(900.milliseconds) # advance time 9 minutes
+    # body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    # body["history"].as_a.last["state"].should eq("ended")
+    # body["history"].as_a.size.should eq(3)
   end
 
   it "#guest_list should list guests for a booking" do
