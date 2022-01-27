@@ -141,7 +141,7 @@ class Booking
   end
 
   private def validate_history_size
-    add_error("history", "must contain between 1 and 3 events") if history.size > 3
+    add_error("history", "must contain at most 3 events") if history.size > 3
   end
 
   scope :by_tenant do |tenant_id|
