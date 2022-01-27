@@ -1,34 +1,4 @@
-require "json"
-
-struct History
-  include JSON::Serializable
-
-  property state : Booking::State
-  property time : Int64
-  property source : String?
-
-  def initialize(@state : Booking::State, @time : Int64, @source : String? = nil)
-  end
-end
-
-class HistoryConverter
-  def self.to_column(x) : Array(History)?
-    case x
-    when Nil
-      nil
-    when JSON::Any
-      Array(History).from_json x.to_json
-    else
-      raise "Cannot convert from #{x.class} to Array(History)"
-    end
-  end
-
-  def self.to_db(x : Array(History)?)
-    x.to_json
-  end
-end
-
-Clear::Model::Converter.add_converter("Array(History)", HistoryConverter)
+require "./booking/history"
 
 class Booking
   include Clear::Model
@@ -64,7 +34,7 @@ class Booking
     booked_from: String?,
     extension_data: JSON::Any,
     current_state: State,
-    history: Array(History?),
+    history: Array(History)?,
   )
 
   enum State
