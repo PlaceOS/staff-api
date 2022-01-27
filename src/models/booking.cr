@@ -304,16 +304,16 @@ class Booking
     when .is_ended?                    then State::Ended
     else
       unknown_state = {
-        current_time: current_time,
-        booking_start: booking_start,
-        booking_end: booking_end,
-        rejected: rejected,
-        rejected_at: rejected_at_column.value(nil),
-        checked_in: checked_in,
-        checked_in_at: checked_in_at_column.value(nil),
+        current_time:   current_time,
+        booking_start:  booking_start,
+        booking_end:    booking_end,
+        rejected:       rejected,
+        rejected_at:    rejected_at_column.value(nil),
+        checked_in:     checked_in,
+        checked_in_at:  checked_in_at_column.value(nil),
         checked_out_at: checked_out_at_column.value(nil),
-        deleted: deleted_column.value(nil),
-        deleted_at: deleted_at_column.value(nil),
+        deleted:        deleted_column.value(nil),
+        deleted_at:     deleted_at_column.value(nil),
       }.to_json
       Log.error { "Booking is in an Unknown state: #{unknown_state}" }
       State::Unknown
