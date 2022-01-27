@@ -120,7 +120,6 @@ class Booking
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
     booking_model.history = booking_model.current_history
-    Log.warn { "Booking is in an Unknown state" } if booking_model.current_state.unknown?
   end
 
   def current_history : Array(History)
@@ -304,6 +303,19 @@ class Booking
     when .is_cancelled?                then State::Cancelled
     when .is_ended?                    then State::Ended
     else
+      unknown_state = {
+        current_time: current_time,
+        booking_start: booking_start,
+        booking_end: booking_end,
+        rejected: rejected,
+        rejected_at: rejected_at_column.value(nil),
+        checked_in: checked_in,
+        checked_in_at: checked_in_at_column.value(nil),
+        checked_out_at: checked_out_at_column.value(nil),
+        deleted: deleted_column.value(nil),
+        deleted_at: deleted_at_column.value(nil),
+      }.to_json
+      Log.error { "Booking is in an Unknown state: #{unknown_state}" }
       State::Unknown
     end
   end
