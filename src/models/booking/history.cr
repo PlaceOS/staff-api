@@ -18,8 +18,10 @@ class Booking
           nil
         when JSON::Any
           Array(History).from_json x.to_json
+        when Array(History)
+          x
         else
-          raise "Cannot convert from #{x.class} to Array(History)"
+          raise "Cannot convert from #{x.class} to Array(Booking::History)"
         end
       end
 

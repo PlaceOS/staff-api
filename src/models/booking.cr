@@ -108,6 +108,7 @@ class Booking
 
   def validate
     validate_booking_time
+    validate_history_size
   end
 
   before(:save) do |m|
@@ -126,7 +127,7 @@ class Booking
     state = current_state
     history_column.value([] of History).dup.tap do |booking_history|
       if booking_history.empty? || booking_history.last.state != state
-        booking_history << History.new(state, Time.local.to_unix, @utm_source)
+        booking_history << History.new(state, Time.local.to_unix, @utm_source) unless state.unknown?
       end
     end
   end
@@ -137,6 +138,10 @@ class Booking
 
   private def validate_booking_time
     add_error("booking_end", "must be after booking_start") if booking_end <= booking_start
+  end
+
+  private def validate_history_size
+    add_error("history", "must contain between 1 and 3 events") if history.size > 3
   end
 
   scope :by_tenant do |tenant_id|

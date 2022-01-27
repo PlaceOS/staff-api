@@ -198,6 +198,52 @@ describe Bookings do
     body["history"].as_a.size.should eq(2)
   end
 
+  it "history should not be shorter than 1 or longer than 3" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 1.minutes.from_now.to_unix,
+      booking_end: 15.minutes.from_now.to_unix)
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["history"].as_a.size.should eq(1)
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 1.minutes.from_now.to_unix,
+      booking_end: 15.minutes.from_now.to_unix,
+      history: [
+        Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
+      ])
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["history"].as_a.size.should eq(1)
+
+    booking = BookingsHelper.create_booking(tenant.id,
+      booking_start: 5.minutes.ago.to_unix,
+      booking_end: 15.minutes.from_now.to_unix,
+      history: [
+        Booking::History.new(Booking::State::Reserved, 5.minutes.ago.to_unix),
+        Booking::History.new(Booking::State::CheckedIn, 4.minutes.ago.to_unix),
+        Booking::History.new(Booking::State::CheckedOut, Time.local.to_unix),
+      ])
+    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body["history"].as_a.size.should eq(3)
+
+    expect_raises(Clear::Model::InvalidError) do
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: Time.local.to_unix,
+        booking_end: 15.minutes.from_now.to_unix,
+        history: [
+          Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
+          Booking::History.new(Booking::State::CheckedIn, Time.local.to_unix),
+          Booking::History.new(Booking::State::CheckedOut, Time.local.to_unix),
+          Booking::History.new(Booking::State::Unknown, Time.local.to_unix),
+        ])
+    end
+  end
+
   it "?utm_source= should set booked_from if it is not set" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -684,7 +730,8 @@ module BookingsHelper
                      booked_by_email = "jon@example.com",
                      booked_by_id = "jon@example.com",
                      booked_by_name = "Jon Smith",
-                     utm_source = "desktop")
+                     utm_source = "desktop",
+                     history = [] of Booking::History)
     Booking.create!(
       tenant_id: tenant_id,
       user_id: user_id,
@@ -701,6 +748,8 @@ module BookingsHelper
       booked_by_email: PlaceOS::Model::Email.new(booked_by_email),
       booked_by_id: booked_by_id,
       booked_by_name: booked_by_name,
+      utm_source: utm_source,
+      history: history,
     )
   end
 
