@@ -120,6 +120,7 @@ class Booking
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
     booking_model.history = booking_model.current_history
+    Log.warn { "Booking is in an Unknown state" } if booking_model.current_state.unknown?
   end
 
   def current_history : Array(History)
