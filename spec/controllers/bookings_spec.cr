@@ -361,8 +361,9 @@ describe Bookings do
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
-    booking_user_ids = body.map { |r| r["id"] }
-    booking_user_ids.should eq([booking1.id, booking2.id])
+    booking_user_ids = body.map { |r| r["id"].as_i }
+    # Sorting ids because both events have the same starting time
+    booking_user_ids.sort.should eq([booking1.id, booking2.id].sort)
   end
 
   it "#create should create and #update should update a booking" do
