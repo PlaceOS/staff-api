@@ -198,52 +198,6 @@ describe Bookings do
     body["history"].as_a.size.should eq(2)
   end
 
-  it "history should not be shorter than 1 or longer than 3" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 1.minutes.from_now.to_unix,
-      booking_end: 15.minutes.from_now.to_unix)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["history"].as_a.size.should eq(1)
-
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 1.minutes.from_now.to_unix,
-      booking_end: 15.minutes.from_now.to_unix,
-      history: [
-        Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
-      ])
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["history"].as_a.size.should eq(1)
-
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.ago.to_unix,
-      booking_end: 15.minutes.from_now.to_unix,
-      history: [
-        Booking::History.new(Booking::State::Reserved, 5.minutes.ago.to_unix),
-        Booking::History.new(Booking::State::CheckedIn, 4.minutes.ago.to_unix),
-        Booking::History.new(Booking::State::CheckedOut, Time.local.to_unix),
-      ])
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["history"].as_a.size.should eq(3)
-
-    expect_raises(Clear::Model::InvalidError) do
-      booking = BookingsHelper.create_booking(tenant.id,
-        booking_start: Time.local.to_unix,
-        booking_end: 15.minutes.from_now.to_unix,
-        history: [
-          Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
-          Booking::History.new(Booking::State::CheckedIn, Time.local.to_unix),
-          Booking::History.new(Booking::State::CheckedOut, Time.local.to_unix),
-          Booking::History.new(Booking::State::Unknown, Time.local.to_unix),
-        ])
-    end
-  end
-
   it "?utm_source= should set booked_from if it is not set" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -656,6 +610,38 @@ describe Bookings do
     not_updated.should eq(409)
   end
 
+  it "#create and #update should not allow setting the history" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    booking = BookingsHelper.http_create_booking(
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end: 15.minutes.from_now.to_unix,
+      history: [
+        Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
+        Booking::History.new(Booking::State::CheckedIn, 6.minutes.from_now.to_unix),
+        Booking::History.new(Booking::State::CheckedOut, 11.minutes.from_now.to_unix),
+      ])[1].as_h
+    booking["history"].as_a.size.should eq(1)
+
+    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking["id"]}",
+      route_params: {"id" => booking["id"].to_s},
+      body: {
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end:   11.minutes.from_now.to_unix,
+        history:       [
+          Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
+          Booking::History.new(Booking::State::Cancelled, Time.local.to_unix),
+        ],
+      }.to_json,
+      headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    updated["history"].as_a.size.should eq(1)
+  end
+
   it "#prevents a booking being saved with an end time before the start time" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     expect_raises(Clear::Model::InvalidError) do
@@ -754,17 +740,18 @@ module BookingsHelper
   end
 
   def http_create_booking(
-    user_id = nil,
-    user_email = nil,
-    user_name = nil,
-    asset_id = nil,
-    zones = nil,
-    booking_type = nil,
+    user_id = "jon@example.com",
+    user_email = "jon@example.com",
+    user_name = "Jon Smith",
+    asset_id = "asset-1",
+    zones = ["zone-1234", "zone-4567", "zone-890"],
+    booking_type = "desk",
     booking_start = 5.minutes.from_now.to_unix,
     booking_end = 1.hour.from_now.to_unix,
-    booked_by_email = nil,
-    booked_by_id = nil,
-    booked_by_name = nil,
+    booked_by_email = "jon@example.com",
+    booked_by_id = "jon@example.com",
+    booked_by_name = "Jon Smith",
+    history = nil,
     utm_source = nil
   )
     body = {
@@ -779,6 +766,7 @@ module BookingsHelper
       booked_by_email: booked_by_email ? PlaceOS::Model::Email.new(booked_by_email) : nil,
       booked_by_id:    booked_by_id,
       booked_by_name:  booked_by_name,
+      history:         history,
     }.to_h.compact!.to_json
 
     param = utm_source ? "?utm_source=#{utm_source}" : ""

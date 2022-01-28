@@ -108,7 +108,6 @@ class Booking
 
   def validate
     validate_booking_time
-    validate_history_size
   end
 
   before(:save) do |m|
@@ -125,11 +124,15 @@ class Booking
 
   def current_history : Array(History)
     state = current_state
-    history_column.value([] of History).dup.tap do |booking_history|
+    new_history = history_column.value([] of History).dup.tap do |booking_history|
       if booking_history.empty? || booking_history.last.state != state
         booking_history << History.new(state, Time.local.to_unix, @utm_source) unless state.unknown?
       end
     end
+
+    Log.error { "History contains more than 3 events" } if new_history.size > 3
+
+    new_history
   end
 
   def set_created
@@ -138,10 +141,6 @@ class Booking
 
   private def validate_booking_time
     add_error("booking_end", "must be after booking_start") if booking_end <= booking_start
-  end
-
-  private def validate_history_size
-    add_error("history", "must contain at most 3 events") if history.size > 3
   end
 
   scope :by_tenant do |tenant_id|
@@ -257,7 +256,7 @@ class Booking
 
   # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
   protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
-    checked_in &&
+    checked_in_column.value(false) &&
       booking_start <= current_time &&
       booking_end >= current_time
   end
@@ -277,7 +276,7 @@ class Booking
 
   # Someone rejected the booking before it started
   protected def is_rejected?
-    rejected &&
+    rejected_column.value(false) &&
       (r_at = rejected_at) &&
       booking_start > r_at
   end
@@ -292,7 +291,7 @@ class Booking
   # The current time is past the end of the booking, the user checked-in but never checked-out
   protected def is_ended?(current_time : Int64 = Time.local.to_unix)
     !checked_out_at_column.value(nil) &&
-      checked_in &&
+      checked_in_column.value(false) &&
       booking_end < current_time
   end
 
@@ -312,9 +311,9 @@ class Booking
         current_time:   current_time,
         booking_start:  booking_start,
         booking_end:    booking_end,
-        rejected:       rejected,
+        rejected:       rejected_column.value(false),
         rejected_at:    rejected_at_column.value(nil),
-        checked_in:     checked_in,
+        checked_in:     checked_in_column.value(false),
         checked_in_at:  checked_in_at_column.value(nil),
         checked_out_at: checked_out_at_column.value(nil),
         deleted:        deleted_column.value(nil),

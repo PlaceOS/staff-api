@@ -69,6 +69,9 @@ class Bookings < Application
     # Add utm_source
     booking.utm_source = query_params["utm_source"]?
 
+    # clear history
+    booking.history = [] of Booking::History
+
     # Add the tenant details
     booking.tenant_id = tenant.id
 
