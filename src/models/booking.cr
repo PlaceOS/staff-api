@@ -120,19 +120,16 @@ class Booking
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
     booking_model.history = booking_model.current_history
+    Log.error { "History contains more than 3 events. (booking id: #{booking_model.id})" } if booking_model.history.size > 3
   end
 
   def current_history : Array(History)
     state = current_state
-    new_history = history_column.value([] of History).dup.tap do |booking_history|
+    history_column.value([] of History).dup.tap do |booking_history|
       if booking_history.empty? || booking_history.last.state != state
         booking_history << History.new(state, Time.local.to_unix, @utm_source) unless state.unknown?
       end
     end
-
-    Log.error { "History contains more than 3 events. (booking id: #{id})" } if new_history.size > 3
-
-    new_history
   end
 
   def set_created
