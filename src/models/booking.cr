@@ -130,7 +130,7 @@ class Booking
       end
     end
 
-    Log.error { "History contains more than 3 events" } if new_history.size > 3
+    Log.error { "History contains more than 3 events. (booking id: #{id})" } if new_history.size > 3
 
     new_history
   end
