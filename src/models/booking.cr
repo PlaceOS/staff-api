@@ -249,14 +249,15 @@ class Booking
   # Booking starts in the future, no one has checked-in and it hasn't been deleted
   protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
     booking_start > current_time &&
-      !checked_in_column.value(false) &&
-      !deleted_column.value(false) &&
-      !rejected_column.value(false)
+      !checked_in_at_column.value(nil) &&
+      !deleted_at_column.value(nil) &&
+      !rejected_at_column.value(nil)
   end
 
   # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
   protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
-    checked_in_column.value(false) &&
+    checked_in_at_column.value(nil) &&
+      !checked_out_at_column.value(nil) &&
       booking_start <= current_time &&
       booking_end >= current_time
   end
@@ -276,22 +277,20 @@ class Booking
 
   # Someone rejected the booking before it started
   protected def is_rejected?
-    rejected_column.value(false) &&
-      (r_at = rejected_at) &&
+    (r_at = rejected_at_column.value(nil)) &&
       booking_start > r_at
   end
 
   # The booking was deleted before the booking start time
   protected def is_cancelled?
-    deleted_column.value(false) &&
-      (del_at = deleted_at) &&
+    (del_at = deleted_at_column.value(nil)) &&
       booking_start > del_at
   end
 
   # The current time is past the end of the booking, the user checked-in but never checked-out
   protected def is_ended?(current_time : Int64 = Time.local.to_unix)
     !checked_out_at_column.value(nil) &&
-      checked_in_column.value(false) &&
+      checked_in_at_column.value(nil) &&
       booking_end < current_time
   end
 
@@ -311,12 +310,9 @@ class Booking
         current_time:   current_time,
         booking_start:  booking_start,
         booking_end:    booking_end,
-        rejected:       rejected_column.value(false),
         rejected_at:    rejected_at_column.value(nil),
-        checked_in:     checked_in_column.value(false),
         checked_in_at:  checked_in_at_column.value(nil),
         checked_out_at: checked_out_at_column.value(nil),
-        deleted:        deleted_column.value(nil),
         deleted_at:     deleted_at_column.value(nil),
       }.to_json
       Log.error { "Booking is in an Unknown state: #{unknown_state}" }
