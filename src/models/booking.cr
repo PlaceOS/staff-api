@@ -303,7 +303,7 @@ class Booking
     when .is_cancelled?                then State::Cancelled
     when .is_ended?                    then State::Ended
     else
-      unknown_state = {
+      Log.error { {
         message:        "Booking is in an Unknown state.",
         id:             id_column.value(nil),
         current_time:   current_time,
@@ -313,8 +313,7 @@ class Booking
         checked_in_at:  checked_in_at_column.value(nil),
         checked_out_at: checked_out_at_column.value(nil),
         deleted_at:     deleted_at_column.value(nil),
-      }.to_json
-      Log.error { unknown_state }
+      } }
       State::Unknown
     end
   end
