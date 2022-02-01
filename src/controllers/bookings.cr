@@ -66,6 +66,12 @@ class Bookings < Application
     clashing_bookings = check_clashing(booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
+    # Add utm_source
+    booking.utm_source = query_params["utm_source"]?
+
+    # clear history
+    booking.history = [] of Booking::History
+
     # Add the tenant details
     booking.tenant_id = tenant.id
 
@@ -324,6 +330,7 @@ class Bookings < Application
     booking.set({
       deleted:    true,
       deleted_at: Time.local.to_unix,
+      utm_source: query_params["utm_source"]?,
     }).save!
 
     spawn do
@@ -376,6 +383,7 @@ class Bookings < Application
     booking.approver_id = nil
     booking.approver_email = nil
     booking.approver_name = nil
+    booking.utm_source = params["utm_source"]?
     update_booking(booking, "rejected")
   end
 
@@ -386,6 +394,7 @@ class Bookings < Application
     else
       booking.checked_out_at = Time.utc.to_unix
     end
+    booking.utm_source = params["utm_source"]?
     update_booking(booking, "checked_in")
   end
 

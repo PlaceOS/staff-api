@@ -1,6 +1,52 @@
+require "./booking/history"
+
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(id: Int64, booking_type: String, booking_start: Int64, booking_end: Int64, timezone: String | Nil, asset_id: String, user_id: String, user_email: String, user_name: String, zones: Array(String) | Nil, process_state: String | Nil, last_changed: Int64 | Nil, approved: Bool, approved_at: Int64 | Nil, rejected: Bool, rejected_at: Int64 | Nil, approver_id: String | Nil, approver_name: String | Nil, approver_email: String | Nil, title: String | Nil, checked_in: Bool, checked_in_at: Int64 | Nil, checked_out_at: Int64 | Nil, description: String | Nil, deleted: Bool?, deleted_at: Int64?, booked_by_email: String, booked_by_name: String, extension_data: JSON::Any)
+  alias AsHNamedTuple = NamedTuple(
+    id: Int64,
+    booking_type: String,
+    booking_start: Int64,
+    booking_end: Int64,
+    timezone: String | Nil,
+    asset_id: String,
+    user_id: String,
+    user_email: String,
+    user_name: String,
+    zones: Array(String) | Nil,
+    process_state: String | Nil,
+    last_changed: Int64 | Nil,
+    approved: Bool,
+    approved_at: Int64 | Nil,
+    rejected: Bool,
+    rejected_at: Int64 | Nil,
+    approver_id: String | Nil,
+    approver_name: String | Nil,
+    approver_email: String | Nil,
+    title: String | Nil,
+    checked_in: Bool,
+    checked_in_at: Int64 | Nil,
+    checked_out_at: Int64 | Nil,
+    description: String | Nil,
+    deleted: Bool?,
+    deleted_at: Int64?,
+    booked_by_email: String,
+    booked_by_name: String,
+    booked_from: String?,
+    extension_data: JSON::Any,
+    current_state: State,
+    history: Array(History)?,
+  )
+
+  enum State
+    Reserved   # Booking starts in the future, no one has checked-in and it hasn't been deleted
+    CheckedIn  # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
+    CheckedOut # The user checked out during the start and end times
+    NoShow     # It's past the end time of the booking and it was never checked in
+    Rejected   # Someone rejected the booking before it started
+    Cancelled  # The booking was deleted before the booking start time
+    Ended      # The current time is past the end of the booking, the user checked-in but never checked-out
+    Unknown
+  end
 
   column id : Int64, primary: true, presence: false
 
@@ -51,6 +97,9 @@ class Booking
   column created : Int64?
 
   column extension_data : JSON::Any, presence: false
+  column history : Array(History), presence: false
+
+  property utm_source : String? = nil
 
   belongs_to tenant : Tenant
   has_many attendees : Attendee, foreign_key: "booking_id"
@@ -69,6 +118,21 @@ class Booking
     booking_model.approver_email = booking_model.approver_email if booking_model.approver_email_column.defined?
     booking_model.email_digest = booking_model.user_email.digest
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
+    booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
+    booking_model.history = booking_model.current_history
+    Log.error { {
+      message: "History contains more than 3 events.",
+      id:      booking_model.id,
+    } } if booking_model.history.size > 3
+  end
+
+  def current_history : Array(History)
+    state = current_state
+    history_column.value([] of History).dup.tap do |booking_history|
+      if booking_history.empty? || booking_history.last.state != state
+        booking_history << History.new(state, Time.local.to_unix, @utm_source) unless state.unknown?
+      end
+    end
   end
 
   def set_created
@@ -182,6 +246,81 @@ class Booking
     where("( #{query} )")
   end
 
+  # Booking starts in the future, no one has checked-in and it hasn't been deleted
+  protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
+    booking_start > current_time &&
+      !checked_in_at_column.value(nil) &&
+      !deleted_at_column.value(nil) &&
+      !rejected_at_column.value(nil)
+  end
+
+  # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
+  protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
+    checked_in_at_column.value(nil) &&
+      !checked_out_at_column.value(nil) &&
+      booking_start <= current_time &&
+      booking_end >= current_time
+  end
+
+  # The user checked out during the start and end times
+  protected def is_checked_out?
+    (co_at = checked_out_at_column.value(nil)) &&
+      booking_start <= co_at &&
+      booking_end >= co_at
+  end
+
+  # It's past the end time of the booking and it was never checked in
+  protected def is_no_show?(current_time : Int64 = Time.local.to_unix)
+    !checked_in_at_column.value(nil) &&
+      booking_end < current_time
+  end
+
+  # Someone rejected the booking before it started
+  protected def is_rejected?
+    (r_at = rejected_at_column.value(nil)) &&
+      booking_start > r_at
+  end
+
+  # The booking was deleted before the booking start time
+  protected def is_cancelled?
+    (del_at = deleted_at_column.value(nil)) &&
+      booking_start > del_at
+  end
+
+  # The current time is past the end of the booking, the user checked-in but never checked-out
+  protected def is_ended?(current_time : Int64 = Time.local.to_unix)
+    !checked_out_at_column.value(nil) &&
+      checked_in_at_column.value(nil) &&
+      booking_end < current_time
+  end
+
+  def current_state : State
+    current_time = Time.local.to_unix
+
+    case self
+    when .is_reserved?(current_time)   then State::Reserved
+    when .is_checked_in?(current_time) then State::CheckedIn
+    when .is_checked_out?              then State::CheckedOut
+    when .is_no_show?(current_time)    then State::NoShow
+    when .is_rejected?                 then State::Rejected
+    when .is_cancelled?                then State::Cancelled
+    when .is_ended?                    then State::Ended
+    else
+      Log.error { {
+        message:        "Booking is in an Unknown state.",
+        id:             id_column.value(nil),
+        current_time:   current_time,
+        booking_start:  booking_start,
+        booking_end:    booking_end,
+        rejected_at:    rejected_at_column.value(nil),
+        checked_in_at:  checked_in_at_column.value(nil),
+        checked_out_at: checked_out_at_column.value(nil),
+        deleted_at:     deleted_at_column.value(nil),
+      } }
+      State::Unknown
+    end
+  end
+
   def as_h : AsHNamedTuple
     {
       id:              id,
@@ -212,7 +351,10 @@ class Booking
       deleted_at:      deleted_at,
       booked_by_email: booked_by_email.to_s,
       booked_by_name:  booked_by_name,
+      booked_from:     booked_from,
       extension_data:  extension_data,
+      current_state:   current_state,
+      history:         history,
     }
   end
 end
