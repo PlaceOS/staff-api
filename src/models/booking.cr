@@ -120,7 +120,10 @@ class Booking
     booking_model.booked_by_email_digest = booking_model.booked_by_email.digest
     booking_model.booked_from = booking_model.utm_source if !booking_model.booked_from_column.defined?
     booking_model.history = booking_model.current_history
-    Log.error { "History contains more than 3 events. (booking id: #{booking_model.id})" } if booking_model.history.size > 3
+    Log.error { {
+      message: "History contains more than 3 events.",
+      id:      booking_model.id,
+    } } if booking_model.history.size > 3
   end
 
   def current_history : Array(History)
