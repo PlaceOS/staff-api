@@ -51,7 +51,7 @@ shards:
 
   faker:
     git: https://github.com/askn/faker.git
-    version: 0.6.0
+    version: 0.7.0
 
   future:
     git: https://github.com/crystal-community/future.cr.git
@@ -111,7 +111,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.5.0+git.commit.6717bcb51fe10d113a7a36c9f2308130973c26dc
+    version: 2.5.1+git.commit.d0c62759f40842a843201a8a6f5d6995e5e4b1a4
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -119,7 +119,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 5.15.2
+    version: 6.2.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git

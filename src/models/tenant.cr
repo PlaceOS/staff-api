@@ -146,7 +146,7 @@ class Tenant
   ###########################################################################
 
   protected def encrypt(string : String)
-    raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
+    raise PlaceOS::Model::Error::NoParent.new if (encryption_id = self.domain).nil?
 
     PlaceOS::Encryption.encrypt(string, id: encryption_id, level: PlaceOS::Encryption::Level::NeverDisplay)
   end
@@ -167,7 +167,7 @@ class Tenant
   # Decrypts the tenants's credentials string
   #
   protected def decrypt_credentials
-    raise PlaceOS::Model::NoParentError.new if (encryption_id = self.domain).nil?
+    raise PlaceOS::Model::Error::NoParent.new if (encryption_id = self.domain).nil?
 
     PlaceOS::Encryption.decrypt(string: self.credentials, id: encryption_id, level: PlaceOS::Encryption::Level::NeverDisplay)
   end
@@ -180,7 +180,7 @@ class Tenant
   # Decrypts (if user has correct privilege) and returns the credentials string
   #
   def decrypt_for(user) : String
-    raise PlaceOS::Model::NoParentError.new unless (encryption_id = self.domain)
+    raise PlaceOS::Model::Error::NoParent.new unless (encryption_id = self.domain)
 
     PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::NeverDisplay, id: encryption_id)
   end

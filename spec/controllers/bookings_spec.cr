@@ -209,8 +209,10 @@ describe Bookings do
     body = BookingsHelper.http_create_booking(
       asset_id: "desk1",
       booking_type: "desk",
-      utm_source: "desktop")[1].as_h
+      utm_source: "desktop",
+      department: "accounting")[1].as_h
     body["booked_from"].should eq("desktop")
+    body["department"].should eq("accounting")
   end
 
   it "?utm_source= should set source in history" do
@@ -752,7 +754,8 @@ module BookingsHelper
     booked_by_id = "jon@example.com",
     booked_by_name = "Jon Smith",
     history = nil,
-    utm_source = nil
+    utm_source = nil,
+    department = nil
   )
     body = {
       user_id:         user_id,
@@ -767,6 +770,7 @@ module BookingsHelper
       booked_by_id:    booked_by_id,
       booked_by_name:  booked_by_name,
       history:         history,
+      department:      department,
     }.to_h.compact!.to_json
 
     param = utm_source ? "?utm_source=#{utm_source}" : ""

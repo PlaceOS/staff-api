@@ -5,7 +5,7 @@ class Bookings < Application
   before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
   getter booking : Booking { find_booking }
 
-  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state)
+  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department)
 
   def index
     starting = query_params["period_start"].to_i64

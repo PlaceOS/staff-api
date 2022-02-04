@@ -22,6 +22,7 @@ class Booking
     approver_id: String | Nil,
     approver_name: String | Nil,
     approver_email: String | Nil,
+    department: String | Nil,
     title: String | Nil,
     checked_in: Bool,
     checked_in_at: Int64 | Nil,
@@ -80,6 +81,7 @@ class Booking
   column approver_id : String?
   column approver_email : String?
   column approver_name : String?
+  column department : String?
 
   column booked_by_id : String
   column booked_by_email : PlaceOS::Model::Email
@@ -229,6 +231,14 @@ class Booking
     end
   end
 
+  scope :is_department do |value|
+    if value
+      where { department == value }
+    else
+      self
+    end
+  end
+
   # Bookings have the zones in an array.
   #
   # In case of multiple zones as input,
@@ -342,6 +352,7 @@ class Booking
       approver_id:     approver_id,
       approver_name:   approver_name,
       approver_email:  approver_email,
+      department:      department,
       title:           title,
       checked_in:      checked_in,
       checked_in_at:   checked_in_at,
