@@ -1,6 +1,6 @@
 # PlaceOS Staff API
 
-[![Build Dev Image](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build-dev-image.yml)
+[![Build](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml)
 [![CI](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml)
 
 Service for integrating [PlaceOS](https://placeos.com/) with the workplace.
