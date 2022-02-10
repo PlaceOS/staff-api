@@ -178,13 +178,8 @@ describe Guests do
   it "prevents duplicate guest emails on same tenant" do
     expect_raises(PQ::PQError) do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
-      created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-
-      created["email"].should eq("toby@redant.com.au")
-
-      req_body = %({"email":"toby@redant.com.au","banned":false,"extension_data":{"test":"data"}})
-      Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)
+      GuestsHelper.create_guest(tenant.id, "Connor", "jon@example.com")
+      GuestsHelper.create_guest(tenant.id, "Ian", "jon@example.com")
     end
   end
 
@@ -200,10 +195,6 @@ describe Guests do
 
     GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
     GuestsHelper.create_guest(google_tenant.id, "Steve", "jon@example.com")
-
-    expect_raises(PQ::PQError) do
-      GuestsHelper.create_guest(google_tenant.id, "Steve", "jon@example.com")
-    end
   end
 
   it "#meetings should show meetings for guest" do
