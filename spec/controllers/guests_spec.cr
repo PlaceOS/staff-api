@@ -175,6 +175,37 @@ describe Guests do
     guest.extension_data.as_h.should eq({"test" => "data", "other" => "info"})
   end
 
+  it "prevents duplicate guest emails on same tenant" do
+    expect_raises(PQ::PQError) do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
+      created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+
+      created["email"].should eq("toby@redant.com.au")
+
+      req_body = %({"email":"toby@redant.com.au","banned":false,"extension_data":{"test":"data"}})
+      Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)
+    end
+  end
+
+  it "creates guests with same emails on different tenants" do
+    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+    google_tenant = TenantsHelper.create_tenant({
+      name:        "Ian",
+      platform:    "google",
+      domain:      "google.staff-api.dev",
+      credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+    })
+
+    GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+    GuestsHelper.create_guest(google_tenant.id, "Steve", "jon@example.com")
+
+    expect_raises(PQ::PQError) do
+      GuestsHelper.create_guest(google_tenant.id, "Steve", "jon@example.com")
+    end
+  end
+
   it "#meetings should show meetings for guest" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))

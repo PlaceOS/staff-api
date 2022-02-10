@@ -12,6 +12,24 @@ describe Tenant do
     a.errors.size.should eq 0
   end
 
+  it "prevents two tenants with the same domain" do
+    expect_raises(PQ::PQError) do
+      TenantsHelper.create_tenant({
+        name:        "Jon",
+        platform:    "google",
+        domain:      "google.staff-api.dev",
+        credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+      })
+
+      TenantsHelper.create_tenant({
+        name:        "Ian",
+        platform:    "google",
+        domain:      "google.staff-api.dev",
+        credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+      })
+    end
+  end
+
   it "should accept JSON params" do
     body = %({
       "name":        "Bob",
@@ -60,7 +78,12 @@ describe Tenant do
   end
 
   it "check encryption" do
-    t = TenantsHelper.create_tenant
+    t = TenantsHelper.create_tenant({
+      name:        "Jon2",
+      platform:    "google",
+      domain:      "encrypt.google.staff-api.dev",
+      credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+    })
     t.is_encrypted?.should be_true
   end
 
