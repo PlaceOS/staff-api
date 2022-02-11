@@ -128,16 +128,20 @@ class Bookings < Application
         })
 
         spawn do
-          get_placeos_client.root.signal("staff/guest/attending", {
-            action:         :booking_created,
-            id:             guest.id,
-            booking_id:     booking.id,
-            resource_id:    booking.asset_id,
-            title:          booking.title,
-            booking_start:  booking.booking_start,
-            attendee_name:  attendee.name,
-            attendee_email: attendee.email,
-          })
+          begin
+            get_placeos_client.root.signal("staff/guest/attending", {
+              action:         :booking_created,
+              id:             guest.id,
+              booking_id:     booking.id,
+              resource_id:    booking.asset_id,
+              title:          booking.title,
+              booking_start:  booking.booking_start,
+              attendee_name:  attendee.name,
+              attendee_email: attendee.email,
+            })
+          rescue error
+            Log.warn(exception: error) { "failed to signal guest attendance" }
+          end
         end
       end
     end
@@ -302,16 +306,20 @@ class Bookings < Application
 
             if !previously_visiting
               spawn do
-                get_placeos_client.root.signal("staff/guest/attending", {
-                  action:         :booking_updated,
-                  id:             guest.id,
-                  booking_id:     existing_booking.id,
-                  resource_id:    existing_booking.asset_id,
-                  title:          existing_booking.title,
-                  booking_start:  existing_booking.booking_start,
-                  attendee_name:  attendee.name,
-                  attendee_email: attendee.email,
-                })
+                begin
+                  get_placeos_client.root.signal("staff/guest/attending", {
+                    action:         :booking_updated,
+                    id:             guest.id,
+                    booking_id:     existing_booking.id,
+                    resource_id:    existing_booking.asset_id,
+                    title:          existing_booking.title,
+                    booking_start:  existing_booking.booking_start,
+                    attendee_name:  attendee.name,
+                    attendee_email: attendee.email,
+                  })
+                rescue error
+                  Log.warn(exception: error) { "failed to signal guest attendance" }
+                end
               end
             end
           end
