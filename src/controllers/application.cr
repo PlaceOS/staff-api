@@ -96,6 +96,11 @@ abstract class Application < ActionController::Base
     render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
   end
 
+  rescue_from PQ::PQError do |error|
+    # render :unprocessable_entity, json: error.to_s
+    render_error(UNPROCESSABLE_ENTITY, error)
+  end
+
   rescue_from KeyError do |error|
     raise error unless error.message.try &.includes?("param")
 
