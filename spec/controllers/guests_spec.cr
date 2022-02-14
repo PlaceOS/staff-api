@@ -175,32 +175,52 @@ describe Guests do
     guest.extension_data.as_h.should eq({"test" => "data", "other" => "info"})
   end
 
-  it "prevents duplicate guest emails on same tenant", focus: true do
-    # expect_raises(PQ::PQError) do
-    #   tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    #   GuestsHelper.create_guest(tenant.id, "Connor", "jon@example.com")
-    #   GuestsHelper.create_guest(tenant.id, "Ian", "jon@example.com")
-    # end
+  with_server do
+    it "prevents duplicate guest emails on same tenant" do
+      WebMock.allow_net_connect = true
+      path = "/api/staff/v1/guests"
+      req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
 
-    # tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
-    created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+      curl(
+        method: "POST",
+        path: path,
+        body: req_body,
+        headers: Mock::Headers.office365_guest,
+      )
 
-    created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-  end
+      response = curl(
+        method: "POST",
+        path: path,
+        body: req_body,
+        headers: Mock::Headers.office365_guest,
+      )
 
-  it "creates guests with same emails on different tenants" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      response.status_code.should eq 422
+      response.body.should contain "duplicate key value violates unique constraint"
+    end
 
-    google_tenant = TenantsHelper.create_tenant({
-      name:        "Ian",
-      platform:    "google",
-      domain:      "google.staff-api.dev",
-      credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
-    })
+    it "creates guests with same emails on different tenants" do
+      WebMock.allow_net_connect = true
+      google_tenant = TenantsHelper.create_tenant({
+        name:        "Ian",
+        platform:    "google",
+        domain:      "google.staff-api.dev",
+        credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+      })
+      GuestsHelper.create_guest(google_tenant.id, "Steve", "daniel@example.com")
 
-    GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
-    GuestsHelper.create_guest(google_tenant.id, "Steve", "jon@example.com")
+      path = "/api/staff/v1/guests"
+      req_body = %({"email":"daniel@example.com","banned":true,"extension_data":{"test":"data"}})
+
+      response = curl(
+        method: "POST",
+        path: path,
+        body: req_body,
+        headers: Mock::Headers.office365_guest,
+      )
+      puts response.status_code.should eq 201
+    end
+    WebMock.reset
   end
 
   it "#meetings should show meetings for guest" do
@@ -220,7 +240,7 @@ describe Guests do
       .to_return(GuestsHelper.mock_event_query_json)
 
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+    guest = GuestsHelper.create_guest(tenant.id, "Nathan", "nathan@redant.com.au")
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
     guest.attendee_for(meta.id.not_nil!)
 

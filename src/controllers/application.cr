@@ -97,8 +97,9 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from PQ::PQError do |error|
-    # render :unprocessable_entity, json: error.to_s
-    render_error(UNPROCESSABLE_ENTITY, error)
+    if error.message.to_s.includes?("duplicate key value violates unique constraint")
+      render_error(HTTP::Status::UNPROCESSABLE_ENTITY, error)
+    end
   end
 
   rescue_from KeyError do |error|

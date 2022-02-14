@@ -12,24 +12,12 @@ describe Tenant do
     a.errors.size.should eq 0
   end
 
-  it "prevents two tenants with the same domain", focus: true do
-    # expect_raises(Clear::Model::InvalidError) do
-    # TenantsHelper.create_tenant({
-    #   name:        "Jon",
-    #   platform:    "google",
-    #   domain:      "google.staff-api.dev",
-    #   credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
-    # })
+  with_server do
+    it "prevents two tenants with the same domain" do
+      WebMock.allow_net_connect = true
+      path = "/api/staff/v1/tenants"
 
-    # TenantsHelper.create_tenant({
-    #   name:        "Ian",
-    #   platform:    "google",
-    #   domain:      "google.staff-api.dev",
-    #   credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
-    # })
-    # # end
-
-    body = %({
+      body = %({
       "name":        "Bob",
       "platform":    "google",
       "domain":      "club-bob.staff-api.dev",
@@ -42,15 +30,14 @@ describe Tenant do
       }
     })
 
-    headers = {
-      "Host"          => "google.staff-api.dev",
-      "Authorization" => "Bearer #{Mock::Token.google}",
-      "Content-Type"  => "application/json",
-    }
+      curl(
+        method: "POST",
+        path: path,
+        body: body,
+        headers: Mock::Headers.office365_guest,
+      )
 
-    res = Tenants.context("POST", "/api/staff/v1/tenants", body: body, headers: headers, &.create)
-
-    body = %({
+      body = %({
       "name":        "Ian",
       "platform":    "google",
       "domain":      "club-bob.staff-api.dev",
@@ -63,14 +50,24 @@ describe Tenant do
       }
     })
 
-    res = Tenants.context("POST", "/api/staff/v1/tenants", body: body, headers: headers, &.create)
+      response = curl(
+        method: "POST",
+        path: path,
+        body: body,
+        headers: Mock::Headers.office365_guest,
+      )
+
+      response.status_code.should eq 422
+      response.body.should contain "duplicate key value violates unique constraint"
+    end
+    WebMock.reset
   end
 
   it "should accept JSON params" do
     body = %({
       "name":        "Bob",
       "platform":    "google",
-      "domain":      "club-bob.staff-api.dev",
+      "domain":      "club-bob2.staff-api.dev",
       "credentials": {
         "issuer":      "1122121212",
         "scopes":      ["http://example.com"],
@@ -110,6 +107,8 @@ describe Tenant do
       credentials:    %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
       booking_limits: %({"desk": "2"}),
     })
+    puts "\n"
+    puts a.inspect
     a.errors.size.should eq 1
   end
 
