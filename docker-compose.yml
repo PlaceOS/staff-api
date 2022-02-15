@@ -20,17 +20,13 @@ services:
       - 5432:5432
 
   test:
+    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.2.1}
     hostname: staff_api
-    build:
-      context: ./
-      dockerfile: Dockerfile.test
-      args:
-        CRYSTAL_VERSION: ${CRYSTAL_VERSION:-latest}
+    volumes:
+      - ${PWD}/spec:/app/spec
+      - ${PWD}/src:/app/src
     depends_on:
       - db
-    volumes:
-      - ./spec:/app/spec
-      - ./src:/app/src
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
       PLACE_URI: http://toby.dev.place.tech
