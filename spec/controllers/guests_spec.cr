@@ -1,6 +1,8 @@
 require "../spec_helper"
 require "./helpers/spec_clean_up"
 
+PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
+
 describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
@@ -140,33 +142,33 @@ describe Guests do
 
   it "#destroy" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    toby = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+    dave = GuestsHelper.create_guest(tenant.id, "Dave", "dave@redant.com.au")
+    GuestsHelper.create_guest(tenant.id, "Elvis", "elvis@example.com")
 
-    Guests.context("DELETE", "#{GUESTS_BASE}/#{toby.email}/", route_params: {"id" => toby.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
+    Guests.context("DELETE", "#{GUESTS_BASE}/#{dave.email}/", route_params: {"id" => dave.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Check only one is returned
     body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
     # Only has steve, toby got deleted
-    body.map(&.["name"]).should eq(["Steve"])
-    body.map(&.["email"]).should eq(["steve@example.com"])
+    body.map(&.["name"]).should eq(["Elvis"])
+    body.map(&.["email"]).should eq(["elvis@example.com"])
   end
 
   it "#create & #update" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
+    req_body = %({"email":"toby6@redant.com.au","banned":true,"extension_data":{"test":"data"}})
     created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
-    created["email"].should eq("toby@redant.com.au")
+    created["email"].should eq("toby6@redant.com.au")
     created["banned"].should eq(true)
     created["dangerous"].should eq(false)
     created["extension_data"].should eq({"test" => "data"})
 
-    req_body = %({"email":"toby@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
-    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby@redant.com.au", route_params: {"id" => "toby@redant.com.au"}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    req_body = %({"email":"toby6@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
+    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby6@redant.com.au", route_params: {"id" => "toby6@redant.com.au"}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
 
-    updated["email"].should eq("toby@redant.com.au")
+    updated["email"].should eq("toby6@redant.com.au")
     updated["banned"].should eq(true)
     updated["dangerous"].should eq(true)
     updated["extension_data"].should eq({"test" => "data", "other" => "info"})
@@ -221,6 +223,14 @@ describe Guests do
       puts response.status_code.should eq 201
     end
     WebMock.reset
+  end
+
+  it "prevents duplicate guest emails on same tenant at the model level" do
+    expect_raises(PQ::PQError, PG_UNIQUE_CONSTRAINT_REGEX) do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      GuestsHelper.create_guest(tenant.id, "Connor", "jon@example.com")
+      GuestsHelper.create_guest(tenant.id, "Ian", "jon@example.com")
+    end
   end
 
   it "#meetings should show meetings for guest" do
