@@ -105,7 +105,7 @@ describe Bookings do
     body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
-  describe "current_state and history:", focus: true do
+  describe "current_state and history:" do
     it "booking reserved and no_show" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))

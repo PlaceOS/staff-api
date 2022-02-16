@@ -256,33 +256,35 @@ class Booking
     where("( #{query} )")
   end
 
-  # Booking starts in the future, no one has checked-in and it hasn't been deleted
+  # Booking ends in the future, no one has checked-in and it hasn't been deleted
   protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
-    booking_start > current_time &&
+    booking_end > current_time &&
       !checked_in_at_column.value(nil) &&
       !deleted_at_column.value(nil) &&
       !rejected_at_column.value(nil)
   end
 
-  # Booking is currently active (the wall clock time is between start and end times of the booking) and the user has checked in
+  # Booking ends in the future and the user has checked in
   protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
     checked_in_at_column.value(nil) &&
       !checked_out_at_column.value(nil) &&
-      booking_start <= current_time &&
-      booking_end >= current_time
+      booking_end > current_time
   end
 
   # The user checked out during the start and end times
   protected def is_checked_out?
     (co_at = checked_out_at_column.value(nil)) &&
-      booking_start <= co_at &&
       booking_end >= co_at
   end
 
   # It's past the end time of the booking and it was never checked in
+  # or the booking was deleted between the start and end time and it was never checked in
   protected def is_no_show?(current_time : Int64 = Time.local.to_unix)
     !checked_in_at_column.value(nil) &&
-      booking_end < current_time
+      !is_cancelled? &&
+      (booking_end < current_time ||
+        ((del_at = deleted_at_column.value(nil)) &&
+          booking_end >= del_at))
   end
 
   # Someone rejected the booking before it started
