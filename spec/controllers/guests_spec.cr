@@ -2,8 +2,6 @@ require "../spec_helper"
 require "./helpers/spec_clean_up"
 require "../../src/constants"
 
-# PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
-
 describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
@@ -227,7 +225,7 @@ describe Guests do
   end
 
   it "prevents duplicate guest emails on same tenant at the model level" do
-    expect_raises(PQ::PQError, PG_UNIQUE_CONSTRAINT_REGEX) do
+    expect_raises(PQ::PQError, App::PG_UNIQUE_CONSTRAINT_REGEX) do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
       GuestsHelper.create_guest(tenant.id, "Connor", "jon@example.com")
       GuestsHelper.create_guest(tenant.id, "Ian", "jon@example.com")

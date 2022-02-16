@@ -4,8 +4,7 @@ require "./utilities/*"
 
 abstract class Application < ActionController::Base
   # TODO:: Move this to user model
-  DEFAULT_TIME_ZONE          = Time::Location.load(ENV["STAFF_TIME_ZONE"]? || "Australia/Sydney")
-  PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
+  DEFAULT_TIME_ZONE = Time::Location.load(ENV["STAFF_TIME_ZONE"]? || "Australia/Sydney")
 
   # =========================================
   # HELPERS
@@ -98,7 +97,7 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from PQ::PQError do |error|
-    if error.message =~ PG_UNIQUE_CONSTRAINT_REGEX
+    if error.message =~ App::PG_UNIQUE_CONSTRAINT_REGEX
       render_error(HTTP::Status::UNPROCESSABLE_ENTITY, error)
     end
   end
