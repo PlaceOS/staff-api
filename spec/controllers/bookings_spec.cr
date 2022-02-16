@@ -106,14 +106,17 @@ describe Bookings do
   end
 
   describe "current_state and history:" do
-    it "booking reserved and no_show" do
+    before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
       Timecop.scale(600) # 1 second == 10 minutes
+    end
+
+    it "booking reserved and no_show" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -135,13 +138,7 @@ describe Bookings do
     end
 
     it "booking deleted before booking_start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -155,13 +152,7 @@ describe Bookings do
     end
 
     it "booking deleted between booking_start and booking_end" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -175,13 +166,7 @@ describe Bookings do
     end
 
     it "booking rejected before booking_start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -195,13 +180,7 @@ describe Bookings do
     end
 
     it "booking checked_in before booking_start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -213,13 +192,7 @@ describe Bookings do
     end
 
     it "booking checked_in and checked_out before booking_start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 5.minutes.from_now.to_unix,
@@ -239,13 +212,7 @@ describe Bookings do
     end
 
     it "booking checked_in and checked_out between booking_start and booking_end" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
@@ -269,13 +236,7 @@ describe Bookings do
     end
 
     it "booking checked_in but never checked_out between booking_start and booking_end" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-
-      Timecop.scale(600) # 1 second == 10 minutes
 
       booking = BookingsHelper.create_booking(tenant.id,
         booking_start: 1.minutes.from_now.to_unix,
