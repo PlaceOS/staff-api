@@ -271,7 +271,7 @@ class Booking
       booking_end > current_time
   end
 
-  # The user checked out during the start and end times
+  # The user checked out before the end time
   protected def is_checked_out?
     (co_at = checked_out_at_column.value(nil)) &&
       booking_end >= co_at
