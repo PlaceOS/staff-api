@@ -105,97 +105,191 @@ describe Bookings do
     body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
   end
 
-  it "#show should include the current state" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+  describe "current_state and history:", focus: true do
+    it "booking reserved and no_show" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
-    booking = BookingsHelper.create_booking(tenant.id)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("reserved")
+      Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.ago.to_unix,
-      booking_end: 1.hour.from_now.to_unix)
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("checked_in")
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 6.minutes.from_now.to_unix)
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.ago.to_unix,
-      booking_end: 1.hour.from_now.to_unix)
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("checked_out")
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("reserved")
+      body["history"][0]["state"].should eq("reserved")
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 45.minutes.ago.to_unix,
-      booking_end: 5.minutes.ago.to_unix)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("no_show")
+      sleep(200.milliseconds) # advance time 2 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id)
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("rejected")
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("reserved")
 
-    booking = BookingsHelper.create_booking(tenant.id)
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("cancelled")
+      sleep(500.milliseconds) # advance time 5 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 20.minutes.ago.to_unix,
-      booking_end: 5.minutes.ago.to_unix)
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("ended")
-  end
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("no_show")
+    end
 
-  it "#show should include history of state changes" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    it "booking deleted before booking_start" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
-    Timecop.scale(600) # 1 second == 10 minutes
+      Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 1.minutes.from_now.to_unix,
-      booking_end: 15.minutes.from_now.to_unix)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["history"][0]["state"].should eq("reserved")
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
 
-    sleep(200.milliseconds) # advance time 2 minutes
+      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("cancelled")
+      body["history"].as_a.last["state"].should eq("cancelled")
+      body["history"].as_a.size.should eq(2)
+    end
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
-    body["history"].as_a.last["state"].should eq("checked_in")
-    body["history"].as_a.size.should eq(2)
+    it "booking deleted between booking_start and booking_end" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
-    sleep(500.milliseconds) # advance time 5 minutes
+      Timecop.scale(600) # 1 second == 10 minutes
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
-    body["history"].as_a.last["state"].should eq("checked_out")
-    body["history"].as_a.size.should eq(3)
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.from_now.to_unix,
-      booking_end: 25.minutes.from_now.to_unix)
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)[1].as_h
-    body["history"].as_a.last["state"].should eq("rejected")
-    body["history"].as_a.size.should eq(2)
+      sleep(200.milliseconds) # advance time 2 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 5.minutes.from_now.to_unix,
-      booking_end: 25.minutes.from_now.to_unix)
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["history"].as_a.last["state"].should eq("cancelled")
-    body["history"].as_a.size.should eq(2)
+      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("no_show")
+    end
+
+    it "booking rejected before booking_start" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("rejected")
+      body["history"].as_a.last["state"].should eq("rejected")
+      body["history"].as_a.size.should eq(2)
+    end
+
+    it "booking checked_in before booking_start" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("checked_in")
+    end
+
+    it "booking checked_in and checked_out before booking_start" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 15.minutes.from_now.to_unix)
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("checked_in")
+      body["history"].as_a.last["state"].should eq("checked_in")
+      body["history"].as_a.size.should eq(2)
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("checked_out")
+      body["history"].as_a.last["state"].should eq("checked_out")
+      body["history"].as_a.size.should eq(3)
+    end
+
+    it "booking checked_in and checked_out between booking_start and booking_end" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("checked_in")
+      body["history"].as_a.last["state"].should eq("checked_in")
+      body["history"].as_a.size.should eq(2)
+
+      sleep(500.milliseconds) # advance time 5 minutes
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("checked_out")
+      body["history"].as_a.last["state"].should eq("checked_out")
+      body["history"].as_a.size.should eq(3)
+    end
+
+    it "booking checked_in but never checked_out between booking_start and booking_end" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 6.minutes.from_now.to_unix)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+
+      sleep(500.milliseconds) # advance time 5 minutes
+
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("ended")
+    end
   end
 
   it "?utm_source= should set booked_from if it is not set" do
