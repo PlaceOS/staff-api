@@ -189,6 +189,8 @@ describe Bookings do
       Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
       body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
       body["current_state"].should eq("checked_in")
+      body["history"].as_a.last["state"].should eq("checked_in")
+      body["history"].as_a.size.should eq(2)
     end
 
     it "booking checked_in and checked_out before booking_start" do
