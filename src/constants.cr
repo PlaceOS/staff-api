@@ -26,5 +26,7 @@ module App
 
   SSL_VERIFY_NONE = !!ENV["SSL_VERIFY_NONE"]?.presence.try { |var| var.downcase.in?("1", "true") }
 
+  PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
+
   class_getter? running_in_production : Bool = PRODUCTION
 end

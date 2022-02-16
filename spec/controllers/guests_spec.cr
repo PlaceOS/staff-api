@@ -1,7 +1,8 @@
 require "../spec_helper"
 require "./helpers/spec_clean_up"
+require "../../src/constants"
 
-PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
+# PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
 
 describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
