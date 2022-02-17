@@ -1,5 +1,6 @@
 require "../spec_helper"
 require "./helpers/spec_clean_up"
+require "../../src/constants"
 
 describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
@@ -8,28 +9,32 @@ describe Guests do
   describe "#index" do
     it "unfiltered should return a list of all guests" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+      GuestsHelper.create_guest(tenant.id, "Jon", "jon2@example.com")
       GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
-      body.map(&.["name"]).should eq(["Jon", "Steve"])
-      # Guest emails
-      body.map(&.["email"]).should eq(["jon@example.com", "steve@example.com"])
+      names = body.map(&.["name"])
+      names.includes?("Jon").should be_true
+      names.includes?("Steve").should be_true
+      # # Guest emails
+      emails = body.map(&.["email"])
+      emails.includes?("jon2@example.com").should be_true
+      emails.includes?("steve@example.com").should be_true
     end
 
     it "query filtered should return a list of only matched guests" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
-      GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+      GuestsHelper.create_guest(tenant.id, "Jon", "jon4@example.com")
+      GuestsHelper.create_guest(tenant.id, "Steve", "steve2@example.com")
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}?q=steve", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
       # Guest names
       body.map(&.["name"]).should eq(["Steve"])
       # Guest emails
-      body.map(&.["email"]).should eq(["steve@example.com"])
+      body.map(&.["email"]).should eq(["steve2@example.com"])
     end
 
     pending "should return guests visiting today in a subset of rooms and bookings" do
@@ -48,11 +53,11 @@ describe Guests do
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
 
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby23@redant.com.au")
       meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
       guest.attendee_for(meta.id.not_nil!)
 
-      guest2 = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+      guest2 = GuestsHelper.create_guest(tenant.id, "Jon", "jon8@example.com")
       booking = BookingsHelper.create_booking(tenant.id)
       Attendee.create!({booking_id:     booking.id,
                         guest_id:       guest2.id,
@@ -69,7 +74,7 @@ describe Guests do
       # Guest names
       body.map(&.["name"]).should eq(["Toby", "Jon"])
       # Guest emails
-      body.map(&.["email"]).should eq(["toby@redant.com.au", "jon@example.com"])
+      body.map(&.["email"]).should eq(["toby23@redant.com.au", "jon8@example.com"])
       # Event info
       body.map(&.["event"]).should eq(GuestsHelper.guest_events_output)
     end
@@ -81,30 +86,30 @@ describe Guests do
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant34.com.au")
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
 
       body["name"].should eq("Toby")
-      body["email"].should eq("toby@redant.com.au")
+      body["email"].should eq("toby@redant34.com.au")
       body["visit_expected"].should eq(false)
     end
 
     it "should show a guests details when visting today" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant32.com.au")
       meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
       guest.attendee_for(meta.id.not_nil!)
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
       body["name"].should eq("Toby")
-      body["email"].should eq("toby@redant.com.au")
+      body["email"].should eq("toby@redant32.com.au")
       body["visit_expected"].should eq(true)
     end
 
     it "should show a guest with booking details when visting today for a booking" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby90@redant.com.au")
       booking = BookingsHelper.create_booking(tenant.id)
       Attendee.create!({booking_id:     booking.id,
                         guest_id:       guest.id,
@@ -115,7 +120,7 @@ describe Guests do
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
       body["name"].should eq("Toby")
-      body["email"].should eq("toby@redant.com.au")
+      body["email"].should eq("toby90@redant.com.au")
       body["visit_expected"].should eq(true)
       body["booking"]["id"].should eq(booking.id)
     end
@@ -124,7 +129,7 @@ describe Guests do
   describe "#bookings" do
     it "should show bookings for a guest when visting" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+      guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby89@redant.com.au")
       booking = BookingsHelper.create_booking(tenant.id)
       Attendee.create!({booking_id:     booking.id,
                         guest_id:       guest.id,
@@ -140,39 +145,98 @@ describe Guests do
 
   it "#destroy" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    toby = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
-    GuestsHelper.create_guest(tenant.id, "Steve", "steve@example.com")
+    dave = GuestsHelper.create_guest(tenant.id, "Dave", "dave@redant.com.au")
+    GuestsHelper.create_guest(tenant.id, "Elvis", "elvis@example.com")
 
-    Guests.context("DELETE", "#{GUESTS_BASE}/#{toby.email}/", route_params: {"id" => toby.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
+    Guests.context("DELETE", "#{GUESTS_BASE}/#{dave.email}/", route_params: {"id" => dave.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Check only one is returned
     body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
-    # Only has steve, toby got deleted
-    body.map(&.["name"]).should eq(["Steve"])
-    body.map(&.["email"]).should eq(["steve@example.com"])
+    body.map(&.["name"]).includes?("Dave").should be_false
+    body.map(&.["email"]).includes?("dave@redant.com.au").should be_false
   end
 
   it "#create & #update" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    req_body = %({"email":"toby@redant.com.au","banned":true,"extension_data":{"test":"data"}})
+    req_body = %({"name":"toby6","email":"toby6@redant.com.au","banned":true,"extension_data":{"test":"data"}})
     created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
-    created["email"].should eq("toby@redant.com.au")
+    created["email"].should eq("toby6@redant.com.au")
     created["banned"].should eq(true)
     created["dangerous"].should eq(false)
     created["extension_data"].should eq({"test" => "data"})
 
-    req_body = %({"email":"toby@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
-    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby@redant.com.au", route_params: {"id" => "toby@redant.com.au"}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
+    req_body = %({"email":"toby6@redant.com.au","dangerous":true,"extension_data":{"other":"info"}})
+    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/toby6@redant.com.au", route_params: {"id" => "toby6@redant.com.au"}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
 
-    updated["email"].should eq("toby@redant.com.au")
+    updated["email"].should eq("toby6@redant.com.au")
     updated["banned"].should eq(true)
     updated["dangerous"].should eq(true)
     updated["extension_data"].should eq({"test" => "data", "other" => "info"})
 
     guest = Guest.query.by_tenant(tenant.id).find!({email: updated["email"]})
     guest.extension_data.as_h.should eq({"test" => "data", "other" => "info"})
+  end
+
+  describe "unique emails" do
+    before_each do
+      WebMock.allow_net_connect = true
+    end
+
+    with_server do
+      it "prevents duplicate guest emails on same tenant" do
+        # WebMock.allow_net_connect = true
+        path = "/api/staff/v1/guests"
+        req_body = %({"name":"toby236","email":"toby239@redant.com.au","banned":true,"extension_data":{"test":"data"}})
+
+        curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
+
+        response = curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
+
+        response.status_code.should eq 422
+        response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+      end
+
+      it "creates guests with same emails on different tenants" do
+        google_tenant = TenantsHelper.create_tenant({
+          name:        "Ian",
+          platform:    "google",
+          domain:      "google.staff-api.dev",
+          credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon2@example.com.au"}),
+        })
+        GuestsHelper.create_guest(google_tenant.id, "Steve", "daniel@example.com")
+
+        path = "/api/staff/v1/guests"
+        req_body = %({"name":"dan","email":"daniel@example.com","banned":true,"extension_data":{"test":"data"}})
+
+        response = curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
+        response.status_code.should eq 201
+      end
+    end
+  end
+
+  it "prevents duplicate guest emails on same tenant at the model level" do
+    expect_raises(PQ::PQError, App::PG_UNIQUE_CONSTRAINT_REGEX) do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      GuestsHelper.create_guest(tenant.id, "Connor", "jon4@example.com")
+      GuestsHelper.create_guest(tenant.id, "Ian", "jon4@example.com")
+    end
   end
 
   it "#meetings should show meetings for guest" do
@@ -192,7 +256,7 @@ describe Guests do
       .to_return(GuestsHelper.mock_event_query_json)
 
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby@redant.com.au")
+    guest = GuestsHelper.create_guest(tenant.id, "Nathan", "nathan@redant.com.au")
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
     guest.attendee_for(meta.id.not_nil!)
 

@@ -36,7 +36,6 @@ class Guest
   end
 
   def validate
-    validate_email_uniqueness
     set_booleans
   end
 
@@ -156,12 +155,5 @@ class Guest
   private def set_booleans
     self.dangerous = false if !dangerous_column.defined?
     self.banned = false if !banned_column.defined?
-  end
-
-  # TODO: Update to take tenant_id into account
-  private def validate_email_uniqueness
-    if (!persisted? && email_column.defined? && Guest.query.by_tenant(tenant.id).find { raw("email = '#{self.email}'") }) || (persisted? && Guest.query.by_tenant(tenant.id).find { raw("email = '#{self.email}'") & raw("id != '#{self.id}'") })
-      add_error("email", "duplicate error. A guest with this email already exists")
-    end
   end
 end

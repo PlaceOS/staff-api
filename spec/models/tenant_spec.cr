@@ -12,11 +12,62 @@ describe Tenant do
     a.errors.size.should eq 0
   end
 
+  with_server do
+    it "prevents two tenants with the same domain" do
+      WebMock.allow_net_connect = true
+      path = "/api/staff/v1/tenants"
+
+      body = %({
+      "name":        "Bob",
+      "platform":    "google",
+      "domain":      "club-bob.staff-api.dev",
+      "credentials": {
+        "issuer":      "1122121212",
+        "scopes":      ["http://example.com"],
+        "signing_key": "-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----",
+        "domain":      "example.com.au",
+        "sub":         "bob@example.com.au"
+      }
+    })
+
+      curl(
+        method: "POST",
+        path: path,
+        body: body,
+        headers: Mock::Headers.office365_guest,
+      )
+
+      body = %({
+      "name":        "Ian",
+      "platform":    "google",
+      "domain":      "club-bob.staff-api.dev",
+      "credentials": {
+        "issuer":      "1122121212",
+        "scopes":      ["http://example.com"],
+        "signing_key": "-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----",
+        "domain":      "example.com.au",
+        "sub":         "bob@example.com.au"
+      }
+    })
+
+      response = curl(
+        method: "POST",
+        path: path,
+        body: body,
+        headers: Mock::Headers.office365_guest,
+      )
+
+      response.status_code.should eq 422
+      response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+      WebMock.reset
+    end
+  end
+
   it "should accept JSON params" do
     body = %({
       "name":        "Bob",
       "platform":    "google",
-      "domain":      "club-bob.staff-api.dev",
+      "domain":      "club-bob2.staff-api.dev",
       "credentials": {
         "issuer":      "1122121212",
         "scopes":      ["http://example.com"],
@@ -60,7 +111,12 @@ describe Tenant do
   end
 
   it "check encryption" do
-    t = TenantsHelper.create_tenant
+    t = TenantsHelper.create_tenant({
+      name:        "Jon2",
+      platform:    "google",
+      domain:      "encrypt.google.staff-api.dev",
+      credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+    })
     t.is_encrypted?.should be_true
   end
 
