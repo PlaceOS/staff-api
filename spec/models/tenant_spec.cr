@@ -58,9 +58,9 @@ describe Tenant do
       )
 
       response.status_code.should eq 422
-      response.body.should contain "duplicate key value violates unique constraint"
+      response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+      WebMock.reset
     end
-    WebMock.reset
   end
 
   it "should accept JSON params" do
@@ -107,8 +107,6 @@ describe Tenant do
       credentials:    %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
       booking_limits: %({"desk": "2"}),
     })
-    puts "\n"
-    puts a.inspect
     a.errors.size.should eq 1
   end
 

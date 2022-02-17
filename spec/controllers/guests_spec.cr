@@ -179,52 +179,56 @@ describe Guests do
     guest.extension_data.as_h.should eq({"test" => "data", "other" => "info"})
   end
 
-  with_server do
-    it "prevents duplicate guest emails on same tenant" do
+  describe "unique emails" do
+    before_each do
       WebMock.allow_net_connect = true
-      path = "/api/staff/v1/guests"
-      req_body = %({"name":"toby236","email":"toby239@redant.com.au","banned":true,"extension_data":{"test":"data"}})
-
-      curl(
-        method: "POST",
-        path: path,
-        body: req_body,
-        headers: Mock::Headers.office365_guest,
-      )
-
-      response = curl(
-        method: "POST",
-        path: path,
-        body: req_body,
-        headers: Mock::Headers.office365_guest,
-      )
-
-      response.status_code.should eq 422
-      response.body.should contain "duplicate key value violates unique constraint"
     end
 
-    it "creates guests with same emails on different tenants" do
-      WebMock.allow_net_connect = true
-      google_tenant = TenantsHelper.create_tenant({
-        name:        "Ian",
-        platform:    "google",
-        domain:      "google.staff-api.dev",
-        credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon2@example.com.au"}),
-      })
-      GuestsHelper.create_guest(google_tenant.id, "Steve", "daniel@example.com")
+    with_server do
+      it "prevents duplicate guest emails on same tenant" do
+        # WebMock.allow_net_connect = true
+        path = "/api/staff/v1/guests"
+        req_body = %({"name":"toby236","email":"toby239@redant.com.au","banned":true,"extension_data":{"test":"data"}})
 
-      path = "/api/staff/v1/guests"
-      req_body = %({"name":"dan","email":"daniel@example.com","banned":true,"extension_data":{"test":"data"}})
+        curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
 
-      response = curl(
-        method: "POST",
-        path: path,
-        body: req_body,
-        headers: Mock::Headers.office365_guest,
-      )
-      response.status_code.should eq 201
+        response = curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
+
+        response.status_code.should eq 422
+        response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+      end
+
+      it "creates guests with same emails on different tenants" do
+        google_tenant = TenantsHelper.create_tenant({
+          name:        "Ian",
+          platform:    "google",
+          domain:      "google.staff-api.dev",
+          credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon2@example.com.au"}),
+        })
+        GuestsHelper.create_guest(google_tenant.id, "Steve", "daniel@example.com")
+
+        path = "/api/staff/v1/guests"
+        req_body = %({"name":"dan","email":"daniel@example.com","banned":true,"extension_data":{"test":"data"}})
+
+        response = curl(
+          method: "POST",
+          path: path,
+          body: req_body,
+          headers: Mock::Headers.office365_guest,
+        )
+        response.status_code.should eq 201
+      end
     end
-    WebMock.reset
   end
 
   it "prevents duplicate guest emails on same tenant at the model level" do
