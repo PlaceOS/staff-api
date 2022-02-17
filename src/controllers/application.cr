@@ -97,6 +97,8 @@ abstract class Application < ActionController::Base
   rescue_from PQ::PQError do |error|
     if error.message =~ App::PG_UNIQUE_CONSTRAINT_REGEX
       render_error(HTTP::Status::UNPROCESSABLE_ENTITY, error)
+    else
+      raise error
     end
   end
 
