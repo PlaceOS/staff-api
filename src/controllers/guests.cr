@@ -117,10 +117,6 @@ class Guests < Application
         .where { var("guests", "email").in?(attendees.keys) }
         .each { |guest| guests[guest.email.not_nil!] = guest }
 
-      puts "============="
-      puts guests.inspect
-      puts "============="
-
       render json: attendees.map { |email, visitor|
         # Prevent a database lookup
         meeting_event = nil
@@ -154,10 +150,6 @@ class Guests < Application
         next if part.empty?
         sql_query = sql_query.where("searchable LIKE :query", query: "%#{part}%")
       end
-
-      puts "============="
-      puts sql_query.inspect
-      puts "============="
 
       render json: sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g) }
     end
