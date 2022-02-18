@@ -264,7 +264,7 @@ describe Bookings do
 
   it "#guest_list should list guests for a booking" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    guest = GuestsHelper.create_guest(tenant.id, "Jon", "jon@example.com")
+    guest = GuestsHelper.create_guest(tenant.id)
     booking = BookingsHelper.create_booking(tenant.id)
     Attendee.create!({booking_id:     booking.id,
                       guest_id:       guest.id,
@@ -274,7 +274,7 @@ describe Bookings do
     })
 
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}/guests", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
-    body.map(&.["name"]).should eq(["Jon"])
+    body.map(&.["name"]).should eq([guest.name])
   end
 
   it "#ensures case insensitivity in user emails" do
