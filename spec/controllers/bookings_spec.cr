@@ -5,27 +5,25 @@ describe Bookings do
   describe "#index" do
     it "should return a list of bookings" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      BookingsHelper.create_booking(tenant.id)
-      BookingsHelper.create_booking(tenant_id: tenant.id,
-        user_id: "bob@example.com",
-        user_email: "bob@example.com",
-        asset_id: "asset-2",
-        zones: ["zone-4127", "zone-890"],
-        booking_end: 30.minutes.from_now.to_unix)
+
+      booking1 = BookingsHelper.create_booking(tenant.id)
+      booking2 = BookingsHelper.create_booking(tenant.id)
 
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=jon@example.com&type=desk"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(1)
 
       # filter by zones
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-890,zone-4127"
+      zones1 = booking1.zones.not_nil!
+      zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(2)
 
       # More filters by zones
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-4127"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(1)
     end
@@ -38,7 +36,7 @@ describe Bookings do
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-      guest_email = "guest@email.com"
+      guest_email = Faker::Internet.email
 
       Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"fsd_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}), headers: Mock::Headers.office365_guest, &.create)
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&extension_data={booking_for:#{guest_email}}"
@@ -52,38 +50,40 @@ describe Bookings do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
 
-      guest_email = "guest2@email.com"
+      guest_email = Faker::Internet.email
+      ext_data = Faker::Lorem.word
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"desk_1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}","other":"stuff"}}), headers: Mock::Headers.office365_guest, &.create)
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"desk_1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}","other":"#{ext_data}"}}), headers: Mock::Headers.office365_guest, &.create)
       Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"desk_2","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}), headers: Mock::Headers.office365_guest, &.create)
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&extension_data={booking_for:#{guest_email},other:stuff}"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&extension_data={booking_for:#{guest_email},other:#{ext_data}}"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       body.size.should eq(1)
     end
 
     it "should return a list of bookings when filtered by user" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "toby@redant.com.au")
-      BookingsHelper.create_booking(tenant.id)
+
+      booking1 = BookingsHelper.create_booking(tenant.id, "toby@redant.com.au")
+      booking2 = BookingsHelper.create_booking(tenant.id)
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-      # Since we are using Toby's token to login, user=current means Toby
+
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       booking_user_ids = body.map { |r| r["user_id"] }
-      booking_user_ids.should eq(["toby@redant.com.au"])
+      booking_user_ids.should eq([booking1.user_id])
 
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=jon@example.com"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=#{booking2.user_email}"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       booking_user_ids = body.map { |r| r["user_id"] }
-      booking_user_ids.should eq(["jon@example.com"])
+      booking_user_ids.should eq([booking2.user_id])
     end
 
     it "should return a list of bookings filtered current user when no zones or user is specified" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "toby@redant.com.au")
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
       BookingsHelper.create_booking(tenant.id)
 
       starting = 5.minutes.from_now.to_unix
@@ -92,7 +92,7 @@ describe Bookings do
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
       body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
       booking_user_ids = body.map { |r| r["user_id"] }
-      booking_user_ids.should eq(["toby@redant.com.au"])
+      booking_user_ids.should eq([booking.user_id])
     end
   end
 
@@ -101,8 +101,8 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id)
 
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["user_id"].should eq("jon@example.com")
-    body["zones"].should eq(["zone-1234", "zone-4567", "zone-890"])
+    body["user_id"].should eq(booking.user_id)
+    body["zones"].should eq(booking.zones)
   end
 
   it "#show should include the current state" do
@@ -119,6 +119,7 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id,
       booking_start: 5.minutes.ago.to_unix,
       booking_end: 1.hour.from_now.to_unix)
+
     Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
     body["current_state"].should eq("checked_in")
@@ -279,20 +280,26 @@ describe Bookings do
 
   it "#ensures case insensitivity in user emails" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(tenant_id: tenant.id, user_id: "dave", user_email: "DAVE@example.com", booked_by_email: "toby@redant.com.au")
+    booking_name = Faker::Name.first_name
+    booking_email = "#{booking_name.upcase}@email.com"
+
+    booking = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: booking_email)
+
+    booking.user_id = booking_name.downcase
+    booking.save!
 
     starting = 5.minutes.from_now.to_unix
     ending = 40.minutes.from_now.to_unix
 
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=dave@example.com"
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{booking_email.downcase}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     booking_user_ids = body.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["dave"])
+    booking_user_ids.should eq([booking.user_id])
 
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=DAVE@example.com"
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{booking_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     booking_user_ids = body.map { |r| r["user_id"] }
-    booking_user_ids.should eq(["dave"])
+    booking_user_ids.should eq([booking.user_id])
   end
 
   it "#destroy should delete a booking" do
@@ -301,27 +308,22 @@ describe Bookings do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    BookingsHelper.create_booking(
-      tenant.id, user_id: "toby@redant.com.au",
-      user_email: "toby@redant.com.au")
-    booking = BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "toby@redant.com.au",
-      user_email: "toby@redant.com.au",
-      asset_id: "asset-2",
-      zones: ["zone-4127", "zone-890"],
-      booking_end: 30.minutes.from_now.to_unix)
+
+    user_email = Faker::Internet.email
+    booking1 = BookingsHelper.create_booking(tenant.id, user_email)
+    booking2 = BookingsHelper.create_booking(tenant.id, user_email)
 
     # Check both are returned in beginning
-    starting = 5.minutes.from_now.to_unix
-    ending = 80.minutes.from_now.to_unix
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    starting = [booking1.booking_start, booking2.booking_start].min
+    ending = [booking1.booking_end, booking2.booking_end].max
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking2.id}/", route_params: {"id" => booking2.id.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Check only one is returned after deletion
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(1)
   end
@@ -335,9 +337,9 @@ describe Bookings do
 
     Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 1.minutes.from_now.to_unix,
-      booking_end: 15.minutes.from_now.to_unix)
+    booking = BookingsHelper.create_booking(tenant.id)
+    booking.booking_start = 1.minutes.from_now.to_unix
+    booking.save!
 
     sleep(200.milliseconds) # advance time 2 minutes
     Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
@@ -357,9 +359,10 @@ describe Bookings do
 
     Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id,
-      booking_start: 1.minutes.from_now.to_unix,
-      booking_end: 15.minutes.from_now.to_unix)
+    booking = BookingsHelper.create_booking(tenant.id)
+    booking.booking_start = 1.minutes.from_now.to_unix
+    booking.booking_end = 15.minutes.from_now.to_unix
+    booking.save!
 
     sleep(200.milliseconds) # advance time 2 minutes
     Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
@@ -378,35 +381,31 @@ describe Bookings do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    booking1 = BookingsHelper.create_booking(
-      tenant.id, user_id: "toby@redant.com.au",
-      user_email: "toby@redant.com.au")
-    booking2 = booking = BookingsHelper.create_booking(tenant_id: tenant.id,
-      user_id: "toby@redant.com.au",
-      user_email: "toby@redant.com.au",
-      asset_id: "asset-2",
-      zones: ["zone-4127", "zone-890"],
-      booking_end: 30.minutes.from_now.to_unix)
+    user_email = Faker::Internet.email
+    booking1 = BookingsHelper.create_booking(tenant.id, user_email)
+    booking2 = BookingsHelper.create_booking(tenant.id, user_email)
 
     # Check both are returned in beginning
-    starting = 5.minutes.from_now.to_unix
-    ending = 80.minutes.from_now.to_unix
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
+    starting = [booking1.booking_start, booking2.booking_start].min
+    ending = [booking1.booking_end, booking2.booking_end].max
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
+
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking1.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking1.id}/", route_params: {"id" => booking1.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Return one deleted booking
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true"
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(1)
     body.first["id"].should eq(booking1.id)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking2.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking2.id}/", route_params: {"id" => booking2.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Return both deleted bookings
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true"
+    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
     booking_user_ids = body.map { |r| r["id"].as_i }
@@ -414,7 +413,7 @@ describe Bookings do
     booking_user_ids.sort.should eq([booking1.id, booking2.id].sort)
   end
 
-  it "#create should create and #update should update a booking" do
+  it "#create and #update" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -422,12 +421,15 @@ describe Bookings do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
       .to_return(body: "")
 
-    starting = 5.minutes.from_now.to_unix
-    ending = 40.minutes.from_now.to_unix
+    user_name = Faker::Internet.user_name
+    user_email = Faker::Internet.email
+    starting = Random.new.rand(5..19).minutes.from_now.to_unix
+    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
     created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
       {
-          "name": "test",
-          "email": "test@example.com",
+          "name": "#{user_name}",
+          "email": "#{user_email}",
           "checked_in": true,
           "visit_expected": true
       }]}), headers: Mock::Headers.office365_guest, &.create)[1].as_h
@@ -443,14 +445,17 @@ describe Bookings do
     attendee.visit_expected.should eq(true)
 
     guest = attendee.guest
-    guest.name.should eq("test")
-    guest.email.should eq("test@example.com")
+    guest.name.should eq(user_name)
+    guest.email.should eq(user_email)
+
+    updated_user_name = Faker::Internet.user_name
+    updated_user_email = Faker::Internet.email
 
     # instantiate the controller
     updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"title":"new title","extension_data":{"other":"stuff"},"booking_attendees": [
       {
-          "name": "jon",
-          "email": "jon@example.com",
+        "name": "#{updated_user_name}",
+        "email": "#{updated_user_email}",
           "checked_in": false,
           "visit_expected": true
       }]}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
@@ -469,8 +474,8 @@ describe Bookings do
     attendee.visit_expected.should eq(true)
 
     guest = attendee.guest
-    guest.name.should eq("jon")
-    guest.email.should eq("jon@example.com")
+    guest.name.should eq(updated_user_name)
+    guest.email.should eq(updated_user_email)
   end
 
   # add support for configurable booking limits on resources
@@ -647,20 +652,22 @@ describe Bookings do
   it "#prevents a booking being saved with an end time before the start time" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     expect_raises(Clear::Model::InvalidError) do
-      BookingsHelper.create_booking(tenant_id: tenant.id, booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 3.minutes.from_now.to_unix)
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id)
+      booking.booking_end = booking.booking_start - 2
+      booking.save!
     end
   end
 
   it "#prevents a booking being saved with an end time the same as the start time" do
     tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
     expect_raises(Clear::Model::InvalidError) do
-      BookingsHelper.create_booking(tenant_id: tenant.id, booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 5.minutes.from_now.to_unix)
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id)
+      booking.booking_end = booking.booking_start
+      booking.save!
     end
   end
 
-  it "#approve should approve a booking and #reject should reject meeting" do
+  it "#approve & #reject" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -669,10 +676,11 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id)
 
     body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/approve", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
+    booking = Booking.query.find! { user_id == booking.user_id }
     body["approved"].should eq(true)
-    body["approver_id"].should eq("toby@redant.com.au")
-    body["approver_email"].should eq("dev@acaprojects.com")
-    body["approver_name"].should eq("Toby Carvan")
+    body["approver_id"].should eq(booking.approver_id)
+    body["approver_email"].should eq(booking.approver_email)
+    body["approver_name"].should eq(booking.approver_name)
     body["rejected"].should eq(false)
 
     # Test rejection
@@ -706,39 +714,40 @@ BOOKINGS_BASE = Bookings.base_route
 module BookingsHelper
   extend self
 
-  def create_booking(tenant_id,
-                     user_id = "jon@example.com",
-                     user_email = "jon@example.com",
-                     user_name = "Jon Smith",
-                     asset_id = "asset-1",
-                     zones = ["zone-1234", "zone-4567", "zone-890"],
-                     booking_type = "desk",
-                     booking_start = 5.minutes.from_now.to_unix,
-                     booking_end = 1.hour.from_now.to_unix,
-                     booked_by_email = "jon@example.com",
-                     booked_by_id = "jon@example.com",
-                     booked_by_name = "Jon Smith",
-                     utm_source = "desktop",
-                     history = [] of Booking::History)
+  def create_booking(tenant_id, user_email)
+    user_name = Faker::Internet.user_name
+    zones = ["zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}"]
     Booking.create!(
       tenant_id: tenant_id,
-      user_id: user_id,
+      user_id: user_email,
       user_email: PlaceOS::Model::Email.new(user_email),
       user_name: user_name,
-      asset_id: asset_id,
+      asset_id: "asset-#{Random.new.rand(500)}",
       zones: zones,
-      booking_type: booking_type,
-      booking_start: booking_start,
-      booking_end: booking_end,
+      booking_type: "desk",
+      booking_start: Random.new.rand(5..19).minutes.from_now.to_unix,
+      booking_end: Random.new.rand(25..79).minutes.from_now.to_unix,
       checked_in: false,
       approved: false,
       rejected: false,
-      booked_by_email: PlaceOS::Model::Email.new(booked_by_email),
-      booked_by_id: booked_by_id,
-      booked_by_name: booked_by_name,
-      utm_source: utm_source,
-      history: history,
+      booked_by_email: PlaceOS::Model::Email.new(user_email),
+      booked_by_id: user_email,
+      booked_by_name: user_name,
+      utm_source: "desktop",
+      history: [] of Booking::History,
     )
+  end
+
+  def create_booking(tenant_id, booking_start, booking_end)
+    booking = create_booking(tenant_id)
+    booking.booking_start = booking_start
+    booking.booking_end = booking_end
+    booking.save!
+  end
+
+  def create_booking(tenant_id)
+    user_email = Faker::Internet.email
+    create_booking(tenant_id: tenant_id, user_email: user_email)
   end
 
   def http_create_booking(

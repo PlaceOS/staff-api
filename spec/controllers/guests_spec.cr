@@ -274,13 +274,6 @@ module GuestsHelper
 
   def create_guest(tenant_id)
     create_guest(tenant_id, Faker::Internet.email)
-    # Guest.create({
-    #   name:      Faker::Name.name,
-    #   email:     Faker::Internet.email,
-    #   tenant_id: tenant_id,
-    #   banned:    false,
-    #   dangerous: false,
-    # })
   end
 
   def create_guest(tenant_id, email)
