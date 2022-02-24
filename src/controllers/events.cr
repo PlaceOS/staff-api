@@ -131,14 +131,18 @@ class Events < Application
       })
 
       spawn do
-        placeos_client.root.signal("staff/event/changed", {
-          action:    :create,
-          system_id: input_event.system_id,
-          event_id:  created_event.id,
-          host:      host,
-          resource:  sys.email,
-          ext_data:  input_event.extension_data,
-        })
+        begin
+          placeos_client.root.signal("staff/event/changed", {
+            action:    :create,
+            system_id: input_event.system_id,
+            event_id:  created_event.id,
+            host:      host,
+            resource:  sys.email,
+            ext_data:  input_event.extension_data,
+          })
+        rescue error
+          Log.warn(exception: error) { "failed to signal event creation" }
+        end
       end
 
       # Save custom data
@@ -197,17 +201,21 @@ class Events < Application
             })
 
             spawn do
-              placeos_client.root.signal("staff/guest/attending", {
-                action:         :meeting_created,
-                system_id:      sys.id,
-                event_id:       created_event.id,
-                host:           host,
-                resource:       sys.email,
-                event_summary:  created_event.body,
-                event_starting: created_event.event_start.not_nil!.to_unix,
-                attendee_name:  attendee.name,
-                attendee_email: attendee.email,
-              })
+              begin
+                placeos_client.root.signal("staff/guest/attending", {
+                  action:         :meeting_created,
+                  system_id:      sys.id,
+                  event_id:       created_event.id,
+                  host:           host,
+                  resource:       sys.email,
+                  event_summary:  created_event.body,
+                  event_starting: created_event.event_start.not_nil!.to_unix,
+                  attendee_name:  attendee.name,
+                  attendee_email: attendee.email,
+                })
+              rescue error
+                Log.warn(exception: error) { "failed to signal guest attendance" }
+              end
             end
           end
         end
@@ -453,7 +461,33 @@ class Events < Application
 
             if !previously_visiting || changing_room
               spawn do
+                begin
+                  sys = system.not_nil!
+
+                  placeos_client.root.signal("staff/guest/attending", {
+                    action:         :meeting_update,
+                    system_id:      sys.id,
+                    event_id:       event_id,
+                    host:           host,
+                    resource:       sys.email,
+                    event_summary:  updated_event.not_nil!.body,
+                    event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
+                    attendee_name:  attendee.name,
+                    attendee_email: attendee.email,
+                  })
+                rescue error
+                  Log.warn(exception: error) { "failed to signal guest attendance" }
+                end
+              end
+            end
+          end
+        elsif changing_room
+          existing.each do |attend|
+            next unless attend.visit_expected
+            spawn do
+              begin
                 sys = system.not_nil!
+                guest = attend.guest
 
                 placeos_client.root.signal("staff/guest/attending", {
                   action:         :meeting_update,
@@ -463,30 +497,12 @@ class Events < Application
                   resource:       sys.email,
                   event_summary:  updated_event.not_nil!.body,
                   event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
-                  attendee_name:  attendee.name,
-                  attendee_email: attendee.email,
+                  attendee_name:  guest.name,
+                  attendee_email: guest.email,
                 })
+              rescue error
+                Log.warn(exception: error) { "failed to signal guest attendance" }
               end
-            end
-          end
-        elsif changing_room
-          existing.each do |attend|
-            next unless attend.visit_expected
-            spawn do
-              sys = system.not_nil!
-              guest = attend.guest
-
-              placeos_client.root.signal("staff/guest/attending", {
-                action:         :meeting_update,
-                system_id:      sys.id,
-                event_id:       event_id,
-                host:           host,
-                resource:       sys.email,
-                event_summary:  updated_event.not_nil!.body,
-                event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
-                attendee_name:  guest.name,
-                attendee_email: guest.email,
-              })
             end
           end
         end
@@ -497,15 +513,19 @@ class Events < Application
 
       # Update PlaceOS with an signal "staff/event/changed"
       spawn do
-        sys = system.not_nil!
-        placeos_client.root.signal("staff/event/changed", {
-          action:    :update,
-          system_id: sys.id,
-          event_id:  event_id,
-          host:      host,
-          resource:  sys.email,
-          ext_data:  eventmeta.try &.ext_data,
-        })
+        begin
+          sys = system.not_nil!
+          placeos_client.root.signal("staff/event/changed", {
+            action:    :update,
+            system_id: sys.id,
+            event_id:  event_id,
+            host:      host,
+            resource:  sys.email,
+            ext_data:  eventmeta.try &.ext_data,
+          })
+        rescue error
+          Log.warn(exception: error) { "failed to signal event update" }
+        end
       end
 
       render json: StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
@@ -636,12 +656,16 @@ class Events < Application
       EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete_all
 
       spawn do
-        placeos_client.root.signal("staff/event/changed", {
-          action:    :cancelled,
-          system_id: system.not_nil!.id,
-          event_id:  event_id,
-          resource:  system.not_nil!.email,
-        })
+        begin
+          placeos_client.root.signal("staff/event/changed", {
+            action:    :cancelled,
+            system_id: system.not_nil!.id,
+            event_id:  event_id,
+            resource:  system.not_nil!.email,
+          })
+        rescue error
+          Log.warn(exception: error) { "failed to signal event deletion" }
+        end
       end
     end
 
@@ -797,19 +821,23 @@ class Events < Application
 
     # Update PlaceOS with an signal "staff/guest/checkin"
     spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
-        action:         :checkin,
-        checkin:        checkin,
-        system_id:      system_id,
-        event_id:       event_id,
-        host:           event.host,
-        resource:       eventmeta.resource_calendar,
-        event_summary:  event.not_nil!.body,
-        event_starting: eventmeta.event_start,
-        attendee_name:  guest.name,
-        attendee_email: guest.email,
-        ext_data:       eventmeta.ext_data,
-      })
+      begin
+        get_placeos_client.root.signal("staff/guest/checkin", {
+          action:         :checkin,
+          checkin:        checkin,
+          system_id:      system_id,
+          event_id:       event_id,
+          host:           event.host,
+          resource:       eventmeta.resource_calendar,
+          event_summary:  event.not_nil!.body,
+          event_starting: eventmeta.event_start,
+          attendee_name:  guest.name,
+          attendee_email: guest.email,
+          ext_data:       eventmeta.ext_data,
+        })
+      rescue error
+        Log.warn(exception: error) { "failed to signal guest checkin" }
+      end
     end
 
     render json: attending_guest(attendee, attendee.guest)
