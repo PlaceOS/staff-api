@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml)
 [![CI](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml)
+[![Changelog](https://img.shields.io/badge/Changelog-available-github.svg)](/CHANGELOG.md)
 
 Service for integrating [PlaceOS](https://placeos.com/) with the workplace.
 
@@ -48,18 +49,6 @@ LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
 ```
 
-## Development
+## Contributing
 
-The `test` script spins up a configured development environment, and can be used like so...
-
-```console
-./test
-```
-
-or, to run specs as you make changes...
-
-```console
-./test --watch
-```
-
-**Note:** pass the `-Dquiet` flag to silence the SQL loging
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
