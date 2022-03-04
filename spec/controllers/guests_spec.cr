@@ -8,7 +8,7 @@ describe Guests do
 
   describe "#index" do
     it "unfiltered should return a list of all guests" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest1 = GuestsHelper.create_guest(tenant.id)
       guest2 = GuestsHelper.create_guest(tenant.id)
 
@@ -25,7 +25,7 @@ describe Guests do
     end
 
     it "query filtered should return a list of only matched guests" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}?q=#{guest.name.to_s.downcase}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
@@ -51,7 +51,7 @@ describe Guests do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
 
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby23@redant.com.au")
       meta = EventMetadatasHelper.create_event(tenant.id, "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=")
       guest.attendee_for(meta.id.not_nil!)
@@ -84,7 +84,7 @@ describe Guests do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
       body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
@@ -95,7 +95,7 @@ describe Guests do
     end
 
     it "should show a guests details when visting today" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
       meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
       guest.attendee_for(meta.id.not_nil!)
@@ -107,7 +107,7 @@ describe Guests do
     end
 
     it "should show a guest with booking details when visting today for a booking" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
       booking = BookingsHelper.create_booking(tenant.id)
       Attendee.create!({booking_id:     booking.id,
@@ -127,7 +127,7 @@ describe Guests do
 
   describe "#bookings" do
     it "should show bookings for a guest when visting" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
       booking = BookingsHelper.create_booking(tenant.id)
       Attendee.create!({booking_id:     booking.id,
@@ -143,7 +143,7 @@ describe Guests do
   end
 
   it "#destroy" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     guest = GuestsHelper.create_guest(tenant.id)
     GuestsHelper.create_guest(tenant.id)
 
@@ -157,7 +157,7 @@ describe Guests do
   end
 
   it "#create & #update" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     guest_name = Faker::Name.name
     guest_email = Faker::Internet.email
     req_body = %({"name":"#{guest_name}","email":"#{guest_email}","banned":true,"extension_data":{"test":"data"}})
@@ -234,7 +234,7 @@ describe Guests do
 
   it "prevents duplicate guest emails on same tenant at the model level" do
     expect_raises(PQ::PQError, App::PG_UNIQUE_CONSTRAINT_REGEX) do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
       GuestsHelper.create_guest(tenant.id, guest.email)
     end
@@ -245,20 +245,41 @@ describe Guests do
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/user@example.com/calendar/events/generic_event")
-      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
-    {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
-      WebMock
-        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-        .to_return(body: systems_resp[index])
-    end
 
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room2@example.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+    WebMock.stub(:any, /^http:\/\/.*\/api\/engine\/v2\/systems\//).to_return(body: %({
+        "name": "Room #{Random.rand(99)}",
+        "description": null,
+        "email": "email-#{Random.rand(99)}@example.com",
+        "capacity": 10,
+        "features": [],
+        "bookable": true,
+        "installed_ui_devices": 0,
+        "zones": [
+            "zone-#{Random.rand(99)}"
+        ],
+        "modules": [
+            "mod-rJRJ#{Random.rand(99)}",
+            "mod-rJRL#{Random.rand(99)}",
+            "mod-rJR#{Random.rand(99)}"
+        ],
+        "created_at": 1562041127,
+        "updated_at": 1562041137,
+        "support_url": null,
+        "version": 5,
+        "id": "sys_id-#{Random.rand(99)}"
+    }))
+
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/.*\.com\/calendar\/calendarView\?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId\+eq\+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&\$top=10000/)
       .to_return(GuestsHelper.mock_event_query_json)
 
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     guest = GuestsHelper.create_guest(tenant.id)
+
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{meta.host_email}/calendar/events/generic_event")
+      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+
     guest.attendee_for(meta.id.not_nil!)
 
     body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/meetings", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.meetings)[1].as_a

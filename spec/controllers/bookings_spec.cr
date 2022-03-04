@@ -4,7 +4,7 @@ require "./helpers/spec_clean_up"
 describe Bookings do
   describe "#index" do
     it "should return a list of bookings" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id)
       booking2 = BookingsHelper.create_booking(tenant.id)
@@ -62,7 +62,7 @@ describe Bookings do
     end
 
     it "should return a list of bookings when filtered by user" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id, "toby@redant.com.au")
       booking2 = BookingsHelper.create_booking(tenant.id)
@@ -82,7 +82,7 @@ describe Bookings do
     end
 
     it "should return a list of bookings filtered current user when no zones or user is specified" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = get_tenant
       booking = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
       BookingsHelper.create_booking(tenant.id)
 
@@ -97,7 +97,7 @@ describe Bookings do
   end
 
   it "#show should find booking" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id)
 
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
@@ -110,7 +110,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
 
     booking = BookingsHelper.create_booking(tenant.id)
     body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
@@ -161,7 +161,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
 
     Timecop.scale(600) # 1 second == 10 minutes
 
@@ -264,7 +264,7 @@ describe Bookings do
   end
 
   it "#guest_list should list guests for a booking" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     guest = GuestsHelper.create_guest(tenant.id)
     booking = BookingsHelper.create_booking(tenant.id)
     Attendee.create!({booking_id:     booking.id,
@@ -279,7 +279,7 @@ describe Bookings do
   end
 
   it "#ensures case insensitivity in user emails" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     booking_name = Faker::Name.first_name
     booking_email = "#{booking_name.upcase}@email.com"
 
@@ -307,7 +307,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
 
     user_email = Faker::Internet.email
     booking1 = BookingsHelper.create_booking(tenant.id, user_email)
@@ -333,7 +333,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
 
     Timecop.scale(600) # 1 second == 10 minutes
 
@@ -355,14 +355,11 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
 
     Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id)
-    booking.booking_start = 1.minutes.from_now.to_unix
-    booking.booking_end = 15.minutes.from_now.to_unix
-    booking.save!
+    booking = BookingsHelper.create_booking(tenant.id, booking_start: 1.minutes.from_now.to_unix, booking_end: 15.minutes.from_now.to_unix)
 
     sleep(200.milliseconds) # advance time 2 minutes
     Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
@@ -380,7 +377,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     user_email = Faker::Internet.email
     booking1 = BookingsHelper.create_booking(tenant.id, user_email)
     booking2 = BookingsHelper.create_booking(tenant.id, user_email)
@@ -388,8 +385,6 @@ describe Bookings do
     # Check both are returned in beginning
     starting = [booking1.booking_start, booking2.booking_start].min
     ending = [booking1.booking_end, booking2.booking_end].max
-    route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
-
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(2)
@@ -488,7 +483,7 @@ describe Bookings do
       .to_return(body: "")
 
     # Set booking limit
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     tenant.booking_limits = JSON.parse(%({"desk": 2}))
     tenant.save!
 
@@ -537,7 +532,7 @@ describe Bookings do
       .to_return(body: "")
 
     # Set booking limit
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     tenant.booking_limits = JSON.parse(%({"desk": 2}))
     tenant.save!
 
@@ -572,7 +567,7 @@ describe Bookings do
       .to_return(body: "")
 
     # Set booking limit
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     tenant.booking_limits = JSON.parse(%({"desk": 2}))
     tenant.save!
 
@@ -650,7 +645,7 @@ describe Bookings do
   end
 
   it "#prevents a booking being saved with an end time before the start time" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     expect_raises(Clear::Model::InvalidError) do
       booking = BookingsHelper.create_booking(tenant_id: tenant.id)
       booking.booking_end = booking.booking_start - 2
@@ -659,7 +654,7 @@ describe Bookings do
   end
 
   it "#prevents a booking being saved with an end time the same as the start time" do
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     expect_raises(Clear::Model::InvalidError) do
       booking = BookingsHelper.create_booking(tenant_id: tenant.id)
       booking.booking_end = booking.booking_start
@@ -672,7 +667,7 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+    tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id)
 
     body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/approve", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h

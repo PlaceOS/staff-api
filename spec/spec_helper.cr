@@ -1,6 +1,7 @@
 require "spec"
 require "faker"
 require "timecop"
+require "uuid"
 
 # Your application config
 # If you have a testing environment, replace this with a test config file
@@ -23,6 +24,10 @@ Spec.before_suite do
   {% else %}
     ::Log.setup(:debug)
   {% end %}
+end
+
+def get_tenant
+  Tenant.query.find! { domain == "toby.staff-api.dev" }
 end
 
 def truncate_db
@@ -121,14 +126,14 @@ module EventMetadatasHelper
   extend self
 
   def create_event(tenant_id,
-                   id,
-                   event_start = Time.utc.to_unix,
-                   event_end = 60.minutes.from_now.to_unix,
-                   system_id = "sys_id",
-                   room_email = "room@example.com",
-                   host = "user@example.com",
+                   id = UUID.random.to_s,
+                   event_start = Random.new.rand(5..19).minutes.from_now.to_unix,
+                   event_end = Random.new.rand(25..79).minutes.from_now.to_unix,
+                   system_id = "sys_id-#{Random.new.rand(500)}",
+                   room_email = Faker::Internet.email,
+                   host = Faker::Internet.email,
                    ext_data = JSON.parse({"foo": 123}.to_json),
-                   ical_uid = "random_uid")
+                   ical_uid = "random_uid-#{Random.new.rand(500)}")
     EventMetadata.create!({
       tenant_id:         tenant_id,
       system_id:         system_id,

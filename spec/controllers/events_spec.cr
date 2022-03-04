@@ -18,25 +18,15 @@ describe Events do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
-      now = 1588407645
-      later = 1588422097
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
-      id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(tenant.id)
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest) { |e|
-        tenant_id = e.tenant.id
-        EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
-        e.index
-      }[1].as_a
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{event.event_start}&period_end=#{event.event_end}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
-      body.includes?("sys-rJQQlR4Cn7")
-      body.includes?(%("host" => "dev@acaprojects.onmicrosoft.com"))
-      body.includes?(%("id" => "sys-rJQQlR4Cn7"))
-      body.includes?(%("extension_data" => {"foo" => 123}))
+      body.includes?(event.system_id)
+      body.includes?(%("host" => "#{event.host_email}"))
+      body.includes?(%("id" => "#{event.system_id}"))
+      body.includes?(%("extension_data" => {#{event.ext_data}}))
     end
 
     it "metadata extension endpoint should filter by extension data" do
@@ -45,11 +35,11 @@ describe Events do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      id = "test_id"
-      EventMetadatasHelper.create_event(tenant.id, id + "1", ext_data: JSON.parse({"colour": "blue"}.to_json))
-      EventMetadatasHelper.create_event(tenant.id, id + "2")
-      EventMetadatasHelper.create_event(tenant.id, id + "3", ext_data: JSON.parse({"colour": "red"}.to_json))
+      tenant = get_tenant
+
+      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "blue"}.to_json))
+      EventMetadatasHelper.create_event(tenant.id)
+      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "red"}.to_json))
 
       field_name = "colour"
       value = "blue"
@@ -68,20 +58,14 @@ describe Events do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_with_recurring_event.json"))
 
-      now = 1588407645
-      later = 1588422097
+      now = 1.minutes.from_now.to_unix
+      later = 80.minutes.from_now.to_unix
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
 
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
-      count = 1
-      while count < 5
-        EventMetadatasHelper.create_event(tenant.id, count, room_email: "email#{count}@mail.com")
-        count = count + 1
-      end
+      tenant = get_tenant
+      5.times { EventMetadatasHelper.create_event(tenant.id) }
 
       body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest, &.index)[1].to_s
-
-      body.includes?(%("recurring_event_id" => "#{master_event_id}"))
       body.includes?(%("recurring_master_id" => "#{master_event_id}"))
     end
   end
@@ -100,8 +84,10 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(tenant.id)
       created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-      created_event.to_s.includes?(%("event_start" => 1598503500))
+      created_event.to_s.includes?(%("event_start" => #{event.event_start}))
 
       # Should have created metadata record
       evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
