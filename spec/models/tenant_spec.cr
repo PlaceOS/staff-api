@@ -131,14 +131,14 @@ describe Tenant do
   end
 
   it "takes JSON credentials and returns a PlaceCalendar::Client" do
-    a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    a.place_calendar_client.class.should eq(PlaceCalendar::Client)
+    tenant = get_tenant
+    tenant.place_calendar_client.class.should eq(PlaceCalendar::Client)
   end
 
   it "should validate credentials based on platform" do
-    a = Tenant.query.find! { domain == "toby.staff-api.dev" }
-    a.update({platform: "google"})
-    a.errors.size.should be > 0
+    tenant = get_tenant
+    tenant.update({platform: "google"})
+    tenant.errors.size.should be > 0
   end
 end
 
