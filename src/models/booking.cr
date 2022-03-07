@@ -154,7 +154,7 @@ class Booking
   end
 
   scope :by_user_or_email do |user_id_value, user_email_value, include_booked_by|
-    # TODO:: interpolate these values properly
+    # TODO: Construct `user_or_email` query correctly
     booked_by = include_booked_by ? %( OR "booked_by_id" = '#{user_id_value}') : ""
     user_id_value = user_id_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\+\=\*\&\^\#\!\`\%\}\{\[\]]/, "")
     user_email_value = user_email_value.try &.gsub(/[\'\"\)\(\\\/\$\?\;\:\<\>\=\*\&\^\!\`\%\}\{\[\]]/, "")
