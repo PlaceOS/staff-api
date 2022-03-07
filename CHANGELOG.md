@@ -1,122 +1,50 @@
-## Unreleased
+## v1.2.0 (2022-03-07)
 
 ### Refactor
 
-- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
-- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
-- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
-- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
-- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
-- **api**: log calendar errors
-- **jwt**: use updated interface
-- minor model refactor
-- efficient and concise specs
-- use correct find over find! enumerable method
-- clarifying relations of tables in complex query
-- scope methods with where clause clarifying the relations of tables
-- clean up
-- ::PlaceOS::Client::API::Error in rescue_from block
-- optimise sql queries, use concise expressions in algo
-- improve Bookings#create algo
-- use find! over find where redundant, remove unnecessary before_action block
-- make controller helper methods private
-- use the correct fields default
+- **spec**: randomise data (#159)
+- **tenant**: improve uniqueness constraint (#151)
+- **application**: remove unnecessary code (#155)
+- central build CI (#150)
+- **booking**: use PlaceOS::Model::Email (#135)
 
 ### Fix
 
-- **bookings**: handle additional state transitions ([#157](https://github.com/PlaceOS/staff-api/pull/157))
-- incomplete centralised ci ([#156](https://github.com/PlaceOS/staff-api/pull/156))
-- **migrations**: adds unique migration for deleted and email digest ([#139](https://github.com/PlaceOS/staff-api/pull/139))
+- **bookings**: handle additional state transitions (#157)
+- incomplete centralised ci (#156)
+- **migrations**: adds unique migration for deleted and email digest (#139)
 - **models booking**: render deleted at as an integer
-- **models booking**: render deleted and deleted_at ([#138](https://github.com/PlaceOS/staff-api/pull/138))
+- **models booking**: render deleted and deleted_at (#138)
 - **controller bookings**: ignore deleted entries when checking for clashes
-- **bookings/events/guest**: query Guest by tenant ([#137](https://github.com/PlaceOS/staff-api/pull/137))
+- **bookings/events/guest**: query Guest by tenant (#137)
 - **event/guests**: Don't add host as guest, even when event.host is not specified
 - **event/guests**: filtering of host from attendees
 - **event/guests**: Don't add host as guest, even when event.host is not specified
-- **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
-- **calendars**: check availability correctly ([#125](https://github.com/PlaceOS/staff-api/pull/125))
-- **events update**: unable to mark visitor as unexpected ([#122](https://github.com/PlaceOS/staff-api/pull/122))
-- **bookings**: add validation for booking times ([#120](https://github.com/PlaceOS/staff-api/pull/120))
-- **events**: on PUT request look up events with system mailbox ([#118](https://github.com/PlaceOS/staff-api/pull/118))
-- **events**: parsing online meetings in office365
-- **Dockerfile**: layer name missing
-- syntax error in specs ([#113](https://github.com/PlaceOS/staff-api/pull/113))
-- improve handling of GraphAPI errors
-- **application controller**: public scope check
-- **Dockerfile**: correct path to healthcheck ([#94](https://github.com/PlaceOS/staff-api/pull/94))
-- **utilities helper**: list calendars only as required ([#93](https://github.com/PlaceOS/staff-api/pull/93))
-- **tenant**: remove id assign + correct domain validation ([#91](https://github.com/PlaceOS/staff-api/pull/91))
-- **spec**: add various fixes to ensure CI is passing ([#92](https://github.com/PlaceOS/staff-api/pull/92))
-- **clashing bookings**: Do not include bookings on the time bound.
-- **clashing bookings**: Do not include bookings on the time bound.
-- **controller events**: resolve build issues
-- **tenant**: init id ([#74](https://github.com/PlaceOS/staff-api/pull/74))
-- **tenant_spec**: remove focus
-- change level to NeverDisplay ([#67](https://github.com/PlaceOS/staff-api/pull/67))
-- **readme**: typo `
-- **creds**: use placeos encryption model for credentials ([#58](https://github.com/PlaceOS/staff-api/pull/58))
-- **bookings**: don't reset state unless value changed
-- **tenant**: allow editing of tenants
-- update visitor name on event creation
-- metadata not found
-- update visitor name on event creation
-- **events**: resources marked as resources in office365
-- **guest checkin**: where user might not have calendar read access
-- get_placeos_client now proxies host header
-- **bookings**: don't return bookings on the boundary of searches
-- **application**: correct HTTP status enum members
-- check for timezone presence ([#50](https://github.com/PlaceOS/staff-api/pull/50))
-- **guest meetings**: return correct meeting ID for graph API ([#42](https://github.com/PlaceOS/staff-api/pull/42))
-- **models guest**: event_metadatas inner join on id instead of event_id
-- **migrations**: class name clash
-- **Dockerfile.test**: shards install
-- **event_metadata.cr**: fix typo
-- **bookings controller**: save who made the changes on booking update
-- **bookings**: booked by check needs to be an OR
-- **bookings**: make query less ambiguous
-- **booking**: query for user_id and email
-- **booking**: check if approver email is defined
-- **healthcheck**: add version information to help with debugging
-- **bookings**: don't set user id if email is set
-- **bookings**: it's not a conflict to book a previously rejected asset_id
-- **bookings**: use last_changed as age tracker
-- update model queries to match updated ORM
-- **bookings**: change how zones query is structured
-- **bookings**: change how zones query is structured
-- **bookings**: change where zones query occurs in index
-- **build**: compiler errors
-- minor webmock stub fix
-- postgresql variable using aargs instead of namedtuple
-- migrations adding columns not working
-- update from Clear v.8 to v.9 with shard target to place-labs/clear
-- where queries with pg variables as args instead of namedtuples
-- order_by args format, updated connection pool format
-- **bookings**: modify zones filter
-- **bookings**: modify zones filter
-- **guest**: Get guest's future Events should include events that are currently in progress (not ended yet)
-- **matching_calendar_ids**: matches should be case-insensitive
-- **matching_calendar_ids**: matches should be case-insensitive
-- **events**: office365 delegated access
+- **bookings**: emails saved in lower case (#128)
 
 ### Feat
 
-- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
-- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
-- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
-- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
-- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
-- **tenant**: scopes in parameters for delegated access ([#126](https://github.com/PlaceOS/staff-api/pull/126))
-- **tenant**: allow conference_type to be configurable ([#119](https://github.com/PlaceOS/staff-api/pull/119))
-- **events**: add permissions check on event creation ([#111](https://github.com/PlaceOS/staff-api/pull/111))
-- add PG_CONNECTION_POOL_SIZE env ([#109](https://github.com/PlaceOS/staff-api/pull/109))
-- **guests controller**: improve search query ([#104](https://github.com/PlaceOS/staff-api/pull/104))
-- **events**: create visitor on check-in ([#98](https://github.com/PlaceOS/staff-api/pull/98))
-- **guests controller**: make email mutable ([#99](https://github.com/PlaceOS/staff-api/pull/99))
-- add support for x-api-key auth ([#89](https://github.com/PlaceOS/staff-api/pull/89))
-- **bookings**: query within extension_data json ([#84](https://github.com/PlaceOS/staff-api/pull/84))
+- **bookings**: add department field (#149)
+- **bookings**: add current_state and history (#146)
+- **bookings**: add configurable limits on booked assets (#145)
+- **bookings**: flag on delete (#136)
+- **events**: endpoint to get events by ext_data (#131)
+
+## v1.1.2 (2021-11-05)
+
+### Feat
+
+- **tenant**: scopes in parameters for delegated access (#126)
+- **tenant**: allow conference_type to be configurable (#119)
+- **events**: add permissions check on event creation (#111)
+- add PG_CONNECTION_POOL_SIZE env (#109)
+- **guests controller**: improve search query (#104)
+- **events**: create visitor on check-in (#98)
+- **guests controller**: make email mutable (#99)
+- add support for x-api-key auth (#89)
+- **bookings**: query within extension_data json (#84)
 - **guests controller**: query should allow searching emails
-- removes double serialisation ([#78](https://github.com/PlaceOS/staff-api/pull/78))
+- removes double serialisation (#78)
 - add phone to search query
 - **events**: allow guest check-in using guest id instead of email
 - **guests**: support updating via guest ID
@@ -125,7 +53,7 @@
 - **events**: allow mailbox override on guest check-in
 - **application**: add additional error information in production
 - **events**: return error description on 404 responses
-- add SSL_VERIFY_NONE env var ([#61](https://github.com/PlaceOS/staff-api/pull/61))
+- add SSL_VERIFY_NONE env var (#61)
 - add query for checked in status
 - **logging**: add sentry
 - add health check command line option
@@ -170,9 +98,90 @@
 - **events**: include event extension_data in changed signals
 - **events**: include event extension_data in changed signals
 
+### Fix
+
+- **calendars**: check availability correctly (#125)
+- **events update**: unable to mark visitor as unexpected (#122)
+- **bookings**: add validation for booking times (#120)
+- **events**: on PUT request look up events with system mailbox (#118)
+- **events**: parsing online meetings in office365
+- **Dockerfile**: layer name missing
+- syntax error in specs (#113)
+- improve handling of GraphAPI errors
+- **application controller**: public scope check
+- **Dockerfile**: correct path to healthcheck (#94)
+- **utilities helper**: list calendars only as required (#93)
+- **tenant**: remove id assign + correct domain validation (#91)
+- **spec**: add various fixes to ensure CI is passing (#92)
+- **clashing bookings**: Do not include bookings on the time bound.
+- **clashing bookings**: Do not include bookings on the time bound.
+- **controller events**: resolve build issues
+- **tenant**: init id (#74)
+- **tenant_spec**: remove focus
+- change level to NeverDisplay (#67)
+- **readme**: typo `
+- **creds**: use placeos encryption model for credentials (#58)
+- **bookings**: don't reset state unless value changed
+- **tenant**: allow editing of tenants
+- update visitor name on event creation
+- metadata not found
+- update visitor name on event creation
+- **events**: resources marked as resources in office365
+- **guest checkin**: where user might not have calendar read access
+- get_placeos_client now proxies host header
+- **bookings**: don't return bookings on the boundary of searches
+- **application**: correct HTTP status enum members
+- check for timezone presence (#50)
+- **guest meetings**: return correct meeting ID for graph API (#42)
+- **models guest**: event_metadatas inner join on id instead of event_id
+- **migrations**: class name clash
+- **Dockerfile.test**: shards install
+- **event_metadata.cr**: fix typo
+- **bookings controller**: save who made the changes on booking update
+- **bookings**: booked by check needs to be an OR
+- **bookings**: make query less ambiguous
+- **booking**: query for user_id and email
+- **booking**: check if approver email is defined
+- **healthcheck**: add version information to help with debugging
+- **bookings**: don't set user id if email is set
+- **bookings**: it's not a conflict to book a previously rejected asset_id
+- **bookings**: use last_changed as age tracker
+- update model queries to match updated ORM
+- **bookings**: change how zones query is structured
+- **bookings**: change how zones query is structured
+- **bookings**: change where zones query occurs in index
+- **build**: compiler errors
+- minor webmock stub fix
+- postgresql variable using aargs instead of namedtuple
+- migrations adding columns not working
+- update from Clear v.8 to v.9 with shard target to place-labs/clear
+- where queries with pg variables as args instead of namedtuples
+- order_by args format, updated connection pool format
+- **bookings**: modify zones filter
+- **bookings**: modify zones filter
+- **guest**: Get guest's future Events should include events that are currently in progress (not ended yet)
+- **matching_calendar_ids**: matches should be case-insensitive
+- **matching_calendar_ids**: matches should be case-insensitive
+- **events**: office365 delegated access
+
 ### Perf
 
-- **bookings**: only query given params ([#123](https://github.com/PlaceOS/staff-api/pull/123))
+- **bookings**: only query given params (#123)
 - **logging**: set raven to be async
 
-## v1.0 (2020-10-08)
+### Refactor
+
+- **api**: log calendar errors
+- **jwt**: use updated interface
+- minor model refactor
+- efficient and concise specs
+- use correct find over find! enumerable method
+- clarifying relations of tables in complex query
+- scope methods with where clause clarifying the relations of tables
+- clean up
+- ::PlaceOS::Client::API::Error in rescue_from block
+- optimise sql queries, use concise expressions in algo
+- improve Bookings#create algo
+- use find! over find where redundant, remove unnecessary before_action block
+- make controller helper methods private
+- use the correct fields default
