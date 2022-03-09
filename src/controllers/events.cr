@@ -46,16 +46,20 @@ class Events < Application
 
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
-    metadata_ids = [] of String
-    ical_uids = [] of String
-    results.map { |(_calendar_id, system, event)|
+    # Set size hint to save reallocation of Array
+    metadata_ids = Array(String).new(initial_capacity: results.size)
+    ical_uids = Array(String).new(initial_capacity: results.size)
+
+    results.each do |(_calendar_id, system, event)|
       if system
         metadata_ids << event.id.not_nil!
         ical_uids << event.ical_uid.not_nil!
-        # TODO:: how to deal with recurring events in Office365 where ical_uid is also different for each recurrance
+
+        # TODO: Handle recurring O365 events with differing `ical_uid`
+        # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
         metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
       end
-    }
+    end
 
     metadata_ids.uniq!
 
