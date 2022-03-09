@@ -102,7 +102,7 @@ class Tenant
     when "office365"
       Office365Config.from_json(creds)
     end
-  rescue e : JSON::MappingError | JSON::SerializableError
+  rescue e : JSON::SerializableError
     add_error("credentials", e.message.to_s)
   end
 

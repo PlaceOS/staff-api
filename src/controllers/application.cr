@@ -113,7 +113,7 @@ abstract class Application < ActionController::Base
     end
   end
 
-  rescue_from JSON::MappingError do |error|
+  rescue_from JSON::SerializableError do |error|
     respond_with(:bad_request) do
       text error.inspect_with_backtrace
       json({
