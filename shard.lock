@@ -11,7 +11,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 3.1.1
+    version: 4.0.0
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
@@ -77,10 +77,6 @@ shards:
     git: https://github.com/anykeyh/inflector.cr.git
     version: 0.1.8+git.commit.dc5c898b0a834617d8b3ff73ac5a2239bd9fc019
 
-  json_mapping:
-    git: https://github.com/crystal-lang/json_mapping.cr.git
-    version: 0.1.1
-
   jwt:
     git: https://github.com/crystal-community/jwt.git
     version: 1.6.0
@@ -119,7 +115,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.5.1+git.commit.d0c62759f40842a843201a8a6f5d6995e5e4b1a4
+    version: 2.6.0+git.commit.8b1c94afe5e4dae86859af9557955b42bc62d4df
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -127,7 +123,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 6.6.5
+    version: 7.0.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -138,12 +134,12 @@ shards:
     version: 1.9.1+git.commit.d53319dc4ce26fc44f13b9c1c6ffb8699e22899b
 
   rethinkdb:
-    git: https://github.com/place-labs/crystal-rethinkdb.git
-    version: 0.3.1+git.commit.07ce7c694a367efe3af9f8cb5670bc4bff5b6df0
+    git: https://github.com/kingsleyh/crystal-rethinkdb.git
+    version: 0.3.1
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 5.0.4
+    version: 6.0.1
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
@@ -160,8 +156,4 @@ shards:
   webmock:
     git: https://github.com/manastech/webmock.cr.git
     version: 0.14.0
-
-  yaml_mapping:
-    git: https://github.com/crystal-lang/yaml_mapping.cr.git
-    version: 0.1.1
 
