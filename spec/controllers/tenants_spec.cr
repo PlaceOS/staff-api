@@ -8,6 +8,17 @@ describe Tenants do
       body.first["booking_limits"]?.should be_truthy
     end
   end
+
+  describe "#current_limits" do
+    it "should return the limits for the current domain (any user)" do
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 2}))
+      tenant.save!
+
+      body = Context(Tenants, JSON::Any).response("GET", TENANTS_BASE, headers: Mock::Headers.office365_guest, &.current_limits)[1].as_h
+      body["desk"]?.should eq(2)
+    end
+  end
 end
 
 TENANTS_BASE = Tenants.base_route
