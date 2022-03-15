@@ -1,7 +1,7 @@
 class Tenants < Application
   base "/api/staff/v1/tenants"
 
-  before_action :admin_only
+  before_action :admin_only, except: [:current_limits, :show_limits]
   getter tenant : Tenant { find_tenant }
 
   def index
