@@ -42,6 +42,10 @@ class Tenants < Application
   get "/current_limits", :current_limits do
     render json: current_tenant.booking_limits
   end
+
+  get "/:id/limits", :show_limits do
+    render json: tenant.booking_limits
+  end
   private def admin_only
     head(:forbidden) unless is_admin?
   end

@@ -19,6 +19,17 @@ describe Tenants do
       body["desk"]?.should eq(2)
     end
   end
+
+  describe "#show_limits" do
+    it "should return the limits for the requested tenant (any user)" do
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 2}))
+      tenant.save!
+
+      body = Context(Tenants, JSON::Any).response("GET", TENANTS_BASE, route_params: {"id" => tenant.id.to_s}, headers: Mock::Headers.office365_guest, &.show_limits)[1].as_h
+      body["desk"]?.should eq(2)
+    end
+  end
 end
 
 TENANTS_BASE = Tenants.base_route
