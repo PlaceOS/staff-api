@@ -46,6 +46,15 @@ class Tenants < Application
   get "/:id/limits", :show_limits do
     render json: tenant.booking_limits
   end
+
+  post "/:id/limits", :update_limits do
+    limits = JSON.parse(request.body.not_nil!)
+    tenant.booking_limits = limits
+    tenant.save!
+
+    render json: tenant.booking_limits
+  end
+
   private def admin_only
     head(:forbidden) unless is_admin?
   end

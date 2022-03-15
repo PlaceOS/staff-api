@@ -30,6 +30,19 @@ describe Tenants do
       body["desk"]?.should eq(2)
     end
   end
+
+  describe "#update_limits" do
+    it "should set the limits (sys-admins only)" do
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 2}))
+      tenant.save!
+
+      body = {desk: 1}.to_json
+      response = Context(Tenants, JSON::Any).response("POST", TENANTS_BASE, route_params: {"id" => tenant.id.to_s}, body: body, headers: Mock::Headers.office365_guest, &.update_limits)
+      response[0].should eq(200)
+      response[1].as_h["desk"]?.should eq(1)
+    end
+  end
 end
 
 TENANTS_BASE = Tenants.base_route
