@@ -456,6 +456,7 @@ class Bookings < Application
         starting: starting, ending: ending, booking_type: booking_type, user_id: user_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
+    # TODO: Change to use the PostgreSQL `&&` array operator in the query above. (https://www.postgresql.org/docs/9.1/functions-array.html)
     query.to_a.reject do |booking|
       if (b_zones = booking.zones) && zones
         (b_zones & zones).empty?
