@@ -549,6 +549,7 @@ describe Bookings do
       booking_start: 5.minutes.from_now.to_unix,
       booking_end:   40.minutes.from_now.to_unix,
       booking_type:  "desk",
+      zones:         ["zone-1", "zone-2"],
     }
     different_starting = 45.minutes.from_now.to_unix
     different_ending = 55.minutes.from_now.to_unix
@@ -568,8 +569,15 @@ describe Bookings do
       booking_start: different_starting,
       booking_end: different_ending,
       booking_type: "desk",
-      asset_id: "third_desk")[1].as_h
+      asset_id: "third_desk",
+      zones: ["zone-1", "zone-2"]
+    )[1].as_h
     third_booking["asset_id"].should eq("third_desk")
+
+    # Create fourth booking in different zone
+    common_zone4 = common.merge({zones: ["zone-4"]})
+    fourth_booking = BookingsHelper.http_create_booking(**common_zone4, asset_id: "fourth_desk")[1].as_h
+    fourth_booking["asset_id"].should eq("fourth_desk")
 
     # Fail to change booking due to limit
     not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",

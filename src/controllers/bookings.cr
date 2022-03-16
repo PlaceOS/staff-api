@@ -447,6 +447,7 @@ class Bookings < Application
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
     user_id = new_booking.user_id_column.defined? ? new_booking.user_id : new_booking.booked_by_id
+    zones = new_booking.zones_column.defined? ? new_booking.zones : [] of String
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -455,7 +456,12 @@ class Bookings < Application
         starting: starting, ending: ending, booking_type: booking_type, user_id: user_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
-    query.to_a
+    # TODO: Change to use the PostgreSQL `&&` array operator in the query above. (https://www.postgresql.org/docs/9.1/functions-array.html)
+    query.to_a.reject do |booking|
+      if (b_zones = booking.zones) && zones
+        (b_zones & zones).empty?
+      end
+    end
   end
 
   private def check_booking_limits(tenant, booking)
