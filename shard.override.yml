@@ -1,4 +1,13 @@
 # NOTE:: here because of a shards ambiguous sources error
 dependencies:
-  retriable:
-    git: https://github.com/sija/retriable.cr.git
+  http-params-serializable:
+    github: place-labs/http-params-serializable
+    branch: chore/0.36.0
+
+  # TODO:: resolve compile issues with newer versions
+  pg:
+    github: place-labs/crystal-pg
+    branch: master
+  db:
+    github: place-labs/crystal-db
+    branch: master

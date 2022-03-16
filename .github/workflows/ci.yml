@@ -1,0 +1,15 @@
+name: CI
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0" # Sunday at midnight
+jobs:
+  test:
+    uses: PlaceOS/.github/.github/workflows/containerised-test.yml@main
+
+  crystal-style:
+    uses: PlaceOS/.github/.github/workflows/crystal-style.yml@main
+
+  dockerfile-style:
+    uses: PlaceOS/.github/.github/workflows/dockerfile-style.yml@main

@@ -4,6 +4,7 @@ class Events < Application
   # Skip scope check for a single route
   skip_action :check_jwt_scope, only: [:show, :guest_checkin]
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def index
     period_start = Time.unix(query_params["period_start"].to_i64)
     period_end = Time.unix(query_params["period_end"].to_i64)
@@ -45,16 +46,20 @@ class Events < Application
 
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
-    metadata_ids = [] of String
-    ical_uids = [] of String
-    results.map { |(_calendar_id, system, event)|
+    # Set size hint to save reallocation of Array
+    metadata_ids = Array(String).new(initial_capacity: results.size)
+    ical_uids = Array(String).new(initial_capacity: results.size)
+
+    results.each do |(_calendar_id, system, event)|
       if system
         metadata_ids << event.id.not_nil!
         ical_uids << event.ical_uid.not_nil!
-        # TODO:: how to deal with recurring events in Office365 where ical_uid is also different for each recurrance
+
+        # TODO: Handle recurring O365 events with differing `ical_uid`
+        # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
         metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
       end
-    }
+    end
 
     metadata_ids.uniq!
 
@@ -87,17 +92,21 @@ class Events < Application
     }
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def create
     input_event = PlaceCalendar::Event.from_json(request.body.as(IO))
     placeos_client = get_placeos_client
 
-    host = input_event.host || user.email
+    # get_user_calendars returns only calendars where the user has write access
+    user_email = user.email.downcase
+    host = (input_event.host || user_email).try(&.downcase)
+    head :forbidden unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
       system = placeos_client.systems.fetch(system_id)
       system_email = system.email.presence.not_nil!
-      system_attendee = PlaceCalendar::Event::Attendee.new(name: system_email, email: system_email)
+      system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
     end
 
@@ -109,7 +118,7 @@ class Events < Application
     input_event.attendees << host_attendee
 
     # Default to system timezone if not passed in
-    zone = input_event.timezone ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
+    zone = input_event.timezone.presence ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
 
     input_event.event_start = input_event.event_start.in(zone)
     input_event.event_end = input_event.event_end.not_nil!.in(zone)
@@ -139,18 +148,18 @@ class Events < Application
       # Save custom data
       ext_data = input_event.extension_data
       if ext_data || (attending && !attending.empty?)
-        meta = EventMetadata.new
-        meta.system_id = sys.id.not_nil!
-        meta.event_id = created_event.id.not_nil!
-        meta.recurring_master_id = created_event.recurring_event_id || created_event.id if created_event.recurring
-        meta.event_start = created_event.event_start.not_nil!.to_unix
-        meta.event_end = created_event.event_end.not_nil!.to_unix
-        meta.resource_calendar = sys.email.not_nil!
-        meta.host_email = host
-        meta.ext_data = ext_data
-        meta.tenant_id = tenant.id
-        meta.ical_uid = created_event.ical_uid.not_nil!
-        meta.save!
+        meta = EventMetadata.create!({
+          system_id:           sys.id.not_nil!,
+          event_id:            created_event.id.not_nil!,
+          recurring_master_id: (created_event.recurring_event_id || created_event.id if created_event.recurring),
+          event_start:         created_event.event_start.not_nil!.to_unix,
+          event_end:           created_event.event_end.not_nil!.to_unix,
+          resource_calendar:   sys.email.not_nil!,
+          host_email:          host,
+          ext_data:            ext_data,
+          tenant_id:           tenant.id,
+          ical_uid:            created_event.ical_uid.not_nil!,
+        })
 
         Log.info { "saving extension data for event #{created_event.id} in #{sys.id}" }
 
@@ -159,7 +168,8 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.find({email: email})
+            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
+                      existing_guest.name = attendee.name if existing_guest.name != attendee.name
                       existing_guest
                     else
                       Guest.new({
@@ -177,9 +187,8 @@ class Events < Application
                     end
 
             if attendee_ext_data = attendee.extension_data
-              guest.ext_data = attendee_ext_data
+              guest.extension_data = attendee_ext_data
             end
-
             guest.save!
 
             # Create attendees
@@ -218,12 +227,13 @@ class Events < Application
     render json: StaffApi::Event.augment(created_event, host)
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def update
     event_id = route_params["id"]
     changes = PlaceCalendar::Event.from_json(request.body.as(IO))
 
     # Guests can update extension_data to indicate their order
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, guest_system_id = user.roles
       head :forbidden unless changes.extension_data && event_id == guest_event_id && query_params["system_id"]? == guest_system_id
     end
@@ -247,12 +257,18 @@ class Events < Application
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
+      if system_id = (query_params["system_id"]? || changes.system_id).presence
+        system = placeos_client.systems.fetch(system_id)
+        sys_cal = system.email.presence
+        get_hosts_event(event, system.email)
+      else
+        get_hosts_event(event)
+      end
       event_id = event.id.not_nil!
     end
 
     # Guests can only update the extension_data
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       # We expect the metadata to exist when a guest is accessing
       meta = get_migrated_metadata(event, system_id.not_nil!).not_nil!
 
@@ -331,14 +347,14 @@ class Events < Application
       attendees_without_old_room = changes.attendees.uniq.reject { |attendee| attendee.email == sys_cal }
       changes.attendees = attendees_without_old_room
       # Add the updated system attendee to the payload for update
-      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_sys_cal, email: new_sys_cal)
+      changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_system.display_name.presence || new_system.name, email: new_sys_cal, resource: true)
 
       new_sys_cal # cal_id
       system = new_system
     else
       # If room is not changing and it is not an attendee, add it.
       if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
-        changes.attendees << PlaceCalendar::Event::Attendee.new(name: sys_cal.not_nil!, email: sys_cal.not_nil!)
+        changes.attendees << PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: sys_cal.not_nil!, resource: true)
       end
     end
 
@@ -395,7 +411,7 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.find({email: email})
+            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
                       existing_guest
                     else
                       Guest.new({
@@ -413,7 +429,7 @@ class Events < Application
                     end
 
             if attendee_ext_data = attendee.extension_data
-              guest.ext_data = attendee_ext_data
+              guest.extension_data = attendee_ext_data
             end
 
             guest.save!
@@ -425,17 +441,19 @@ class Events < Application
                                     attend.visit_expected
                                   else
                                     attend.set({
-                                      visit_expected: true,
-                                      checked_in:     false,
-                                      tenant_id:      tenant.id,
+                                      checked_in: false,
+                                      tenant_id:  tenant.id,
                                     })
                                     false
                                   end
 
             attend.update!({
-              event_id: meta.id.not_nil!,
-              guest_id: guest.id,
+              event_id:       meta.id.not_nil!,
+              guest_id:       guest.id,
+              visit_expected: attendee.visit_expected.not_nil!,
             })
+
+            next unless attend.visit_expected
 
             if !previously_visiting || changing_room
               spawn do
@@ -505,7 +523,7 @@ class Events < Application
     placeos_client = get_placeos_client
 
     # Guest access
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, system_id = user.roles
       guest_email = user.email.downcase
 
@@ -538,17 +556,7 @@ class Events < Application
       end
     end
 
-    if user_cal = query_params["calendar"]?
-      # Need to confirm the user can access this calendar
-      found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-      head(:not_found) unless found
-
-      # Grab the event details
-      event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
-      head(:not_found) unless event
-
-      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
-    elsif system_id = query_params["system_id"]?
+    if system_id = query_params["system_id"]?
       # Need to grab the calendar associated with this system
       system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
@@ -558,34 +566,52 @@ class Events < Application
       head(:not_found) unless event
 
       # ensure we have the host event details
-      if client.client_id == :office365 && event.host != calendar_id
+      if client.client_id == :office365 && event.host != cal_id
         event = get_hosts_event(event)
       end
 
       metadata = get_event_metadata(event, system_id)
       parent_meta = metadata && metadata.event_id != event.id
       render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
+    else
+      user_cal = query_params["calendar"]?.try(&.downcase)
+
+      # Need to confirm the user can access this calendar
+      if user_cal
+        found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
+      else
+        user_cal = user.email
+        found = true
+      end
+      head(:not_found) unless found
+
+      # Grab the event details
+      event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
+      head(:not_found) unless event
+
+      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
     end
 
     head :bad_request
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def destroy
     event_id = route_params["id"]
     notify_guests = query_params["notify"]? != "false"
     placeos_client = get_placeos_client
 
-    cal_id = if user_cal = query_params["calendar"]?
-               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-               head(:not_found) unless found
-               user_cal
-             elsif system_id = query_params["system_id"]?
+    cal_id = if system_id = query_params["system_id"]?
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
                sys_cal
+             elsif user_cal = query_params["calendar"]?.try(&.downcase)
+               found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
+               head(:not_found) unless found
+               user_cal
              else
-               head :bad_request
+               user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     head(:not_found) unless event
@@ -674,28 +700,69 @@ class Events < Application
     render json: visitors
   end
 
+  # example route: /extension_metadata?field_name=colour&value=blue
+  get("extension_metadata", :extension_metadata) do
+    field_name = query_params["field_name"]
+    value = query_params["value"]
+
+    query = EventMetadata.by_ext_data(field_name, value)
+
+    results = query.to_a
+    render json: results
+  end
+
   post("/:id/guests/:guest_id/checkin", :guest_checkin) do
     checkin = (query_params["state"]? || "true") == "true"
     event_id = route_params["id"]
-    guest_email = route_params["guest_id"].downcase
+    guest_id = route_params["guest_id"].downcase
+    host_mailbox = query_params["host_mailbox"]?.try &.downcase
 
-    if user_token.scope.includes?("guest")
+    if user_token.guest_scope?
       guest_event_id, system_id = user.roles
       guest_token_email = user.email.downcase
 
-      head :forbidden unless event_id == guest_event_id && guest_email == guest_token_email
+      head :forbidden unless event_id == guest_event_id && guest_id == guest_token_email
     else
       system_id = query_params["system_id"]?
       render :bad_request, json: {error: "missing system_id param"} unless system_id
     end
 
-    guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
+    guest_email = if guest_id.includes?('@')
+                    guest_id.strip.downcase
+                  else
+                    Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64).email
+                  end
 
-    cal_id = get_placeos_client.systems.fetch(system_id).email
-    head(:not_found) unless cal_id
+    system = get_placeos_client.systems.fetch(system_id)
+    sys_email = system.email
+    render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
+
+    # The provided event id defaults to the system ID however for office365
+    # we may need to explicitly provide the hosts mailbox if the rooms event id is unknown
+    cal_id = host_mailbox || sys_email
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) if event.nil?
+    render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
+
+    # Check the guest email is in the event
+    attendee = event.attendees.find { |attending| attending.email.downcase == guest_email }
+    head(:not_found) unless attendee
+
+    # Create the guest model if not already in the database
+    guest = begin
+      Guest.query.by_tenant(tenant.id).find!({email: guest_email})
+    rescue Clear::SQL::RecordNotFoundError
+      g = Guest.new({
+        tenant_id:      tenant.id,
+        email:          guest_email,
+        name:           attendee.name,
+        banned:         false,
+        dangerous:      false,
+        extension_data: JSON::Any.new({} of String => JSON::Any),
+      })
+      render :unprocessable_entity, json: g.errors.map(&.to_s) if !g.save
+      g
+    end
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -703,40 +770,51 @@ class Events < Application
       event_id = event.id.not_nil!
     end
 
-    eventmeta = get_migrated_metadata(event, system_id)
-    head(:not_found) unless eventmeta
+    eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!({
+      system_id:           system.id.not_nil!,
+      event_id:            event.id.not_nil!,
+      recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
+      event_start:         event.event_start.not_nil!.to_unix,
+      event_end:           event.event_end.not_nil!.to_unix,
+      resource_calendar:   sys_email,
+      host_email:          event.host.not_nil!,
+      tenant_id:           tenant.id,
+      ical_uid:            event.ical_uid.not_nil!,
+    })
 
     if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
       attendee.update!({checked_in: checkin})
-
-      guest_details = attendee.guest
-
-      # Check the event is still on
-      host_email = eventmeta.not_nil!.host_email
-      event = client.get_event(host_email, id: event_id)
-      head(:not_found) unless event && event.status != "cancelled"
-
-      # Update PlaceOS with an signal "staff/guest/checkin"
-      spawn do
-        get_placeos_client.root.signal("staff/guest/checkin", {
-          action:         :checkin,
-          checkin:        checkin,
-          system_id:      system_id,
-          event_id:       event_id,
-          host:           host_email,
-          resource:       eventmeta.not_nil!.resource_calendar,
-          event_summary:  event.not_nil!.body,
-          event_starting: eventmeta.not_nil!.event_start,
-          attendee_name:  guest_details.name,
-          attendee_email: guest_details.email,
-          ext_data:       eventmeta.try &.ext_data,
-        })
-      end
-
-      render json: attending_guest(attendee, attendee.guest)
     else
-      head :not_found
+      attendee = Attendee.create!({
+        event_id:       eventmeta.id.not_nil!,
+        guest_id:       guest.id,
+        visit_expected: true,
+        checked_in:     checkin,
+        tenant_id:      tenant.id,
+      })
     end
+
+    # Check the event is still on
+    render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{event.host} is cancelled"} unless event && event.status != "cancelled"
+
+    # Update PlaceOS with an signal "staff/guest/checkin"
+    spawn do
+      get_placeos_client.root.signal("staff/guest/checkin", {
+        action:         :checkin,
+        checkin:        checkin,
+        system_id:      system_id,
+        event_id:       event_id,
+        host:           event.host,
+        resource:       eventmeta.resource_calendar,
+        event_summary:  event.not_nil!.body,
+        event_starting: eventmeta.event_start,
+        attendee_name:  guest.name,
+        attendee_email: guest.email,
+        ext_data:       eventmeta.ext_data,
+      })
+    end
+
+    render json: attending_guest(attendee, attendee.guest)
   end
 
   private def update_status(status)

@@ -5,17 +5,15 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil, is_parent_metadata = false)
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
       metadata.try &.delete
       metadata = nil
-    else
-      staff_api_attendees = metadata.try(&.attendees)
-      if staff_api_attendees
-        staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
-      end
+    elsif (staff_api_attendees = metadata.try(&.attendees))
+      staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
     end
 
     # Grab the list of external visitors
@@ -25,7 +23,7 @@ class StaffApi::Event
       if visitor = visitors[attendee.email]?
         attendee.checked_in = is_parent_metadata ? false : visitor.checked_in
         attendee.visit_expected = visitor.visit_expected
-        attendee.extension_data = visitor.try(&.guest).try(&.ext_data) || JSON.parse("{}")
+        attendee.extension_data = visitor.try(&.guest).try(&.extension_data) || JSON.parse("{}")
       end
 
       attendee
@@ -36,9 +34,10 @@ class StaffApi::Event
 
     # Ensure metadata is in sync
     if metadata && (event_start != metadata.event_start || (event_end && event_end != metadata.event_end))
-      metadata.event_start = start_time = event_start
-      metadata.event_end = event_end ? event_end : (start_time + 24.hours.to_i)
-      metadata.save
+      metadata.update({
+        event_start: (start_time = event_start),
+        event_end:   (event_end ? event_end : (start_time + 24.hours.to_i)),
+      })
     end
 
     event.calendar = calendar

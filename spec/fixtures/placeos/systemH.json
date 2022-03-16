@@ -1,0 +1,22 @@
+{
+    "name": "Room 2",
+    "description": null,
+    "email": "room2@example.com",
+    "capacity": 10,
+    "features": [],
+    "bookable": true,
+    "installed_ui_devices": 0,
+    "zones": [
+        "zone-rGfCRp_aUD"
+    ],
+    "modules": [
+        "mod-rJRCVFDVuB",
+        "mod-rJRWE21pya",
+        "mod-rJBGYsZExU"
+    ],
+    "created_at": 1562041110,
+    "updated_at": 1562041120,
+    "support_url": null,
+    "version": 5,
+    "id": "sys-rHQQlR4Cn7"
+}

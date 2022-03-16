@@ -1,40 +1,54 @@
 name: staff-api
-version: 1.0
+version: 1.2.0
+
+targets:
+  app:
+    main: src/staff-api.cr
 
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
 
-  placeos:
-    github: placeos/crystal-client
-    branch: master
-
-  place_calendar:
-    github: PlaceOS/calendar
-
   clear:
     github: place-labs/clear
     branch: master
 
+  placeos-models:
+    github: placeos/models
+    version: ~> 7.0
+
+  # TODO:: remove in future
+  http-params-serializable:
+    github: place-labs/http-params-serializable
+    branch: chore/0.36.0
+
+  placeos:
+    github: placeos/crystal-client
+    branch: master
+
+  placeos-log-backend:
+    github: place-labs/log-backend
+
+  place_calendar:
+    github: PlaceOS/calendar
+
   promise:
     github: spider-gazelle/promise
+
+  # Sentry integration
+  raven:
+    github: Sija/raven.cr
+    branch: master
 
   secrets-env:
     github: place-labs/secrets-env
 
-  # TODO:: remove in future
-  http-params-serializable:
-    github: caspiano/http-params-serializable
-    branch: chore/0.36.0
-
 development_dependencies:
   ameba:
     github: veelenga/ameba
-  webmock:
-    github: manastech/webmock.cr
   faker:
     github: askn/faker
-
-targets:
-  app:
-    main: src/staff-api.cr
+  webmock:
+    github: manastech/webmock.cr
+  timecop:
+    github: crystal-community/timecop.cr

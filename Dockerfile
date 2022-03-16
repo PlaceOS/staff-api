@@ -1,16 +1,15 @@
-FROM crystallang/crystal:0.36.1-alpine
-ADD . /src
-WORKDIR /src
+ARG CRYSTAL_VERSION=1.1.1
+FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine as build
+WORKDIR /app
 
 # Set the commit through a build arg
 ARG PLACE_COMMIT="DEV"
 
-# Install any additional dependencies
-# RUN apk update
-# RUN apk add libssh2 libssh2-dev
-
 # Add trusted CAs for communicating with external services
-RUN apk update && apk add --no-cache ca-certificates tzdata && update-ca-certificates
+RUN apk add --no-cache \
+        ca-certificates \
+    && \
+    update-ca-certificates
 
 # Create a non-privileged user
 # defaults are appuser:10001
@@ -28,32 +27,48 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
+# Install shards for caching
+COPY shard.yml .
+COPY shard.override.yml .
+COPY shard.lock .
+
+RUN shards install --production --ignore-crystal-version
+
+# Add src
+COPY ./src src
+
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --error-trace --production
+    crystal build \
+    --error-trace \
+    --release \
+    -o staff-api \
+    src/staff-api.cr
+
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # Extract dependencies
-RUN ldd bin/app | tr -s '[:blank:]' '\n' | grep '^/' | \
+RUN ldd staff-api | tr -s '[:blank:]' '\n' | grep '^/' | \
     xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 # Build a minimal docker image
 FROM scratch
 WORKDIR /
 ENV PATH=$PATH:/
-COPY --from=0 /src/deps /
-COPY --from=0 /src/bin/app /app
-COPY --from=0 /etc/hosts /etc/hosts
+COPY --from=build /app/deps /
+COPY --from=build /app/staff-api /app
+COPY --from=build /etc/hosts /etc/hosts
 
 # These provide certificate chain validation where communicating with external services over TLS
-COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # This is required for Timezone support
-COPY --from=0 /usr/share/zoneinfo/ /usr/share/zoneinfo/
+COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 
 # Copy the user information over
-COPY --from=0 /etc/passwd /etc/passwd
-COPY --from=0 /etc/group /etc/group
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
 
 # Use an unprivileged user.
 USER appuser:appuser
@@ -61,5 +76,5 @@ USER appuser:appuser
 # Run the app binding on port 8080
 EXPOSE 8080
 ENTRYPOINT ["/app"]
-HEALTHCHECK CMD ["/app", "-c", "http://127.0.0.1:8080/"]
+HEALTHCHECK CMD ["/app", "-c", "http://127.0.0.1:8080/api/staff/v1"]
 CMD ["/app", "-b", "0.0.0.0", "-p", "8080"]

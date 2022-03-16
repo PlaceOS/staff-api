@@ -1,66 +1,54 @@
-[![Build Status](https://travis-ci.com/red-ant/staff-api.svg?token=RzVfSpK1WxvVvMdpTs99&branch=master)](https://travis-ci.com/red-ant/staff-api)
-
 # PlaceOS Staff API
 
-## Env Vars
+[![Build](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/build.yml)
+[![CI](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/staff-api/actions/workflows/ci.yml)
+[![Changelog](https://img.shields.io/badge/Changelog-available-github.svg)](/CHANGELOG.md)
 
-```
-# Default Timezone
-STAFF_TIME_ZONE=Australia/Sydney
+Service for integrating [PlaceOS](https://placeos.com/) with the workplace.
 
-# Google calendar credentials
-GOOGLE_PRIVATE_KEY=base64
-GOOGLE_ISSUER=placeos@organisation.iam.gserviceaccount.com
-GOOGLE_ADMIN_ACCOUNT=placeos_service_account@admin.org.com
-GOOGLE_DIRECTORY_DOMAIN=example.com
+## Environment
+
+These environment variables are required for configuring an instance of Staff API
+
+```console
+SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
+
+# Database config:
+PG_DATABASE_URL=postgresql://user:password@hostname/placeos
+
+# Size of the connection pool
+PG_CONNECTION_POOL_SIZE=5
 
 # Public key for decrypting and validating JWT tokens
-SECRET_KEY_BASE=base64-public-key
+JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 
 # Location of PlaceOS API
 PLACE_URI=https://example.place.technology
-
-# Comma separated list of staff email domains
-# for determining who is a potential guest
-STAFF_DOMAINS=admin.org.com,org.com
-
-# Database config:
-PG_DATABASE_URL=postgresql://localhost/travis_test
 ```
 
-## Local development
+### Optional
 
-```
-brew install postgres
+```console
+# Default Timezone
+STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
-# Setup the data store
-sudo su
-mkdir -p /usr/local/pgsql
-chown steve /usr/local/pgsql
-exit
+SSL_VERIFY_NONE=true # Whether staff-api should verify the SSL cert that PlaceOS rest-api presents
 
-initdb /usr/local/pgsql/data
+# Sentry monitoring
+SENTRY_DSN=<sentry dsn>
 
-# Then can start the service in the background
-pg_ctl -D /usr/local/pgsql/data start
+# Logstash log ingest
+LOGSTASH_HOST=example.com
+LOGSTASH_PORT=12345
 
-# Or start it in the foreground
-postgres -D /usr/local/pgsql/data
+# Sentry monitoring
+SENTRY_DSN=<sentry dsn>
 
-# This seems to be required
-createdb
-
-# Now the server is running with default user the same as your Mac login
-psql -c 'create database travis_test;'
-export PG_DATABASE_URL=postgresql://localhost/travis_test
+# Logstash log ingest
+LOGSTASH_HOST=example.com
+LOGSTASH_PORT=12345
 ```
 
-Alternatively with Docker:
+## Contributing
 
-```
-./test
-```
-
-## Testing
-
-Use the `-Dquiet` flag to silence the SQL loging
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).

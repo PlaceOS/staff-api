@@ -1,3 +1,5 @@
+require "csv"
+
 class Guests < Application
   base "/api/staff/v1/guests"
 
@@ -6,16 +8,25 @@ class Guests < Application
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :update]
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def index
-    query = (query_params["q"]? || "").gsub(/[^\w\s]/, "").strip.downcase
+    query = (query_params["q"]? || "").gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
     if starting = query_params["period_start"]?
       period_start = Time.unix(starting.to_i64)
       period_end = Time.unix(query_params["period_end"].to_i64)
 
+      # Grab the bookings
+      booking_lookup = {} of Int64 => Booking::AsHNamedTuple
+      booking_ids = Set(Int64).new
+      Booking.booked_between(tenant.id, starting.to_i64, query_params["period_end"].to_i64).each do |booking|
+        booking_ids << booking.id
+        booking_lookup[booking.id] = booking.as_h
+      end
+
       # We want a subset of the calendars
       calendars = matching_calendar_ids
-      render(json: [] of Nil) if calendars.empty?
+      render(json: [] of Nil) if calendars.empty? && booking_ids.empty?
 
       # Grab events in batches
       requests = [] of HTTP::Request
@@ -69,8 +80,8 @@ class Guests < Application
         end
       }
 
-      # Don't perform the query if there are no calendar entries
-      render(json: [] of Nil) if metadata_ids.empty?
+      # Don't perform the query if there are no calendar or booking entries
+      render(json: [] of Nil) if metadata_ids.empty? && booking_ids.empty?
 
       # Return the guests visiting today
       attendees = {} of String => Attendee
@@ -89,7 +100,12 @@ class Guests < Application
       end
 
       query.each do |attend|
-        attend.checked_in = false if attend.event_metadata.event_id.in?(metadata_recurring_ids)
+        attend.checked_in = false if attend.event_metadata.try &.event_id.try &.in?(metadata_recurring_ids)
+        attendees[attend.guest.email] = attend
+      end
+
+      booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
+      booking_attendees.each do |attend|
         attendees[attend.guest.email] = attend
       end
 
@@ -102,13 +118,20 @@ class Guests < Application
         .each { |guest| guests[guest.email.not_nil!] = guest }
 
       render json: attendees.map { |email, visitor|
-        attending_guest(visitor, guests[email]?)
         # Prevent a database lookup
         meeting_event = nil
-        if meet = (meeting_lookup[visitor.event_metadata.event_id]? || meeting_lookup[visitor.event_metadata.ical_uid]?)
+        if meet = (meeting_lookup[visitor.event_metadata.try &.event_id]? || meeting_lookup[visitor.event_metadata.try &.ical_uid]?)
           _calendar_id, _system, meeting_event = meet
         end
-        attending_guest(visitor, guests[email]?, meeting_details: meeting_event)
+
+        guest = guests[email]?
+        if visitor.for_booking?
+          if !guest.nil?
+            guest.for_booking_to_h(visitor, booking_lookup[visitor.booking_id]?)
+          end
+        else
+          attending_guest(visitor, guest, meeting_details: meeting_event)
+        end
       }
     elsif query.empty?
       # Return the first 1500 guests
@@ -118,82 +141,70 @@ class Guests < Application
         .limit(1500).map { |g| attending_guest(nil, g) }
     else
       # Return guests based on the filter query
-      query = "%#{query}%"
-      render json: Guest.query
-        .by_tenant(tenant.id)
-        .where("searchable LIKE :query", query: query)
-        .limit(1500).map { |g| attending_guest(nil, g) }
+      csv = CSV.new(query, strip: true, separator: ' ')
+      csv.next
+      parts = csv.row.to_a
+
+      sql_query = Guest.query.by_tenant(tenant.id)
+      parts.each do |part|
+        next if part.empty?
+        sql_query = sql_query.where("searchable LIKE :query", query: "%#{part}%")
+      end
+
+      render json: sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g) }
     end
   end
 
   def show
-    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+    if user_token.guest_scope? && (guest.email != user_token.id)
       head :forbidden
     end
 
     # find out if they are attending today
     attendee = guest.attending_today(tenant.id, get_timezone)
-    render json: attending_guest(attendee, guest)
+    result = !attendee.nil? && attendee.for_booking? ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest)
+    render json: result
   end
 
   def update
-    if user_token.scope.includes?("guest") && (guest.email != user_token.sub)
+    if user_token.guest_scope? && (guest.email != user_token.id)
       head :forbidden
     end
 
-    parsed = JSON.parse(request.body.not_nil!)
-    changes = Guest.new(parsed)
-    {% for key in [:name, :preferred_name, :phone, :organisation, :notes, :photo] %}
+    changes = Guest.from_json(request.body.as(IO))
+    {% for key in %i(email name preferred_name phone organisation notes photo dangerous banned) %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
       end
     {% end %}
 
-    # For some reason need to manually set the banned and dangerous
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned.as_bool if banned
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous.as_bool if dangerous
-
-    # merge changes into extension data
-    extension_data = parsed.as_h["extension_data"]?
+    extension_data = changes.extension_data if changes.extension_data_column.defined?
     if extension_data
-      guest_ext_data = guest.ext_data
+      guest_ext_data = guest.extension_data
       data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      guest.ext_data_column.clear
-      guest.ext_data = JSON.parse(data.to_json)
+      guest.extension_data_column.clear
+      guest.extension_data = JSON::Any.new(data)
     end
 
-    if guest.save
-      attendee = guest.attending_today(tenant.id, get_timezone)
-      render json: attending_guest(attendee, guest)
-    else
-      render :unprocessable_entity, json: guest.errors.map(&.to_s)
-    end
+    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
+
+    attendee = guest.attending_today(tenant.id, get_timezone)
+    render json: attending_guest(attendee, guest)
   end
 
   put "/:id", :update_alt { update }
 
   def create
-    parsed = JSON.parse(request.body.not_nil!)
-    guest = Guest.new(parsed)
+    guest = Guest.from_json(request.body.as(IO))
     guest.tenant_id = tenant.id
 
-    banned = parsed.as_h["banned"]?
-    guest.banned = banned ? banned.as_bool : false
-    dangerous = parsed.as_h["dangerous"]?
-    guest.dangerous = dangerous ? dangerous.as_bool : false
-    guest.ext_data = parsed.as_h["extension_data"]? || JSON.parse("{}")
+    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
 
-    if guest.save
-      attendee = guest.attending_today(tenant.id, get_timezone)
-      render :created, json: attending_guest(attendee, guest)
-    else
-      render :unprocessable_entity, json: guest.errors.map(&.to_s)
-    end
+    attendee = guest.attending_today(tenant.id, get_timezone)
+    render :created, json: attending_guest(attendee, guest)
   end
 
   # TODO: Should we be allowing to delete guests that are associated with attendees?
@@ -210,12 +221,22 @@ class Guests < Application
 
     events = Promise.all(guest.events(future_only, limit).map { |metadata|
       Promise.defer {
-        cal_id = metadata.host_email.not_nil!
-        system = placeos_client.fetch(metadata.system_id.not_nil!)
-        event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
-        if event
-          StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
-        else
+        begin
+          cal_id = metadata.host_email.not_nil!
+          system = placeos_client.fetch(metadata.system_id.not_nil!)
+          sys_cal = system.email.presence
+          event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
+          if event
+            if sys_cal && client.client_id == :office365 && event.host != sys_cal
+              event = get_hosts_event(event, sys_cal)
+            end
+
+            StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata)
+          else
+            nil
+          end
+        rescue error
+          Log.warn(exception: error) { error.message }
           nil
         end
       }
@@ -224,11 +245,27 @@ class Guests < Application
     render json: events
   end
 
+  get("/:id/bookings", :bookings) do
+    if user_token.guest_scope? && (guest.email != user_token.id)
+      head :forbidden
+    end
+
+    future_only = query_params["include_past"]? != "true"
+    limit = (query_params["limit"]? || "10").to_i
+
+    render json: guest.bookings(future_only, limit).map { |booking| booking.as_h }
+  end
+
   # ============================================
   #              Helper Methods
   # ============================================
 
   private def find_guest
-    Guest.query.by_tenant(tenant.id).find!({email: route_params["id"].downcase})
+    guest_id = route_params["id"]
+    if guest_id.includes?('@')
+      Guest.query.by_tenant(tenant.id).find!({email: guest_id.downcase})
+    else
+      Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64)
+    end
   end
 end

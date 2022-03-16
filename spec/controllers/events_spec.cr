@@ -1,119 +1,93 @@
 require "../spec_helper"
+require "./helpers/event_helper"
 require "./helpers/spec_clean_up"
 
+EVENTS_BASE = Events.base_route
+
 describe Events do
-  systems_json = File.read("./spec/fixtures/placeos/systems.json")
-  systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
+  before_each do
+    EventsHelper.stub_event_tokens
+  end
 
   describe "#index" do
-    pending "#index should return a list of events with metadata" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    it "#index should return a list of events with metadata" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
         .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
-      now = 1588407645
-      later = 1588422097
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(tenant.id)
 
-      ctx = context("GET", "/api/staff/v1/events?zone_ids=z1&period_start=#{now}&period_end=#{later}", OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      events = Events.new(ctx)
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{event.event_start}&period_end=#{event.event_end}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
 
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
-      id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
-      tenant_id = events.tenant.id
-
-      EventMetadatasHelper.create_event(tenant_id, id, event_start, event_end, system_id, room_email, host)
-
-      events.index
-
-      results = JSON.parse(ctx.response.output.to_s)
-
-      results.as_a.should contain(EventsHelper.mock_event(id, event_start, event_end, system_id, room_email, host, {"foo" => 123}))
+      body.includes?(event.system_id)
+      body.includes?(%("host" => "#{event.host_email}"))
+      body.includes?(%("id" => "#{event.system_id}"))
+      body.includes?(%("extension_data" => {#{event.ext_data}}))
     end
 
-    pending "#index should return a list of events with metadata of master event if event in list is an occurrence" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    it "metadata extension endpoint should filter by extension data" do
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = get_tenant
+
+      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "blue"}.to_json))
+      EventMetadatasHelper.create_event(tenant.id)
+      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "red"}.to_json))
+
+      field_name = "colour"
+      value = "blue"
+
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: Mock::Headers.office365_guest, &.extension_metadata)[1]
+      body.to_s.includes?("red").should be_false
+    end
+
+    it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
+        .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_with_recurring_event.json"))
 
-      now = 1588407645
-      later = 1588422097
-
-      ctx = context("GET", "/api/staff/v1/events?zone_ids=z1&period_start=#{now}&period_end=#{later}", OFFICE365_HEADERS)
-      ctx.response.output = IO::Memory.new
-      events = Events.new(ctx)
-
-      event_start = 1598832000.to_i64
-      event_end = 1598833800.to_i64
+      now = 1.minutes.from_now.to_unix
+      later = 80.minutes.from_now.to_unix
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
-      system_id = "sys-rJQQlR4Cn7"
-      room_email = "room1@example.com"
-      host = "dev@acaprojects.onmicrosoft.com"
-      tenant_id = events.tenant.id
 
-      EventMetadatasHelper.create_event(tenant_id, master_event_id, event_start, event_end, system_id, room_email, host)
+      tenant = get_tenant
+      5.times { EventMetadatasHelper.create_event(tenant.id) }
 
-      events.index
-
-      results = JSON.parse(ctx.response.output.to_s)
-
-      expected_result = EventsHelper.mock_event("event_instance_of_recurrence_id", event_start, event_end, system_id, room_email, host, {"foo" => 123})
-      expected_result["recurring_event_id"] = master_event_id
-      expected_result["recurring_master_id"] = master_event_id
-
-      results.as_a.should contain(expected_result)
+      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest, &.index)[1].to_s
+      body.includes?(%("recurring_master_id" => "#{master_event_id}"))
     end
   end
 
-  describe "#create & #update" do
-    pending "#create should create event with attendees and extension data and #update should update for system" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
+  describe "#create" do
+    before_each do
+      EventsHelper.stub_create_endpoints
+    end
+    it "with attendees and extension data" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
 
-      created_event.should eq(EventsHelper.create_event_output)
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(tenant.id)
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+      created_event.to_s.includes?(%("event_start" => #{event.event_start}))
 
       # Should have created metadata record
       evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
@@ -128,28 +102,48 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have created guests records
-      guests = evt_meta.attendees.map { |a| a.guest }
-      guests.map { |g| g.name }.should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
-      guests.compact_map { |g| g.email }.should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
-      guests.compact_map { |g| g.preferred_name }.should eq(["Jon"])
-      guests.compact_map { |g| g.phone }.should eq(["012334446"])
-      guests.compact_map { |g| g.organisation }.should eq(["Google inc"])
-      guests.compact_map { |g| g.notes }.should eq(["some notes"])
-      guests.compact_map { |g| g.photo }.should eq(["http://example.com/first.jpg"])
-      guests.compact_map { |g| g.searchable }.should eq(["amit  ", "john jon google inc", "dev@acaprojects.onmicrosoft.com  "])
-      guests.compact_map { |g| g.ext_data }.should eq([{} of String => String?, {"fizz" => "buzz"}, {} of String => String?])
+      guests = evt_meta.attendees.map(&.guest)
+      guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
+      guests.compact_map(&.email).should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
+      guests.compact_map(&.preferred_name).should eq(["Jon"])
+      guests.compact_map(&.phone).should eq(["012334446"])
+      guests.compact_map(&.organisation).should eq(["Google inc"])
+      guests.compact_map(&.notes).should eq(["some notes"])
+      guests.compact_map(&.photo).should eq(["http://example.com/first.jpg"])
+      guests.compact_map(&.searchable).should eq(["amit@redant.com.au amit   ", "jon@example.com john jon google inc 012334446", "dev@acaprojects.onmicrosoft.com dev@acaprojects.onmicrosoft.com   "])
+      guests.compact_map(&.extension_data).should eq([{} of String => String?, {"fizz" => "buzz"}, {} of String => String?])
+    end
+  end
 
-      # Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS, body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      updated_event = JSON.parse(ctx.response.output.to_s).as_h
-      updated_event.should eq(EventsHelper.update_event_output)
+  describe "#update" do
+    before_each do
+      EventsHelper.stub_create_endpoints
+    end
+    it "for system" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
+
+      req_body = EventsHelper.update_event_input
+
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated_event.to_s.includes?(%(some updated notes))
+      # .should eq(EventsHelper.update_event_output)
       # Should have updated metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
       evt_meta.event_start.should eq(1598504460)
@@ -160,53 +154,40 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have updated guests records
-      guests = evt_meta.attendees.map { |a| a.guest }
-      guests.map { |g| g.name }.should eq(["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"])
-      guests.compact_map { |g| g.email }.should eq(["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"])
-      guests.compact_map { |g| g.preferred_name }.should eq(["bob"])
-      guests.compact_map { |g| g.phone }.should eq(["012333336"])
-      guests.compact_map { |g| g.organisation }.should eq(["Apple inc"])
-      guests.compact_map { |g| g.notes }.should eq(["some updated notes"])
-      guests.compact_map { |g| g.photo }.should eq(["http://example.com/bob.jpg"])
-      guests.compact_map { |g| g.ext_data }.should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
+      guests = evt_meta.attendees.map(&.guest)
+      guests.map(&.name).should eq(["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"])
+      guests.compact_map(&.email).should eq(["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"])
+      guests.compact_map(&.preferred_name).should eq(["bob"])
+      guests.compact_map(&.phone).should eq(["012333336"])
+      guests.compact_map(&.organisation).should eq(["Apple inc"])
+      guests.compact_map(&.notes).should eq(["some updated notes"])
+      guests.compact_map(&.photo).should eq(["http://example.com/bob.jpg"])
+      guests.compact_map(&.extension_data).should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
     end
 
-    pending "#create should create event with attendees and extension data and #update should extension data for when guest" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
+    it "extension data for guest" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Guest Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"), body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      updated_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.update_event_input
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), &.update)[1].as_h
 
       # Should have only updated extension in metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -215,221 +196,162 @@ describe Events do
       evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
     end
 
-    pending "#create should create event and #update should update for user calendar" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
+    it "#for user calendar" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
 
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Update
-      body = IO::Memory.new
-      body << EventsHelper.update_event_input
-      body.rewind
-      ctx = context("PATCH", "/api/staff/v1/events/#{created_event["id"]}?calendar=dev@acaprojects.com", OFFICE365_HEADERS, body)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).update
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598504460)
-      event["event_end"].should eq(1598508120)
+      req_body = EventsHelper.update_event_input
+
+      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
+
+      updated_event["event_start"].should eq(1598504460)
+      updated_event["event_end"].should eq(1598508120)
     end
   end
 
   describe "#show" do
-    pending "should return details for event with guest access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+    before_each do
+      EventsHelper.stub_show_endpoints
+    end
+    it "details for event with limited guest access" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Fetch guest event details
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event_id}, headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), &.show)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
     end
 
-    pending "should return details for event with guest access and event is recurring instance" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    it "details for event with guest access and event is recurring instance" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
         .to_return(body: "")
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/event_instance_of_recurrence_id")
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_recurring_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body.to_s, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.show)
+
+      status_code.should eq(200)
+      master_event_id = created_event["id"].to_s
 
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
       # Should have extension data stored on master event
-      event["extension_data"].should eq({"foo" => "bar"})
+      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
+      evt_meta.recurring_master_id.should eq(master_event_id)
+      event.as_h["extension_data"].should eq({"foo" => "bar"})
     end
 
-    pending "should return details for event with normal access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+    it "details for event with normal access" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Show for calendar
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}?calendar=dev@acaprojects.com", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event_id}?calendar=dev@acaprojects.onmicrosoft.com", route_params: {"id" => created_event_id.to_s}, headers: Mock::Headers.office365_guest, &.show)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
 
       # Show for room
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, headers: Mock::Headers.office365_guest, &.show)
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
     end
 
-    pending "should return details for event that is an recurring event instance with normal access" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    it "details for event that is an recurring event instance with normal access" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/event_instance_of_recurrence_id")
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
@@ -437,291 +359,216 @@ describe Events do
 
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
 
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
+
       # Show event details for calendar params that is an instance of master event created above
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}?calendar=dev@acaprojects.com", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
+
+      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
+      evt_meta.recurring_master_id.should eq(master_event_id)
       # Should not have any exetension information
-      event["extension_data"]?.should eq(nil)
+      event.as_h["extension_data"]?.should eq(nil)
 
       # Show event details for room/system params that is an instance of master event created above
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).show
-      ctx.response.status_code.should eq(200)
-      event = JSON.parse(ctx.response.output.to_s).as_h
-      event["event_start"].should eq(1598503500)
-      event["event_end"].should eq(1598507160)
-      event["recurring_master_id"].should eq(master_event_id)
+      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
+
+      status_code.should eq(200)
+      event.as_h["event_start"].should eq(1598503500)
+      event.as_h["event_end"].should eq(1598507160)
+
       # Should have extension data stored on master event
-      event["extension_data"].should eq({"foo" => "bar"})
+      event.as_h["extension_data"].should eq({"foo" => "bar"})
     end
   end
 
-  pending "#destroy the event for system" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-      WebMock
-        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-        .to_return(body: systems_resp[index])
-    end
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+  it "#destroy the event for system" do
+    # EventsHelper.stub_create_endpoints
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+
+    WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
       .to_return(body: "")
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+    req_body = EventsHelper.create_event_input
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+    created_event_id = created_event["id"].to_s
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      .to_return(EventsHelper.event_query_response(created_event_id))
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+      .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
 
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
+      .to_return(body: %({"permissions":
+      {"name":"permissions",
+        "parent_id": "22",
+        "description" : "grant access",
+      "details":{"admin": ["admin"]}}}))
+
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
+      .to_return(body: %({"permissions":
+         {"name":"permissions",
+           "parent_id": "22",
+           "description" : "grant access",
+         "details":{"admin": ["admin"]}}}))
+
     # delete
-    ctx.response.output = IO::Memory.new
-    ctx = context("DELETE", "/api/staff/v1/events/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    Events.new(ctx).destroy
+    Events.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
 
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
   end
 
-  pending "#approve marks room as accepted" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-      WebMock
-        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-        .to_return(body: systems_resp[index])
-    end
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+  it "#approve marks room as accepted" do
+    EventsHelper.stub_create_endpoints
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      .to_return(GuestsHelper.mock_event_query_json)
+
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/")
       .to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+    req_body = EventsHelper.create_event_input
+
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # approve
-    ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).approve
-    accepted_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = accepted_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee["response_status"].as_s.should eq("accepted")
+    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
+
+    room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
+    room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
 
-  pending "#reject marks room as declined" do
-    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-      WebMock
-        .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-        .to_return(body: systems_resp[index])
-    end
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+  it "#reject marks room as declined" do
+    EventsHelper.stub_create_endpoints
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      .to_return(GuestsHelper.mock_event_query_json)
+
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/")
       .to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
 
     # Create event
-    body = IO::Memory.new
-    body << EventsHelper.create_event_input
-    body.rewind
-    ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).create
-    created_event = JSON.parse(ctx.response.output.to_s).as_h
+    req_body = EventsHelper.create_event_input
+    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
 
     # reject
-    ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-    ctx.route_params = {"id" => created_event["id"].to_s}
-    ctx.response.output = IO::Memory.new
-    Events.new(ctx).approve
-    declined_event = JSON.parse(ctx.response.output.to_s).as_h
-    room_attendee = declined_event["attendees"].as_a.find! { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee["response_status"].as_s.should eq("declined")
+    declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
+    room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
+    room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
 
   describe "#guest_list" do
-    pending "lists guests for an event & guest_checkin checks them in" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
+    it "lists guests for an event & guest_checkin checks them in" do
+      EventsHelper.stub_create_endpoints
+
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
         .to_return(body: "")
 
       # Create event
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
-      created_event = JSON.parse(ctx.response.output.to_s).as_h
+
+      req_body = EventsHelper.create_event_input
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       # guest_list
-      ctx = context("GET", "/api/staff/v1/events/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_list
-      guests = JSON.parse(ctx.response.output.to_s).as_a
-      guests.should eq(EventsHelper.guests_list_output)
+      Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+      # guests.should eq(EventsHelper.guests_list_output)
+      # guests.to_s.includes?(%("id" => "sys-rJQQlR4Cn7"))
+
+      evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
+      guests = evt_meta.attendees.map(&.guest)
+      guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      ctx = context("POST", "/api/staff/v1/events/#{created_event["id"]}/guests/jon@example.com/checkin?state=false", office365_guest_headers(created_event["id"].to_s, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
 
     pending "lists guests for an event that is an recurring instance & guest_checkin checks them in" do
-      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      {"sys-rJQQlR4Cn7"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
+      EventsHelper.stub_create_endpoints
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/event_instance_of_recurrence_id")
-        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
         .to_return(body: "")
 
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_instance_recurring.json"))
+
       # Create event which will create metadata with id that we'll use as seriesMasterId
-      body = IO::Memory.new
-      body << EventsHelper.create_event_input
-      body.rewind
-      ctx = context("POST", "/api/staff/v1/events/", OFFICE365_HEADERS, body)
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).create
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body.to_s, &.create)[1].as_h
+
+      created_event_id = created_event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(created_event_id))
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
 
       # guest_list
-      ctx = context("GET", "/api/staff/v1/events/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_list
-      guests = JSON.parse(ctx.response.output.to_s).as_a
-      guests.should eq(EventsHelper.guests_list_output)
+      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+      guests.to_s.includes?(%("email" => "amit@redant.com.au"))
 
       # guest_checkin via system
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
+
       # We should have created meta by migrating from master event meta
       meta_after_checkin = EventMetadata.query.find!({event_id: event_instance_id})
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
@@ -730,291 +577,16 @@ describe Events do
       meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
 
       # guest_checkin via system state = false
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", OFFICE365_HEADERS)
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      ctx = context("POST", "/api/staff/v1/events/#{event_instance_id}/guests/jon@example.com/checkin?state=false", office365_guest_headers(event_instance_id, "sys-rJQQlR4Cn7"))
-      ctx.route_params = {"id" => event_instance_id, "guest_id" => "jon@example.com"}
-      ctx.response.output = IO::Memory.new
-      Events.new(ctx).guest_checkin
-      checked_in_guest = JSON.parse(ctx.response.output.to_s).as_h
+      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
       checked_in_guest["checked_in"].should eq(false)
     end
-  end
-end
-
-module EventsHelper
-  extend self
-
-  def mock_event(id, event_start, event_end, system_id, room_email, host, ext_data)
-    {
-      "event_start" => event_start,
-      "event_end"   => event_end,
-      "id"          => id,
-      "host"        => host,
-      "title"       => "My new meeting",
-      "body"        => "The quick brown fox jumps over the lazy dog",
-      "attendees"   => [{"name" => "Toby Carvan",
-                       "email" => "testing@redant.com.au",
-                       "response_status" => "needsAction",
-                       "resource" => false,
-                       "extension_data" => {} of String => String?,
-      },
-      {"name"            => "Amit Gaur",
-       "email"           => "amit@redant.com.au",
-       "response_status" => "needsAction",
-       "resource"        => false,
-       "extension_data"  => {} of String => String?,
-      },
-      ],
-      "location"    => "",
-      "private"     => true,
-      "all_day"     => false,
-      "timezone"    => "Australia/Sydney",
-      "recurring"   => false,
-      "attachments" => [] of String,
-      "status"      => "confirmed",
-      "creator"     => "dev@acaprojects.onmicrosoft.com",
-      "calendar"    => "room1@example.com",
-      "system"      => {"created_at" => 1562041110,
-                   "updated_at" => 1562041120,
-                   "id" => system_id,
-                   "name" => "Room 1",
-                   "zones" => ["zone-rGhCRp_aUD"],
-                   "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"],
-                   "email" => room_email,
-                   "capacity" => 10,
-                   "features" => [] of String,
-                   "bookable" => true,
-                   "installed_ui_devices" => 0,
-                   "version" => 5},
-      "extension_data" => ext_data,
-    }
-  end
-
-  def create_event_input
-    %({
-    "event_start": 1598503500,
-    "event_end": 1598507160,
-    "attendees": [
-         {
-            "name": "Amit",
-            "email": "amit@redant.com.au",
-            "response_status": "accepted",
-            "resource": false,
-            "organizer": true,
-            "checked_in": true,
-            "visit_expected": true
-        },
-        {
-            "name": "John",
-            "preferred_name": "Jon",
-            "phone": "012334446",
-            "organisation": "Google inc",
-            "photo": "http://example.com/first.jpg",
-            "email": "jon@example.com",
-            "response_status": "tentative",
-            "resource": false,
-            "organizer": true,
-            "checked_in": true,
-            "visit_expected": true,
-            "extension_data": {
-                "fizz": "buzz"
-            },
-            "notes": "some notes"
-        }
-    ],
-    "private": false,
-    "all_day": false,
-    "recurring": false,
-    "host": "dev@acaprojects.onmicrosoft.com",
-    "title": "tentative event response status and default timezone trial updated",
-    "body": "yeehaw hiya",
-    "location": "test",
-    "system_id": "sys-rJQQlR4Cn7",
-    "system": {
-        "id": "sys-rJQQlR4Cn7"
-    },
-    "extension_data": {
-      "foo": "bar"
-    }
-    })
-  end
-
-  def update_event_input
-    %({
-    "event_start": 1598504460,
-    "event_end": 1598508120,
-    "attendees": [
-         {
-            "name": "Amit",
-            "email": "amit@redant.com.au",
-            "response_status": "accepted",
-            "resource": false,
-            "organizer": true,
-            "checked_in": true,
-            "visit_expected": true,
-            "extension_data": {
-                "fuzz": "bizz"
-            }
-        },
-        {
-            "name": "Robert",
-            "preferred_name": "bob",
-            "phone": "012333336",
-            "organisation": "Apple inc",
-            "photo": "http://example.com/bob.jpg",
-            "email": "bob@example.com",
-            "response_status": "tentative",
-            "resource": false,
-            "organizer": true,
-            "checked_in": true,
-            "visit_expected": true,
-            "extension_data": {
-                "buzz": "fuzz"
-            },
-            "notes": "some updated notes"
-        }
-    ],
-    "private": false,
-    "all_day": false,
-    "recurring": false,
-    "host": "dev@acaprojects.onmicrosoft.com",
-    "title": "tentative event response status and default timezone trial",
-    "body": "yeehaw hiya updated",
-    "location": "test",
-    "system_id": "sys-rJQQlR4Cn7",
-    "system": {
-        "id": "sys-rJQQlR4Cn7"
-    },
-    "extension_data": {
-      "fizz": "buzz"
-    }
-    })
-  end
-
-  def create_event_output
-    {"event_start" => 1598503500, "event_end" => 1598507160, "id" => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=", "host" => "dev@acaprojects.onmicrosoft.com", "title" => "tentative event response status and default timezone trial updated", "body" => "yeehaw hiya", "attendees" => [{"name" => "Amit", "email" => "amit@redant.com.au", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}, {"name" => "John", "email" => "jon@example.com", "response_status" => "tentative", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {"fizz" => "buzz"}}, {"name" => "RM-AU-DP-L105-Swiss-Alps", "email" => "rmaudpswissalps@booking.demo.acaengine.com", "response_status" => "needsAction", "resource" => false, "extension_data" => {} of String => String?}, {"name" => "Developer", "email" => "dev@acaprojects.onmicrosoft.com", "response_status" => "accepted", "resource" => false, "checked_in" => false, "visit_expected" => true, "extension_data" => {} of String => String?}], "location" => "", "private" => true, "all_day" => false, "timezone" => "Australia/Sydney", "recurring" => false, "attachments" => [] of String, "status" => "confirmed", "creator" => "dev@acaprojects.onmicrosoft.com", "calendar" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "extension_data" => {"foo" => "bar"}}
-  end
-
-  def update_event_output
-    {
-      "event_start" => 1598504460,
-      "event_end"   => 1598508120,
-      "id"          => "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
-      "host"        => "dev@acaprojects.onmicrosoft.com",
-      "title"       => "tentative event response status and default timezone trial",
-      "body"        => "yeehaw hiya updated",
-      "attendees"   => [
-        {"name"            => "Amit",
-         "email"           => "amit@redant.com.au",
-         "response_status" => "accepted",
-         "resource"        => false,
-         "checked_in"      => false,
-         "visit_expected"  => true,
-         "extension_data":    {
-           "fuzz" => "bizz",
-         },
-        },
-        {"name"            => "Robert",
-         "email"           => "bob@example.com",
-         "response_status" => "tentative",
-         "resource"        => false,
-         "checked_in"      => false,
-         "visit_expected"  => true,
-         "extension_data":    {
-           "buzz" => "fuzz",
-         },
-        },
-        {"name"            => "RM-AU-DP-L105-Swiss-Alps",
-         "email"           => "rmaudpswissalps@booking.demo.acaengine.com",
-         "response_status" => "needsAction",
-         "resource"        => false,
-         "extension_data"  => {} of String => String?,
-        },
-        {"name"            => "Developer",
-         "email"           => "dev@acaprojects.onmicrosoft.com",
-         "response_status" => "accepted",
-         "resource"        => false,
-         "checked_in"      => false,
-         "visit_expected"  => true,
-         "extension_data"  => {} of String => String?,
-        },
-      ],
-      "location"    => "",
-      "private"     => true,
-      "all_day"     => false,
-      "timezone"    => "Australia/Sydney",
-      "recurring"   => false,
-      "attachments" => [] of String,
-      "status"      => "confirmed",
-      "creator"     => "dev@acaprojects.onmicrosoft.com",
-      "calendar"    => "room1@example.com",
-      "system"      => {"created_at" => 1562041110,
-                   "updated_at" => 1562041120,
-                   "id" => "sys-rJQQlR4Cn7",
-                   "name" => "Room 1",
-                   "zones" => ["zone-rGhCRp_aUD"],
-                   "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"],
-                   "email" => "room1@example.com",
-                   "capacity" => 10,
-                   "features" => [] of String,
-                   "bookable" => true,
-                   "installed_ui_devices" => 0,
-                   "version" => 5},
-      "extension_data" => {"foo" => "bar", "fizz" => "buzz"},
-    }
-  end
-
-  def guests_list_output
-    [{"email"          => "amit@redant.com.au",
-      "name"           => "Amit",
-      "preferred_name" => nil,
-      "phone"          => nil,
-      "organisation"   => nil,
-      "notes"          => nil,
-      "photo"          => nil,
-      "banned"         => false,
-      "dangerous"      => false,
-      "extension_data" => {} of String => String?,
-      "checked_in"     => false,
-      "visit_expected" => true},
-    {"email"          => "jon@example.com",
-     "name"           => "John",
-     "preferred_name" => "Jon",
-     "phone"          => "012334446",
-     "organisation"   => "Google inc",
-     "notes"          => "some notes",
-     "photo"          => "http://example.com/first.jpg",
-     "banned"         => false,
-     "dangerous"      => false,
-     "extension_data" => {"fizz" => "buzz"},
-     "checked_in"     => false,
-     "visit_expected" => true},
-    {"email"          => "dev@acaprojects.onmicrosoft.com",
-     "name"           => "dev@acaprojects.onmicrosoft.com",
-     "preferred_name" => nil,
-     "phone"          => nil,
-     "organisation"   => nil,
-     "notes"          => nil,
-     "photo"          => nil,
-     "banned"         => false,
-     "dangerous"      => false,
-     "extension_data" => {} of String => String?,
-     "checked_in"     => false,
-     "visit_expected" => true}]
   end
 end

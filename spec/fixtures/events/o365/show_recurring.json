@@ -1,7 +1,6 @@
 {
   "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.onmicrosoft.com')/calendar/events/$entity",
   "@odata.etag": "W/\"dPHcBLqEvkGEgQ87r+efLAAAhk36bA==\"",
-  "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
   "id": "event_instance_of_recurrence_id",
   "createdDateTime": "2020-09-13T22:44:39.7263717Z",
   "lastModifiedDateTime": "2020-09-13T22:44:40.4089746Z",
@@ -10,6 +9,17 @@
   "transactionId": null,
   "originalStartTimeZone": "Australia/Sydney",
   "originalEndTimeZone": "Australia/Sydney",
+  "recurrence": {
+    "pattern":{
+        "type": "daily",
+        "interval": 2
+      },
+    "range":
+    {
+      "type": "daily",
+      "startDate": "2020-08-27T14:45:00.0000000",
+      "endDate":"2020-11-27T15:46:00.0000000"
+    }},
   "iCalUId": "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10",
   "reminderMinutesBeforeStart": 15,
   "isReminderOn": true,
@@ -30,7 +40,6 @@
   "isOnlineMeeting": false,
   "onlineMeetingProvider": "unknown",
   "allowNewTimeProposals": true,
-  "recurrence": null,
   "onlineMeeting": null,
   "responseStatus": {
     "response": "organizer",

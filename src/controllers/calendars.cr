@@ -23,7 +23,13 @@ class Calendars < Application
     busy = client.get_availability(user.email, calendars, period_start, period_end)
 
     # Remove any rooms that have overlapping bookings
-    busy.each { |status| calendars.delete(status.calendar.downcase) unless status.availability.empty? }
+    busy.each do |status|
+      status.availability.each do |avail|
+        if (avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start <= avail.ends_at) && (period_end >= avail.starts_at))
+          calendars.delete(status.calendar.downcase)
+        end
+      end
+    end
 
     # Return the results
     results = calendars.map { |email|

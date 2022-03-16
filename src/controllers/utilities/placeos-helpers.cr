@@ -10,10 +10,21 @@ module Utils::PlaceOSHelpers
 
   def get_placeos_client : PlaceOS::Client
     @placeos_client ||= if App.running_in_production?
-                          PlaceOS::Client.new(
-                            PLACE_URI,
-                            token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil)
-                          )
+                          if key = request.headers["X-API-Key"]?
+                            PlaceOS::Client.new(
+                              PLACE_URI,
+                              host_header: request.headers["Host"]?,
+                              insecure: ::App::SSL_VERIFY_NONE,
+                              x_api_key: key
+                            )
+                          else
+                            PlaceOS::Client.new(
+                              PLACE_URI,
+                              token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
+                              host_header: request.headers["Host"]?,
+                              insecure: ::App::SSL_VERIFY_NONE
+                            )
+                          end
                         else
                           PlaceOS::Client.from_environment_user
                         end
@@ -33,6 +44,7 @@ module Utils::PlaceOSHelpers
     attribute bookable : Bool?
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def matching_calendar_ids(allow_default = false)
     args = CalendarSelection.new(params)
 
@@ -82,8 +94,7 @@ module Utils::PlaceOSHelpers
         Promise.defer { systems.fetch(system_id) }
       }).get.each do |system|
         calendar = system.email
-        next unless calendar
-        next if calendar.empty?
+        next if !calendar || calendar.empty?
         system_calendars[calendar] = system
       end
     end

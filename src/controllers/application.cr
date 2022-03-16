@@ -10,9 +10,7 @@ abstract class Application < ActionController::Base
   # HELPERS
   # =========================================
   include Utils::PlaceOSHelpers
-  # include Utils::GoogleHelpers
   include Utils::CurrentUser
-  # include Utils::Responders
   include Utils::MultiTenant
 
   # =========================================
@@ -40,8 +38,8 @@ abstract class Application < ActionController::Base
   before_action :check_jwt_scope
 
   protected def check_jwt_scope
-    unless user_token.scope.includes?("public")
-      Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, sub: user_token.sub} }
+    unless user_token.public_scope?
+      Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
       raise Error::Unauthorized.new "valid scope required for access"
     end
   end
@@ -73,6 +71,7 @@ abstract class Application < ActionController::Base
   # =========================================
   # ERROR HANDLERS
   # =========================================
+
   # 401 if no bearer token
   rescue_from Error::Unauthorized do |error|
     Log.debug { error.message }
@@ -92,13 +91,14 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from Clear::SQL::Error do |error|
-    Log.debug { error.inspect_with_backtrace }
-    respond_with(:internal_server_error) do
-      text error.inspect_with_backtrace
-      json({
-        error:     error.message,
-        backtrace: error.backtrace?,
-      })
+    render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
+  end
+
+  rescue_from PQ::PQError do |error|
+    if error.message =~ App::PG_UNIQUE_CONSTRAINT_REGEX
+      render_error(HTTP::Status::UNPROCESSABLE_ENTITY, error)
+    else
+      raise error
     end
   end
 
@@ -113,7 +113,7 @@ abstract class Application < ActionController::Base
     end
   end
 
-  rescue_from JSON::MappingError do |error|
+  rescue_from JSON::SerializableError do |error|
     respond_with(:bad_request) do
       text error.inspect_with_backtrace
       json({
@@ -124,28 +124,50 @@ abstract class Application < ActionController::Base
   end
 
   rescue_from ::PlaceOS::Client::API::Error do |error|
-    Log.debug { error.message }
-    head :not_found
+    render_error(HTTP::Status::NOT_FOUND, error)
   end
 
-  # Helpful during dev, see errors from office/google clients
-  unless App.running_in_production?
-    rescue_from PlaceCalendar::Exception do |error|
-      respond_with(:internal_server_error) do
-        text "#{error.http_body} \n #{error.inspect_with_backtrace}"
+  # TODO: Should be caught where it's happening, or the code refactored.
+  rescue_from ::Enumerable::EmptyError do |error|
+    render_error(HTTP::Status::NOT_FOUND, error)
+  end
+
+  rescue_from PlaceCalendar::Exception do |error|
+    # Adding `http_body` during dev to inspect errors from office/google clients
+    render_error(
+      HTTP::Status::INTERNAL_SERVER_ERROR,
+      error,
+      "#{error.http_body} \n #{error.inspect_with_backtrace}"
+    )
+  end
+
+  protected def render_error(code : HTTP::Status, error, message = nil)
+    Log.warn(exception: error) { error.message }
+    message = error.inspect_with_backtrace if message.nil?
+
+    if App.running_in_production?
+      respond_with(code) do
+        text message
+        json({error: message})
+      end
+    else
+      respond_with(code) do
+        text message
         json({
-          error:     error.message,
+          error:     message,
           backtrace: error.backtrace?,
         })
       end
     end
   end
 
-  protected def get_hosts_event(event : PlaceCalendar::Event) : PlaceCalendar::Event
+  # TODO: Refactor the following methods into a module
+
+  protected def get_hosts_event(event : PlaceCalendar::Event, host : String? = nil) : PlaceCalendar::Event
     start_time = event.event_start.at_beginning_of_day
     end_time = event.event_end.not_nil!.at_end_of_day
     ical_uid = event.ical_uid.not_nil!
-    host_cal = event.host.not_nil!
+    host_cal = host || event.host.not_nil!
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
@@ -153,6 +175,8 @@ abstract class Application < ActionController::Base
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
       EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+    else
+      meta
     end
   end
 
@@ -160,6 +184,8 @@ abstract class Application < ActionController::Base
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if (meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id) && (original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id}))
       EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
+    else
+      meta
     end
   end
 end

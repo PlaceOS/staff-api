@@ -1,4 +1,7 @@
 require "spec"
+require "faker"
+require "timecop"
+require "uuid"
 
 # Your application config
 # If you have a testing environment, replace this with a test config file
@@ -23,6 +26,10 @@ Spec.before_suite do
   {% end %}
 end
 
+def get_tenant
+  Tenant.query.find! { domain == "toby.staff-api.dev" }
+end
+
 def truncate_db
   Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
   Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
@@ -33,109 +40,85 @@ end
 
 Spec.before_each &->WebMock.reset
 
-def office_mock_token
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "toby.staff-api.dev",
-    sub: "toby@redant.com.au",
-    scope: ["public"],
-    user: UserJWT::Metadata.new(
-      name: "Toby Carvan",
-      email: "dev@acaprojects.com",
-      permissions: UserJWT::Permissions::Admin,
-      roles: ["manage", "admin"]
-    )
-  ).encode
-end
-
-def office_guest_mock_token(guest_event_id, system_id)
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "toby.staff-api.dev",
-    sub: "toby@redant.com.au",
-    scope: ["guest"],
-    user: UserJWT::Metadata.new(
-      name: "Jon Jon",
-      email: "jon@example.com",
-      permissions: UserJWT::Permissions::Admin,
-      roles: [guest_event_id, system_id]
-    )
-  ).encode
-end
-
-def google_mock_token
-  UserJWT.new(
-    iss: "staff-api",
-    iat: Time.local,
-    exp: Time.local + 1.week,
-    aud: "google.staff-api.dev",
-    sub: "amit@redant.com.au",
-    scope: ["public", "guest"],
-    user: UserJWT::Metadata.new(
-      name: "Amit Gaur",
-      email: "amit@redant.com.au",
-      permissions: UserJWT::Permissions::Admin,
-      roles: ["manage", "admin"]
-    )
-  ).encode
-end
-
-def mock_tenant_params
-  {
-    name:        "Toby",
-    platform:    "office365",
-    domain:      "toby.staff-api.dev",
-    credentials: %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"}),
-  }
-end
-
-# Provide some basic headers for office365 auth
-OFFICE365_HEADERS = HTTP::Headers{
-  "Host"          => "toby.staff-api.dev",
-  "Authorization" => "Bearer #{office_mock_token}",
-}
-
-# Provide some basic headers for office365 auth
-def office365_guest_headers(guest_event_id, system_id)
-  HTTP::Headers{
-    "Host"          => "toby.staff-api.dev",
-    "Authorization" => "Bearer #{office_guest_mock_token(guest_event_id, system_id)}",
-  }
-end
-
-# Provide some basic headers for google auth
-GOOGLE_HEADERS = HTTP::Headers{
-  "Host"          => "google.staff-api.dev",
-  "Authorization" => "Bearer #{google_mock_token}",
-}
-
-def extract_http_status(response)
-  split_res(response)[0].split(" ")[1]
-end
-
-def extract_json(response)
-  JSON.parse(extract_body(response))
-end
-
-def extract_body(response)
-  split_res(response)[-1]
-end
-
-private def split_res(response)
-  response.to_s.split("\r\n").reject(&.empty?)
-end
-
-module TenantsHelper
+module Mock
   extend self
 
-  def create_tenant(params = mock_tenant_params)
-    tenant = Tenant.new(params)
-    tenant.save
-    tenant
+  module Token
+    extend self
+
+    # office_mock_token
+    def office
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        domain: "toby.staff-api.dev",
+        id: "toby@redant.com.au",
+        scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
+        user: UserJWT::Metadata.new(
+          name: "Toby Carvan",
+          email: "dev@acaprojects.com",
+          permissions: UserJWT::Permissions::Admin,
+          roles: ["manage", "admin"]
+        )
+      ).encode
+    end
+
+    # office_guest_mock_token
+    def office_guest(guest_event_id, system_id)
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        domain: "toby.staff-api.dev",
+        id: "toby@redant.com.au",
+        scope: [PlaceOS::Model::UserJWT::Scope::GUEST],
+        user: UserJWT::Metadata.new(
+          name: "Jon Jon",
+          email: "jon@example.com",
+          permissions: UserJWT::Permissions::Admin,
+          roles: [guest_event_id, system_id]
+        )
+      ).encode
+    end
+
+    # google_mock_token
+    def google
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        domain: "google.staff-api.dev",
+        id: "amit@redant.com.au",
+        scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC, PlaceOS::Model::UserJWT::Scope::GUEST],
+        user: UserJWT::Metadata.new(
+          name: "Amit Gaur",
+          email: "amit@redant.com.au",
+          permissions: UserJWT::Permissions::Admin,
+          roles: ["manage", "admin"]
+        )
+      ).encode
+    end
+  end
+
+  module Headers
+    extend self
+
+    # Provide some basic headers for office365 auth (office365_guest_headers)
+    def office365_guest(guest_event_id = nil, system_id = nil)
+      auth = (guest_event_id.nil? && system_id.nil?) ? Mock::Token.office : Mock::Token.office_guest(guest_event_id.not_nil!, system_id.not_nil!)
+      {
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def google
+      {
+        "Host"          => "google.staff-api.dev",
+        "Authorization" => "Bearer #{Mock::Token.google}",
+      }
+    end
   end
 end
 
@@ -143,26 +126,52 @@ module EventMetadatasHelper
   extend self
 
   def create_event(tenant_id,
-                   id,
-                   event_start = Time.utc.to_unix,
-                   event_end = 60.minutes.from_now.to_unix,
-                   system_id = "sys_id",
-                   room_email = "room@example.com",
-                   host = "user@example.com",
+                   id = UUID.random.to_s,
+                   event_start = Random.new.rand(5..19).minutes.from_now.to_unix,
+                   event_end = Random.new.rand(25..79).minutes.from_now.to_unix,
+                   system_id = "sys_id-#{Random.new.rand(500)}",
+                   room_email = Faker::Internet.email,
+                   host = Faker::Internet.email,
                    ext_data = JSON.parse({"foo": 123}.to_json),
-                   ical_uid = "random_uid")
-    meta = EventMetadata.new
-    meta.tenant_id = tenant_id
-    meta.system_id = system_id
-    meta.event_id = id
-    meta.host_email = host
-    meta.resource_calendar = room_email
-    meta.event_start = event_start
-    meta.event_end = event_end
-    meta.ext_data = ext_data
-    meta.ical_uid = ical_uid
-    meta.save!
+                   ical_uid = "random_uid-#{Random.new.rand(500)}")
+    EventMetadata.create!({
+      tenant_id:         tenant_id,
+      system_id:         system_id,
+      event_id:          id,
+      host_email:        host,
+      resource_calendar: room_email,
+      event_start:       event_start,
+      event_end:         event_end,
+      ext_data:          ext_data,
+      ical_uid:          ical_uid,
+    })
+  end
+end
 
-    meta
+module Context(T, M)
+  extend self
+
+  def response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
+    ctx = instantiate_context(method, route, route_params, headers, body)
+    instance = T.new(ctx)
+    yield instance
+    ctx.response.output.rewind
+    res = ctx.response
+
+    body = if M == JSON::Any
+             JSON.parse(res.output)
+           else
+             M.from_json(res.output)
+           end
+
+    {ctx.response.status_code, body}
+  end
+
+  def delete_response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
+    ctx = instantiate_context(method, route, route_params, headers, body)
+    instance = T.new(ctx)
+    yield instance
+    ctx.response.output.rewind
+    {ctx.response.status_code}
   end
 end

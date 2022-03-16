@@ -2,8 +2,8 @@ version: "3.7"
 
 services:
   db:
+    hostname: staff_api_db
     image: postgres
-    container_name: staff_api_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -17,13 +17,21 @@ services:
       test: /usr/bin/pg_isready
       interval: 5s
     ports:
-      - "5432:5432"
-  web:
-    build:
-      context: ./
-      dockerfile: Dockerfile.test
-    container_name: staff_api
-    restart: always
+      - 5432:5432
+
+  test:
+    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.2.1}
+    hostname: staff_api
+    volumes:
+      - ${PWD}/spec:/app/spec
+      - ${PWD}/src:/app/src
+      - ${PWD}/lib:/app/lib
+      - ${PWD}/shard.lock:/app/shard.lock
+      - ${PWD}/shard.override.yml:/app/shard.override.yml
+      - ${PWD}/shard.yml:/app/shard.yml
+      - ${PWD}/coverage:/app/coverage
+    depends_on:
+      - db
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
       PLACE_URI: http://toby.dev.place.tech
@@ -31,7 +39,4 @@ services:
       PLACE_PASSWORD: password
       PLACE_AUTH_CLIENT_ID: abc123
       PLACE_AUTH_SECRET: abc123
-    depends_on:
-      - db
-    ports:
-      - 4000:8080
+      GITHUB_ACTION: ${GITHUB_ACTION-}
