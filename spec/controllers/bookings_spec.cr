@@ -617,7 +617,7 @@ describe Bookings do
     second_booking = BookingsHelper.http_create_booking(
       **common,
       asset_id: "second_desk",
-      limit_override: "true")[1].as_h
+      limit_override: "2")[1].as_h
     second_booking["asset_id"].should eq("second_desk")
   end
 

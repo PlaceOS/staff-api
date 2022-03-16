@@ -81,10 +81,9 @@ class Bookings < Application
     booking.booked_by_name = user.name
 
     # check concurrent bookings don't exceed booking limits
-    unless query_params["limit_override"]? == "true"
-      booking_limits = check_booking_limits(tenant, booking)
-      render :conflict, json: booking_limits if booking_limits
-    end
+    limit_override = query_params["limit_override"]?
+    booking_limits = check_booking_limits(tenant, booking, limit_override)
+    render :conflict, json: booking_limits if booking_limits
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -230,10 +229,9 @@ class Bookings < Application
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
     # check concurrent bookings don't exceed booking limits
-    unless query_params["limit_override"]? == "true"
-      booking_limits = check_booking_limits(tenant, existing_booking)
-      render :conflict, json: booking_limits if booking_limits
-    end
+    limit_override = query_params["limit_override"]?
+    booking_limits = check_booking_limits(tenant, existing_booking, limit_override)
+    render :conflict, json: booking_limits if booking_limits
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
@@ -468,12 +466,17 @@ class Bookings < Application
     end
   end
 
-  private def check_booking_limits(tenant, booking)
+  private def check_booking_limits(tenant, booking, limit_override = nil)
     # check concurrent bookings don't exceed booking limits
-    if booking_limits = tenant.booking_limits.as_h?
-      if limit = booking_limits[booking.booking_type]?
-        concurrent_bookings = check_concurrent(booking)
-        concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
+    if limit = limit_override
+      concurrent_bookings = check_concurrent(booking)
+      concurrent_bookings.first if concurrent_bookings.size >= limit.to_i
+    else
+      if booking_limits = tenant.booking_limits.as_h?
+        if limit = booking_limits[booking.booking_type]?
+          concurrent_bookings = check_concurrent(booking)
+          concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
+        end
       end
     end
   end
