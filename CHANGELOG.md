@@ -1,5 +1,14 @@
 ## Unreleased
 
+### Feat
+
+- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
+- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
+- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
+- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
+- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
+- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
+
 ### Perf
 
 - avoid unnecessary allocation ([#160](https://github.com/PlaceOS/staff-api/pull/160))
@@ -25,14 +34,6 @@
 - **event/guests**: filtering of host from attendees
 - **event/guests**: Don't add host as guest, even when event.host is not specified
 - **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
-
-### Feat
-
-- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
-- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
-- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
-- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
-- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
 
 ## v1.1.2 (2021-11-05)
 
