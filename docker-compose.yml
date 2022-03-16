@@ -3,7 +3,7 @@ version: "3.7"
 services:
   db:
     hostname: staff_api_db
-    image: postgres
+    image: postgres:14-alpine
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
