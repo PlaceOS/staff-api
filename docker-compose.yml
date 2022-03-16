@@ -22,6 +22,8 @@ services:
   test:
     image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.2.1}
     hostname: staff_api
+    security_opt:
+      - seccomp:unconfined
     volumes:
       - ${PWD}/spec:/app/spec
       - ${PWD}/src:/app/src
