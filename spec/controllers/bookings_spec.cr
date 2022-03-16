@@ -579,6 +579,40 @@ describe Bookings do
     not_updated.should eq(409)
   end
 
+  it "#create and #update should allow overriding booking limits" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    # Set booking limit
+    tenant = get_tenant
+    tenant.booking_limits = JSON.parse(%({"desk": 1}))
+    tenant.save!
+
+    common = {
+      booking_start: 5.minutes.from_now.to_unix,
+      booking_end:   40.minutes.from_now.to_unix,
+      booking_type:  "desk",
+    }
+
+    first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+    first_booking["asset_id"].should eq("first_desk")
+
+    # Fail to create booking due to limit
+    not_created = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[0]
+    not_created.should eq(409)
+
+    # Create booking with limit_override=true
+    second_booking = BookingsHelper.http_create_booking(
+      **common,
+      asset_id: "second_desk",
+      limit_override: "true")[1].as_h
+    second_booking["asset_id"].should eq("second_desk")
+  end
+
   it "#update limit check can't clash with itself when updating a booking" do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -815,7 +849,8 @@ module BookingsHelper
     booked_by_name = "Jon Smith",
     history = nil,
     utm_source = nil,
-    department = nil
+    department = nil,
+    limit_override = nil
   )
     body = {
       user_id:         user_id,
@@ -833,8 +868,11 @@ module BookingsHelper
       department:      department,
     }.to_h.compact!.to_json
 
-    param = utm_source ? "?utm_source=#{utm_source}" : ""
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{param}",
+    param = URI::Params.new
+    param.add("utm_source", utm_source) if utm_source
+    param.add("limit_override", limit_override) if limit_override
+    uri = URI.new(path: BOOKINGS_BASE, query: param)
+    Context(Bookings, JSON::Any).response("POST", uri.to_s,
       body: body,
       headers: Mock::Headers.office365_guest, &.create)
   end
