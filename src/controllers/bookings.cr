@@ -398,6 +398,10 @@ class Bookings < Application
     clashing_bookings = check_all_clashing(booking).to_a
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
+    render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
+
+    # booked for 8am on the 6th then you can check in anytime before that as long as it's the 6th and the resource is available
+
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
     else
@@ -441,7 +445,6 @@ class Bookings < Application
     query.each do |booking|
       new_query.where { checked_out_at > starting } if booking.checked_out_at_column.defined?
     end
-
     new_query.to_a
   end
 

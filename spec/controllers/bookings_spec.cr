@@ -795,6 +795,21 @@ describe Bookings do
     not_checked_in.should eq(409)
   end
 
+  it "prevents checking in after a booking has ended" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+
+    booking = BookingsHelper.http_create_booking(
+      booking_start: 20.minutes.ago.to_unix,
+      booking_end: 5.minutes.ago.to_unix,
+    )[1].as_h
+
+    not_checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking["id"]}/check_in", route_params: {"id" => booking["id"].to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+    not_checked_in.should eq(409)
+  end
+
   it "#prevents a booking being saved with an end time the same as the start time" do
     tenant = get_tenant
     expect_raises(Clear::Model::InvalidError) do
