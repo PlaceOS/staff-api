@@ -12,6 +12,7 @@ class Bookings < Application
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
     deleted_flag = query_params["deleted"]? == "true"
+    checked_out_flag = query_params["checked_out"]? == "true"
 
     query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
@@ -42,6 +43,8 @@ class Bookings < Application
       .order_by(:booking_start, :desc)
       .where(deleted: deleted_flag)
       .limit(20000)
+
+    query = checked_out_flag ? query.where { checked_out_at != nil } : query.where { checked_out_at == nil }
 
     response.headers["x-placeos-rawsql"] = query.to_sql
     results = query.to_a.map &.as_h
@@ -391,11 +394,16 @@ class Bookings < Application
 
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
+
+    clashing_bookings = check_all_clashing(booking).to_a
+    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
     else
       booking.checked_out_at = Time.utc.to_unix
     end
+
     booking.utm_source = params["utm_source"]?
     update_booking(booking, "checked_in")
   end
@@ -427,6 +435,17 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
   private def check_clashing(new_booking)
+    query = check_all_clashing(new_booking)
+    starting = new_booking.booking_start
+    new_query = query.dup
+    query.each do |booking|
+      new_query.where { checked_out_at > starting } if booking.checked_out_at_column.defined?
+    end
+
+    new_query.to_a
+  end
+
+  private def check_all_clashing(new_booking)
     # check there isn't a clashing booking
     starting = new_booking.booking_start
     ending = new_booking.booking_end
@@ -441,12 +460,7 @@ class Bookings < Application
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
 
-    new_query = query.dup
-    query.each do |booking|
-      new_query.where { checked_out_at > starting } if booking.checked_out_at_column.defined?
-    end
-
-    new_query.to_a
+    query
   end
 
   private def check_concurrent(new_booking)

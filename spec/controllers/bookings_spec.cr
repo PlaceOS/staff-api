@@ -763,13 +763,36 @@ describe Bookings do
       booking_start: 1.minutes.from_now.to_unix,
       booking_end: 20.minutes.from_now.to_unix,
       checked_out_at: 10.minutes.from_now.to_unix
-    )[1].as_h
+    )
 
     should_create = BookingsHelper.http_create_booking(
       booking_start: 15.minutes.from_now.to_unix,
       booking_end: 25.minutes.from_now.to_unix)[0]
 
     should_create.should eq(201)
+  end
+
+  it "prevents checking back in once a new booking in that time has been made" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    booking = BookingsHelper.http_create_booking(
+      booking_start: 1.minutes.from_now.to_unix,
+      booking_end: 20.minutes.from_now.to_unix,
+      checked_out_at: 10.minutes.from_now.to_unix
+    )[1].as_h
+
+    should_create = BookingsHelper.http_create_booking(
+      booking_start: 15.minutes.from_now.to_unix,
+      booking_end: 25.minutes.from_now.to_unix)[0]
+    should_create.should eq(201)
+
+    not_checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking["id"]}/check_in", route_params: {"id" => booking["id"].to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+    not_checked_in.should eq(409)
   end
 
   it "#prevents a booking being saved with an end time the same as the start time" do
@@ -896,7 +919,6 @@ module BookingsHelper
       booked_by_name:  booked_by_name,
       history:         history,
       department:      department,
-
     }.to_h.compact!.to_json
 
     param = URI::Params.new
