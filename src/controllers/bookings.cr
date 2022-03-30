@@ -440,7 +440,13 @@ class Bookings < Application
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
-    query.to_a
+
+    new_query = query.dup
+    query.each do |booking|
+      new_query.where { checked_out_at > starting } if booking.checked_out_at_column.defined?
+    end
+
+    new_query.to_a
   end
 
   private def check_concurrent(new_booking)

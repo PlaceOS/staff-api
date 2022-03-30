@@ -751,6 +751,27 @@ describe Bookings do
     end
   end
 
+  it "#allows a booking once previous has been checked out" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    BookingsHelper.http_create_booking(
+      booking_start: 1.minutes.from_now.to_unix,
+      booking_end: 20.minutes.from_now.to_unix,
+      checked_out_at: 10.minutes.from_now.to_unix
+    )[1].as_h
+
+    should_create = BookingsHelper.http_create_booking(
+      booking_start: 15.minutes.from_now.to_unix,
+      booking_end: 25.minutes.from_now.to_unix)[0]
+
+    should_create.should eq(201)
+  end
+
   it "#prevents a booking being saved with an end time the same as the start time" do
     tenant = get_tenant
     expect_raises(Clear::Model::InvalidError) do
@@ -858,7 +879,8 @@ module BookingsHelper
     history = nil,
     utm_source = nil,
     department = nil,
-    limit_override = nil
+    limit_override = nil,
+    checked_out_at = nil
   )
     body = {
       user_id:         user_id,
@@ -874,11 +896,13 @@ module BookingsHelper
       booked_by_name:  booked_by_name,
       history:         history,
       department:      department,
+
     }.to_h.compact!.to_json
 
     param = URI::Params.new
     param.add("utm_source", utm_source) if utm_source
     param.add("limit_override", limit_override) if limit_override
+    param.add("checked_out_at", checked_out_at.to_s) if checked_out_at
     uri = URI.new(path: BOOKINGS_BASE, query: param)
     Context(Bookings, JSON::Any).response("POST", uri.to_s,
       body: body,
