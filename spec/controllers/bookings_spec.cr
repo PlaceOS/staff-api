@@ -165,6 +165,60 @@ describe Bookings do
       body["current_state"].should eq("no_show")
     end
 
+    it "check in early on the same day" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = get_tenant
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 30.minutes.from_now.to_unix)
+
+      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+
+      check_in_early.should eq(200)
+    end
+
+    it "cannot check in early when another booking is present" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = get_tenant
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 30.minutes.from_now.to_unix)
+
+      BookingsHelper.create_booking(tenant.id,
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 10.minutes.from_now.to_unix)
+
+      sleep 4
+
+      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+
+      check_in_early.should eq(409)
+    end
+
+    it "cannot check in early on another day" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = get_tenant
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: Time.utc(2023, 2, 15, 10, 20, 30).to_unix,
+        booking_end: Time.utc(2023, 2, 15, 11, 20, 30).to_unix)
+
+      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+
+      check_in_early.should eq(405)
+    end
+
     it "booking rejected before booking_start" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 

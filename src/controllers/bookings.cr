@@ -3,6 +3,9 @@ class Bookings < Application
   FIFTY_MB = 50 * 1024 * 1024
 
   before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
+
+  before_action :check_deleted, only: [:approve, :reject, :check_in]
+
   getter booking : Booking { find_booking }
 
   PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department)
@@ -395,12 +398,13 @@ class Bookings < Application
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
 
-    clashing_bookings = check_all_clashing(booking).to_a
+    clashing_bookings = check_all_clashing(booking, Time.utc.to_unix).to_a
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
     render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
 
-    # booked for 8am on the 6th then you can check in anytime before that as long as it's the 6th and the resource is available
+    # Check if we can check into a booking early (on the same day)
+    render :method_not_allowed, json: "Can only check in on the day of booking" if Time.unix(booking.booking_start).date != Time.local.date
 
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
@@ -439,7 +443,7 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
   private def check_clashing(new_booking)
-    query = check_all_clashing(new_booking)
+    query = check_all_clashing(new_booking, new_booking.booking_start)
     starting = new_booking.booking_start
     new_query = query.dup
     query.each do |booking|
@@ -448,9 +452,8 @@ class Bookings < Application
     new_query.to_a
   end
 
-  private def check_all_clashing(new_booking)
+  private def check_all_clashing(new_booking, starting)
     # check there isn't a clashing booking
-    starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
     asset_id = new_booking.asset_id
@@ -517,6 +520,10 @@ class Bookings < Application
        !check_access(user.user.roles, booking.zones || [] of String).none?
       head :forbidden
     end
+  end
+
+  private def check_deleted
+    head :method_not_allowed if booking.deleted
   end
 
   private def update_booking(booking, signal = "changed")
