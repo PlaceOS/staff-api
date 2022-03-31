@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
 - **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
 - **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
 - **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
