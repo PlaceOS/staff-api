@@ -404,7 +404,7 @@ class Bookings < Application
     render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
 
     # Check if we can check into a booking early (on the same day)
-    render :method_not_allowed, json: "Can only check in on the day of booking" if Time.unix(booking.booking_start).date != Time.local.date
+    render :method_not_allowed, json: "Can only check in an hour before the booking start" if booking.booking_start - Time.local.to_unix > 3600
 
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
