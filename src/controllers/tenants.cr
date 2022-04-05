@@ -20,9 +20,12 @@ class Tenants < Application
   def update
     hashed = Hash(String, String | JSON::Any).from_json(request.body.not_nil!)
     changes = Tenant.new(hashed)
-    changes.credentials = hashed["credentials"]?.to_json
 
-    {% for key in [:name, :domain, :platform, :credentials] %}
+    if creds = hashed["credentials"]?
+      tenant.credentials = creds.to_json
+    end
+
+    {% for key in [:name, :domain, :platform, :booking_limits] %}
       begin
         tenant.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
