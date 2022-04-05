@@ -2,6 +2,7 @@
 
 ### Fix
 
+- **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
 - **controllers/tenants**: update to support limits ([#168](https://github.com/PlaceOS/staff-api/pull/168))
 - **bookings**: handle additional state transitions ([#157](https://github.com/PlaceOS/staff-api/pull/157))
 - incomplete centralised ci ([#156](https://github.com/PlaceOS/staff-api/pull/156))
