@@ -60,6 +60,25 @@ describe Calendars do
     body.should eq(CalendarsHelper.free_busy_output)
   end
 
+  it "#free_busy request with a duration < 30mins" do
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
+      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
+      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: "")
+
+    now = Time.local.to_unix
+    later = (Time.local + Time::Span.new(minutes: 15)).to_unix
+    route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
+    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.free_busy)[1].as_a
+    body.should eq(CalendarsHelper.free_busy_output)
+  end
+
   it "#free_busy should not allow an interval of less than 5 minutes" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
