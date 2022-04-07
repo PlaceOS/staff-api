@@ -63,7 +63,11 @@ class Calendars < Application
     # perform availability request
     period_start = Time.unix(query_params["period_start"].to_i64)
     period_end = Time.unix(query_params["period_end"].to_i64)
-    busy = client.get_availability(user.email, calendars, period_start, period_end)
+    duration = period_end - period_start
+
+    render :bad_request, json: "free/busy availability intervals must be greater than 5 minutes" if duration.total_minutes < 5
+    availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
+    busy = client.get_availability(user.email, calendars, period_start, period_end, view_interval: availability_view_interval)
 
     results = busy.map { |details|
       if system = candidates[details.calendar]?

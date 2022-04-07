@@ -892,7 +892,7 @@ describe Bookings do
     booking.checked_out_at = 10.minutes.from_now.to_unix
     booking.save!
 
-    booking2 = BookingsHelper.create_booking(tenant.id, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
+    BookingsHelper.create_booking(tenant.id, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
 
     sleep 2
 
