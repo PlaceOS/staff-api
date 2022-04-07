@@ -269,7 +269,7 @@ describe Guests do
         "id": "sys_id-#{Random.rand(99)}"
     }))
 
-    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/.*\.com\/calendar\/calendarView\?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId\+eq\+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&\$top=10000/)
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00.*/)
       .to_return(GuestsHelper.mock_event_query_json)
 
     tenant = get_tenant

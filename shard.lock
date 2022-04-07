@@ -47,11 +47,11 @@ shards:
 
   email:
     git: https://github.com/arcage/crystal-email.git
-    version: 0.6.4
+    version: 0.7.0
 
   faker:
     git: https://github.com/askn/faker.git
-    version: 0.7.0
+    version: 0.8.0
 
   future:
     git: https://github.com/crystal-community/future.cr.git
@@ -91,7 +91,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.14.0
+    version: 1.15.0
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -111,7 +111,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.12.1
+    version: 4.12.3
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -123,7 +123,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 7.0.0
+    version: 7.6.7
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -139,7 +139,7 @@ shards:
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 6.0.1
+    version: 6.0.2
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
