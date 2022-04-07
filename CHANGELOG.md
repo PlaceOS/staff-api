@@ -1,5 +1,17 @@
 ## Unreleased
 
+### Feat
+
+- **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
+- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
+- **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
+- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
+- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
+- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
+- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
+- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
+- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
+
 ### Fix
 
 - **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
@@ -15,17 +27,6 @@
 - **event/guests**: filtering of host from attendees
 - **event/guests**: Don't add host as guest, even when event.host is not specified
 - **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
-
-### Feat
-
-- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
-- **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
-- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
-- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
-- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
-- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
-- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
-- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
 
 ### Perf
 
