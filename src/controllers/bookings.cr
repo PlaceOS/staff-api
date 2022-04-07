@@ -479,8 +479,8 @@ class Bookings < Application
 
   private def checked_out_clashes(query, booking, start_time)
     new_query = query.dup
-    query.each do |booking|
-      if booking.checked_out_at != nil
+    query.each do |query_booking|
+      if query_booking.checked_out_at != nil
         new_query = new_query.where { checked_out_at >= start_time }
       else
         new_query = new_query.where { booking_end >= start_time }
