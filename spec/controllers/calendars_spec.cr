@@ -4,7 +4,7 @@ describe Calendars do
   it "#index should return a list of calendars" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # instantiate the controller
@@ -42,13 +42,13 @@ describe Calendars do
   end
 
   it "#free_busy should return free busy data of calendars" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: "")
@@ -61,13 +61,13 @@ describe Calendars do
   end
 
   it "#free_busy request with a duration < 30mins" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: "")
@@ -80,13 +80,13 @@ describe Calendars do
   end
 
   it "#free_busy should not allow an interval of less than 5 minutes" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: "")
@@ -118,13 +118,13 @@ module CalendarsHelper
   def stub_cal_endpoints
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule_avail.json"))
 
     WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rJQQlR4Cn7")
@@ -133,7 +133,7 @@ module CalendarsHelper
     WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rHQQlR4Cn7")
       .to_return(body: File.read("./spec/fixtures/placeos/systemH.json"))
 
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
       .to_return(body: "")
@@ -141,7 +141,7 @@ module CalendarsHelper
       .to_return(body: "")
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
       .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
   end
 end

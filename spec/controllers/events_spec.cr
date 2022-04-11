@@ -11,11 +11,11 @@ describe Events do
 
   describe "#index" do
     it "#index should return a list of events with metadata" do
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
         .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
       tenant = get_tenant
@@ -32,7 +32,7 @@ describe Events do
     it "metadata extension endpoint should filter by extension data" do
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
         .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
       tenant = get_tenant
@@ -49,13 +49,13 @@ describe Events do
     end
 
     it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
         .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_with_recurring_event.json"))
 
       now = 1.minutes.from_now.to_unix
@@ -77,9 +77,9 @@ describe Events do
     it "with attendees and extension data" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
       req_body = EventsHelper.create_event_input
@@ -120,14 +120,15 @@ describe Events do
       EventsHelper.stub_create_endpoints
     end
     it "for system" do
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
       req_body = EventsHelper.create_event_input
@@ -136,7 +137,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       req_body = EventsHelper.update_event_input
@@ -168,13 +169,15 @@ describe Events do
     it "extension data for guest" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
       req_body = EventsHelper.create_event_input
@@ -182,7 +185,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Guest Update
@@ -197,16 +200,17 @@ describe Events do
     end
 
     it "#for user calendar" do
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/")
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
 
       req_body = EventsHelper.create_event_input
@@ -215,7 +219,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Update
@@ -233,7 +237,7 @@ describe Events do
       EventsHelper.stub_show_endpoints
     end
     it "details for event with limited guest access" do
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/.*/)
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
@@ -244,10 +248,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
-        .to_return(EventsHelper.event_query_response(created_event_id))
-
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Fetch guest event details
@@ -264,18 +265,18 @@ describe Events do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
-        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
-
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/event_instance_of_recurrence_id")
+        .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
@@ -286,7 +287,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Fetch guest event details that is an instance of master event created above
@@ -307,10 +308,7 @@ describe Events do
     end
 
     it "details for event with normal access" do
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
@@ -320,7 +318,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Show for calendar
@@ -338,13 +336,13 @@ describe Events do
     end
 
     it "details for event that is an recurring event instance with normal access" do
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/event_instance_of_recurrence_id")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
@@ -364,7 +362,7 @@ describe Events do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
         .to_return(EventsHelper.event_query_response(created_event_id))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Show event details for calendar params that is an instance of master event created above
@@ -391,17 +389,19 @@ describe Events do
   end
 
   it "#destroy the event for system" do
-    # EventsHelper.stub_create_endpoints
-
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendars?")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
 
-    WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+    WebMock.stub(:delete, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
       .to_return(body: "")
+
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
+      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
 
     # Create event
 
@@ -410,10 +410,7 @@ describe Events do
 
     created_event_id = created_event["id"].to_s
 
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
-      .to_return(EventsHelper.event_query_response(created_event_id))
-
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
@@ -443,17 +440,26 @@ describe Events do
   it "#approve marks room as accepted" do
     EventsHelper.stub_create_endpoints
 
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/")
       .to_return(GuestsHelper.mock_event_query_json)
 
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/")
-      .to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # Create event
 
     req_body = EventsHelper.create_event_input
 
     created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+    created_event_id = created_event["id"].to_s
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
+      .to_return(EventsHelper.event_query_response(created_event_id))
+
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
     # approve
     accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
@@ -465,15 +471,24 @@ describe Events do
   it "#reject marks room as declined" do
     EventsHelper.stub_create_endpoints
 
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/")
       .to_return(GuestsHelper.mock_event_query_json)
 
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/")
-      .to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
 
     # Create event
     req_body = EventsHelper.create_event_input
     created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+
+    created_event_id = created_event["id"].to_s
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
+      .to_return(EventsHelper.event_query_response(created_event_id))
 
     # reject
     declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
@@ -485,10 +500,7 @@ describe Events do
     it "lists guests for an event & guest_checkin checks them in" do
       EventsHelper.stub_create_endpoints
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
@@ -501,7 +513,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # guest_list
@@ -543,7 +555,7 @@ describe Events do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
         .to_return(body: "")
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1@example.com/calendar/events/event_instance_of_recurrence_id")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_instance_recurring.json"))
 
       # Create event which will create metadata with id that we'll use as seriesMasterId
@@ -554,7 +566,7 @@ describe Events do
 
       created_event_id = created_event["id"].to_s
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       event_instance_id = "event_instance_of_recurrence_id"
