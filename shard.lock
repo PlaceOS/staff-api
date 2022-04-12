@@ -18,8 +18,8 @@ shards:
     version: 1.12.1
 
   ameba:
-    git: https://github.com/veelenga/ameba.git
-    version: 1.0.0
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 0.14.4
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
