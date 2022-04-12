@@ -19,7 +19,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 0.14.3
+    version: 1.0.0
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -43,7 +43,7 @@ shards:
 
   db: # Overridden
     git: https://github.com/place-labs/crystal-db.git
-    version: 0.10.1+git.commit.157438a0d60249be0273765563a3b6e29b022a1b
+    version: 0.11.0+git.commit.0bfea0462867a4d653ecdf8d5d81d59e8ae21172
 
   email:
     git: https://github.com/arcage/crystal-email.git
@@ -63,7 +63,7 @@ shards:
 
   google:
     git: https://github.com/placeos/google.git
-    version: 3.1.4
+    version: 3.2.1
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -91,7 +91,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.15.0
+    version: 1.16.3
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -105,17 +105,21 @@ shards:
     git: https://github.com/spider-gazelle/openssl_ext.git
     version: 2.1.5
 
+  pars:
+    git: https://github.com/spider-gazelle/pars.git
+    version: 1.1.0
+
   pg: # Overridden
     git: https://github.com/place-labs/crystal-pg.git
     version: 0.23.2+git.commit.838f8718993555ed165dcc2b1d6ebfdc6bbf68e4
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.12.3
+    version: 4.13.0
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.6.0+git.commit.8b1c94afe5e4dae86859af9557955b42bc62d4df
+    version: 2.6.1+git.commit.e4f5bab34110f980d65150ffea3cf072c0017ea0
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -123,7 +127,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 7.6.7
+    version: 8.1.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git

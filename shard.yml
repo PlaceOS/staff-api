@@ -15,7 +15,7 @@ dependencies:
 
   placeos-models:
     github: placeos/models
-    version: ~> 7.0
+    version: ">= 8.1"
 
   # TODO:: remove in future
   http-params-serializable:
