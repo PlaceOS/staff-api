@@ -105,6 +105,10 @@ shards:
     git: https://github.com/spider-gazelle/openssl_ext.git
     version: 2.1.5
 
+  pars:
+    git: https://github.com/spider-gazelle/pars.git
+    version: 1.1.0
+
   pg: # Overridden
     git: https://github.com/place-labs/crystal-pg.git
     version: 0.23.2+git.commit.838f8718993555ed165dcc2b1d6ebfdc6bbf68e4
@@ -115,7 +119,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.6.0+git.commit.8b1c94afe5e4dae86859af9557955b42bc62d4df
+    version: 2.6.1
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -123,7 +127,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 7.6.7
+    version: 8.1.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
