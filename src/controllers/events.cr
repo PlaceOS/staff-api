@@ -596,8 +596,16 @@ class Events < Application
     head :bad_request
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def destroy
+    cancel_event(delete: true)
+  end
+
+  post "/:id/decline", :decline do
+    cancel_event(delete: false)
+  end
+
+  # ameba:disable Metrics/CyclomaticComplexity
+  protected def cancel_event(delete : Bool)
     event_id = route_params["id"]
     notify_guests = query_params["notify"]? != "false"
     placeos_client = get_placeos_client
@@ -634,7 +642,18 @@ class Events < Application
       event_id = event.id.not_nil!
     end
 
-    client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
+    if delete
+      client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
+    else
+      comment = request.body.try &.gets_to_end.presence
+      client.decline_event(
+        user_id: host,
+        id: event_id,
+        calendar_id: host,
+        notify: notify_guests,
+        comment: comment
+      )
+    end
 
     if system
       EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete_all
