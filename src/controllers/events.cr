@@ -596,7 +596,6 @@ class Events < Application
     head :bad_request
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def destroy
     cancel_event(delete: true)
   end
@@ -605,6 +604,7 @@ class Events < Application
     cancel_event(delete: false)
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   protected def cancel_event(delete : Bool)
     event_id = route_params["id"]
     notify_guests = query_params["notify"]? != "false"
