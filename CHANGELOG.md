@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
 - **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
 - **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
 - **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
