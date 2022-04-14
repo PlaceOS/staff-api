@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 4.8.0
+    version: 4.7.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -19,7 +19,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.0.0
+    version: 0.14.3
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -43,7 +43,7 @@ shards:
 
   db: # Overridden
     git: https://github.com/place-labs/crystal-db.git
-    version: 0.11.0+git.commit.0bfea0462867a4d653ecdf8d5d81d59e8ae21172
+    version: 0.10.1+git.commit.157438a0d60249be0273765563a3b6e29b022a1b
 
   email:
     git: https://github.com/arcage/crystal-email.git
