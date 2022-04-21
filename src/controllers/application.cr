@@ -96,7 +96,8 @@ abstract class Application < ActionController::Base
     respond_with(:conflict) do
       text error.message
       json({
-        error: error.message,
+        error:    error.message,
+        bookings: error.bookings,
       })
     end
   end
@@ -107,8 +108,8 @@ abstract class Application < ActionController::Base
     respond_with(:gone) do
       text "#{error.message}\nlimit: #{error.limit}"
       json({
-        error: error.message,
-        limit: error.limit,
+        error:    error.message,
+        limit:    error.limit,
         bookings: error.bookings,
       })
     end

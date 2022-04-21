@@ -70,7 +70,7 @@ class Bookings < Application
 
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # Add utm_source
     booking.utm_source = query_params["utm_source"]?
@@ -231,7 +231,7 @@ class Bookings < Application
 
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(existing_booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # check concurrent bookings don't exceed booking limits
     limit_override = query_params["limit_override"]?

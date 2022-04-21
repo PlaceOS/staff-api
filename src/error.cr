@@ -12,7 +12,9 @@ class Error < Exception
   end
 
   class BookingConflict < Error
-    def initialize(message = "Conflicting booking")
+    getter bookings
+
+    def initialize(@bookings : Array(Booking), message = "Conflicting booking")
       super(message)
     end
   end

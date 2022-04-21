@@ -624,14 +624,15 @@ describe Bookings do
 
     sleep 3
 
-    not_created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
-      {
-          "name": "#{user_name}",
-          "email": "#{user_email}",
-          "checked_in": true,
-          "visit_expected": true
-      }]}), headers: Mock::Headers.office365_guest, &.create)[0]
-    not_created.should eq(409)
+    expect_raises Error::BookingConflict do
+      _not_created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+        {
+            "name": "#{user_name}",
+            "email": "#{user_email}",
+            "checked_in": true,
+            "visit_expected": true
+        }]}), headers: Mock::Headers.office365_guest, &.create)
+    end
   end
 
   # add support for configurable booking limits on resources
