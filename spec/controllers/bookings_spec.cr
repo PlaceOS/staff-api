@@ -814,7 +814,7 @@ describe Bookings do
 
     # Fail to change booking due to limit
     expect_raises Error::BookingLimit do
-      not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
+      _not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
         route_params: {"id" => third_booking["id"].to_s},
         body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
         headers: Mock::Headers.office365_guest, &.update)
