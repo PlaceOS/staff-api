@@ -11,6 +11,12 @@ class Error < Exception
   class Forbidden < Error
   end
 
+  class BookingConflict < Error
+  end
+
+  class BookingLimit < Error
+  end
+
   class InvalidParams < Error
     def initialize(@params : Params, message = "")
       super(message)

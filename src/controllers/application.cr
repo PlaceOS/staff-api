@@ -90,6 +90,18 @@ abstract class Application < ActionController::Base
     head :not_found
   end
 
+  # 409 if clashing booking
+  rescue_from Error::BookingConflict do |error|
+    Log.debug { error.message }
+    head :conflict
+  end
+
+  # 410 if booking limit reached
+  rescue_from Error::BookingLimit do |error|
+    Log.debug { error.message }
+    head :gone
+  end
+
   rescue_from Clear::SQL::Error do |error|
     render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
   end
