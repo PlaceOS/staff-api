@@ -91,7 +91,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.16.3
+    version: 1.16.4
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -115,7 +115,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.13.2
+    version: 4.13.3
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -127,7 +127,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.1.0
+    version: 8.2.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
