@@ -667,7 +667,7 @@ describe Bookings do
 
     # Fail to create booking due to limit
     not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
-    not_created.should eq(409)
+    not_created.should eq(410)
 
     # Create third booking at a different time
     third_booking = BookingsHelper.http_create_booking(
@@ -689,7 +689,7 @@ describe Bookings do
       route_params: {"id" => third_booking["id"].to_s},
       body: %({"booking_start":#{starting},"booking_end":#{ending}}),
       headers: Mock::Headers.office365_guest, &.update)[0]
-    not_updated.should eq(409)
+    not_updated.should eq(410)
   end
 
   it "#create and #update should allow overriding booking limits" do
@@ -716,7 +716,7 @@ describe Bookings do
 
     # Fail to create booking due to limit
     not_created = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[0]
-    not_created.should eq(409)
+    not_created.should eq(410)
 
     # Create booking with limit_override=true
     second_booking = BookingsHelper.http_create_booking(
@@ -795,7 +795,7 @@ describe Bookings do
 
     # Fail to create booking due to limit
     not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
-    not_created.should eq(409)
+    not_created.should eq(410)
 
     # Create third booking at a different time
     third_booking = BookingsHelper.http_create_booking(
@@ -812,7 +812,7 @@ describe Bookings do
       route_params: {"id" => third_booking["id"].to_s},
       body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
       headers: Mock::Headers.office365_guest, &.update)[0]
-    not_updated.should eq(409)
+    not_updated.should eq(410)
   end
 
   it "#create and #update should not allow setting the history" do

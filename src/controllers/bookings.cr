@@ -89,7 +89,7 @@ class Bookings < Application
     # check concurrent bookings don't exceed booking limits
     limit_override = query_params["limit_override"]?
     booking_limits = check_booking_limits(tenant, booking, limit_override)
-    render :conflict, json: booking_limits if booking_limits
+    render :gone, json: booking_limits if booking_limits
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -237,7 +237,7 @@ class Bookings < Application
     # check concurrent bookings don't exceed booking limits
     limit_override = query_params["limit_override"]?
     booking_limits = check_booking_limits(tenant, existing_booking, limit_override)
-    render :conflict, json: booking_limits if booking_limits
+    render :gone, json: booking_limits if booking_limits
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
