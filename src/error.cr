@@ -12,9 +12,17 @@ class Error < Exception
   end
 
   class BookingConflict < Error
+    def initialize(message = "Conflicting booking")
+      super(message)
+    end
   end
 
   class BookingLimit < Error
+    getter limit
+
+    def initialize(@limit : Int32, message = "Booking limit reached")
+      super(message)
+    end
   end
 
   class InvalidParams < Error

@@ -93,13 +93,24 @@ abstract class Application < ActionController::Base
   # 409 if clashing booking
   rescue_from Error::BookingConflict do |error|
     Log.debug { error.message }
-    head :conflict
+    respond_with(:conflict) do
+      text error.message
+      json({
+        error: error.message,
+      })
+    end
   end
 
   # 410 if booking limit reached
   rescue_from Error::BookingLimit do |error|
     Log.debug { error.message }
-    head :gone
+    respond_with(:gone) do
+      text "#{error.message}\nlimit: #{error.limit}"
+      json({
+        error: error.message,
+        limit: error.limit,
+      })
+    end
   end
 
   rescue_from Clear::SQL::Error do |error|
