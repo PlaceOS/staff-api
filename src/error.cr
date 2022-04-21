@@ -19,8 +19,9 @@ class Error < Exception
 
   class BookingLimit < Error
     getter limit
+    getter bookings
 
-    def initialize(@limit : Int32, message = "Booking limit reached")
+    def initialize(@limit : Int32, @bookings : Array(Booking), message = "Booking limit reached")
       super(message)
     end
   end

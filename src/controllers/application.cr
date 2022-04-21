@@ -109,6 +109,7 @@ abstract class Application < ActionController::Base
       json({
         error: error.message,
         limit: error.limit,
+        bookings: error.bookings,
       })
     end
   end
