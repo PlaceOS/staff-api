@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **logging**: add configuration by LOG_LEVEL env var
 - **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
 - **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
 - **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
