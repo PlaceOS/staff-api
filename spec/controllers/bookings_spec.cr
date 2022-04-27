@@ -624,14 +624,15 @@ describe Bookings do
 
     sleep 3
 
-    not_created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
-      {
-          "name": "#{user_name}",
-          "email": "#{user_email}",
-          "checked_in": true,
-          "visit_expected": true
-      }]}), headers: Mock::Headers.office365_guest, &.create)[0]
-    not_created.should eq(409)
+    expect_raises Error::BookingConflict do
+      _not_created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+        {
+            "name": "#{user_name}",
+            "email": "#{user_email}",
+            "checked_in": true,
+            "visit_expected": true
+        }]}), headers: Mock::Headers.office365_guest, &.create)
+    end
   end
 
   # add support for configurable booking limits on resources
@@ -666,8 +667,9 @@ describe Bookings do
     second_booking["asset_id"].should eq("second_desk")
 
     # Fail to create booking due to limit
-    not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
-    not_created.should eq(409)
+    expect_raises Error::BookingLimit do
+      _not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")
+    end
 
     # Create third booking at a different time
     third_booking = BookingsHelper.http_create_booking(
@@ -685,11 +687,12 @@ describe Bookings do
     fourth_booking["asset_id"].should eq("fourth_desk")
 
     # Fail to change booking due to limit
-    not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
-      route_params: {"id" => third_booking["id"].to_s},
-      body: %({"booking_start":#{starting},"booking_end":#{ending}}),
-      headers: Mock::Headers.office365_guest, &.update)[0]
-    not_updated.should eq(409)
+    expect_raises Error::BookingLimit do
+      _not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
+        route_params: {"id" => third_booking["id"].to_s},
+        body: %({"booking_start":#{starting},"booking_end":#{ending}}),
+        headers: Mock::Headers.office365_guest, &.update)
+    end
   end
 
   it "#create and #update should allow overriding booking limits" do
@@ -715,8 +718,9 @@ describe Bookings do
     first_booking["asset_id"].should eq("first_desk")
 
     # Fail to create booking due to limit
-    not_created = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[0]
-    not_created.should eq(409)
+    expect_raises Error::BookingLimit do
+      _not_created = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")
+    end
 
     # Create booking with limit_override=true
     second_booking = BookingsHelper.http_create_booking(
@@ -794,8 +798,9 @@ describe Bookings do
     second_booking["asset_id"].should eq("second_desk")
 
     # Fail to create booking due to limit
-    not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0]
-    not_created.should eq(409)
+    expect_raises Error::BookingLimit do
+      _not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")
+    end
 
     # Create third booking at a different time
     third_booking = BookingsHelper.http_create_booking(
@@ -808,11 +813,12 @@ describe Bookings do
     third_booking["asset_id"].should eq("third_desk")
 
     # Fail to change booking due to limit
-    not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
-      route_params: {"id" => third_booking["id"].to_s},
-      body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
-      headers: Mock::Headers.office365_guest, &.update)[0]
-    not_updated.should eq(409)
+    expect_raises Error::BookingLimit do
+      _not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
+        route_params: {"id" => third_booking["id"].to_s},
+        body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
+        headers: Mock::Headers.office365_guest, &.update)
+    end
   end
 
   it "#create and #update should not allow setting the history" do
