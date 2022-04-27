@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **booking**: change error code on booking limits ([#179](https://github.com/PlaceOS/staff-api/pull/179))
 - **logging**: add configuration by LOG_LEVEL env var
 - **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
 - **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
