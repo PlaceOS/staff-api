@@ -1,5 +1,4 @@
 require "placeos-log-backend"
-require "placeos-log-backend/telemetry"
 require "raven"
 require "raven/integrations/action-controller"
 
@@ -36,10 +35,5 @@ module App::Logging
     builder: builder,
     backend: log_backend,
     log_level_env: "LOG_LEVEL",
-  )
-
-  PlaceOS::LogBackend.configure_opentelemetry(
-    service_name: NAME,
-    service_version: VERSION,
   )
 end

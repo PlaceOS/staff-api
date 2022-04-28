@@ -1,14 +1,19 @@
+require "./logging"
+
 # Application dependencies
 require "action-controller"
 require "active-model"
 require "clear"
+
 require "./constants"
-require "./logging"
 require "./error"
 require "./controllers/application"
 require "./controllers/*"
 require "./models/*"
 require "./migrations/*"
+
+# Add telemetry after application code
+require "./telemetry"
 
 # Configure Clear ORM
 Clear::SQL.init(App::PG_DATABASE_URL)
