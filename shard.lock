@@ -19,7 +19,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 0.14.3
+    version: 1.0.0
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -35,7 +35,7 @@ shards:
 
   clear:
     git: https://github.com/place-labs/clear.git
-    version: 0.10+git.commit.ce7bba7f585cc7e346946c62c23d0f77449b6ec6
+    version: 0.10+git.commit.f291a67b087bc43a100bdafb55af46f51af15bed
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
@@ -47,7 +47,7 @@ shards:
 
   db: # Overridden
     git: https://github.com/place-labs/crystal-db.git
-    version: 0.10.1+git.commit.157438a0d60249be0273765563a3b6e29b022a1b
+    version: 0.11.0+git.commit.2afe1ec29f5db087a380ef38eed1e8965720acaf
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
@@ -138,12 +138,12 @@ shards:
     version: 0.1.2
 
   pg: # Overridden
-    git: https://github.com/place-labs/crystal-pg.git
-    version: 0.23.2+git.commit.838f8718993555ed165dcc2b1d6ebfdc6bbf68e4
+    git: https://github.com/will/crystal-pg.git
+    version: 0.26.0
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.13.3
+    version: 4.13.4
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
