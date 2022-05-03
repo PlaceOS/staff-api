@@ -2,6 +2,7 @@
 
 ### Fix
 
+- **models/booking/history**: handle pull parser when setting history
 - update `placeos-log-backend`
 - **telemetry**: seperate telemetry file
 - **migrations/migrate_user_ids**: add user_id migrations ([#180](https://github.com/PlaceOS/staff-api/pull/180))
