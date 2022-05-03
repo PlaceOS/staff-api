@@ -2,6 +2,7 @@
 
 ### Fix
 
+- update `placeos-log-backend`
 - **telemetry**: seperate telemetry file
 - **migrations/migrate_user_ids**: add user_id migrations ([#180](https://github.com/PlaceOS/staff-api/pull/180))
 - **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
