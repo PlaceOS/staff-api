@@ -16,6 +16,8 @@ class Booking
         case x
         when Nil
           nil
+        when JSON::PullParser
+          Array(History).from_json x.read_raw
         when JSON::Any
           Array(History).from_json x.to_json
         when Array(History)
