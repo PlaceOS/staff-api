@@ -13,6 +13,3 @@ dependencies:
     github: place-labs/crystal-db
     branch: master
 
-  opentelemetry-api:
-    github: place-labs/opentelemetry-api.cr
-    branch: fix/trace/in_span
