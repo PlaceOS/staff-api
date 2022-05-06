@@ -1,19 +1,13 @@
 ## Unreleased
 
-### Perf
-
-- avoid unnecessary allocation ([#160](https://github.com/PlaceOS/staff-api/pull/160))
-
-### Refactor
-
-- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
-- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
-- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
-- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
-- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
-
 ### Fix
 
+- **models/booking/history**: handle pull parser when setting history
+- update `placeos-log-backend`
+- **telemetry**: seperate telemetry file
+- **migrations/migrate_user_ids**: add user_id migrations ([#180](https://github.com/PlaceOS/staff-api/pull/180))
+- **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
+- **controllers/tenants**: update to support limits ([#168](https://github.com/PlaceOS/staff-api/pull/168))
 - **bookings**: handle additional state transitions ([#157](https://github.com/PlaceOS/staff-api/pull/157))
 - incomplete centralised ci ([#156](https://github.com/PlaceOS/staff-api/pull/156))
 - **migrations**: adds unique migration for deleted and email digest ([#139](https://github.com/PlaceOS/staff-api/pull/139))
@@ -28,11 +22,31 @@
 
 ### Feat
 
+- **logging**: configure OpenTelemetry
+- **booking**: change error code on booking limits ([#179](https://github.com/PlaceOS/staff-api/pull/179))
+- **logging**: add configuration by LOG_LEVEL env var
+- **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
+- **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
+- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
+- **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
+- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
 - **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
 - **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
 - **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
 - **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
 - **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
+
+### Perf
+
+- avoid unnecessary allocation ([#160](https://github.com/PlaceOS/staff-api/pull/160))
+
+### Refactor
+
+- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
+- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
+- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
+- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
+- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
 
 ## v1.1.2 (2021-11-05)
 

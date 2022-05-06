@@ -6,8 +6,13 @@ dependencies:
 
   # TODO:: resolve compile issues with newer versions
   pg:
-    github: place-labs/crystal-pg
-    branch: master
+    github: will/crystal-pg
+    version: 0.26.0
+
   db:
     github: place-labs/crystal-db
     branch: master
+
+  opentelemetry-api:
+    github: place-labs/opentelemetry-api.cr
+    branch: fix/trace/in_span

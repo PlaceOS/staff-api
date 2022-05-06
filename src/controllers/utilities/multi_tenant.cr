@@ -10,6 +10,10 @@ module Utils::MultiTenant
   @tenant : Tenant? = nil
 
   def tenant
+    current_tenant
+  end
+
+  def current_tenant
     determine_tenant_from_domain unless @tenant
     @tenant.as(Tenant)
   end

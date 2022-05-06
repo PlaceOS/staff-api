@@ -15,7 +15,6 @@ dependencies:
 
   placeos-models:
     github: placeos/models
-    version: ~> 7.0
 
   # TODO:: remove in future
   http-params-serializable:
@@ -24,10 +23,10 @@ dependencies:
 
   placeos:
     github: placeos/crystal-client
-    branch: master
 
   placeos-log-backend:
     github: place-labs/log-backend
+    version: ">= 0.8.9"
 
   place_calendar:
     github: PlaceOS/calendar

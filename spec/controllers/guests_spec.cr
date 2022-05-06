@@ -37,7 +37,7 @@ describe Guests do
     end
 
     pending "should return guests visiting today in a subset of rooms and bookings" do
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/$batch")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
       {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
         WebMock
@@ -46,7 +46,7 @@ describe Guests do
       end
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar?")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -269,7 +269,7 @@ describe Guests do
         "id": "sys_id-#{Random.rand(99)}"
     }))
 
-    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/.*\.com\/calendar\/calendarView\?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId\+eq\+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&\$top=10000/)
+    WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?startDateTime.*/)
       .to_return(GuestsHelper.mock_event_query_json)
 
     tenant = get_tenant
@@ -277,7 +277,7 @@ describe Guests do
 
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
 
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{meta.host_email}/calendar/events/generic_event")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_www_form(meta.host_email)}/calendar/events/generic_event")
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
 
     guest.attendee_for(meta.id.not_nil!)

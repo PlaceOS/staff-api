@@ -3,6 +3,9 @@ class Bookings < Application
   FIFTY_MB = 50 * 1024 * 1024
 
   before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
+
+  before_action :check_deleted, only: [:approve, :reject, :check_in]
+
   getter booking : Booking { find_booking }
 
   PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department)
@@ -12,6 +15,7 @@ class Bookings < Application
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
     deleted_flag = query_params["deleted"]? == "true"
+    checked_out_flag = query_params["checked_out"]? == "true"
 
     query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
@@ -43,6 +47,8 @@ class Bookings < Application
       .where(deleted: deleted_flag)
       .limit(20000)
 
+    query = checked_out_flag ? query.where { checked_out_at != nil } : query.where { checked_out_at == nil }
+
     response.headers["x-placeos-rawsql"] = query.to_sql
     results = query.to_a.map &.as_h
     render json: results
@@ -64,7 +70,7 @@ class Bookings < Application
 
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # Add utm_source
     booking.utm_source = query_params["utm_source"]?
@@ -81,8 +87,8 @@ class Bookings < Application
     booking.booked_by_name = user.name
 
     # check concurrent bookings don't exceed booking limits
-    booking_limits = check_booking_limits(tenant, booking)
-    render :conflict, json: booking_limits if booking_limits
+    limit_override = query_params["limit_override"]?
+    check_booking_limits(tenant, booking, limit_override)
 
     render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
 
@@ -225,11 +231,11 @@ class Bookings < Application
 
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(existing_booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # check concurrent bookings don't exceed booking limits
-    booking_limits = check_booking_limits(tenant, existing_booking)
-    render :conflict, json: booking_limits if booking_limits
+    limit_override = query_params["limit_override"]?
+    check_booking_limits(tenant, existing_booking, limit_override)
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
@@ -389,11 +395,22 @@ class Bookings < Application
 
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
+
+    render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
+
+    # Check if we can check into a booking early (on the same day)
+    render :method_not_allowed, json: "Can only check in an hour before the booking start" if booking.booking_start - Time.local.to_unix > 3600
+
+    # Check if there are any booking between now and booking start time
+    clashing_bookings = check_in_clashing(booking)
+    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
     else
       booking.checked_out_at = Time.utc.to_unix
     end
+
     booking.utm_source = params["utm_source"]?
     update_booking(booking, "checked_in")
   end
@@ -425,20 +442,49 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
   private def check_clashing(new_booking)
-    # check there isn't a clashing booking
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
     asset_id = new_booking.asset_id
 
+    # gets all the clashing bookings
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
+        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
-    query.to_a
+
+    # checks to see if they have been checked out before the new booking starting time
+    checked_out_clashes(query, new_booking, starting)
+  end
+
+  private def check_in_clashing(booking)
+    booking_type = booking.booking_type
+    asset_id = booking.asset_id
+
+    query = Booking.query
+      .by_tenant(tenant.id)
+      .where(
+        "booking_start <= :want_to_check_start AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
+        want_to_check_start: booking.booking_end, booking_type: booking_type, asset_id: asset_id
+      )
+
+    query = query.where { id != booking.id } if booking.id_column.defined?
+    checked_out_clashes(query, booking, Time.local.to_unix)
+  end
+
+  private def checked_out_clashes(query, booking, start_time)
+    new_query = query.dup
+    query.each do |query_booking|
+      if query_booking.checked_out_at != nil
+        new_query = new_query.where { checked_out_at >= start_time }
+      else
+        new_query = new_query.where { booking_end >= start_time }
+      end
+    end
+    new_query.to_a
   end
 
   private def check_concurrent(new_booking)
@@ -447,6 +493,7 @@ class Bookings < Application
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
     user_id = new_booking.user_id_column.defined? ? new_booking.user_id : new_booking.booked_by_id
+    zones = new_booking.zones_column.defined? ? new_booking.zones : [] of String
 
     query = Booking.query
       .by_tenant(tenant.id)
@@ -455,15 +502,25 @@ class Bookings < Application
         starting: starting, ending: ending, booking_type: booking_type, user_id: user_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
-    query.to_a
+    # TODO: Change to use the PostgreSQL `&&` array operator in the query above. (https://www.postgresql.org/docs/9.1/functions-array.html)
+    query.to_a.reject do |booking|
+      if (b_zones = booking.zones) && zones
+        (b_zones & zones).empty?
+      end
+    end
   end
 
-  private def check_booking_limits(tenant, booking)
+  private def check_booking_limits(tenant, booking, limit_override = nil)
     # check concurrent bookings don't exceed booking limits
-    if booking_limits = tenant.booking_limits.as_h?
-      if limit = booking_limits[booking.booking_type]?
-        concurrent_bookings = check_concurrent(booking)
-        concurrent_bookings.first if concurrent_bookings.size >= limit.as_i
+    if limit = limit_override
+      concurrent_bookings = check_concurrent(booking)
+      raise Error::BookingLimit.new(limit.to_i, concurrent_bookings) if concurrent_bookings.size >= limit.to_i
+    else
+      if booking_limits = tenant.booking_limits.as_h?
+        if limit = booking_limits[booking.booking_type]?
+          concurrent_bookings = check_concurrent(booking)
+          raise Error::BookingLimit.new(limit.as_i, concurrent_bookings) if concurrent_bookings.size >= limit.as_i
+        end
       end
     end
   end
@@ -481,6 +538,10 @@ class Bookings < Application
        !check_access(user.user.roles, booking.zones || [] of String).none?
       head :forbidden
     end
+  end
+
+  private def check_deleted
+    head :method_not_allowed if booking.deleted
   end
 
   private def update_booking(booking, signal = "changed")
