@@ -1,5 +1,5 @@
 module App
-  NAME    = "StaffAPI"
+  NAME    = "staff-api"
   VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
 
   ENVIRONMENT = ENV["SG_ENV"]? || "development"
