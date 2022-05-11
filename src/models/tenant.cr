@@ -92,6 +92,7 @@ class Tenant
   has_many guests : Guest, foreign_key: "tenant_id"
   has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
 
+  before :save, :set_delegated
   before :save, :encrypt!
 
   def validate
@@ -201,6 +202,12 @@ class Tenant
   #
   def encrypt!
     encrypt_credentials
+    self
+  end
+
+  # ensure delegated column has been defined
+  def set_delegated
+    self.delegated = false unless delegated_column.defined?
     self
   end
 
