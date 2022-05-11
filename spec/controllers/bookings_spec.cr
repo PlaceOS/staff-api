@@ -883,7 +883,39 @@ describe Bookings do
       body["checked_in"].should eq(false)
     end
 
-    pending "booking limit is not checked on #destroy" do
+    it "booking limit is not checked on #destroy" do
+      # Set booking limit
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 1}))
+      tenant.save!
+
+      common = {
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end:   15.minutes.from_now.to_unix,
+        booking_type:  "desk",
+      }
+
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking["asset_id"].should eq("first_desk")
+
+      # Create booking with limit_override=true
+      second_booking = BookingsHelper.http_create_booking(
+        **common,
+        asset_id: "second_desk",
+        limit_override: "2")[1].as_h
+      second_booking["asset_id"].should eq("second_desk")
+
+      booking_id = first_booking["id"].to_s
+
+      # delete booking (without limit_override)
+      deleted = Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking_id}/",
+        route_params: {"id" => booking_id},
+        headers: Mock::Headers.office365_guest,
+        &.destroy)
+      deleted[0].should eq(202)
+
+      # check that it was deleted
+      Booking.find!(booking_id).deleted.should be_true
     end
 
     pending "#check_in only checks limit if checked out" do
