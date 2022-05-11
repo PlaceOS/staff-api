@@ -1,5 +1,22 @@
 ## Unreleased
 
+### Feat
+
+- add support for delegated API access ([#188](https://github.com/PlaceOS/staff-api/pull/188))
+- **logging**: configure OpenTelemetry
+- **booking**: change error code on booking limits ([#179](https://github.com/PlaceOS/staff-api/pull/179))
+- **logging**: add configuration by LOG_LEVEL env var
+- **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
+- **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
+- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
+- **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
+- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
+- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
+- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
+- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
+- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
+- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
+
 ### Fix
 
 - **models/booking/history**: handle pull parser when setting history
@@ -19,22 +36,6 @@
 - **event/guests**: filtering of host from attendees
 - **event/guests**: Don't add host as guest, even when event.host is not specified
 - **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
-
-### Feat
-
-- **logging**: configure OpenTelemetry
-- **booking**: change error code on booking limits ([#179](https://github.com/PlaceOS/staff-api/pull/179))
-- **logging**: add configuration by LOG_LEVEL env var
-- **controllers/events**: add support for declining events ([#176](https://github.com/PlaceOS/staff-api/pull/176))
-- **calendars**: precise free/busy availability requests ([#170](https://github.com/PlaceOS/staff-api/pull/170))
-- **bookings**: update booking validation ([#166](https://github.com/PlaceOS/staff-api/pull/166))
-- **tenants**: expose booking limits in the API ([#164](https://github.com/PlaceOS/staff-api/pull/164))
-- **bookings**: restrict booking_limits by zones ([#163](https://github.com/PlaceOS/staff-api/pull/163))
-- **bookings**: add department field ([#149](https://github.com/PlaceOS/staff-api/pull/149))
-- **bookings**: add current_state and history ([#146](https://github.com/PlaceOS/staff-api/pull/146))
-- **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
-- **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
-- **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
 
 ### Perf
 
