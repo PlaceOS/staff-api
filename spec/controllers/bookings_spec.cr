@@ -667,16 +667,22 @@ describe Bookings do
     end
   end
 
-  describe "booking_limits" do
-    # add support for configurable booking limits on resources
-    it "#create and #update should respect booking limits" do
+  describe "booking_limits", focus: true do
+    before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
+    end
 
+    after_all do
+      WebMock.reset
+    end
+
+    # add support for configurable booking limits on resources
+    it "#create and #update should respect booking limits" do
       # Set booking limit
       tenant = get_tenant
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
@@ -729,13 +735,6 @@ describe Bookings do
     end
 
     it "#create and #update should allow overriding booking limits" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # Set booking limit
       tenant = get_tenant
       tenant.booking_limits = JSON.parse(%({"desk": 1}))
@@ -764,13 +763,6 @@ describe Bookings do
     end
 
     it "#update limit check can't clash with itself when updating a booking" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # Set booking limit
       tenant = get_tenant
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
@@ -799,13 +791,6 @@ describe Bookings do
     end
 
     it "#create and #update should respect booking limits when booking on behalf of other users" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # Set booking limit
       tenant = get_tenant
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
