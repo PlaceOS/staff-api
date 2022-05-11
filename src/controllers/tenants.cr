@@ -5,7 +5,7 @@ class Tenants < Application
   getter tenant : Tenant { find_tenant }
 
   def index
-    render json: Tenant.query.select("id, name, domain, platform, booking_limits").to_a
+    render json: Tenant.query.select("id, name, domain, platform, booking_limits, delegated").to_a
   end
 
   def create

@@ -51,7 +51,7 @@ shards:
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
-    version: 0.3.3
+    version: 0.3.4
 
   email:
     git: https://github.com/arcage/crystal-email.git
@@ -75,7 +75,7 @@ shards:
 
   google:
     git: https://github.com/placeos/google.git
-    version: 3.2.1
+    version: 3.3.0
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -107,7 +107,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.16.4
+    version: 1.17.1
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -143,7 +143,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.13.4
+    version: 4.14.0
 
   placeos:
     git: https://github.com/placeos/crystal-client.git

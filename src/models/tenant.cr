@@ -46,6 +46,34 @@ struct GoogleConfig
   end
 end
 
+struct GoogleDelegatedConfig
+  include JSON::Serializable
+
+  property domain : String
+  property user_agent : String = "PlaceOS"
+  property conference_type : String? = PlaceCalendar::Google::DEFAULT_CONFERENCE
+
+  def params
+    {
+      domain:          @domain,
+      user_agent:      @user_agent,
+      conference_type: @conference_type,
+    }
+  end
+end
+
+struct Office365DelegatedConfig
+  include JSON::Serializable
+
+  property conference_type : String? = PlaceCalendar::Office365::DEFAULT_CONFERENCE
+
+  def params
+    {
+      conference_type: @conference_type,
+    }
+  end
+end
+
 class Tenant
   include Clear::Model
 
@@ -58,10 +86,13 @@ class Tenant
   column credentials : String
   column booking_limits : JSON::Any, presence: false
 
+  column delegated : Bool?
+
   has_many attendees : Attendee, foreign_key: "tenant_id"
   has_many guests : Guest, foreign_key: "tenant_id"
   has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
 
+  before :save, :set_delegated
   before :save, :encrypt!
 
   def validate
@@ -71,11 +102,15 @@ class Tenant
   end
 
   def as_json
+    is_delegated = delegated_column.defined? ? self.delegated : false
+    limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
     {
-      id:       self.id,
-      name:     self.name,
-      domain:   self.domain,
-      platform: self.platform,
+      id:             self.id,
+      name:           self.name,
+      domain:         self.domain,
+      platform:       self.platform,
+      delegated:      is_delegated,
+      booking_limits: limits,
     }
   end
 
@@ -96,11 +131,21 @@ class Tenant
   private def validate_credentials_for_platform
     creds = decrypt_credentials
     add_error("credentials", "must be valid JSON") unless valid_json?(creds)
-    case platform
-    when "google"
-      GoogleConfig.from_json(creds)
-    when "office365"
-      Office365Config.from_json(creds)
+
+    if delegated
+      case platform
+      when "google"
+        GoogleDelegatedConfig.from_json(creds)
+      when "office365"
+        Office365DelegatedConfig.from_json(creds)
+      end
+    else
+      case platform
+      when "google"
+        GoogleConfig.from_json(creds)
+      when "office365"
+        Office365Config.from_json(creds)
+      end
     end
   rescue e : JSON::SerializableError
     add_error("credentials", e.message.to_s)
@@ -116,6 +161,8 @@ class Tenant
   end
 
   def place_calendar_client
+    raise "not supported, using delegated credentials" if delegated
+
     case platform
     when "office365"
       params = Office365Config.from_json(decrypt_credentials).params
@@ -123,6 +170,20 @@ class Tenant
     when "google"
       params = GoogleConfig.from_json(decrypt_credentials).params
       ::PlaceCalendar::Client.new(**params)
+    end
+  end
+
+  def place_calendar_client(bearer_token : String, expires : Int64?)
+    case platform
+    when "office365"
+      params = Office365DelegatedConfig.from_json(decrypt_credentials).params
+      cal = ::PlaceCalendar::Office365.new(bearer_token, **params)
+      ::PlaceCalendar::Client.new(cal)
+    when "google"
+      params = GoogleDelegatedConfig.from_json(decrypt_credentials).params
+      auth = ::Google::TokenAuth.new(bearer_token, expires || 5.hours.from_now.to_unix)
+      cal = ::PlaceCalendar::Google.new(auth, **params)
+      ::PlaceCalendar::Client.new(cal)
     end
   end
 
@@ -145,6 +206,12 @@ class Tenant
   #
   def encrypt!
     encrypt_credentials
+    self
+  end
+
+  # ensure delegated column has been defined
+  def set_delegated
+    self.delegated = false unless delegated_column.defined?
     self
   end
 

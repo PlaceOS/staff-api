@@ -150,6 +150,7 @@ module TenantsHelper
     platform:    "office365",
     domain:      "toby.staff-api.dev",
     credentials: %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"}),
+    delegated:   false,
   }
 
   def create_tenant(params = MOCK_TENANT_PARAMS)
