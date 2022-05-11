@@ -853,6 +853,21 @@ describe Bookings do
           headers: Mock::Headers.office365_guest, &.update)
       end
     end
+
+    pending "booking limit is not checked on checkout" do
+    end
+
+    pending "booking limit is not checked on #destroy" do
+    end
+
+    pending "#check_in only checks limit if checked out" do
+    end
+
+    pending "#update does not check limit if the new start and end time is inside the existing range" do
+    end
+
+    pending "checked out bookins do not count towards the limit" do
+    end
   end
 
   it "#prevents a booking being saved with an end time before the start time" do
