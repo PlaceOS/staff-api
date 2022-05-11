@@ -668,7 +668,7 @@ describe Bookings do
   end
 
   describe "booking_limits", focus: true do
-    before_all do
+    before_each do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -679,7 +679,7 @@ describe Bookings do
       Timecop.scale(600) # 1 second == 10 minutes
     end
 
-    after_all do
+    after_each do
       WebMock.reset
     end
 
