@@ -5,7 +5,19 @@ module Utils::MultiTenant
     before_action :determine_tenant_from_domain
   end
 
-  getter client : PlaceCalendar::Client { tenant.place_calendar_client.as(PlaceCalendar::Client) }
+  getter client : PlaceCalendar::Client do
+    tenant = current_tenant
+    place_client = if tenant.delegated
+                     # Grab a valid token from RestAPI
+                     token = get_placeos_client.users.resource_token
+                     tenant.place_calendar_client token.token, token.expires
+                   else
+                     # Use the credentials in the database
+                     tenant.place_calendar_client
+                   end
+
+    place_client.as(PlaceCalendar::Client)
+  end
 
   @tenant : Tenant? = nil
 
