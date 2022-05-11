@@ -921,7 +921,44 @@ describe Bookings do
     pending "#check_in only checks limit if checked out" do
     end
 
-    pending "#update does not check limit if the new start and end time is inside the existing range" do
+    it "#update does not check limit if the new start and end time is inside the existing range" do
+      # Set booking limit
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 1}))
+      tenant.save!
+
+      common = {
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end:   45.minutes.from_now.to_unix,
+        booking_type:  "desk",
+      }
+      new_start_time = 10.minutes.from_now.to_unix
+
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking["asset_id"].should eq("first_desk")
+
+      # Create booking with limit_override=true
+      second_booking = BookingsHelper.http_create_booking(
+        **common,
+        asset_id: "second_desk",
+        limit_override: "2")[1].as_h
+      second_booking["asset_id"].should eq("second_desk")
+
+      booking_id = first_booking["id"].to_s
+
+      # update booking
+      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking_id}",
+        route_params: {"id" => booking_id},
+        body: %({"description": "Empty desk"}),
+        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated["description"].should eq("Empty desk")
+
+      # update booking time
+      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking_id}",
+        route_params: {"id" => booking_id},
+        body: %({"booking_start":#{new_start_time}}),
+        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated["booking_start"].should eq(new_start_time)
     end
 
     it "checked out bookins do not count towards the limit" do
@@ -960,8 +997,8 @@ describe Bookings do
 
       second_booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
-        booking_end:   15.minutes.from_now.to_unix,
-        booking_type:  "desk",
+        booking_end: 15.minutes.from_now.to_unix,
+        booking_type: "desk",
         asset_id: "second_desk")[1].as_h
       second_booking["asset_id"].should eq("second_desk")
     end
