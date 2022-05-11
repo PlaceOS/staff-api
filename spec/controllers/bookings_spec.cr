@@ -924,7 +924,46 @@ describe Bookings do
     pending "#update does not check limit if the new start and end time is inside the existing range" do
     end
 
-    pending "checked out bookins do not count towards the limit" do
+    it "checked out bookins do not count towards the limit" do
+      # Set booking limit
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 1}))
+      tenant.save!
+
+      common = {
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end:   45.minutes.from_now.to_unix,
+        booking_type:  "desk",
+      }
+
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking["asset_id"].should eq("first_desk")
+
+      sleep(500.milliseconds) # advance time 5 minutes
+      booking_id = first_booking["id"].to_s
+
+      # check in
+      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
+        route_params: {"id" => booking_id},
+        headers: Mock::Headers.office365_guest,
+        &.check_in)[1].as_h
+      body["checked_in"].should eq(true)
+
+      sleep(500.milliseconds) # advance time 5 minutes
+
+      # Check out
+      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
+        route_params: {"id" => booking_id},
+        headers: Mock::Headers.office365_guest,
+        &.check_in)[1].as_h
+      body["checked_in"].should eq(false)
+
+      second_booking = BookingsHelper.http_create_booking(
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end:   15.minutes.from_now.to_unix,
+        booking_type:  "desk",
+        asset_id: "second_desk")[1].as_h
+      second_booking["asset_id"].should eq("second_desk")
     end
   end
 
