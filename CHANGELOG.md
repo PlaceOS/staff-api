@@ -1,5 +1,14 @@
 ## Unreleased
 
+### Refactor
+
+- set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
+- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
+- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
+- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
+- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
+- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
+
 ### Feat
 
 - **bookings**: adjust booking limit checks ([#189](https://github.com/PlaceOS/staff-api/pull/189))
@@ -41,14 +50,6 @@
 ### Perf
 
 - avoid unnecessary allocation ([#160](https://github.com/PlaceOS/staff-api/pull/160))
-
-### Refactor
-
-- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
-- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
-- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
-- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
-- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
 
 ## v1.1.2 (2021-11-05)
 
