@@ -235,7 +235,7 @@ class Bookings < Application
 
     # check concurrent bookings don't exceed booking limits
     limit_override = query_params["limit_override"]?
-    check_booking_limits(tenant, existing_booking, limit_override)
+    check_booking_limits(tenant, existing_booking, limit_override) if reset_state
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
@@ -405,6 +405,10 @@ class Bookings < Application
     clashing_bookings = check_in_clashing(booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
+    # check concurrent bookings don't exceed booking limits
+    limit_override = query_params["limit_override"]?
+    check_booking_limits(tenant, booking, limit_override) if booking.current_state.checked_out?
+
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
     else
@@ -513,12 +517,12 @@ class Bookings < Application
   private def check_booking_limits(tenant, booking, limit_override = nil)
     # check concurrent bookings don't exceed booking limits
     if limit = limit_override
-      concurrent_bookings = check_concurrent(booking)
+      concurrent_bookings = check_concurrent(booking).reject { |b| b.current_state.checked_out? }
       raise Error::BookingLimit.new(limit.to_i, concurrent_bookings) if concurrent_bookings.size >= limit.to_i
     else
       if booking_limits = tenant.booking_limits.as_h?
         if limit = booking_limits[booking.booking_type]?
-          concurrent_bookings = check_concurrent(booking)
+          concurrent_bookings = check_concurrent(booking).reject { |b| b.current_state.checked_out? }
           raise Error::BookingLimit.new(limit.as_i, concurrent_bookings) if concurrent_bookings.size >= limit.as_i
         end
       end
