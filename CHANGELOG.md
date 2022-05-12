@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: adjust booking limit checks ([#189](https://github.com/PlaceOS/staff-api/pull/189))
 - add support for delegated API access ([#188](https://github.com/PlaceOS/staff-api/pull/188))
 - **logging**: configure OpenTelemetry
 - **booking**: change error code on booking limits ([#179](https://github.com/PlaceOS/staff-api/pull/179))
