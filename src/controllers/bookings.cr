@@ -405,6 +405,10 @@ class Bookings < Application
     clashing_bookings = check_in_clashing(booking)
     render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
 
+    # check concurrent bookings don't exceed booking limits
+    limit_override = query_params["limit_override"]?
+    check_booking_limits(tenant, booking, limit_override) if booking.current_state.checked_out?
+
     if booking.checked_in
       booking.checked_in_at = Time.utc.to_unix
     else

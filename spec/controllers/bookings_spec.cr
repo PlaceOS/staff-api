@@ -115,6 +115,10 @@ describe Bookings do
       Timecop.scale(600) # 1 second == 10 minutes
     end
 
+    after_all do
+      WebMock.reset
+    end
+
     it "booking reserved and no_show" do
       tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
 
@@ -667,8 +671,8 @@ describe Bookings do
     end
   end
 
-  describe "booking_limits", focus: true do
-    before_each do
+  describe "booking_limits" do
+    before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -679,7 +683,7 @@ describe Bookings do
       Timecop.scale(600) # 1 second == 10 minutes
     end
 
-    after_each do
+    after_all do
       WebMock.reset
     end
 
@@ -867,20 +871,20 @@ describe Bookings do
       booking_id = first_booking["id"].to_s
 
       # check in
-      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
+      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
         route_params: {"id" => booking_id},
         headers: Mock::Headers.office365_guest,
         &.check_in)[1].as_h
-      body["checked_in"].should eq(true)
+      checked_in["checked_in"].should eq(true)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
-      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
+      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
         route_params: {"id" => booking_id},
         headers: Mock::Headers.office365_guest,
         &.check_in)[1].as_h
-      body["checked_in"].should eq(false)
+      checked_out["checked_in"].should eq(false)
     end
 
     it "booking limit is not checked on #destroy" do
@@ -918,7 +922,56 @@ describe Bookings do
       Booking.find!(booking_id).deleted.should be_true
     end
 
-    pending "#check_in only checks limit if checked out" do
+    it "#check_in only checks limit if checked out" do
+      # Set booking limit
+      tenant = get_tenant
+      tenant.booking_limits = JSON.parse(%({"desk": 1}))
+      tenant.save!
+
+      common = {
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end:   45.minutes.from_now.to_unix,
+        booking_type:  "desk",
+      }
+
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking["asset_id"].should eq("first_desk")
+
+      # Create booking with limit_override=true
+      second_booking = BookingsHelper.http_create_booking(
+        **common,
+        asset_id: "second_desk",
+        limit_override: "2")[1].as_h
+      second_booking["asset_id"].should eq("second_desk")
+
+      sleep(500.milliseconds) # advance time 5 minutes
+      booking_id = first_booking["id"].to_s
+
+      # check in
+      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
+        route_params: {"id" => booking_id},
+        headers: Mock::Headers.office365_guest,
+        &.check_in)[1].as_h
+      checked_in["checked_in"].should eq(true)
+
+      sleep(500.milliseconds) # advance time 5 minutes
+
+      # Check out (without limit_override)
+      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
+        route_params: {"id" => booking_id},
+        headers: Mock::Headers.office365_guest,
+        &.check_in)[1].as_h
+      checked_out["checked_in"].should eq(false)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      # fail to check in due to booking limit
+      expect_raises Error::BookingLimit do
+        _not_cheked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
+          route_params: {"id" => booking_id},
+          headers: Mock::Headers.office365_guest,
+          &.check_in)[1].as_h
+      end
     end
 
     it "#update does not check limit if the new start and end time is inside the existing range" do
@@ -980,20 +1033,20 @@ describe Bookings do
       booking_id = first_booking["id"].to_s
 
       # check in
-      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
+      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
         route_params: {"id" => booking_id},
         headers: Mock::Headers.office365_guest,
         &.check_in)[1].as_h
-      body["checked_in"].should eq(true)
+      checked_in["checked_in"].should eq(true)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out
-      body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
+      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
         route_params: {"id" => booking_id},
         headers: Mock::Headers.office365_guest,
         &.check_in)[1].as_h
-      body["checked_in"].should eq(false)
+      checked_out["checked_in"].should eq(false)
 
       second_booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
