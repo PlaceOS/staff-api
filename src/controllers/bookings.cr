@@ -235,7 +235,7 @@ class Bookings < Application
 
     # check concurrent bookings don't exceed booking limits
     limit_override = query_params["limit_override"]?
-    check_booking_limits(tenant, existing_booking, limit_override)
+    check_booking_limits(tenant, existing_booking, limit_override) if reset_state
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
