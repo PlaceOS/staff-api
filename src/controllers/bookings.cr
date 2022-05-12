@@ -513,12 +513,12 @@ class Bookings < Application
   private def check_booking_limits(tenant, booking, limit_override = nil)
     # check concurrent bookings don't exceed booking limits
     if limit = limit_override
-      concurrent_bookings = check_concurrent(booking)
+      concurrent_bookings = check_concurrent(booking).reject { |b| b.current_state.checked_out? }
       raise Error::BookingLimit.new(limit.to_i, concurrent_bookings) if concurrent_bookings.size >= limit.to_i
     else
       if booking_limits = tenant.booking_limits.as_h?
         if limit = booking_limits[booking.booking_type]?
-          concurrent_bookings = check_concurrent(booking)
+          concurrent_bookings = check_concurrent(booking).reject { |b| b.current_state.checked_out? }
           raise Error::BookingLimit.new(limit.as_i, concurrent_bookings) if concurrent_bookings.size >= limit.as_i
         end
       end
