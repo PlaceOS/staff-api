@@ -15,6 +15,7 @@ class Bookings < Application
     ending = query_params["period_end"].to_i64
     booking_type = query_params["type"].presence.not_nil!
     deleted_flag = query_params["deleted"]? == "true"
+    include_checked_out = query_params["include_checked_out"]? == "true"
     checked_out_flag = query_params["checked_out"]? == "true"
 
     query = Booking.query.by_tenant(tenant.id).where(
@@ -47,7 +48,9 @@ class Bookings < Application
       .where(deleted: deleted_flag)
       .limit(20000)
 
-    query = checked_out_flag ? query.where { checked_out_at != nil } : query.where { checked_out_at == nil }
+    unless include_checked_out
+      query = checked_out_flag ? query.where { checked_out_at != nil } : query.where { checked_out_at == nil }
+    end
 
     response.headers["x-placeos-rawsql"] = query.to_sql
     results = query.to_a.map &.as_h
