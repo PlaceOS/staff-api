@@ -1,16 +1,8 @@
 ## Unreleased
 
-### Refactor
-
-- set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
-- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
-- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
-- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
-- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
-- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
-
 ### Feat
 
+- **controllers/bookings**: add include checked out flag ([#190](https://github.com/PlaceOS/staff-api/pull/190))
 - **bookings**: adjust booking limit checks ([#189](https://github.com/PlaceOS/staff-api/pull/189))
 - add support for delegated API access ([#188](https://github.com/PlaceOS/staff-api/pull/188))
 - **logging**: configure OpenTelemetry
@@ -26,6 +18,15 @@
 - **bookings**: add configurable limits on booked assets ([#145](https://github.com/PlaceOS/staff-api/pull/145))
 - **bookings**: flag on delete ([#136](https://github.com/PlaceOS/staff-api/pull/136))
 - **events**: endpoint to get events by ext_data ([#131](https://github.com/PlaceOS/staff-api/pull/131))
+
+### Refactor
+
+- set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
+- **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
+- **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
+- **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
+- central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
+- **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
 
 ### Fix
 
