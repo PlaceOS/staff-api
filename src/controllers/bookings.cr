@@ -399,22 +399,31 @@ class Bookings < Application
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
 
-    render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
-
-    # Check if we can check into a booking early (on the same day)
-    render :method_not_allowed, json: "Can only check in an hour before the booking start" if booking.booking_start - Time.local.to_unix > 3600
-
-    # Check if there are any booking between now and booking start time
-    clashing_bookings = check_in_clashing(booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
-
-    # check concurrent bookings don't exceed booking limits
-    limit_override = query_params["limit_override"]?
-    check_booking_limits(tenant, booking, limit_override) if booking.current_state.checked_out?
-
     if booking.checked_in
+      # check concurrent bookings don't exceed booking limits
+      if booking.current_state.checked_out?
+        limit_override = query_params["limit_override"]?
+        check_booking_limits(tenant, booking, limit_override)
+      end
+
+      time_now = Time.utc.to_unix
+
+      # Can't checkin after the booking end time
+      render :method_not_allowed, json: booking.errors.map(&.to_s) if booking.booking_end <= time_now
+
+      # Check if we can check into a booking early (on the same day)
+      render :method_not_allowed, json: "Can only check in an hour before the booking start" if (booking.booking_start - time_now) > 3600
+
+      # Check if there are any booking between now and booking start time
+      if booking.booking_start > time_now
+        clashing_bookings = check_in_clashing(booking)
+        render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+      end
+
       booking.checked_in_at = Time.utc.to_unix
     else
+      # don't allow double checkouts
+      render :method_not_allowed, json: booking.errors.map(&.to_s) if booking.current_state.checked_out?
       booking.checked_out_at = Time.utc.to_unix
     end
 
