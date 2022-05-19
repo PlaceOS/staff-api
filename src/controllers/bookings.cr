@@ -409,7 +409,7 @@ class Bookings < Application
       time_now = Time.utc.to_unix
 
       # Can't checkin after the booking end time
-      render :method_not_allowed, json: booking.errors.map(&.to_s) if booking.booking_end <= time_now
+      render :method_not_allowed, json: "The booking has ended" if booking.booking_end <= time_now
 
       # Check if we can check into a booking early (on the same day)
       render :method_not_allowed, json: "Can only check in an hour before the booking start" if (booking.booking_start - time_now) > 3600
@@ -422,8 +422,8 @@ class Bookings < Application
 
       booking.checked_in_at = Time.utc.to_unix
     else
-      # don't allow double checkouts
-      render :method_not_allowed, json: booking.errors.map(&.to_s) if booking.current_state.checked_out?
+      # don't allow double checkouts, but might as well return a success response
+      render json: booking.as_h if booking.current_state.checked_out?
       booking.checked_out_at = Time.utc.to_unix
     end
 
@@ -467,7 +467,7 @@ class Bookings < Application
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
