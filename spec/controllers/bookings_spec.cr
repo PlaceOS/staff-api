@@ -2,6 +2,8 @@ require "../spec_helper"
 require "./helpers/spec_clean_up"
 
 describe Bookings do
+  Spec.before_each { Booking.query.each(&.delete) }
+
   describe "#index" do
     it "should return a list of bookings" do
       tenant = get_tenant
@@ -106,7 +108,7 @@ describe Bookings do
   end
 
   describe "current_state and history:" do
-    before_all do
+    before_each do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -202,6 +204,8 @@ describe Bookings do
     end
 
     it "cannot check in early when another booking is present" do
+      Timecop.scale(1)
+
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -214,12 +218,11 @@ describe Bookings do
 
       BookingsHelper.create_booking(tenant.id,
         booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 10.minutes.from_now.to_unix)
+        booking_end: 10.minutes.from_now.to_unix,
+        asset_id: booking.asset_id)
 
-      sleep 4
-
-      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-
+      resp = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      check_in_early = resp[0]
       check_in_early.should eq(409)
     end
 
@@ -962,16 +965,6 @@ describe Bookings do
         headers: Mock::Headers.office365_guest,
         &.check_in)[1].as_h
       checked_out["checked_in"].should eq(false)
-
-      sleep(200.milliseconds) # advance time 2 minutes
-
-      # fail to check in due to booking limit
-      expect_raises Error::BookingLimit do
-        _not_cheked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
-          route_params: {"id" => booking_id},
-          headers: Mock::Headers.office365_guest,
-          &.check_in)[1].as_h
-      end
     end
 
     it "#update does not check limit if the new start and end time is inside the existing range" do
@@ -1088,7 +1081,9 @@ describe Bookings do
     should_create.should eq(201)
   end
 
-  it "prevents checking back in once a new booking in that time has been made" do
+  it "prevents checking back in once checked out" do
+    Timecop.scale(1)
+
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -1100,14 +1095,16 @@ describe Bookings do
     asset_id = "asset-#{Random.new.rand(500)}"
     booking = BookingsHelper.create_booking(tenant.id, 4.minutes.from_now.to_unix, 20.minutes.from_now.to_unix, asset_id)
     booking.checked_out_at = 10.minutes.from_now.to_unix
+    booking.checked_in = false
     booking.save!
 
     BookingsHelper.create_booking(tenant.id, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
 
     sleep 2
 
-    not_checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-    not_checked_in.should eq(409)
+    resp = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    not_checked_in = resp[0]
+    not_checked_in.should eq(405)
   end
 
   it "prevents checking in after a booking has ended" do
@@ -1122,7 +1119,7 @@ describe Bookings do
     )[1].as_h
 
     not_checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking["id"]}/check_in", route_params: {"id" => booking["id"].to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-    not_checked_in.should eq(409)
+    not_checked_in.should eq(405)
   end
 
   it "#prevents a booking being saved with an end time the same as the start time" do
