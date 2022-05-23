@@ -259,14 +259,17 @@ class Booking
   # Booking ends in the future, no one has checked-in and it hasn't been deleted
   protected def is_reserved?(current_time : Int64 = Time.local.to_unix)
     booking_end > current_time &&
+      !checked_in_column.value(nil) &&
       !checked_in_at_column.value(nil) &&
       !deleted_at_column.value(nil) &&
-      !rejected_at_column.value(nil)
+      !rejected_at_column.value(nil) &&
+      !checked_out_at_column.value(nil)
   end
 
   # Booking ends in the future and the user has checked in
   protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
     checked_in_at_column.value(nil) &&
+      checked_in_column.value(nil) &&
       !checked_out_at_column.value(nil) &&
       booking_end > current_time
   end

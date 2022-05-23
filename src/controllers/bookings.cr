@@ -399,22 +399,28 @@ class Bookings < Application
   post "/:id/check_in", :check_in do
     booking.checked_in = params["state"]? != "false"
 
-    render :conflict, json: booking.errors.map(&.to_s) if booking.booking_end < Time.utc.to_unix
-
-    # Check if we can check into a booking early (on the same day)
-    render :method_not_allowed, json: "Can only check in an hour before the booking start" if booking.booking_start - Time.local.to_unix > 3600
-
-    # Check if there are any booking between now and booking start time
-    clashing_bookings = check_in_clashing(booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
-
-    # check concurrent bookings don't exceed booking limits
-    limit_override = query_params["limit_override"]?
-    check_booking_limits(tenant, booking, limit_override) if booking.current_state.checked_out?
-
     if booking.checked_in
+      # check concurrent bookings don't exceed booking limits
+      render :method_not_allowed, json: "a checked out booking cannot be checked back in" if booking.current_state.checked_out?
+
+      time_now = Time.utc.to_unix
+
+      # Can't checkin after the booking end time
+      render :method_not_allowed, json: "The booking has ended" if booking.booking_end <= time_now
+
+      # Check if we can check into a booking early (on the same day)
+      render :method_not_allowed, json: "Can only check in an hour before the booking start" if (booking.booking_start - time_now) > 3600
+
+      # Check if there are any booking between now and booking start time
+      if booking.booking_start > time_now
+        clashing_bookings = check_in_clashing(time_now, booking)
+        render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+      end
+
       booking.checked_in_at = Time.utc.to_unix
     else
+      # don't allow double checkouts, but might as well return a success response
+      render json: booking.as_h if booking.current_state.checked_out?
       booking.checked_out_at = Time.utc.to_unix
     end
 
@@ -458,40 +464,23 @@ class Bookings < Application
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start <= :ending AND booking_end >= :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
+        "booking_start < :ending AND booking_end > :starting AND booking_type = :booking_type AND asset_id = :asset_id AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
         starting: starting, ending: ending, booking_type: booking_type, asset_id: asset_id
       )
     query = query.where { id != new_booking.id } if new_booking.id_column.defined?
-
-    # checks to see if they have been checked out before the new booking starting time
-    checked_out_clashes(query, new_booking, starting)
+    query.to_a
   end
 
-  private def check_in_clashing(booking)
+  private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
     asset_id = booking.asset_id
-
     query = Booking.query
       .by_tenant(tenant.id)
       .where(
-        "booking_start <= :want_to_check_start AND booking_type = :booking_type AND asset_id = :asset_id AND rejected = FALSE AND deleted <> TRUE",
-        want_to_check_start: booking.booking_end, booking_type: booking_type, asset_id: asset_id
+        "booking_start < :start_time AND booking_end > :time_now AND booking_type = :booking_type AND asset_id = :asset_id AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        start_time: booking.booking_start, time_now: time_now, booking_type: booking_type, asset_id: asset_id
       )
-
-    query = query.where { id != booking.id } if booking.id_column.defined?
-    checked_out_clashes(query, booking, Time.local.to_unix)
-  end
-
-  private def checked_out_clashes(query, booking, start_time)
-    new_query = query.dup
-    query.each do |query_booking|
-      if query_booking.checked_out_at != nil
-        new_query = new_query.where { checked_out_at >= start_time }
-      else
-        new_query = new_query.where { booking_end >= start_time }
-      end
-    end
-    new_query.to_a
+    query.to_a
   end
 
   private def check_concurrent(new_booking)
