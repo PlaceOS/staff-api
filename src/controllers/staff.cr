@@ -26,4 +26,9 @@ class Staff < Application
       raise Error::NotImplemented.new("manager query is not available for #{client.client_id}")
     end
   end
+
+  get("/:id/calendars", :calendars) do
+    id = params["id"]
+    render json: client.list_calendars(id)
+  end
 end
