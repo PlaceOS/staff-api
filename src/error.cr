@@ -11,6 +11,9 @@ class Error < Exception
   class Forbidden < Error
   end
 
+  class NotImplemented < Error
+  end
+
   class BookingConflict < Error
     getter bookings
 

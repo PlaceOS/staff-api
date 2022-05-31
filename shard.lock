@@ -39,7 +39,7 @@ shards:
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
-    version: 1.4.1
+    version: 2.0.0
 
   csuuid:
     git: https://github.com/wyhaines/csuuid.cr.git
@@ -75,7 +75,7 @@ shards:
 
   google:
     git: https://github.com/placeos/google.git
-    version: 3.3.0
+    version: 3.3.1
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -107,7 +107,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.17.1
+    version: 1.17.2
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -123,11 +123,11 @@ shards:
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
-    version: 0.2.5
+    version: 0.3.0
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.3.1+git.commit.d4bd9afb7c28616b081b05978d836fd1c873ab75
+    version: 0.3.2+git.commit.47a7b5c243edf08dd9f7a4e2270a7698489dcb1b
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
@@ -147,7 +147,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.6.1
+    version: 2.7.0
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -155,7 +155,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.8.1
+    version: 8.9.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
