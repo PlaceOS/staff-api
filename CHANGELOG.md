@@ -2,6 +2,7 @@
 
 ### Feat
 
+- add group related routes ([#192](https://github.com/PlaceOS/staff-api/pull/192))
 - **controllers/bookings**: add include checked out flag ([#190](https://github.com/PlaceOS/staff-api/pull/190))
 - **bookings**: adjust booking limit checks ([#189](https://github.com/PlaceOS/staff-api/pull/189))
 - add support for delegated API access ([#188](https://github.com/PlaceOS/staff-api/pull/188))
