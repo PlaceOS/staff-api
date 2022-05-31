@@ -11,4 +11,9 @@ class Staff < Application
     # NOTE:: works for ids and email addresses
     render json: client.get_user_by_email(id)
   end
+
+  get("/:id/groups", :groups) do
+    id = params["id"]
+    render json: client.get_groups(id)
+  end
 end

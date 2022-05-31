@@ -1,0 +1,17 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups",
+  "value": [
+    {
+      "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups/$entity",
+      "displayName": "Group 1",
+      "mailEnabled": false,
+      "id": "786aa06a-cc30-48fd-868f-99874442a840"
+    },
+    {
+      "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups/$entity",
+      "displayName": "Group 2",
+      "mailEnabled": false,
+      "id": "786aa06a-cc30-48fd-868f-99874442a841"
+    }
+  ]
+}

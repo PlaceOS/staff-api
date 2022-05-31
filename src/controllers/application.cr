@@ -115,6 +115,17 @@ abstract class Application < ActionController::Base
     end
   end
 
+  # 501 if request isn't implemented for the current tenent
+  rescue_from Error::NotImplemented do |error|
+    Log.debug { error.message }
+    respond_with(:not_implemented) do
+      text error.message
+      json({
+        error: error.message,
+      })
+    end
+  end
+
   rescue_from Clear::SQL::Error do |error|
     render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
   end
