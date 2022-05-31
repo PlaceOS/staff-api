@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **staff**: add query for a users calendars
 - **staff**: add query for a users manager
 - add group related routes ([#192](https://github.com/PlaceOS/staff-api/pull/192))
 - **controllers/bookings**: add include checked out flag ([#190](https://github.com/PlaceOS/staff-api/pull/190))
