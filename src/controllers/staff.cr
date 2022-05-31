@@ -16,4 +16,14 @@ class Staff < Application
     id = params["id"]
     render json: client.get_groups(id)
   end
+
+  get("/:id/manager", :manager) do
+    id = params["id"]
+    case client.client_id
+    when :office365
+      render json: client.calendar.as(PlaceCalendar::Office365).client.get_user_manager(id).to_place_calendar
+    else
+      raise Error::NotImplemented.new("manager query is not available for #{client.client_id}")
+    end
+  end
 end
