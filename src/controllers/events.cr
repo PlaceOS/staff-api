@@ -51,6 +51,9 @@ class Events < Application
     ical_uids = Array(String).new(initial_capacity: results.size)
 
     results.each do |(_calendar_id, system, event)|
+      # NOTE:: we should be able to swtch to using the ical uids only in the future
+      # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
+      # However they have a new `uid` field on the beta API which we can use when it's moved to production
       if system
         metadata_ids << event.id.not_nil!
         ical_uids << event.ical_uid.not_nil!
@@ -260,9 +263,9 @@ class Events < Application
       if system_id = (query_params["system_id"]? || changes.system_id).presence
         system = placeos_client.systems.fetch(system_id)
         sys_cal = system.email.presence
-        get_hosts_event(event, system.email)
+        event = get_hosts_event(event, system.email)
       else
-        get_hosts_event(event)
+        event = get_hosts_event(event)
       end
       event_id = event.id.not_nil!
     end
