@@ -1,5 +1,26 @@
 ## Unreleased
 
+### Fix
+
+- **events**: update on graph api where host event switch not made ([#194](https://github.com/PlaceOS/staff-api/pull/194))
+- **models/booking/history**: handle pull parser when setting history
+- update `placeos-log-backend`
+- **telemetry**: seperate telemetry file
+- **migrations/migrate_user_ids**: add user_id migrations ([#180](https://github.com/PlaceOS/staff-api/pull/180))
+- **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
+- **controllers/tenants**: update to support limits ([#168](https://github.com/PlaceOS/staff-api/pull/168))
+- **bookings**: handle additional state transitions ([#157](https://github.com/PlaceOS/staff-api/pull/157))
+- incomplete centralised ci ([#156](https://github.com/PlaceOS/staff-api/pull/156))
+- **migrations**: adds unique migration for deleted and email digest ([#139](https://github.com/PlaceOS/staff-api/pull/139))
+- **models booking**: render deleted at as an integer
+- **models booking**: render deleted and deleted_at ([#138](https://github.com/PlaceOS/staff-api/pull/138))
+- **controller bookings**: ignore deleted entries when checking for clashes
+- **bookings/events/guest**: query Guest by tenant ([#137](https://github.com/PlaceOS/staff-api/pull/137))
+- **event/guests**: Don't add host as guest, even when event.host is not specified
+- **event/guests**: filtering of host from attendees
+- **event/guests**: Don't add host as guest, even when event.host is not specified
+- **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
+
 ### Feat
 
 - **staff**: add query for a users calendars
@@ -30,26 +51,6 @@
 - **application**: remove unnecessary code ([#155](https://github.com/PlaceOS/staff-api/pull/155))
 - central build CI ([#150](https://github.com/PlaceOS/staff-api/pull/150))
 - **booking**: use PlaceOS::Model::Email ([#135](https://github.com/PlaceOS/staff-api/pull/135))
-
-### Fix
-
-- **models/booking/history**: handle pull parser when setting history
-- update `placeos-log-backend`
-- **telemetry**: seperate telemetry file
-- **migrations/migrate_user_ids**: add user_id migrations ([#180](https://github.com/PlaceOS/staff-api/pull/180))
-- **bookings**: correct logic ([#169](https://github.com/PlaceOS/staff-api/pull/169))
-- **controllers/tenants**: update to support limits ([#168](https://github.com/PlaceOS/staff-api/pull/168))
-- **bookings**: handle additional state transitions ([#157](https://github.com/PlaceOS/staff-api/pull/157))
-- incomplete centralised ci ([#156](https://github.com/PlaceOS/staff-api/pull/156))
-- **migrations**: adds unique migration for deleted and email digest ([#139](https://github.com/PlaceOS/staff-api/pull/139))
-- **models booking**: render deleted at as an integer
-- **models booking**: render deleted and deleted_at ([#138](https://github.com/PlaceOS/staff-api/pull/138))
-- **controller bookings**: ignore deleted entries when checking for clashes
-- **bookings/events/guest**: query Guest by tenant ([#137](https://github.com/PlaceOS/staff-api/pull/137))
-- **event/guests**: Don't add host as guest, even when event.host is not specified
-- **event/guests**: filtering of host from attendees
-- **event/guests**: Don't add host as guest, even when event.host is not specified
-- **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
 
 ### Perf
 
