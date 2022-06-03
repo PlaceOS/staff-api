@@ -255,13 +255,7 @@ class Events < Application
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
-      if system_id
-        system = placeos_client.systems.fetch(system_id)
-        sys_cal = system.email.presence
-        event = get_hosts_event(event, system.email)
-      else
-        event = get_hosts_event(event)
-      end
+      event = get_hosts_event(event)
       event_id = event.id.not_nil!
       changes.id = event_id
     end
@@ -507,7 +501,7 @@ class Events < Application
         placeos_client.root.signal("staff/event/changed", {
           action:    :update,
           system_id: sys.id,
-          event_id:  event_id,
+          event_id:  original_id,
           host:      host,
           resource:  sys.email,
           ext_data:  eventmeta.try &.ext_data,
@@ -545,7 +539,7 @@ class Events < Application
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event, system.email)
+      event = get_hosts_event(event)
       event_id = event.id.not_nil!
     end
 
