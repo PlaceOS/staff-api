@@ -232,14 +232,9 @@ class Events < Application
 
   # ameba:disable Metrics/CyclomaticComplexity
   def update
-    event_id = route_params["id"]
+    event_id = original_id = route_params["id"]
     changes = PlaceCalendar::Event.from_json(request.body.as(IO))
-
-    # Guests can update extension_data to indicate their order
-    if user_token.guest_scope?
-      guest_event_id, guest_system_id = user.roles
-      head :forbidden unless changes.extension_data && event_id == guest_event_id && query_params["system_id"]? == guest_system_id
-    end
+    system_id = (query_params["system_id"]? || changes.system_id).presence
 
     placeos_client = get_placeos_client
 
@@ -247,7 +242,7 @@ class Events < Application
                found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
                head(:not_found) unless found
                user_cal
-             elsif system_id = (query_params["system_id"]? || changes.system_id).presence
+             elsif system_id
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                head(:not_found) unless sys_cal
@@ -256,22 +251,20 @@ class Events < Application
                head :bad_request
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
+    render(:not_found, text: "failed to find event searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
-      if system_id = (query_params["system_id"]? || changes.system_id).presence
-        system = placeos_client.systems.fetch(system_id)
-        sys_cal = system.email.presence
-        event = get_hosts_event(event, system.email)
-      else
-        event = get_hosts_event(event)
-      end
+      event = get_hosts_event(event)
       event_id = event.id.not_nil!
+      changes.id = event_id
     end
 
     # Guests can only update the extension_data
     if user_token.guest_scope?
+      guest_event_id, guest_system_id = user.roles
+      head :forbidden unless changes.extension_data && guest_event_id.in?({original_id, event_id}) && system_id == guest_system_id
+
       # We expect the metadata to exist when a guest is accessing
       meta = get_migrated_metadata(event, system_id.not_nil!).not_nil!
 
@@ -297,7 +290,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+      render(:forbidden, text: "current user not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # Check if attendees need updating
@@ -385,7 +378,7 @@ class Events < Application
         extension_data.as_h.each { |key, value| data[key] = value }
         # Needed for clear to assign the updated json correctly
         meta.ext_data_column.clear
-        meta.ext_data = JSON.parse(data.to_json)
+        meta.ext_data = JSON::Any.new(data)
         meta.save!
       elsif changing_room || update_attendees
         meta.save!
@@ -508,7 +501,7 @@ class Events < Application
         placeos_client.root.signal("staff/event/changed", {
           action:    :update,
           system_id: sys.id,
-          event_id:  event_id,
+          event_id:  original_id,
           host:      host,
           resource:  sys.email,
           ext_data:  eventmeta.try &.ext_data,
@@ -519,6 +512,85 @@ class Events < Application
     else
       render json: StaffApi::Event.augment(updated_event.not_nil!, host)
     end
+  end
+
+  put("/:id/metadata/:system_id", :update_metadata) do
+    update_metadata
+  end
+
+  patch("/:id/metadata/:system_id", :update_metadata) do
+    update_metadata merge: true
+  end
+
+  # ameba:disable Metrics/CyclomaticComplexity
+  protected def update_metadata(merge : Bool = false)
+    changes = JSON::Any.from_json(request.body.as(IO)).as_h
+    event_id = original_id = route_params["id"]
+    system_id = route_params["system_id"]
+
+    placeos_client = get_placeos_client
+
+    system = placeos_client.systems.fetch(system_id)
+    cal_id = system.email.presence
+    render(:not_found, text: "system does not have a resource email associated with it") unless cal_id
+
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    render(:not_found, text: "event not found on system calendar") unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host != cal_id
+      event = get_hosts_event(event)
+      event_id = event.id.not_nil!
+    end
+
+    # Guests can update extension_data to indicate their order
+    if user_token.guest_scope?
+      guest_event_id, guest_system_id = user.roles
+      head :forbidden unless merge && guest_event_id.in?({original_id, event_id}) && system_id == guest_system_id
+    else
+      attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+      user_email = user.email.downcase
+      head :forbidden unless is_support? || user_email == event.host || user_email.in?(attendees)
+    end
+
+    # attempt to find the metadata
+    meta = get_migrated_metadata(event, system_id.not_nil!) || EventMetadata.new
+    meta.system_id = system.id.not_nil!
+    meta.event_id = event.id.not_nil!
+    meta.ical_uid = event.ical_uid.not_nil!
+    meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring
+    meta.event_start = event.event_start.not_nil!.to_unix
+    meta.event_end = event.event_end.not_nil!.to_unix
+    meta.resource_calendar = system.email.not_nil!
+    meta.host_email = event.host.not_nil!
+    meta.tenant_id = tenant.id
+
+    # Updating extension data by merging into existing.
+    if merge
+      meta_ext_data = meta.ext_data
+      data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
+      changes.each { |key, value| data[key] = value }
+    else
+      data = changes
+    end
+
+    # Needed for clear to assign the updated json correctly
+    meta.ext_data_column.clear
+    meta.ext_data = JSON::Any.new(data)
+    meta.save!
+
+    spawn do
+      placeos_client.root.signal("staff/event/changed", {
+        action:    :update,
+        system_id: system.id,
+        event_id:  original_id,
+        host:      event.host,
+        resource:  system.email,
+        ext_data:  meta.ext_data,
+      })
+    end
+
+    render json: meta.ext_data
   end
 
   def show
