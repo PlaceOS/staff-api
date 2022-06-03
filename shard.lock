@@ -123,11 +123,11 @@ shards:
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
-    version: 0.3.1
+    version: 0.3.2
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.3.2+git.commit.47a7b5c243edf08dd9f7a4e2270a7698489dcb1b
+    version: 0.3.3+git.commit.551543ad0f4e5d7eefdb5277809493e154e4f5c2
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
@@ -155,7 +155,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.9.1
+    version: 8.9.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
