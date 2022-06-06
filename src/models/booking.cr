@@ -266,12 +266,13 @@ class Booking
       !checked_out_at_column.value(nil)
   end
 
-  # Booking ends in the future and the user has checked in
+  # Booking ends in the future, the user has checked in and it is not cancelled
   protected def is_checked_in?(current_time : Int64 = Time.local.to_unix)
     checked_in_at_column.value(nil) &&
       checked_in_column.value(nil) &&
       !checked_out_at_column.value(nil) &&
-      booking_end > current_time
+      booking_end > current_time &&
+      !is_cancelled?
   end
 
   # The user checked out before the end time
@@ -297,9 +298,11 @@ class Booking
   end
 
   # The booking was deleted before the booking start time
+  # or before the booking end time if checked in
   protected def is_cancelled?
     (del_at = deleted_at_column.value(nil)) &&
-      booking_start > del_at
+      (booking_start > del_at ||
+        (booking_end > del_at && checked_in))
   end
 
   # The current time is past the end of the booking, the user checked-in but never checked-out
