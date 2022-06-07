@@ -4,6 +4,9 @@ require "./helpers/spec_clean_up"
 describe Bookings do
   Spec.before_each { Booking.query.each(&.delete) }
 
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   describe "#index" do
     it "should return a list of bookings" do
       tenant = get_tenant
@@ -14,19 +17,19 @@ describe Bookings do
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(1)
 
       # filter by zones
       zones1 = booking1.zones.not_nil!
       zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(2)
 
       # More filters by zones
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(1)
     end
 
@@ -40,9 +43,9 @@ describe Bookings do
       ending = 40.minutes.from_now.to_unix
       guest_email = Faker::Internet.email
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"fsd_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}), headers: Mock::Headers.office365_guest, &.create)
+      client.post(BOOKINGS_BASE, headers: headers, body: %({"asset_id":"fsd_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}))
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&extension_data={booking_for:#{guest_email}}"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(1)
     end
 
@@ -56,10 +59,10 @@ describe Bookings do
       ext_data = Faker::Lorem.word
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"desk_1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}","other":"#{ext_data}"}}), headers: Mock::Headers.office365_guest, &.create)
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"desk_2","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}), headers: Mock::Headers.office365_guest, &.create)
+      client.post(BOOKINGS_BASE, headers: headers, body: %({"asset_id":"desk_1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}","other":"#{ext_data}"}}))
+      client.post(BOOKINGS_BASE, headers: headers, body: %({"asset_id":"desk_2","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"booking_for":"#{guest_email}"}}))
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&extension_data={booking_for:#{guest_email},other:#{ext_data}}"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(1)
     end
 
@@ -73,12 +76,12 @@ describe Bookings do
       ending = 40.minutes.from_now.to_unix
 
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=current"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq([booking1.user_id])
 
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=#{booking2.user_email}"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq([booking2.user_id])
     end
@@ -92,7 +95,7 @@ describe Bookings do
       ending = 40.minutes.from_now.to_unix
       # Since we are using Toby's token to login, user=current means Toby
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk"
-      body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq([booking.user_id])
     end
@@ -102,7 +105,7 @@ describe Bookings do
     tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id)
 
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
     body["user_id"].should eq(booking.user_id)
     body["zones"].should eq(booking.zones)
   end
@@ -128,18 +131,18 @@ describe Bookings do
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 6.minutes.from_now.to_unix)
 
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("reserved")
       body["history"][0]["state"].should eq("reserved")
 
       sleep(200.milliseconds) # advance time 2 minutes
 
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("reserved")
 
       sleep(500.milliseconds) # advance time 5 minutes
 
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("no_show")
     end
 
@@ -150,8 +153,8 @@ describe Bookings do
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
-      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("cancelled")
       body["history"].as_a.last["state"].should eq("cancelled")
       body["history"].as_a.size.should eq(2)
@@ -166,8 +169,8 @@ describe Bookings do
 
       sleep(200.milliseconds) # advance time 2 minutes
 
-      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("no_show")
     end
 
@@ -182,8 +185,7 @@ describe Bookings do
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 30.minutes.from_now.to_unix)
 
-      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(200)
     end
 
@@ -198,8 +200,7 @@ describe Bookings do
         booking_start: 70.minutes.from_now.to_unix,
         booking_end: 80.minutes.from_now.to_unix)
 
-      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(405)
     end
 
@@ -221,8 +222,7 @@ describe Bookings do
         booking_end: 10.minutes.from_now.to_unix,
         asset_id: booking.asset_id)
 
-      resp = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      check_in_early = resp[0]
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(409)
     end
 
@@ -237,8 +237,7 @@ describe Bookings do
         booking_start: Time.utc(2023, 2, 15, 10, 20, 30).to_unix,
         booking_end: Time.utc(2023, 2, 15, 11, 20, 30).to_unix)
 
-      check_in_early = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
-
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(405)
     end
 
@@ -249,8 +248,8 @@ describe Bookings do
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/reject", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("rejected")
       body["history"].as_a.last["state"].should eq("rejected")
       body["history"].as_a.size.should eq(2)
@@ -263,8 +262,8 @@ describe Bookings do
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("checked_in")
       body["history"].as_a.last["state"].should eq("checked_in")
       body["history"].as_a.size.should eq(2)
@@ -277,14 +276,14 @@ describe Bookings do
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 15.minutes.from_now.to_unix)
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("checked_in")
       body["history"].as_a.last["state"].should eq("checked_in")
       body["history"].as_a.size.should eq(2)
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("checked_out")
       body["history"].as_a.last["state"].should eq("checked_out")
       body["history"].as_a.size.should eq(3)
@@ -299,16 +298,16 @@ describe Bookings do
 
       sleep(200.milliseconds) # advance time 2 minutes
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("checked_in")
       body["history"].as_a.last["state"].should eq("checked_in")
       body["history"].as_a.size.should eq(2)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers)
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("checked_out")
       body["history"].as_a.last["state"].should eq("checked_out")
       body["history"].as_a.size.should eq(3)
@@ -323,11 +322,11 @@ describe Bookings do
 
       sleep(200.milliseconds) # advance time 2 minutes
 
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
       body["current_state"].should eq("ended")
     end
 
@@ -346,20 +345,17 @@ describe Bookings do
           Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
           Booking::History.new(Booking::State::CheckedIn, 6.minutes.from_now.to_unix),
           Booking::History.new(Booking::State::CheckedOut, 11.minutes.from_now.to_unix),
-        ])[1].as_h
+        ])[1]
       booking["history"].as_a.size.should eq(1)
 
-      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking["id"]}",
-        route_params: {"id" => booking["id"].to_s},
-        body: {
-          booking_start: 1.minutes.from_now.to_unix,
-          booking_end:   11.minutes.from_now.to_unix,
-          history:       [
-            Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
-            Booking::History.new(Booking::State::Cancelled, Time.local.to_unix),
-          ],
-        }.to_json,
-        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{booking["id"]}", headers: headers, body: {
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end:   11.minutes.from_now.to_unix,
+        history:       [
+          Booking::History.new(Booking::State::Reserved, Time.local.to_unix),
+          Booking::History.new(Booking::State::Cancelled, Time.local.to_unix),
+        ],
+      }.to_json).body).as_h
       updated["history"].as_a.size.should eq(1)
     end
   end
@@ -376,7 +372,7 @@ describe Bookings do
       asset_id: "desk1",
       booking_type: "desk",
       utm_source: "desktop",
-      department: "accounting")[1].as_h
+      department: "accounting")[1]
     body["booked_from"].should eq("desktop")
     body["department"].should eq("accounting")
   end
@@ -396,35 +392,36 @@ describe Bookings do
       booking_type: "desk",
       booking_start: 2.minutes.from_now.to_unix,
       booking_end: 10.minutes.from_now.to_unix,
-      utm_source: "desktop")[1].as_h
+      utm_source: "desktop")[1]
     body["history"].as_a.first["source"].should eq("desktop")
 
     sleep(300.milliseconds) # advance time 3 minutes
 
     booking_id = body["id"].to_s
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true&utm_source=mobile", route_params: {"id" => booking_id}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true&utm_source=mobile", headers: headers).body).as_h
     body["history"].as_a.last["source"].should eq("mobile")
 
     sleep(500.milliseconds) # advance time 5 minutes
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false&utm_source=kiosk", route_params: {"id" => booking_id}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false&utm_source=kiosk", headers: headers).body).as_h
     body["history"].as_a.last["source"].should eq("kiosk")
 
     body = BookingsHelper.http_create_booking(
       asset_id: "desk2",
       booking_type: "desk",
-      utm_source: "desktop")[1].as_h
+      utm_source: "desktop")[1]
     booking_id = body["id"].to_s
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/reject?utm_source=mobile", route_params: {"id" => booking_id}, headers: Mock::Headers.office365_guest, &.reject)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/reject?utm_source=mobile", headers: headers).body).as_h
     body["history"].as_a.last["source"].should eq("mobile")
 
     body = BookingsHelper.http_create_booking(
       asset_id: "desk3",
       booking_type: "desk",
-      utm_source: "desktop")[1].as_h
+      utm_source: "desktop")[1]
     booking_id = body["id"].to_s
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking_id}/?utm_source=kiosk", route_params: {"id" => booking_id}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking_id}", route_params: {"id" => booking_id}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+
+    client.delete("#{BOOKINGS_BASE}/#{booking_id}/?utm_source=kiosk", headers: headers).status_code
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}", headers: headers).body).as_h
     body["history"].as_a.last["source"].should eq("kiosk")
   end
 
@@ -439,7 +436,7 @@ describe Bookings do
                       visit_expected: true,
     })
 
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}/guests", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}/guests", headers: headers).body).as_a
     body.map(&.["name"]).should eq([guest.name])
   end
 
@@ -457,12 +454,12 @@ describe Bookings do
     ending = 40.minutes.from_now.to_unix
 
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{booking_email.downcase}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     booking_user_ids = body.map { |r| r["user_id"] }
     booking_user_ids.should eq([booking.user_id])
 
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{booking_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     booking_user_ids = body.map { |r| r["user_id"] }
     booking_user_ids.should eq([booking.user_id])
   end
@@ -482,14 +479,14 @@ describe Bookings do
     starting = [booking1.booking_start, booking2.booking_start].min
     ending = [booking1.booking_end, booking2.booking_end].max
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(2)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking2.id}/", route_params: {"id" => booking2.id.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    client.delete("#{BOOKINGS_BASE}/#{booking2.id}/", headers: headers)
 
     # Check only one is returned after deletion
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(1)
   end
 
@@ -507,9 +504,9 @@ describe Bookings do
     booking.save!
 
     sleep(200.milliseconds) # advance time 2 minutes
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+    client.delete("#{BOOKINGS_BASE}/#{booking.id}/", headers: headers)
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
     body["current_state"].should eq("checked_in")
     body["history"].as_a.last["state"].should eq("checked_in")
     body["history"].as_a.size.should eq(2)
@@ -527,11 +524,11 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id, booking_start: 1.minutes.from_now.to_unix, booking_end: 15.minutes.from_now.to_unix)
 
     sleep(200.milliseconds) # advance time 2 minutes
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+    client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
     sleep(400.milliseconds) # advance time 4 minutes
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+    client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers)
+    client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers)
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
     body["current_state"].should eq("checked_out")
     body["history"].as_a.last["state"].should eq("checked_out")
     body["history"].as_a.size.should eq(3)
@@ -551,22 +548,22 @@ describe Bookings do
     starting = [booking1.booking_start, booking2.booking_start].min
     ending = [booking1.booking_end, booking2.booking_end].max
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(2)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking1.id}/", route_params: {"id" => booking1.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    client.delete("#{BOOKINGS_BASE}/#{booking1.id}", headers: headers)
 
     # Return one deleted booking
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true&email=#{user_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(1)
     body.first["id"].should eq(booking1.id)
 
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking2.id}/", route_params: {"id" => booking2.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    client.delete("#{BOOKINGS_BASE}/#{booking2.id}", headers: headers)
 
     # Return both deleted bookings
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&deleted=true&email=#{user_email}"
-    body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(2)
     booking_user_ids = body.map { |r| r["id"].as_i }
     # Sorting ids because both events have the same starting time
@@ -586,13 +583,15 @@ describe Bookings do
     starting = Random.new.rand(5..19).minutes.from_now.to_unix
     ending = Random.new.rand(25..39).minutes.from_now.to_unix
 
-    created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+    created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
       {
           "name": "#{user_name}",
           "email": "#{user_email}",
           "checked_in": true,
           "visit_expected": true
-      }]}), headers: Mock::Headers.office365_guest, &.create)[1].as_h
+      }]})
+    ).body)
     created["asset_id"].should eq("some_desk")
     created["booking_start"].should eq(starting)
     created["booking_end"].should eq(ending)
@@ -612,13 +611,14 @@ describe Bookings do
     updated_user_email = Faker::Internet.email
 
     # instantiate the controller
-    updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{created["id"]}", route_params: {"id" => created["id"].to_s}, body: %({"title":"new title","extension_data":{"other":"stuff"},"booking_attendees": [
+    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers, body: %({"title":"new title","extension_data":{"other":"stuff"},"booking_attendees": [
       {
         "name": "#{updated_user_name}",
         "email": "#{updated_user_email}",
           "checked_in": false,
           "visit_expected": true
-      }]}), headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      }]})
+    ).body).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
     booking = Booking.query.find!({id: updated["id"]})
     booking.extension_data.as_h.should eq({"other" => "stuff"})
@@ -652,26 +652,26 @@ describe Bookings do
     starting = 5.minutes.from_now.to_unix
     ending = 20.minutes.from_now.to_unix
 
-    created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+    created = client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
       {
           "name": "#{user_name}",
           "email": "#{user_email}",
           "checked_in": true,
           "visit_expected": true
-      }]}), headers: Mock::Headers.office365_guest, &.create)[0]
+      }]})
+    ).status_code
     created.should eq(201)
 
     sleep 3
 
-    expect_raises Error::BookingConflict do
-      _not_created = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/", body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
-        {
-            "name": "#{user_name}",
-            "email": "#{user_email}",
-            "checked_in": true,
-            "visit_expected": true
-        }]}), headers: Mock::Headers.office365_guest, &.create)
-    end
+    client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+      {
+          "name": "#{user_name}",
+          "email": "#{user_email}",
+          "checked_in": true,
+          "visit_expected": true
+      }]})
+    ).status.should eq HTTP::Status::CONFLICT
   end
 
   describe "booking_limits" do
@@ -708,16 +708,14 @@ describe Bookings do
       different_starting = 45.minutes.from_now.to_unix
       different_ending = 55.minutes.from_now.to_unix
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
-      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       # Fail to create booking due to limit
-      expect_raises Error::BookingLimit do
-        _not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")
-      end
+      BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0].should eq 410
 
       # Create third booking at a different time
       third_booking = BookingsHelper.http_create_booking(
@@ -726,21 +724,19 @@ describe Bookings do
         booking_type: "desk",
         asset_id: "third_desk",
         zones: ["zone-1", "zone-2"]
-      )[1].as_h
+      )[1]
       third_booking["asset_id"].should eq("third_desk")
 
       # Create fourth booking in different zone
       common_zone4 = common.merge({zones: ["zone-4"]})
-      fourth_booking = BookingsHelper.http_create_booking(**common_zone4, asset_id: "fourth_desk")[1].as_h
+      fourth_booking = BookingsHelper.http_create_booking(**common_zone4, asset_id: "fourth_desk")[1]
       fourth_booking["asset_id"].should eq("fourth_desk")
 
       # Fail to change booking due to limit
-      expect_raises Error::BookingLimit do
-        _not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
-          route_params: {"id" => third_booking["id"].to_s},
-          body: %({"booking_start":#{starting},"booking_end":#{ending}}),
-          headers: Mock::Headers.office365_guest, &.update)
-      end
+      client.patch("#{BOOKINGS_BASE}/#{third_booking["id"]}",
+        headers: headers,
+        body: %({"booking_start":#{starting},"booking_end":#{ending}})
+      ).status.should eq HTTP::Status::GONE
     end
 
     it "#create and #update should allow overriding booking limits" do
@@ -755,19 +751,17 @@ describe Bookings do
         booking_type:  "desk",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       # Fail to create booking due to limit
-      expect_raises Error::BookingLimit do
-        _not_created = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")
-      end
+      BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[0].should eq 410
 
       # Create booking with limit_override=true
       second_booking = BookingsHelper.http_create_booking(
         **common,
         asset_id: "second_desk",
-        limit_override: "2")[1].as_h
+        limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
     end
 
@@ -785,16 +779,16 @@ describe Bookings do
       different_starting = 20.minutes.from_now.to_unix
       different_ending = 60.minutes.from_now.to_unix
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
-      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1]
       second_booking["asset_id"].should eq("second_desk")
 
-      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{second_booking["id"]}",
-        route_params: {"id" => second_booking["id"].to_s},
-        body: %({"booking_start":#{different_starting},"booking_end":#{different_ending}}),
-        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{second_booking["id"]}",
+        headers: headers,
+        body: %({"booking_start":#{different_starting},"booking_end":#{different_ending}})
+      ).body)
       updated["booking_start"].should eq(different_starting)
       updated["booking_end"].should eq(different_ending)
     end
@@ -818,16 +812,14 @@ describe Bookings do
         user_email:    "bob@example.com",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
-      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1].as_h
+      second_booking = BookingsHelper.http_create_booking(**common, asset_id: "second_desk")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       # Fail to create booking due to limit
-      expect_raises Error::BookingLimit do
-        _not_created = BookingsHelper.http_create_booking(**common, asset_id: "third_desk")
-      end
+      BookingsHelper.http_create_booking(**common, asset_id: "third_desk")[0].should eq 410
 
       # Create third booking at a different time
       third_booking = BookingsHelper.http_create_booking(
@@ -836,16 +828,14 @@ describe Bookings do
         booking_type: "desk",
         user_id: "bob@example.com",
         user_email: "bob@example.com",
-        asset_id: "third_desk")[1].as_h
+        asset_id: "third_desk")[1]
       third_booking["asset_id"].should eq("third_desk")
 
       # Fail to change booking due to limit
-      expect_raises Error::BookingLimit do
-        _not_updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{third_booking["id"]}",
-          route_params: {"id" => third_booking["id"].to_s},
-          body: %({"booking_start":#{starting}, "booking_end":#{ending}}),
-          headers: Mock::Headers.office365_guest, &.update)
-      end
+      client.patch("#{BOOKINGS_BASE}/#{third_booking["id"]}",
+        headers: headers,
+        body: %({"booking_start":#{starting},"booking_end":#{ending}})
+      ).status.should eq HTTP::Status::GONE
     end
 
     it "booking limit is not checked on checkout" do
@@ -860,33 +850,27 @@ describe Bookings do
         booking_type:  "desk",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       # Create booking with limit_override=true
       second_booking = BookingsHelper.http_create_booking(
         **common,
         asset_id: "second_desk",
-        limit_override: "2")[1].as_h
+        limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       sleep(500.milliseconds) # advance time 5 minutes
       booking_id = first_booking["id"].to_s
 
       # check in
-      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body)
       checked_in["checked_in"].should eq(true)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
-      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body)
       checked_out["checked_in"].should eq(false)
     end
 
@@ -902,24 +886,21 @@ describe Bookings do
         booking_type:  "desk",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       # Create booking with limit_override=true
       second_booking = BookingsHelper.http_create_booking(
         **common,
         asset_id: "second_desk",
-        limit_override: "2")[1].as_h
+        limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       booking_id = first_booking["id"].to_s
 
       # delete booking (without limit_override)
-      deleted = Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking_id}/",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.destroy)
-      deleted[0].should eq(202)
+      deleted = client.delete("#{BOOKINGS_BASE}/#{booking_id}/", headers: headers).status_code
+      deleted.should eq(202)
 
       # check that it was deleted
       Booking.find!(booking_id).deleted.should be_true
@@ -937,33 +918,27 @@ describe Bookings do
         booking_type:  "desk",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       # Create booking with limit_override=true
       second_booking = BookingsHelper.http_create_booking(
         **common,
         asset_id: "second_desk",
-        limit_override: "2")[1].as_h
+        limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       sleep(500.milliseconds) # advance time 5 minutes
       booking_id = first_booking["id"].to_s
 
       # check in
-      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
       checked_in["checked_in"].should eq(true)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
-      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
       checked_out["checked_in"].should eq(false)
     end
 
@@ -980,30 +955,30 @@ describe Bookings do
       }
       new_start_time = 10.minutes.from_now.to_unix
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       # Create booking with limit_override=true
       second_booking = BookingsHelper.http_create_booking(
         **common,
         asset_id: "second_desk",
-        limit_override: "2")[1].as_h
+        limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
 
       booking_id = first_booking["id"].to_s
 
       # update booking
-      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking_id}",
-        route_params: {"id" => booking_id},
-        body: %({"description": "Empty desk"}),
-        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{booking_id}",
+        headers: headers,
+        body: %({"description": "Empty desk"})
+      ).body).as_h
       updated["description"].should eq("Empty desk")
 
       # update booking time
-      updated = Context(Bookings, JSON::Any).response("PATCH", "#{BOOKINGS_BASE}/#{booking_id}",
-        route_params: {"id" => booking_id},
-        body: %({"booking_start":#{new_start_time}}),
-        headers: Mock::Headers.office365_guest, &.update)[1].as_h
+      updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{booking_id}",
+        headers: headers,
+        body: %({"booking_start":#{new_start_time}})
+      ).body).as_h
       updated["booking_start"].should eq(new_start_time)
     end
 
@@ -1019,33 +994,27 @@ describe Bookings do
         booking_type:  "desk",
       }
 
-      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1].as_h
+      first_booking = BookingsHelper.http_create_booking(**common, asset_id: "first_desk")[1]
       first_booking["asset_id"].should eq("first_desk")
 
       sleep(500.milliseconds) # advance time 5 minutes
       booking_id = first_booking["id"].to_s
 
       # check in
-      checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
       checked_in["checked_in"].should eq(true)
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out
-      checked_out = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false",
-        route_params: {"id" => booking_id},
-        headers: Mock::Headers.office365_guest,
-        &.check_in)[1].as_h
+      checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
       checked_out["checked_in"].should eq(false)
 
       second_booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 15.minutes.from_now.to_unix,
         booking_type: "desk",
-        asset_id: "second_desk")[1].as_h
+        asset_id: "second_desk")[1]
       second_booking["asset_id"].should eq("second_desk")
     end
   end
@@ -1077,7 +1046,6 @@ describe Bookings do
     should_create = BookingsHelper.http_create_booking(
       booking_start: 15.minutes.from_now.to_unix,
       booking_end: 25.minutes.from_now.to_unix)[0]
-
     should_create.should eq(201)
   end
 
@@ -1102,8 +1070,7 @@ describe Bookings do
 
     sleep 2
 
-    resp = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    not_checked_in = resp[0]
+    not_checked_in = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
     not_checked_in.should eq(405)
   end
 
@@ -1116,9 +1083,9 @@ describe Bookings do
     booking = BookingsHelper.http_create_booking(
       booking_start: 20.minutes.ago.to_unix,
       booking_end: 5.minutes.ago.to_unix,
-    )[1].as_h
+    )[1]
 
-    not_checked_in = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking["id"]}/check_in", route_params: {"id" => booking["id"].to_s}, headers: Mock::Headers.office365_guest, &.check_in)[0]
+    not_checked_in = client.post("#{BOOKINGS_BASE}/#{booking["id"]}/check_in", headers: headers).status_code
     not_checked_in.should eq(405)
   end
 
@@ -1139,7 +1106,7 @@ describe Bookings do
     tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id)
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/approve", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/approve", headers: headers).body).as_h
     booking = Booking.query.find! { user_id == booking.user_id }
     body["approved"].should eq(true)
     body["approver_id"].should eq(booking.approver_id)
@@ -1148,7 +1115,7 @@ describe Bookings do
     body["rejected"].should eq(false)
 
     # Test rejection
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/reject", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.reject)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/reject", headers: headers).body).as_h
     body["rejected"].should eq(true)
     body["approved"].should eq(false)
     # Reset approver info
@@ -1165,10 +1132,10 @@ describe Bookings do
     tenant = Tenant.query.find!({domain: "toby.staff-api.dev"})
     booking = BookingsHelper.create_booking(tenant.id)
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers).body).as_h
     body["checked_in"].should eq(true)
 
-    body = Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)[1].as_h
+    body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers).body).as_h
     body["checked_in"].should eq(false)
   end
 end
@@ -1255,12 +1222,20 @@ module BookingsHelper
       department:      department,
     }.to_h.compact!.to_json
 
+    client = AC::SpecHelper.client
+
     param = URI::Params.new
     param.add("utm_source", utm_source) if utm_source
     param.add("limit_override", limit_override) if limit_override
     uri = URI.new(path: BOOKINGS_BASE, query: param)
-    Context(Bookings, JSON::Any).response("POST", uri.to_s,
+    response = client.post(uri.to_s,
       body: body,
-      headers: Mock::Headers.office365_guest, &.create)
+      headers: Mock::Headers.office365_guest
+    )
+    if response.success?
+      {response.status_code, JSON.parse(response.body).as_h}
+    else
+      {response.status_code, {} of String => JSON::Any}
+    end
   end
 end

@@ -9,6 +9,9 @@ describe Events do
     EventsHelper.stub_event_tokens
   end
 
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   describe "#index" do
     it "#index should return a list of events with metadata" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
@@ -21,7 +24,7 @@ describe Events do
       tenant = get_tenant
       event = EventMetadatasHelper.create_event(tenant.id)
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}?zone_ids=z1&period_start=#{event.event_start}&period_end=#{event.event_end}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get("#{EVENTS_BASE}?zone_ids=z1&period_start=#{event.event_start}&period_end=#{event.event_end}", headers: headers).body).as_a
 
       body.includes?(event.system_id)
       body.includes?(%("host" => "#{event.host_email}"))
@@ -44,7 +47,7 @@ describe Events do
       field_name = "colour"
       value = "blue"
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: Mock::Headers.office365_guest, &.extension_metadata)[1]
+      body = JSON.parse(client.get("#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: headers).body)
       body.to_s.includes?("red").should be_false
     end
 
@@ -65,8 +68,8 @@ describe Events do
       tenant = get_tenant
       5.times { EventMetadatasHelper.create_event(tenant.id) }
 
-      body = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: Mock::Headers.office365_guest, &.index)[1].to_s
-      body.includes?(%("recurring_master_id" => "#{master_event_id}"))
+      body = client.get("#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: headers).body
+      body.includes?(%("recurring_master_id": "#{master_event_id}"))
     end
   end
 
@@ -86,8 +89,8 @@ describe Events do
 
       tenant = get_tenant
       event = EventMetadatasHelper.create_event(tenant.id)
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-      created_event.to_s.includes?(%("event_start" => #{event.event_start}))
+      created_event = client.post(EVENTS_BASE, headers: headers, body: req_body).body
+      created_event.includes?(%("event_start": #{event.event_start}))
 
       # Should have created metadata record
       evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
@@ -137,8 +140,7 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body).as_h
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
@@ -146,8 +148,8 @@ describe Events do
 
       req_body = EventsHelper.update_event_input
 
-      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
-      updated_event.to_s.includes?(%(some updated notes))
+      updated_event = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers, body: req_body).body
+      updated_event.includes?(%(some updated notes))
       # .should eq(EventsHelper.update_event_output)
       # Should have updated metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -189,8 +191,7 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
@@ -198,7 +199,7 @@ describe Events do
 
       # Guest Update
       req_body = EventsHelper.update_event_input
-      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), &.update)[1].as_h
+      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), body: req_body).body)
 
       # Should have only updated extension in metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -226,8 +227,7 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
@@ -236,8 +236,7 @@ describe Events do
       # Update
       req_body = EventsHelper.update_event_input
 
-      updated_event = Context(Events, JSON::Any).response("PATCH", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
-
+      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers, body: req_body).body)
       updated_event["event_start"].should eq(1598504460)
       updated_event["event_end"].should eq(1598508120)
     end
@@ -252,22 +251,21 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
       # Create event
-
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: Mock::Headers.office365_guest, body: req_body).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Fetch guest event details
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}", route_params: {"id" => created_event_id}, headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), &.show)
+      response = client.get("#{EVENTS_BASE}/#{created_event["id"]}", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"))
+      response.status_code.should eq(200)
+      event = JSON.parse(response.body)
 
-      status_code.should eq(200)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
     end
 
     it "details for event with guest access and event is recurring instance" do
@@ -293,9 +291,7 @@ describe Events do
       # Create event which will create metadata with id that we'll use as seriesMasterId
 
       req_body = EventsHelper.create_recurring_event_input
-
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body.to_s, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body.to_s).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
@@ -303,19 +299,20 @@ describe Events do
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.show)
+      response = client.get("#{EVENTS_BASE}/#{event_instance_id}", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"))
+      response.status_code.should eq(200)
 
-      status_code.should eq(200)
+      event = JSON.parse(response.body)
       master_event_id = created_event["id"].to_s
 
       # Metadata should not exist for this event
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
       # Should have extension data stored on master event
       evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       evt_meta.recurring_master_id.should eq(master_event_id)
-      event.as_h["extension_data"].should eq({"foo" => "bar"})
+      event["extension_data"].should eq({"foo" => "bar"})
     end
 
     it "details for event with normal access" do
@@ -325,25 +322,26 @@ describe Events do
       # Create event
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Show for calendar
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event_id}?calendar=dev@acaprojects.onmicrosoft.com", route_params: {"id" => created_event_id.to_s}, headers: Mock::Headers.office365_guest, &.show)
+      response = client.get("#{EVENTS_BASE}/#{created_event_id}?calendar=dev@acaprojects.onmicrosoft.com", headers: headers)
+      response.status_code.should eq(200)
+      event = JSON.parse(response.body)
 
-      status_code.should eq(200)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
 
       # Show for room
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event_id}, headers: Mock::Headers.office365_guest, &.show)
-      status_code.should eq(200)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      response = client.get("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
+      response.status_code.should eq(200)
+      event = JSON.parse(response.body)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
     end
 
     it "details for event that is an recurring event instance with normal access" do
@@ -359,8 +357,7 @@ describe Events do
       # Create event which will create metadata with id that we'll use as seriesMasterId
 
       req_body = EventsHelper.create_event_input
-
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
@@ -377,25 +374,27 @@ describe Events do
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # Show event details for calendar params that is an instance of master event created above
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
-      status_code.should eq(200)
+      response = client.get("#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", headers: headers)
+      response.status_code.should eq(200)
+      event = JSON.parse(response.body)
       event.as_h["event_start"].should eq(1598503500)
       event.as_h["event_end"].should eq(1598507160)
 
       evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       evt_meta.recurring_master_id.should eq(master_event_id)
       # Should not have any exetension information
-      event.as_h["extension_data"]?.should eq(nil)
+      event["extension_data"]?.should eq(nil)
 
       # Show event details for room/system params that is an instance of master event created above
-      status_code, event = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.show)
+      response = client.get("#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
+      response.status_code.should eq(200)
+      event_h = JSON.parse(response.body)
 
-      status_code.should eq(200)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      event["event_start"].should eq(1598503500)
+      event_h["event_end"].should eq(1598507160)
 
       # Should have extension data stored on master event
-      event.as_h["extension_data"].should eq({"foo" => "bar"})
+      event["extension_data"].should eq({"foo" => "bar"})
     end
   end
 
@@ -417,8 +416,7 @@ describe Events do
     # Create event
 
     req_body = EventsHelper.create_event_input
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+    created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
     created_event_id = created_event["id"].to_s
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
@@ -442,7 +440,7 @@ describe Events do
          "details":{"admin": ["admin"]}}}))
 
     # delete
-    Events.context("DELETE", "#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+    client.delete("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers)
 
     # Should have deleted event meta
     EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
@@ -464,8 +462,7 @@ describe Events do
 
     req_body = EventsHelper.create_event_input
 
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+    created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
     created_event_id = created_event["id"].to_s
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
@@ -473,8 +470,7 @@ describe Events do
     WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
     # approve
-    accepted_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
-
+    accepted_event = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", headers: headers).body)
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
@@ -495,14 +491,13 @@ describe Events do
 
     # Create event
     req_body = EventsHelper.create_event_input
-    created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+    created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
     created_event_id = created_event["id"].to_s
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # reject
-    declined_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.approve)[1].as_h
+    declined_event = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", headers: headers).body)
     room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
@@ -520,15 +515,14 @@ describe Events do
       # Create event
 
       req_body = EventsHelper.create_event_input
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # guest_list
-      Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
+      client.get("#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", headers: headers)
       # guests.should eq(EventsHelper.guests_list_output)
       # guests.to_s.includes?(%("id" => "sys-rJQQlR4Cn7"))
 
@@ -537,20 +531,19 @@ describe Events do
       guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body)
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: headers).body)
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
-
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin&system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7")).body)
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => created_event["id"].to_s, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7")).body)
       checked_in_guest["checked_in"].should eq(false)
     end
 
@@ -573,8 +566,7 @@ describe Events do
 
       req_body = EventsHelper.create_event_input
 
-      created_event = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/", headers: Mock::Headers.office365_guest, body: req_body.to_s, &.create)[1].as_h
-
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body.to_s).body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
@@ -585,11 +577,11 @@ describe Events do
       EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
 
       # guest_list
-      guests = Context(Events, JSON::Any).response("GET", "#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id}, headers: Mock::Headers.office365_guest, &.guest_list)[1].as_a
-      guests.to_s.includes?(%("email" => "amit@redant.com.au"))
+      guests = client.get("#{EVENTS_BASE}/#{event_instance_id}/guests?system_id=sys-rJQQlR4Cn7", headers: headers).body
+      guests.includes?(%("email": "amit@redant.com.au"))
 
       # guest_checkin via system
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse client.post("#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body
       checked_in_guest["checked_in"].should eq(true)
 
       # We should have created meta by migrating from master event meta
@@ -600,15 +592,15 @@ describe Events do
       meta_after_checkin.attendees.count.should eq(master_meta.attendees.count)
 
       # guest_checkin via system state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest, &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse client.post("#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: headers).body
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse client.post("#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin", headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7")).body
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      checked_in_guest = Context(Events, JSON::Any).response("POST", "#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", route_params: {"id" => event_instance_id, "guest_id" => "jon@example.com"}, headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7"), &.guest_checkin)[1].as_h
+      checked_in_guest = JSON.parse client.post("#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7")).body
       checked_in_guest["checked_in"].should eq(false)
     end
   end

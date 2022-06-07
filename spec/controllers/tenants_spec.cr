@@ -2,9 +2,12 @@ require "../spec_helper"
 require "./helpers/spec_clean_up"
 
 describe Tenants do
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   describe "#index" do
     it "includes the booking limits" do
-      body = Context(Tenants, JSON::Any).response("GET", TENANTS_BASE, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body).as_a
       body.first["booking_limits"]?.should be_truthy
     end
   end
@@ -15,7 +18,7 @@ describe Tenants do
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
       tenant.save!
 
-      body = Context(Tenants, JSON::Any).response("GET", TENANTS_BASE, headers: Mock::Headers.office365_guest, &.current_limits)[1].as_h
+      body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body)
       body["desk"]?.should eq(2)
     end
   end
@@ -26,7 +29,7 @@ describe Tenants do
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
       tenant.save!
 
-      body = Context(Tenants, JSON::Any).response("GET", TENANTS_BASE, route_params: {"id" => tenant.id.to_s}, headers: Mock::Headers.office365_guest, &.show_limits)[1].as_h
+      body = JSON.parse(client.get("#{TENANTS_BASE}/#{tenant.id}", headers: headers).body)
       body["desk"]?.should eq(2)
     end
   end
@@ -38,9 +41,9 @@ describe Tenants do
       tenant.save!
 
       body = {desk: 1}.to_json
-      response = Context(Tenants, JSON::Any).response("POST", TENANTS_BASE, route_params: {"id" => tenant.id.to_s}, body: body, headers: Mock::Headers.office365_guest, &.update_limits)
-      response[0].should eq(200)
-      response[1].as_h["desk"]?.should eq(1)
+      response = client.post("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      response.status_code.should eq(200)
+      JSON.parse(response.body)["desk"]?.should eq(1)
     end
   end
 end

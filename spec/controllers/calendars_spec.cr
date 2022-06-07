@@ -1,6 +1,9 @@
 require "../spec_helper"
 
 describe Calendars do
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   it "#index should return a list of calendars" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
@@ -8,8 +11,7 @@ describe Calendars do
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # instantiate the controller
-    status_code = Context(Calendars, JSON::Any).response("GET", "#{CALENDARS_BASE}", headers: Mock::Headers.office365_guest, &.index)[0]
-    status_code.should eq(200)
+    client.get(CALENDARS_BASE, headers: headers).status_code.should eq(200)
   end
 
   describe "#availability" do
@@ -18,7 +20,8 @@ describe Calendars do
       time = Time.utc(2019, 3, 15, 10).to_unix
       time2 = Time.utc(2019, 3, 15, 11).to_unix
       route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
-      body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
+
+      body = JSON.parse(client.get(route, headers: headers).body)
       body.to_s.includes?("room1@example.com").should be_false
     end
 
@@ -27,7 +30,7 @@ describe Calendars do
       time = Time.utc(2020, 3, 15, 10).to_unix
       time2 = Time.utc(2020, 3, 15, 12).to_unix
       route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
-      body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
+      body = JSON.parse(client.get(route, headers: headers).body)
       body.to_s.includes?("room2@example.com").should be_false
     end
 
@@ -36,7 +39,7 @@ describe Calendars do
       time = Time.utc(2021, 3, 15, 10).to_unix
       time2 = Time.utc(2021, 3, 15, 11).to_unix
       route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
-      body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.availability)[1]
+      body = JSON.parse(client.get(route, headers: headers).body)
       body.should eq(CalendarsHelper.calendar_list_output)
     end
   end
@@ -56,7 +59,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.free_busy)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.should eq(CalendarsHelper.free_busy_output)
   end
 
@@ -75,7 +78,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + Time::Span.new(minutes: 15)).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.free_busy)[1].as_a
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.should eq(CalendarsHelper.free_busy_output)
   end
 
@@ -94,7 +97,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + Time::Span.new(minutes: 4)).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    bad_request = Context(Calendars, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.free_busy)[0]
+    bad_request = client.get(route, headers: headers).status_code
     bad_request.should eq(400)
   end
 end
