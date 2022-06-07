@@ -148,31 +148,3 @@ module EventMetadatasHelper
     })
   end
 end
-
-module Context(T, M)
-  extend self
-
-  def response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
-    ctx = instantiate_context(method, route, route_params, headers, body)
-    instance = T.new(ctx)
-    yield instance
-    ctx.response.output.rewind
-    res = ctx.response
-
-    body = if M == JSON::Any
-             JSON.parse(res.output)
-           else
-             M.from_json(res.output)
-           end
-
-    {ctx.response.status_code, body}
-  end
-
-  def delete_response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
-    ctx = instantiate_context(method, route, route_params, headers, body)
-    instance = T.new(ctx)
-    yield instance
-    ctx.response.output.rewind
-    {ctx.response.status_code}
-  end
-end

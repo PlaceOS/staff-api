@@ -18,7 +18,8 @@ describe Tenants do
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
       tenant.save!
 
-      body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body)
+      resp = client.get("#{TENANTS_BASE}/current_limits", headers: headers)
+      body = JSON.parse(resp.body)
       body["desk"]?.should eq(2)
     end
   end
@@ -29,7 +30,8 @@ describe Tenants do
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
       tenant.save!
 
-      body = JSON.parse(client.get("#{TENANTS_BASE}/#{tenant.id}", headers: headers).body)
+      resp = client.get("#{TENANTS_BASE}/current_limits", headers: headers)
+      body = JSON.parse(resp.body)
       body["desk"]?.should eq(2)
     end
   end
@@ -40,10 +42,10 @@ describe Tenants do
       tenant.booking_limits = JSON.parse(%({"desk": 2}))
       tenant.save!
 
-      body = {desk: 1}.to_json
-      response = client.post("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      body = {booking_limits: {desk: 1}}.to_json
+      response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
       response.status_code.should eq(200)
-      JSON.parse(response.body)["desk"]?.should eq(1)
+      JSON.parse(response.body)["booking_limits"]["desk"]?.should eq(1)
     end
   end
 end
