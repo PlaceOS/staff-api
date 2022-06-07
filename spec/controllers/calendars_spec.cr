@@ -38,7 +38,7 @@ describe Calendars do
       CalendarsHelper.stub_cal_endpoints
       time = Time.utc(2021, 3, 15, 10).to_unix
       time2 = Time.utc(2021, 3, 15, 11).to_unix
-      route = "#{CALENDARS_BASE}?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
+      route = "#{CALENDARS_BASE}/availability?calendars=dev@acaprojects.com&period_start=#{time}&period_end=#{time2}&system_ids=sys-rJQQlR4Cn7,sys-rHQQlR4Cn7"
       body = JSON.parse(client.get(route, headers: headers).body)
       body.should eq(CalendarsHelper.calendar_list_output)
     end
