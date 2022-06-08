@@ -171,6 +171,26 @@ describe Bookings do
       body["current_state"].should eq("no_show")
     end
 
+    it "booking deleted between booking_start and booking_end while checked_in" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      # check in
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("cancelled")
+      body["history"].as_a.last["state"].should eq("cancelled")
+    end
+
     it "check in early less than an hour before booking start" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -491,28 +511,6 @@ describe Bookings do
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = Context(Bookings, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
     body.size.should eq(1)
-  end
-
-  it "#destroy should not change the state of a checked in booking" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    tenant = get_tenant
-
-    Timecop.scale(600) # 1 second == 10 minutes
-
-    booking = BookingsHelper.create_booking(tenant.id)
-    booking.booking_start = 1.minutes.from_now.to_unix
-    booking.save!
-
-    sleep(200.milliseconds) # advance time 2 minutes
-    Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
-    Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-    body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-    body["current_state"].should eq("checked_in")
-    body["history"].as_a.last["state"].should eq("checked_in")
-    body["history"].as_a.size.should eq(2)
   end
 
   it "#destroy should not change the state of a checked out booking" do
