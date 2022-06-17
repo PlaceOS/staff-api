@@ -248,6 +248,7 @@ class Events < Application
                head(:not_found) unless sys_cal
                sys_cal
              else
+               # TODO:: should defualt to the current users email
                head :bad_request
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
@@ -594,15 +595,13 @@ class Events < Application
   end
 
   def show
-    event_id = route_params["id"]
+    original_event_id = event_id = route_params["id"]
     placeos_client = get_placeos_client
 
     # Guest access
     if user_token.guest_scope?
       guest_event_id, system_id = user.roles
       guest_email = user.email.downcase
-
-      head :forbidden unless event_id == guest_event_id
 
       # grab the calendar id
       calendar_id = placeos_client.systems.fetch(system_id).email.presence
@@ -613,12 +612,15 @@ class Events < Application
       # Get the event using the admin account
       event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
       head(:not_found) unless event
+      original_recurring_event_id = event.recurring_event_id
 
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != calendar_id
         event = get_hosts_event(event)
         event_id = event.id
       end
+
+      head :forbidden unless {original_event_id, event_id, event.recurring_event_id, original_recurring_event_id}.includes?(guest_event_id)
 
       eventmeta = get_event_metadata(event, system_id)
       head(:not_found) unless eventmeta
@@ -797,7 +799,7 @@ class Events < Application
   end
 
   # example route: /extension_metadata?field_name=colour&value=blue
-  get("extension_metadata", :extension_metadata) do
+  get("/extension_metadata", :extension_metadata) do
     field_name = query_params["field_name"]
     value = query_params["value"]
 

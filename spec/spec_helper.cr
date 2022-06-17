@@ -1,4 +1,8 @@
 require "spec"
+
+# Helper methods for testing controllers (curl, with_server, context)
+require "action-controller/spec_helper"
+
 require "faker"
 require "timecop"
 require "uuid"
@@ -6,9 +10,6 @@ require "uuid"
 # Your application config
 # If you have a testing environment, replace this with a test config file
 require "../src/config"
-
-# Helper methods for testing controllers (curl, with_server, context)
-require "../lib/action-controller/spec/curl_context"
 require "webmock"
 
 Spec.before_suite do
@@ -107,14 +108,14 @@ module Mock
     # Provide some basic headers for office365 auth (office365_guest_headers)
     def office365_guest(guest_event_id = nil, system_id = nil)
       auth = (guest_event_id.nil? && system_id.nil?) ? Mock::Token.office : Mock::Token.office_guest(guest_event_id.not_nil!, system_id.not_nil!)
-      {
+      HTTP::Headers{
         "Host"          => "toby.staff-api.dev",
         "Authorization" => "Bearer #{auth}",
       }
     end
 
     def google
-      {
+      HTTP::Headers{
         "Host"          => "google.staff-api.dev",
         "Authorization" => "Bearer #{Mock::Token.google}",
       }
@@ -145,33 +146,5 @@ module EventMetadatasHelper
       ext_data:          ext_data,
       ical_uid:          ical_uid,
     })
-  end
-end
-
-module Context(T, M)
-  extend self
-
-  def response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
-    ctx = instantiate_context(method, route, route_params, headers, body)
-    instance = T.new(ctx)
-    yield instance
-    ctx.response.output.rewind
-    res = ctx.response
-
-    body = if M == JSON::Any
-             JSON.parse(res.output)
-           else
-             M.from_json(res.output)
-           end
-
-    {ctx.response.status_code, body}
-  end
-
-  def delete_response(method : String, route : String, route_params : Hash(String, String)? = nil, headers : Hash(String, String)? = nil, body : String | Bytes | IO | Nil = nil, &block)
-    ctx = instantiate_context(method, route, route_params, headers, body)
-    instance = T.new(ctx)
-    yield instance
-    ctx.response.output.rewind
-    {ctx.response.status_code}
   end
 end

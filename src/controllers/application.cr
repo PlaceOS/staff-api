@@ -38,9 +38,9 @@ abstract class Application < ActionController::Base
   before_action :check_jwt_scope
 
   protected def check_jwt_scope
-    unless user_token.public_scope?
+    unless user_token.public_scope? || user_token.guest_scope?
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
-      raise Error::Unauthorized.new "valid scope required for access"
+      raise Error::Unauthorized.new "valid scope required for access, provided #{user_token.scope}"
     end
   end
 
@@ -73,127 +73,113 @@ abstract class Application < ActionController::Base
   # =========================================
 
   # 401 if no bearer token
-  rescue_from Error::Unauthorized do |error|
+  @[AC::Route::Exception(Error::Unauthorized, status_code: HTTP::Status::UNAUTHORIZED)]
+  def resource_requires_authentication(error) : String?
     Log.debug { error.message }
-    head :unauthorized
+    error.message
   end
 
   # 403 if user role invalid for a route
-  rescue_from Error::Forbidden do |error|
+  @[AC::Route::Exception(Error::Forbidden, status_code: HTTP::Status::FORBIDDEN)]
+  def resource_access_forbidden(error) : Nil
     Log.debug { error.inspect_with_backtrace }
-    head :forbidden
   end
 
   # 404 if resource not present
-  rescue_from Clear::SQL::RecordNotFoundError do |error|
+  @[AC::Route::Exception(Clear::SQL::RecordNotFoundError, status_code: HTTP::Status::NOT_FOUND)]
+  def sql_record_not_found(error) : Nil
     Log.debug { error.message }
-    head :not_found
   end
 
   # 409 if clashing booking
-  rescue_from Error::BookingConflict do |error|
+  @[AC::Route::Exception(Error::BookingConflict, status_code: HTTP::Status::CONFLICT)]
+  def booking_conflict(error)
     Log.debug { error.message }
-    respond_with(:conflict) do
-      text error.message
-      json({
-        error:    error.message,
-        bookings: error.bookings,
-      })
-    end
+    {
+      error:    error.message,
+      bookings: error.bookings,
+    }
   end
 
   # 410 if booking limit reached
-  rescue_from Error::BookingLimit do |error|
+  @[AC::Route::Exception(Error::BookingLimit, status_code: HTTP::Status::GONE)]
+  def booking_limit_reached(error)
     Log.debug { error.message }
-    respond_with(:gone) do
-      text "#{error.message}\nlimit: #{error.limit}"
-      json({
-        error:    error.message,
-        limit:    error.limit,
-        bookings: error.bookings,
-      })
-    end
+    {
+      error:    error.message,
+      limit:    error.limit,
+      bookings: error.bookings,
+    }
   end
 
   # 501 if request isn't implemented for the current tenent
-  rescue_from Error::NotImplemented do |error|
+  @[AC::Route::Exception(Error::NotImplemented, status_code: HTTP::Status::NOT_IMPLEMENTED)]
+  def action_not_implemented(error)
     Log.debug { error.message }
-    respond_with(:not_implemented) do
-      text error.message
-      json({
-        error: error.message,
-      })
-    end
+    {
+      error: error.message,
+    }
   end
 
-  rescue_from Clear::SQL::Error do |error|
-    render_error(HTTP::Status::INTERNAL_SERVER_ERROR, error)
+  # handle common errors at a global level
+  # this covers no acceptable response format and not an acceptable post format
+  @[AC::Route::Exception(ActionController::Route::NotAcceptable, status_code: HTTP::Status::NOT_ACCEPTABLE)]
+  @[AC::Route::Exception(AC::Route::UnsupportedMediaType, status_code: HTTP::Status::UNSUPPORTED_MEDIA_TYPE)]
+  def bad_media_type(error)
+    {
+      error:   error.message,
+      accepts: error.accepts,
+    }
   end
 
-  rescue_from PQ::PQError do |error|
+  # this covers a required paramater missing and a bad paramater value / format
+  @[AC::Route::Exception(AC::Route::Param::MissingError, status_code: HTTP::Status::BAD_REQUEST)]
+  @[AC::Route::Exception(AC::Route::Param::ValueError, status_code: HTTP::Status::BAD_REQUEST)]
+  def invalid_param(error)
+    {
+      error:       error.message,
+      parameter:   error.parameter,
+      restriction: error.restriction,
+    }
+  end
+
+  @[AC::Route::Exception(PQ::PQError, status_code: HTTP::Status::UNPROCESSABLE_ENTITY)]
+  def postgresql_error(error)
     if error.message =~ App::PG_UNIQUE_CONSTRAINT_REGEX
-      render_error(HTTP::Status::UNPROCESSABLE_ENTITY, error)
+      render_error(error)
     else
       raise error
     end
   end
 
-  rescue_from KeyError do |error|
-    raise error unless error.message.try &.includes?("param")
-
-    respond_with(:bad_request) do
-      text error.message
-      json({
-        error: error.message,
-      })
-    end
-  end
-
-  rescue_from JSON::SerializableError do |error|
-    respond_with(:bad_request) do
-      text error.inspect_with_backtrace
-      json({
-        error:     error.message,
-        backtrace: error.backtrace?,
-      })
-    end
-  end
-
-  rescue_from ::PlaceOS::Client::API::Error do |error|
-    render_error(HTTP::Status::NOT_FOUND, error)
-  end
-
-  # TODO: Should be caught where it's happening, or the code refactored.
-  rescue_from ::Enumerable::EmptyError do |error|
-    render_error(HTTP::Status::NOT_FOUND, error)
-  end
-
-  rescue_from PlaceCalendar::Exception do |error|
+  @[AC::Route::Exception(PlaceCalendar::Exception, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
+  def handled_calendar_exception(error)
     # Adding `http_body` during dev to inspect errors from office/google clients
     render_error(
-      HTTP::Status::INTERNAL_SERVER_ERROR,
       error,
       "#{error.http_body} \n #{error.inspect_with_backtrace}"
     )
   end
 
-  protected def render_error(code : HTTP::Status, error, message = nil)
+  @[AC::Route::Exception(Clear::SQL::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
+  @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
+  @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]
+  @[AC::Route::Exception(::Enumerable::EmptyError, status_code: HTTP::Status::NOT_FOUND)] # TODO: Should be caught where it's happening, or the code refactored.
+  def handled_generic_error(error)
+    render_error(error)
+  end
+
+  protected def render_error(error, message = nil)
     Log.warn(exception: error) { error.message }
     message = error.inspect_with_backtrace if message.nil?
 
     if App.running_in_production?
-      respond_with(code) do
-        text message
-        json({error: message})
-      end
+      {error: message}
     else
-      respond_with(code) do
-        text message
-        json({
-          error:     message,
-          backtrace: error.backtrace?,
-        })
-      end
+      {
+        error:     message,
+        backtrace: error.backtrace?,
+      }
     end
   end
 

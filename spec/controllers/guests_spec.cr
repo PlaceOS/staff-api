@@ -6,13 +6,16 @@ describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   describe "#index" do
     it "unfiltered should return a list of all guests" do
       tenant = get_tenant
       guest1 = GuestsHelper.create_guest(tenant.id)
       guest2 = GuestsHelper.create_guest(tenant.id)
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get(GUESTS_BASE, headers: headers).body).as_a
 
       # Guest names
       names = body.map(&.["name"])
@@ -28,7 +31,7 @@ describe Guests do
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}?q=#{guest.name.to_s.downcase}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
+      body = JSON.parse(client.get("#{GUESTS_BASE}?q=#{guest.name.to_s.downcase}", headers: headers).body).as_a
 
       # Guest names
       body.map(&.["name"]).should eq([guest.name])
@@ -68,7 +71,8 @@ describe Guests do
       now = Time.utc.to_unix
       later = 4.hours.from_now.to_unix
       route = "#{GUESTS_BASE}?period_start=#{now}&period_end=#{later}&system_ids=sys-rJQQlR4Cn7,sys_id"
-      body = Context(Guests, JSON::Any).response("GET", route, headers: Mock::Headers.office365_guest, &.index)[1].as_a
+
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
 
       # Guest names
       body.map(&.["name"]).should eq(["Toby", "Jon"])
@@ -87,8 +91,7 @@ describe Guests do
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
-
+      body = JSON.parse(client.get("#{GUESTS_BASE}/#{guest.email}/", headers: headers).body)
       body["name"].should eq(guest.name)
       body["email"].should eq(guest.email)
       body["visit_expected"].should eq(false)
@@ -100,7 +103,7 @@ describe Guests do
       meta = EventMetadatasHelper.create_event(tenant.id, "128912891829182")
       guest.attendee_for(meta.id.not_nil!)
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{GUESTS_BASE}/#{guest.email}/", headers: headers).body)
       body["name"].should eq(guest.name)
       body["email"].should eq(guest.email)
       body["visit_expected"].should eq(true)
@@ -117,7 +120,7 @@ describe Guests do
                         visit_expected: true,
       })
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body = JSON.parse(client.get("#{GUESTS_BASE}/#{guest.email}/", headers: headers).body)
       body["name"].should eq(guest.name)
       body["email"].should eq(guest.email)
       body["visit_expected"].should eq(true)
@@ -137,7 +140,7 @@ describe Guests do
                         visit_expected: true,
       })
 
-      body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/bookings", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.bookings)[1].as_a
+      body = JSON.parse(client.get("#{GUESTS_BASE}/#{guest.email}/bookings", headers: headers).body).as_a
       body.map(&.["id"]).should eq([booking.id])
     end
   end
@@ -147,11 +150,10 @@ describe Guests do
     guest = GuestsHelper.create_guest(tenant.id)
     GuestsHelper.create_guest(tenant.id)
 
-    Guests.context("DELETE", "#{GUESTS_BASE}/#{guest.email}/", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.destroy)
+    client.delete("#{GUESTS_BASE}/#{guest.email}/", headers: headers)
 
     # Check only one is returned
-    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}", headers: Mock::Headers.office365_guest, &.index)[1].as_a
-
+    body = JSON.parse(client.get(GUESTS_BASE, headers: headers).body).as_a
     body.map(&.["name"]).includes?(guest.name).should be_false
     body.map(&.["email"]).includes?(guest.email).should be_false
   end
@@ -161,8 +163,8 @@ describe Guests do
     guest_name = Faker::Name.name
     guest_email = Faker::Internet.email
     req_body = %({"name":"#{guest_name}","email":"#{guest_email}","banned":true,"extension_data":{"test":"data"}})
-    created = Context(Guests, JSON::Any).response("POST", "#{GUESTS_BASE}/", body: req_body, headers: Mock::Headers.office365_guest, &.create)[1].as_h
 
+    created = JSON.parse(client.post(GUESTS_BASE, headers: headers, body: req_body).body)
     created["email"].should eq(guest_email)
     created["banned"].should eq(true)
     created["dangerous"].should eq(false)
@@ -170,8 +172,8 @@ describe Guests do
 
     new_email = Faker::Internet.email
     req_body = %({"email":"#{new_email}","dangerous":true,"extension_data":{"other":"info"}})
-    updated = Context(Guests, JSON::Any).response("PATCH", "#{GUESTS_BASE}/#{guest_email}", route_params: {"id" => guest_email}, body: req_body, headers: Mock::Headers.office365_guest, &.update)[1].as_h
 
+    updated = JSON.parse(client.patch("#{GUESTS_BASE}/#{guest_email}", headers: headers, body: req_body).body)
     updated["email"].should eq(new_email)
     updated["banned"].should eq(true)
     updated["dangerous"].should eq(true)
@@ -186,49 +188,30 @@ describe Guests do
       WebMock.allow_net_connect = true
     end
 
-    with_server do
-      it "prevents duplicate guest emails on same tenant" do
-        path = "/api/staff/v1/guests"
-        req_body = %({"name":"#{Faker::Name.name}","email":"#{Faker::Internet.email}","banned":true,"extension_data":{"test":"data"}})
+    it "prevents duplicate guest emails on same tenant" do
+      path = "/api/staff/v1/guests"
+      req_body = %({"name":"#{Faker::Name.name}","email":"#{Faker::Internet.email}","banned":true,"extension_data":{"test":"data"}})
 
-        curl(
-          method: "POST",
-          path: path,
-          body: req_body,
-          headers: Mock::Headers.office365_guest,
-        )
+      client.post(path, headers: headers, body: req_body)
+      response = client.post(path, headers: headers, body: req_body)
+      response.status_code.should eq 422
+      response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+    end
 
-        response = curl(
-          method: "POST",
-          path: path,
-          body: req_body,
-          headers: Mock::Headers.office365_guest,
-        )
+    it "creates guests with same emails on different tenants" do
+      google_tenant = TenantsHelper.create_tenant({
+        name:        "Ian",
+        platform:    "google",
+        domain:      "google.staff-api.dev",
+        credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon2@example.com.au"}),
+      })
+      guest = GuestsHelper.create_guest(google_tenant.id)
 
-        response.status_code.should eq 422
-        response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
-      end
+      path = "/api/staff/v1/guests"
+      req_body = %({"name":"#{Faker::Name.name}","email":"#{guest.email}","banned":true,"extension_data":{"test":"data"}})
 
-      it "creates guests with same emails on different tenants" do
-        google_tenant = TenantsHelper.create_tenant({
-          name:        "Ian",
-          platform:    "google",
-          domain:      "google.staff-api.dev",
-          credentials: %({"issuer":"1122331212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon2@example.com.au"}),
-        })
-        guest = GuestsHelper.create_guest(google_tenant.id)
-
-        path = "/api/staff/v1/guests"
-        req_body = %({"name":"#{Faker::Name.name}","email":"#{guest.email}","banned":true,"extension_data":{"test":"data"}})
-
-        response = curl(
-          method: "POST",
-          path: path,
-          body: req_body,
-          headers: Mock::Headers.office365_guest,
-        )
-        response.status_code.should eq 201
-      end
+      response = client.post(path, headers: headers, body: req_body)
+      response.status_code.should eq 201
     end
   end
 
@@ -282,7 +265,7 @@ describe Guests do
 
     guest.attendee_for(meta.id.not_nil!)
 
-    body = Context(Guests, JSON::Any).response("GET", "#{GUESTS_BASE}/#{guest.email}/meetings", route_params: {"id" => guest.email.not_nil!}, headers: Mock::Headers.office365_guest, &.meetings)[1].as_a
+    body = JSON.parse(client.get("#{GUESTS_BASE}/#{guest.email}/meetings", headers: headers).body).as_a
     # Should get 1 event
     body.size.should eq(1)
   end

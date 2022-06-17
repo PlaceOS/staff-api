@@ -2,6 +2,9 @@ require "../spec_helper"
 require "placeos-models/spec/generator"
 
 describe Tenant do
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
   it "valid input raises no errors" do
     a = TenantsHelper.create_tenant({
       name:        "Jon",
@@ -12,12 +15,11 @@ describe Tenant do
     a.errors.size.should eq 0
   end
 
-  with_server do
-    it "prevents two tenants with the same domain" do
-      WebMock.allow_net_connect = true
-      path = "/api/staff/v1/tenants"
+  it "prevents two tenants with the same domain" do
+    WebMock.allow_net_connect = true
+    path = "/api/staff/v1/tenants"
 
-      body = %({
+    body = %({
       "name":        "Bob",
       "platform":    "google",
       "domain":      "club-bob.staff-api.dev",
@@ -29,15 +31,9 @@ describe Tenant do
         "sub":         "bob@example.com.au"
       }
     })
+    client.post(path, headers: headers, body: body)
 
-      curl(
-        method: "POST",
-        path: path,
-        body: body,
-        headers: Mock::Headers.office365_guest,
-      )
-
-      body = %({
+    body = %({
       "name":        "Ian",
       "platform":    "google",
       "domain":      "club-bob.staff-api.dev",
@@ -49,18 +45,11 @@ describe Tenant do
         "sub":         "bob@example.com.au"
       }
     })
+    response = client.post(path, headers: headers, body: body)
 
-      response = curl(
-        method: "POST",
-        path: path,
-        body: body,
-        headers: Mock::Headers.office365_guest,
-      )
-
-      response.status_code.should eq 422
-      response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
-      WebMock.reset
-    end
+    response.status_code.should eq 422
+    response.body.should match(App::PG_UNIQUE_CONSTRAINT_REGEX)
+    WebMock.reset
   end
 
   it "should accept JSON params" do
@@ -77,13 +66,13 @@ describe Tenant do
       }
     })
 
-    headers = {
+    headers = HTTP::Headers{
       "Host"          => "google.staff-api.dev",
       "Authorization" => "Bearer #{Mock::Token.google}",
       "Content-Type"  => "application/json",
     }
 
-    res = Tenants.context("POST", "/api/staff/v1/tenants", body: body, headers: headers, &.create)
+    res = client.post("/api/staff/v1/tenants", headers: headers, body: body)
     res.status_code.should eq(200)
   end
 
