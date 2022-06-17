@@ -799,7 +799,7 @@ class Events < Application
   end
 
   # example route: /extension_metadata?field_name=colour&value=blue
-  get("extension_metadata", :extension_metadata) do
+  get("/extension_metadata", :extension_metadata) do
     field_name = query_params["field_name"]
     value = query_params["value"]
 

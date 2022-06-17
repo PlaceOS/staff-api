@@ -77,6 +77,7 @@ describe Events do
     before_each do
       EventsHelper.stub_create_endpoints
     end
+
     it "with attendees and extension data" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
@@ -93,7 +94,7 @@ describe Events do
       created_event.includes?(%("event_start": #{event.event_start}))
 
       # Should have created metadata record
-      evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
+      evt_meta = EventMetadata.query.find! { event_id == JSON.parse(created_event)["id"].as_s }
       evt_meta.event_start.should eq(1598503500)
       evt_meta.event_end.should eq(1598507160)
       evt_meta.system_id.should eq("sys-rJQQlR4Cn7")
@@ -122,6 +123,7 @@ describe Events do
     before_each do
       EventsHelper.stub_create_endpoints
     end
+
     it "for system" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
@@ -152,7 +154,7 @@ describe Events do
       updated_event.includes?(%(some updated notes))
       # .should eq(EventsHelper.update_event_output)
       # Should have updated metadata record
-      evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
+      evt_meta = EventMetadata.query.find! { event_id == JSON.parse(updated_event)["id"].as_s }
       evt_meta.event_start.should eq(1598504460)
       evt_meta.event_end.should eq(1598508120)
 
