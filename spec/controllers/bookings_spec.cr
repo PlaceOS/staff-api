@@ -174,6 +174,26 @@ describe Bookings do
       body["current_state"].should eq("no_show")
     end
 
+    it "booking deleted between booking_start and booking_end while checked_in" do
+      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+
+      booking = BookingsHelper.create_booking(tenant.id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      # check in
+      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
+      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      body["current_state"].should eq("cancelled")
+      body["history"].as_a.last["state"].should eq("cancelled")
+    end
+
     it "check in early less than an hour before booking start" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))

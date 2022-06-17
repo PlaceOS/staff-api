@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: checked_in to canclled state transition ([#196](https://github.com/PlaceOS/staff-api/pull/196))
 - **events**: add dedicated metadata update methods ([#195](https://github.com/PlaceOS/staff-api/pull/195))
 - **staff**: add query for a users calendars
 - **staff**: add query for a users manager
