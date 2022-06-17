@@ -184,12 +184,12 @@ describe Bookings do
       sleep(200.milliseconds) # advance time 2 minutes
 
       # check in
-      Context(Bookings, JSON::Any).response("POST", "#{BOOKINGS_BASE}/#{booking.id}/check_in", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.check_in)
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers)
 
       sleep(200.milliseconds) # advance time 2 minutes
 
-      Context(Bookings, JSON::Any).delete_response("DELETE", "#{BOOKINGS_BASE}/#{booking.id}/", route_params: {"id" => booking.id.not_nil!.to_s}, headers: Mock::Headers.office365_guest, &.destroy)
-      body = Context(Bookings, JSON::Any).response("GET", "#{BOOKINGS_BASE}/#{booking.id}", route_params: {"id" => booking.id.to_s}, headers: Mock::Headers.office365_guest, &.show)[1].as_h
+      client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers)
+      body = JSON.parse client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body
       body["current_state"].should eq("cancelled")
       body["history"].as_a.last["state"].should eq("cancelled")
     end
@@ -508,28 +508,6 @@ describe Bookings do
     route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=#{user_email}"
     body = JSON.parse(client.get(route, headers: headers).body).as_a
     body.size.should eq(1)
-  end
-
-  it "#destroy should not change the state of a checked in booking" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    tenant = get_tenant
-
-    Timecop.scale(600) # 1 second == 10 minutes
-
-    booking = BookingsHelper.create_booking(tenant.id)
-    booking.booking_start = 1.minutes.from_now.to_unix
-    booking.save!
-
-    sleep(200.milliseconds) # advance time 2 minutes
-    client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
-    client.delete("#{BOOKINGS_BASE}/#{booking.id}/", headers: headers)
-    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
-    body["current_state"].should eq("checked_in")
-    body["history"].as_a.last["state"].should eq("checked_in")
-    body["history"].as_a.size.should eq(2)
   end
 
   it "#destroy should not change the state of a checked out booking" do
