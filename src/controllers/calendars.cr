@@ -8,7 +8,7 @@ class Calendars < Application
   get "/availability", :availability do
     # Grab the system emails
     candidates = matching_calendar_ids
-    calendars = candidates.keys
+    calendars = candidates.keys.map &.downcase
 
     # Append calendars you might not have direct access too
     # As typically a staff member can see anothers availability
@@ -51,7 +51,7 @@ class Calendars < Application
   get "/free_busy", :free_busy do
     # Grab the system emails
     candidates = matching_calendar_ids
-    calendars = candidates.keys
+    calendars = candidates.keys.map &.downcase
 
     # Append calendars you might not have direct access too
     # As typically a staff member can see anothers availability

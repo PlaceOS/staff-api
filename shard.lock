@@ -51,7 +51,7 @@ shards:
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
-    version: 0.3.4
+    version: 0.3.6
 
   email:
     git: https://github.com/arcage/crystal-email.git
@@ -127,11 +127,11 @@ shards:
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
-    version: 0.3.3
+    version: 0.3.4
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.3.3+git.commit.c960d72e003d1979961c6de2c2c9176c942dc6f4
+    version: 0.3.5
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
@@ -155,7 +155,7 @@ shards:
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
-    version: 0.10.3
+    version: 0.10.5
 
   placeos-models:
     git: https://github.com/placeos/models.git
@@ -171,7 +171,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.1+git.commit.d53319dc4ce26fc44f13b9c1c6ffb8699e22899b
+    version: 1.9.2+git.commit.de91bb38858124270ea06be61641153b8947e18f
 
   rethinkdb:
     git: https://github.com/kingsleyh/crystal-rethinkdb.git

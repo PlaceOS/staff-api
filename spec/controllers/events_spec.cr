@@ -199,7 +199,9 @@ describe Events do
 
       # Guest Update
       req_body = EventsHelper.update_event_input
-      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), body: req_body).body)
+      resp = client.patch("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"), body: req_body)
+      body = resp.body
+      updated_event = JSON.parse(body)
 
       # Should have only updated extension in metadata record
       evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
@@ -299,7 +301,7 @@ describe Events do
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
-      response = client.get("#{EVENTS_BASE}/#{event_instance_id}", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"))
+      response = client.get("#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7"))
       response.status_code.should eq(200)
 
       event = JSON.parse(response.body)
@@ -377,8 +379,8 @@ describe Events do
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", headers: headers)
       response.status_code.should eq(200)
       event = JSON.parse(response.body)
-      event.as_h["event_start"].should eq(1598503500)
-      event.as_h["event_end"].should eq(1598507160)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
 
       evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       evt_meta.recurring_master_id.should eq(master_event_id)
@@ -390,11 +392,11 @@ describe Events do
       response.status_code.should eq(200)
       event_h = JSON.parse(response.body)
 
-      event["event_start"].should eq(1598503500)
+      event_h["event_start"].should eq(1598503500)
       event_h["event_end"].should eq(1598507160)
 
       # Should have extension data stored on master event
-      event["extension_data"].should eq({"foo" => "bar"})
+      event_h["extension_data"]?.should eq({"foo" => "bar"})
     end
   end
 
@@ -522,28 +524,29 @@ describe Events do
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       # guest_list
-      client.get("#{EVENTS_BASE}/#{created_event["id"]}/guests?system_id=sys-rJQQlR4Cn7", headers: headers)
+      client.get("#{EVENTS_BASE}/#{created_event_id}/guests?system_id=sys-rJQQlR4Cn7", headers: headers)
       # guests.should eq(EventsHelper.guests_list_output)
       # guests.to_s.includes?(%("id" => "sys-rJQQlR4Cn7"))
 
-      evt_meta = EventMetadata.query.find! { event_id == created_event["id"] }
+      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       guests = evt_meta.attendees.map(&.guest)
       guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
-      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body)
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body)
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
-      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: headers).body)
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: headers).body)
       checked_in_guest["checked_in"].should eq(false)
 
       # guest_checkin via guest_token
-      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin&system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7")).body)
+      body = client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7")).body
+      checked_in_guest = JSON.parse(body)
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via guest_token state = false
-      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event["id"].to_s, "sys-rJQQlR4Cn7")).body)
+      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?state=false&system_id=sys-rJQQlR4Cn7", headers: Mock::Headers.office365_guest(created_event_id, "sys-rJQQlR4Cn7")).body)
       checked_in_guest["checked_in"].should eq(false)
     end
 

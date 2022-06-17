@@ -38,9 +38,9 @@ abstract class Application < ActionController::Base
   before_action :check_jwt_scope
 
   protected def check_jwt_scope
-    unless user_token.public_scope?
+    unless user_token.public_scope? || user_token.guest_scope?
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
-      raise Error::Unauthorized.new "valid scope required for access"
+      raise Error::Unauthorized.new "valid scope required for access, provided #{user_token.scope}"
     end
   end
 
@@ -74,8 +74,9 @@ abstract class Application < ActionController::Base
 
   # 401 if no bearer token
   @[AC::Route::Exception(Error::Unauthorized, status_code: HTTP::Status::UNAUTHORIZED)]
-  def resource_requires_authentication(error) : Nil
+  def resource_requires_authentication(error) : String?
     Log.debug { error.message }
+    error.message
   end
 
   # 403 if user role invalid for a route
