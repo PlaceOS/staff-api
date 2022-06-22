@@ -75,7 +75,7 @@ shards:
 
   google:
     git: https://github.com/placeos/google.git
-    version: 3.3.1
+    version: 3.4.0
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
@@ -111,7 +111,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.17.2
+    version: 1.18.0
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -147,7 +147,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.14.0
+    version: 4.15.2
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
