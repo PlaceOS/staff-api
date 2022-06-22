@@ -25,6 +25,7 @@ class Events < Application
         period_end: period_end,
         showDeleted: include_cancelled
       )
+      Log.debug { "requesting events from: #{request.path}" }
       requests << request
       {request, calendar_id, system}
     }

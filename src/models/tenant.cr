@@ -177,12 +177,12 @@ class Tenant
     case platform
     when "office365"
       params = Office365DelegatedConfig.from_json(decrypt_credentials).params
-      cal = ::PlaceCalendar::Office365.new(bearer_token, **params)
+      cal = ::PlaceCalendar::Office365.new(bearer_token, **params, delegated_access: true)
       ::PlaceCalendar::Client.new(cal)
     when "google"
       params = GoogleDelegatedConfig.from_json(decrypt_credentials).params
       auth = ::Google::TokenAuth.new(bearer_token, expires || 5.hours.from_now.to_unix)
-      cal = ::PlaceCalendar::Google.new(auth, **params)
+      cal = ::PlaceCalendar::Google.new(auth, **params, delegated_access: true)
       ::PlaceCalendar::Client.new(cal)
     end
   end
