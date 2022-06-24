@@ -32,6 +32,8 @@ services:
       - ${PWD}/coverage:/app/coverage
     depends_on:
       - db
+    security_opt:
+      - seccomp:unconfined
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
       PLACE_URI: http://toby.dev.place.tech
