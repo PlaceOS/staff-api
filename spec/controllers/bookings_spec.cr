@@ -99,6 +99,30 @@ describe Bookings do
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq([booking.user_id])
     end
+
+    it "should include bookins made on behalf of other users when include_booked_by=true" do
+      tenant = get_tenant
+      booking1 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
+      
+      booked_by_email = "josh@redant.com.au"
+      booking2 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
+      booking2.booked_by_email = PlaceOS::Model::Email.new(booked_by_email)
+      booking2.booked_by_id = booked_by_email
+      booking2.booked_by_name = Faker::Internet.user_name
+      booking2.save!
+
+      booking3 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: booked_by_email)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+
+      route = "#{BOOKINGS_BASE}?type=desk&period_start=#{starting}&period_end=#{ending}&user=#{booked_by_email}&include_booked_by=true&include_checked_out=true"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      booking_ids = body.map { |r| r["id"] }
+      booking_ids.should_not contain(booking1.id)
+      booking_ids.should contain(booking2.id)
+      booking_ids.should contain(booking3.id)
+    end
   end
 
   it "#show should find booking" do
