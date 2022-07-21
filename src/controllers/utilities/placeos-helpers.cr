@@ -76,10 +76,9 @@ module Utils::PlaceOSHelpers
         }
       }).get.each do |results|
         results.each do |system|
-          calendar = system.email
+          calendar = system.email.presence
           next unless calendar
-          next if calendar.empty?
-          system_calendars[calendar] = system
+          system_calendars[calendar.downcase] = system
         end
       end
     end
@@ -93,14 +92,14 @@ module Utils::PlaceOSHelpers
       Promise.all(system_ids.map { |system_id|
         Promise.defer { systems.fetch(system_id) }
       }).get.each do |system|
-        calendar = system.email
-        next if !calendar || calendar.empty?
-        system_calendars[calendar] = system
+        calendar = system.email.presence
+        next unless calendar
+        system_calendars[calendar.downcase] = system
       end
     end
 
     # default to the current user if no params were passed
-    system_calendars[user.email] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
+    system_calendars[user.email.downcase] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
 
     system_calendars
   end
