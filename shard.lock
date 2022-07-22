@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 5.1.4
+    version: 5.1.8
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -48,6 +48,10 @@ shards:
   db: # Overridden
     git: https://github.com/place-labs/crystal-db.git
     version: 0.11.0+git.commit.2afe1ec29f5db087a380ef38eed1e8965720acaf
+
+  debug:
+    git: https://github.com/sija/debug.cr.git
+    version: 2.0.2
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
@@ -127,15 +131,19 @@ shards:
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
-    version: 2.1.5
+    version: 2.2.0
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
-    version: 0.3.4
+    version: 0.5.0
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.3.5
+    version: 0.5.0+git.commit.7d83b9a53c9540fbc159f06eeed5d4bdad5c4377
+
+  opentelemetry-sdk:
+    git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
+    version: 0.5.1
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
@@ -155,15 +163,15 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.7.1
+    version: 2.7.2
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
-    version: 0.10.5
+    version: 0.11.0
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.11.0
+    version: 8.11.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
