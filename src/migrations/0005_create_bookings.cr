@@ -1,8 +1,8 @@
 class CreateBookingsMigration
   include Clear::Migration
 
-  def change(direction)
-    direction.up do
+  def change(dir)
+    dir.up do
       create_table(:bookings) do |t|
         t.references to: "tenants", name: "tenant_id", on_delete: "cascade", null: false
 
@@ -32,7 +32,7 @@ class CreateBookingsMigration
       end
     end
 
-    direction.down do
+    dir.down do
       execute("DROP TABLE bookings")
     end
   end
