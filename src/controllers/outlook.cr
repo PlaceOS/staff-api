@@ -2,7 +2,6 @@ class Outlook < ActionController::Base
   base "/api/staff/v1/outlook"
 
   get("/manifest.xml") do
-    # TODO: get values from config
     manifest = OutlookManifest.new(
       app_domain: "",
       source_location: "",
