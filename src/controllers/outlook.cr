@@ -3,13 +3,13 @@ class Outlook < ActionController::Base
 
   get("/manifest.xml") do
     manifest = OutlookManifest.new(
-      app_domain: "",
-      source_location: "",
-      function_file_url: "",
-      taskpane_url: "",
-      bookings_button_url: ""
+      app_domain: "#{App::PLACE_URI}/outlook/",
+      source_location: "#{App::PLACE_URI}/outlook/",
+      function_file_url: "#{App::PLACE_URI}/outlook/function-file/function-file.html",
+      taskpane_url: "#{App::PLACE_URI}/outlook/",
+      bookings_button_url: "#{App::PLACE_URI}/outlook/upcoming"
     )
 
-    render xml: manifest
+    render xml: manifest.to_xml
   end
 end
