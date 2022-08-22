@@ -1,8 +1,8 @@
 class CreateAttendeeMigration
   include Clear::Migration
 
-  def change(direction)
-    direction.up do
+  def change(dir)
+    dir.up do
       create_table(:attendees) do |t|
         t.references to: "event_metadatas", name: "event_id", on_delete: "cascade", null: false
         t.references to: "guests", name: "guest_id", on_delete: "cascade", null: false
@@ -15,7 +15,7 @@ class CreateAttendeeMigration
       end
     end
 
-    direction.down do
+    dir.down do
       execute("DROP TABLE attendees")
     end
   end

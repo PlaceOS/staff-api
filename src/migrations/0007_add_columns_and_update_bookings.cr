@@ -1,8 +1,8 @@
 class AddColumnsAndUpdateBookingsToEventMetadatas
   include Clear::Migration
 
-  def change(direction)
-    direction.up do
+  def change(dir)
+    dir.up do
       # Add the new columns
       execute("ALTER TABLE bookings ADD COLUMN booked_by_id TEXT")
       execute("ALTER TABLE bookings ADD COLUMN booked_by_email TEXT")
@@ -17,7 +17,7 @@ class AddColumnsAndUpdateBookingsToEventMetadatas
       execute("UPDATE bookings SET booked_by_name = user_name WHERE booked_by_name IS NULL")
     end
 
-    direction.down do
+    dir.down do
       # remove the new columns
       execute("ALTER TABLE bookings DROP COLUMN booked_by_id")
       execute("ALTER TABLE bookings DROP COLUMN booked_by_email")

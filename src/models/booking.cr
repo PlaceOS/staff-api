@@ -23,6 +23,7 @@ class Booking
     approver_name: String | Nil,
     approver_email: String | Nil,
     department: String | Nil,
+    event_id: String | Nil,
     title: String | Nil,
     checked_in: Bool,
     checked_in_at: Int64 | Nil,
@@ -82,6 +83,7 @@ class Booking
   column approver_email : String?
   column approver_name : String?
   column department : String?
+  column event_id : String?
 
   column booked_by_id : String
   column booked_by_email : PlaceOS::Model::Email
@@ -196,6 +198,10 @@ class Booking
 
   scope :is_created_after do |time|
     time ? where { last_changed > time.not_nil!.to_i64 } : self
+  end
+
+  scope :is_event_id do |event_id|
+    event_id ? where(event_id: event_id) : self
   end
 
   scope :booked_between do |tenant_id, period_start, period_end|
@@ -361,6 +367,7 @@ class Booking
       approver_name:   approver_name,
       approver_email:  approver_email,
       department:      department,
+      event_id:        event_id,
       title:           title,
       checked_in:      checked_in,
       checked_in_at:   checked_in_at,
