@@ -3,10 +3,13 @@ require "../spec_helper"
 
 describe Outlook do
   client = AC::SpecHelper.client
-  headers = Mock::Headers.office365_guest
 
   describe "get /manifest.xml" do
     it "returns an xml manifest" do
+      headers = HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
+      }
+
       response = client.get("#{OUTLOOK_BASE}/manifest.xml", headers: headers)
       response.status_code.should eq(200)
       XML.parse(response.body).xml?.should be_true
