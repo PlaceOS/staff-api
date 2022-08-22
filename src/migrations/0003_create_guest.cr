@@ -1,8 +1,8 @@
 class CreateGuestMigration
   include Clear::Migration
 
-  def change(direction)
-    direction.up do
+  def change(dir)
+    dir.up do
       create_table(:guests) do |t|
         t.references to: "tenants", name: "tenant_id", on_delete: "cascade", null: false
 
@@ -24,7 +24,7 @@ class CreateGuestMigration
       execute("CREATE UNIQUE INDEX idx_lower_unique_guests_email ON guests (lower(email), tenant_id)")
     end
 
-    direction.down do
+    dir.down do
       execute("DROP TABLE guests")
     end
   end

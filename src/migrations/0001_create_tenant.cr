@@ -1,8 +1,8 @@
 class CreateTenantMigration
   include Clear::Migration
 
-  def change(direction)
-    direction.up do
+  def change(dir)
+    dir.up do
       create_table(:tenants) do |t|
         t.column :name, :text
         t.column :domain, :text, unique: true, index: true
@@ -12,7 +12,7 @@ class CreateTenantMigration
       end
     end
 
-    direction.down do
+    dir.down do
       execute("DROP TABLE tenants")
     end
   end

@@ -8,7 +8,7 @@ class Bookings < Application
 
   getter booking : Booking { find_booking }
 
-  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department)
+  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department event_id)
 
   def index
     starting = query_params["period_start"].to_i64
