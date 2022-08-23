@@ -595,6 +595,7 @@ class Events < Application
     render json: meta.ext_data
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   def show
     original_event_id = event_id = route_params["id"]
     placeos_client = get_placeos_client
