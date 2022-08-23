@@ -55,14 +55,14 @@ class Events < Application
       # NOTE:: we should be able to swtch to using the ical uids only in the future
       # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
       # However they have a new `uid` field on the beta API which we can use when it's moved to production
-      if system
-        metadata_ids << event.id.not_nil!
-        ical_uids << event.ical_uid.not_nil!
 
-        # TODO: Handle recurring O365 events with differing `ical_uid`
-        # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
-        metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
-      end
+      # Attempt to return metadata regardless of system id availability
+      metadata_ids << event.id.not_nil!
+      ical_uids << event.ical_uid.not_nil!
+
+      # TODO: Handle recurring O365 events with differing `ical_uid`
+      # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
+      metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
     end
 
     metadata_ids.uniq!
