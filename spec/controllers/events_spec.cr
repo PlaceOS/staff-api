@@ -386,7 +386,7 @@ describe Events do
 
       evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       evt_meta.recurring_master_id.should eq(master_event_id)
-      event_h["extension_data"]?.should eq({"foo" => "bar"})
+      event["extension_data"]?.should eq({"foo" => "bar"})
 
       # Show event details for room/system params that is an instance of master event created above
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
