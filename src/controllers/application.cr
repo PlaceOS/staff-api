@@ -197,6 +197,8 @@ abstract class Application < ActionController::Base
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
     if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
       EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+    elsif meta.nil? && (ev_ical_uid = event.ical_uid)
+      EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
     else
       meta
     end

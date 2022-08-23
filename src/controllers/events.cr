@@ -668,7 +668,11 @@ class Events < Application
       event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
       head(:not_found) unless event
 
-      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
+      # see if there are any relevent metadata details
+      if ev_ical_uid = event.ical_uid
+        metadata = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+      end
+      render json: StaffApi::Event.augment(event.not_nil!, user_cal, metadata: metadata)
     end
 
     head :bad_request
