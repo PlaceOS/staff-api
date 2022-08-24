@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: relax when metadata is returned on events ([#210](https://github.com/PlaceOS/staff-api/pull/210))
 - **bookings**: add event_id column for associating bookings to events ([#207](https://github.com/PlaceOS/staff-api/pull/207))
 - **bookings**: checked_in to canclled state transition ([#196](https://github.com/PlaceOS/staff-api/pull/196))
 - **events**: add dedicated metadata update methods ([#195](https://github.com/PlaceOS/staff-api/pull/195))
