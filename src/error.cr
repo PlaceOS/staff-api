@@ -14,6 +14,14 @@ class Error < Exception
   class NotImplemented < Error
   end
 
+  class ModelValidation < Error
+    getter failures
+
+    def initialize(@failures : Array(NamedTuple(field: String?, reason: String)), message : String)
+      super(message)
+    end
+  end
+
   class BookingConflict < Error
     getter bookings
 

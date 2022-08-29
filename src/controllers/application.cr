@@ -211,6 +211,23 @@ abstract class Application < ActionController::Base
     error_resp
   end
 
+  struct ValidationError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    getter failures : Array(NamedTuple(field: String?, reason: String))
+
+    def initialize(@error, @failures)
+    end
+  end
+
+  # handles model validation errors
+  @[AC::Route::Exception(Error::ModelValidation, status_code: HTTP::Status::UNPROCESSABLE_ENTITY)]
+  def model_validation(error) : ValidationError
+    ValidationError.new error.message.not_nil!, error.failures
+  end
+
   # TODO: Refactor the following methods into a module
 
   protected def get_hosts_event(event : PlaceCalendar::Event, host : String? = nil) : PlaceCalendar::Event

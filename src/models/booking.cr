@@ -3,6 +3,7 @@ require "./booking/history"
 
 class Booking
   include Clear::Model
+
   struct BookingResponse
     include JSON::Serializable
     include AutoInitialize
@@ -399,5 +400,9 @@ class StaffApi::BookingWithAttendees
   include JSON::Serializable
   include JSON::Serializable::Unmapped
 
+  property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
+end
+
+struct Booking::Assigner
   property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end

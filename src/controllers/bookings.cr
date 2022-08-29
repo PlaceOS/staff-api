@@ -1,6 +1,5 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
-  FIFTY_MB = 50 * 1024 * 1024
 
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
   private def confirm_access
@@ -12,7 +11,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_booking(id : Int64)
     @booking = Booking.query
       .by_tenant(tenant.id)
@@ -105,26 +104,31 @@ class Bookings < Application
     query.to_a.map &.as_h
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  def create
-    bytes_read, body_io = body_io(request)
+  # creates a new booking
+  @[AC::Route::POST("/", body: :booking_req)]
+  def create(
+    booking_req : Booking::Assigner,
 
-    head :bad_request if bytes_read > FIFTY_MB
-    booking = Booking.from_json(body_io)
-    body_io.rewind
-    booking_with_attendees = StaffApi::BookingWithAttendees.from_json(body_io)
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+    @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
+    limit_override : Int32? = nil
+  ) : Booking::BookingResponse
+    booking = booking_req.create(trusted: false)
 
-    head :bad_request unless booking.booking_start_column.defined? &&
-                             booking.booking_end_column.defined? &&
-                             booking.booking_type_column.defined? &&
-                             booking.asset_id_column.defined?
+    unless booking.booking_start_column.defined? &&
+           booking.booking_end_column.defined? &&
+           booking.booking_type_column.defined? &&
+          booking.asset_id_column.defined?
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_id"}], "error validating booking data")
+    end
 
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # Add utm_source
-    booking.utm_source = query_params["utm_source"]?
+    booking.utm_source = utm_source
 
     # clear history
     booking.history = [] of Booking::History
@@ -138,13 +142,11 @@ class Bookings < Application
     booking.booked_by_name = user.name
 
     # check concurrent bookings don't exceed booking limits
-    limit_override = query_params["limit_override"]?
     check_booking_limits(tenant, booking, limit_override)
-
-    render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
+    raise Error::ModelValidation.new(booking.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating booking data") if !booking.save
 
     # Grab the list of attendees
-    attending = booking_with_attendees.booking_attendees.try(&.select { |attendee|
+    attending = booking_req.booking_attendees.try(&.select { |attendee|
       attendee.visit_expected
     })
 
@@ -227,13 +229,11 @@ class Bookings < Application
       end
     end
 
-    render :created, json: booking.as_h
+    booking.as_h
   end
 
   def update
     bytes_read, body_io = body_io(request)
-
-    head :bad_request if bytes_read > FIFTY_MB
 
     changes = Booking.from_json(body_io)
     body_io.rewind
@@ -618,7 +618,7 @@ class Bookings < Application
 
   private def body_io(request)
     body_io = IO::Memory.new
-    bytes_read = IO.copy(request.body.as(IO), body_io, limit: FIFTY_MB)
+    bytes_read = IO.copy(request.body.as(IO), body_io)
     body_io.rewind
 
     return bytes_read, body_io
