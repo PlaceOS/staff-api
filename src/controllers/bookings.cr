@@ -1,6 +1,13 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
+  @[AC::Route::Filter(:before_action, except: [:index, :create])]
+  private def find_booking(id : Int64)
+    @booking = Booking.query
+      .by_tenant(tenant.id)
+      .find!({id: id.to_i64})
+  end
+
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
   private def confirm_access
     if (user = user_token) &&
@@ -9,13 +16,6 @@ class Bookings < Application
        !check_access(user.user.roles, booking.zones || [] of String).none?
       head :forbidden
     end
-  end
-
-  @[AC::Route::Filter(:before_action, except: [:index, :create])]
-  private def find_booking(id : Int64)
-    @booking = Booking.query
-      .by_tenant(tenant.id)
-      .find!({id: id.to_i64})
   end
 
   @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in])]
@@ -37,11 +37,11 @@ class Bookings < Application
     @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
     booking_type : String,
     @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
-    deleted_flag : Bool? = nil,
+    deleted_flag : Bool = false,
     @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
-    include_checked_out : Bool? = nil,
+    include_checked_out : Bool = false,
     @[AC::Param::Info(name: "checked_out", description: "when true, only returns checked out bookings, unless `include_checked_out=true`", example: "true")]
-    checked_out_flag : Bool? = nil,
+    checked_out_flag : Bool = false,
     @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
     zones : String? = nil,
     @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
@@ -105,7 +105,7 @@ class Bookings < Application
   end
 
   # creates a new booking
-  @[AC::Route::POST("/", body: :booking_req)]
+  @[AC::Route::POST("/", body: :booking_req, status_code: HTTP::Status::CREATED)]
   def create(
     booking_req : Booking::Assigner,
 

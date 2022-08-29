@@ -403,6 +403,7 @@ class StaffApi::BookingWithAttendees
   property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end
 
+# We're adding `booking_attendees` to the json deserialiser of clear
 struct Booking::Assigner
   property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end
