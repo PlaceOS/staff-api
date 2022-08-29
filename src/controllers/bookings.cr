@@ -2,32 +2,81 @@ class Bookings < Application
   base "/api/staff/v1/bookings"
   FIFTY_MB = 50 * 1024 * 1024
 
-  before_action :confirm_access, only: [:update, :update_alt, :destroy, :update_state]
+  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
+  private def confirm_access
+    if (user = user_token) &&
+       (booking && !({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user_token.user.email.downcase))) &&
+       !(user.is_admin? || user.is_support?) &&
+       !check_access(user.user.roles, booking.zones || [] of String).none?
+      head :forbidden
+    end
+  end
 
-  before_action :check_deleted, only: [:approve, :reject, :check_in]
+  @[AC::Route::Filter(:before_action, except: [:index])]
+  private def find_booking(id : Int64)
+    @booking = Booking.query
+      .by_tenant(tenant.id)
+      .find!({id: id.to_i64})
+  end
 
-  getter booking : Booking { find_booking }
+  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in])]
+  private def check_deleted
+    head :method_not_allowed if booking.deleted
+  end
+
+  getter! booking : Booking
 
   PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department event_id)
 
-  def index
-    starting = query_params["period_start"].to_i64
-    ending = query_params["period_end"].to_i64
-    booking_type = query_params["type"].presence.not_nil!
-    deleted_flag = query_params["deleted"]? == "true"
-    include_checked_out = query_params["include_checked_out"]? == "true"
-    checked_out_flag = query_params["checked_out"]? == "true"
+  # lists bookings based on the parameters provided
+  @[AC::Route::GET("/")]
+  def index(
+    @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "booking period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
+    booking_type : String,
+    @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
+    deleted_flag : Bool? = nil,
+    @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
+    include_checked_out : Bool? = nil,
+    @[AC::Param::Info(name: "checked_out", description: "when true, only returns checked out bookings, unless `include_checked_out=true`", example: "true")]
+    checked_out_flag : Bool? = nil,
+    @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
+    zones : String? = nil,
+    @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
+    user_email : String? = nil,
+    @[AC::Param::Info(name: "user", description: "filters bookings owned by this user id", example: "user-1234")]
+    user_id : String? = nil,
+    @[AC::Param::Info(description: "if `email` or `user` parameters are set, this includes bookings that user booked on behalf of others", example: "true")]
+    include_booked_by : Bool? = nil,
 
+    @[AC::Param::Info(description: "filters bookings that have been checked in or not", example: "true")]
+    checked_in : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings that were created before the unix epoch specified", example: "1661743123")]
+    created_before : Int64? = nil,
+    @[AC::Param::Info(description: "filters bookings that were created after the unix epoch specified", example: "1661743123")]
+    created_after : Int64? = nil,
+    @[AC::Param::Info(description: "filters bookings that are approved or not", example: "true")]
+    approved : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings that are rejected or not", example: "true")]
+    rejected : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings with matching extension data entries", example: %({"entry1":"value to match","entry2":1234}))]
+    extension_data : String? = nil,
+    @[AC::Param::Info(description: "filters on the booking process state, a user defined value", example: "pending-approval")]
+    state : String? = nil,
+    @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
+    department : String? = nil,
+    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String? = nil,
+  ) : Array(Booking::BookingResponse)
     query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
       starting: starting, ending: ending, booking_type: booking_type)
 
-    zones = Set.new((query_params["zones"]? || "").split(',').map(&.strip).reject(&.empty?)).to_a
+    zones = Set.new((zones || "").split(',').map(&.strip).reject(&.empty?)).to_a
     query = query.by_zones(zones) unless zones.empty?
-
-    user_email = query_params["email"]?.presence
-    user_id = query_params["user"]?.presence
-    include_booked_by = query_params["include_booked_by"]?.presence.try(&.strip) == "true"
 
     # We want to do a special current user query if no user details are provided
     if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
@@ -38,8 +87,8 @@ class Bookings < Application
     query = query.by_user_or_email(user_id, user_email, include_booked_by)
 
     {% for param in PARAMS %}
-      if query_params.has_key?({{param}})
-        query = query.is_{{param.id}}(query_params[{{param}}])
+      if !{{param.id}}.nil?
+        query = query.is_{{param.id}}({{param.id}})
       end
     {% end %}
 
@@ -53,8 +102,7 @@ class Bookings < Application
     end
 
     response.headers["x-placeos-rawsql"] = query.to_sql
-    results = query.to_a.map &.as_h
-    render json: results
+    query.to_a.map &.as_h
   end
 
   # ameba:disable Metrics/CyclomaticComplexity
@@ -519,25 +567,6 @@ class Bookings < Application
         end
       end
     end
-  end
-
-  private def find_booking
-    Booking.query
-      .by_tenant(tenant.id)
-      .find!({id: route_params["id"].to_i64})
-  end
-
-  private def confirm_access
-    if (user = user_token) &&
-       (booking && !({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user_token.user.email.downcase))) &&
-       !(user.is_admin? || user.is_support?) &&
-       !check_access(user.user.roles, booking.zones || [] of String).none?
-      head :forbidden
-    end
-  end
-
-  private def check_deleted
-    head :method_not_allowed if booking.deleted
   end
 
   private def update_booking(booking, signal = "changed")

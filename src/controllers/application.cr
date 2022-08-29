@@ -17,11 +17,11 @@ abstract class Application < ActionController::Base
   # LOGGING
   # =========================================
   Log = ::App::Log.for("controller")
-  before_action :configure_request_logging
   @request_id : String? = nil
 
   # This makes it simple to match client requests with server side logs.
   # When building microservices this ID should be propagated to upstream services.
+  @[AC::Route::Filter(:before_action)]
   protected def configure_request_logging
     @request_id = request_id = UUID.random.to_s
     Log.context.set(
@@ -35,8 +35,7 @@ abstract class Application < ActionController::Base
   # ============================
   # JWT Scope Check
   # ============================
-  before_action :check_jwt_scope
-
+  @[AC::Route::Filter(:before_action)]
   protected def check_jwt_scope
     unless user_token.public_scope? || user_token.guest_scope?
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
@@ -74,9 +73,9 @@ abstract class Application < ActionController::Base
 
   # 401 if no bearer token
   @[AC::Route::Exception(Error::Unauthorized, status_code: HTTP::Status::UNAUTHORIZED)]
-  def resource_requires_authentication(error) : String?
+  def resource_requires_authentication(error) : CommonError
     Log.debug { error.message }
-    error.message
+    render_error(error)
   end
 
   # 403 if user role invalid for a route
@@ -91,60 +90,86 @@ abstract class Application < ActionController::Base
     Log.debug { error.message }
   end
 
+  # returned when there is a booking clash or limit reached
+  struct BookingError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    getter limit : Int32? = nil
+    getter bookings : Array(Booking)? = nil
+
+    def initialize(@error, @limit = nil, @bookings = nil)
+    end
+  end
+
   # 409 if clashing booking
   @[AC::Route::Exception(Error::BookingConflict, status_code: HTTP::Status::CONFLICT)]
-  def booking_conflict(error)
+  def booking_conflict(error) : BookingError
     Log.debug { error.message }
-    {
-      error:    error.message,
-      bookings: error.bookings,
-    }
+    BookingError.new(error.message.not_nil!, bookings: error.bookings)
   end
 
   # 410 if booking limit reached
   @[AC::Route::Exception(Error::BookingLimit, status_code: HTTP::Status::GONE)]
-  def booking_limit_reached(error)
+  def booking_limit_reached(error) : BookingError
     Log.debug { error.message }
     {
       error:    error.message,
       limit:    error.limit,
       bookings: error.bookings,
     }
+    BookingError.new(error.message.not_nil!, error.limit, error.bookings)
   end
 
   # 501 if request isn't implemented for the current tenent
   @[AC::Route::Exception(Error::NotImplemented, status_code: HTTP::Status::NOT_IMPLEMENTED)]
-  def action_not_implemented(error)
+  def action_not_implemented(error) : CommonError
     Log.debug { error.message }
-    {
-      error: error.message,
-    }
+    render_error(error)
   end
 
-  # handle common errors at a global level
-  # this covers no acceptable response format and not an acceptable post format
-  @[AC::Route::Exception(ActionController::Route::NotAcceptable, status_code: HTTP::Status::NOT_ACCEPTABLE)]
+  # provides a list of acceptable content types if an unknown one is requested
+  struct ContentError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    getter accepts : Array(String)? = nil
+
+    def initialize(@error, @accepts = nil)
+    end
+  end
+
+  # covers no acceptable response format and not an acceptable post format
+  @[AC::Route::Exception(AC::Route::NotAcceptable, status_code: HTTP::Status::NOT_ACCEPTABLE)]
   @[AC::Route::Exception(AC::Route::UnsupportedMediaType, status_code: HTTP::Status::UNSUPPORTED_MEDIA_TYPE)]
-  def bad_media_type(error)
-    {
-      error:   error.message,
-      accepts: error.accepts,
-    }
+  def bad_media_type(error) : ContentError
+    ContentError.new error: error.message.not_nil!, accepts: error.accepts
   end
 
-  # this covers a required paramater missing and a bad paramater value / format
-  @[AC::Route::Exception(AC::Route::Param::MissingError, status_code: HTTP::Status::BAD_REQUEST)]
+  # Provides details on which parameter is missing or invalid
+  struct ParameterError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    getter parameter : String? = nil
+    getter restriction : String? = nil
+
+    def initialize(@error, @parameter = nil, @restriction = nil)
+    end
+  end
+
+  # handles paramater missing or a bad paramater value / format
+  @[AC::Route::Exception(AC::Route::Param::MissingError, status_code: HTTP::Status::UNPROCESSABLE_ENTITY)]
   @[AC::Route::Exception(AC::Route::Param::ValueError, status_code: HTTP::Status::BAD_REQUEST)]
-  def invalid_param(error)
-    {
-      error:       error.message,
-      parameter:   error.parameter,
-      restriction: error.restriction,
-    }
+  def invalid_param(error) : ParameterError
+    ParameterError.new error: error.message.not_nil!, parameter: error.parameter, restriction: error.restriction
   end
 
   @[AC::Route::Exception(PQ::PQError, status_code: HTTP::Status::UNPROCESSABLE_ENTITY)]
-  def postgresql_error(error)
+  def postgresql_error(error) : CommonError
     if error.message =~ App::PG_UNIQUE_CONSTRAINT_REGEX
       render_error(error)
     else
@@ -153,34 +178,37 @@ abstract class Application < ActionController::Base
   end
 
   @[AC::Route::Exception(PlaceCalendar::Exception, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
-  def handled_calendar_exception(error)
+  def handled_calendar_exception(error) : CommonError
     # Adding `http_body` during dev to inspect errors from office/google clients
-    render_error(
-      error,
-      "#{error.http_body} \n #{error.inspect_with_backtrace}"
-    )
+    render_error(error, "#{error.message}\n#{error.http_body}")
   end
 
+  # handler for a few different errors
   @[AC::Route::Exception(Clear::SQL::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
   @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]
   @[AC::Route::Exception(::Enumerable::EmptyError, status_code: HTTP::Status::NOT_FOUND)] # TODO: Should be caught where it's happening, or the code refactored.
-  def handled_generic_error(error)
+  def handled_generic_error(error) : CommonError
     render_error(error)
+  end
+
+  # generic error feedback, backtraces only provided in development
+  struct CommonError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    property backtrace : Array(String)? = nil
+
+    def initialize(@error)
+    end
   end
 
   protected def render_error(error, message = nil)
     Log.warn(exception: error) { error.message }
-    message = error.inspect_with_backtrace if message.nil?
-
-    if App.running_in_production?
-      {error: message}
-    else
-      {
-        error:     message,
-        backtrace: error.backtrace?,
-      }
-    end
+    error_resp = CommonError.new(message || error.message || error.inspect_with_backtrace)
+    error_resp.backtrace = error.backtrace? unless App.running_in_production?
+    error_resp
   end
 
   # TODO: Refactor the following methods into a module

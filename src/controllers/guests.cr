@@ -17,7 +17,7 @@ class Guests < Application
       period_end = Time.unix(query_params["period_end"].to_i64)
 
       # Grab the bookings
-      booking_lookup = {} of Int64 => Booking::AsHNamedTuple
+      booking_lookup = {} of Int64 => Booking::BookingResponse
       booking_ids = Set(Int64).new
       Booking.booked_between(tenant.id, starting.to_i64, query_params["period_end"].to_i64).each do |booking|
         booking_ids << booking.id

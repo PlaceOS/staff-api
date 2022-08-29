@@ -2,7 +2,7 @@ require "./booking/history"
 
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(
+  alias BookingResponse = NamedTuple(
     id: Int64,
     booking_type: String,
     booking_start: Int64,
@@ -29,14 +29,14 @@ class Booking
     checked_in_at: Int64 | Nil,
     checked_out_at: Int64 | Nil,
     description: String | Nil,
-    deleted: Bool?,
+    deleted: Bool,
     deleted_at: Int64?,
     booked_by_email: String,
     booked_by_name: String,
     booked_from: String?,
     extension_data: JSON::Any,
     current_state: State,
-    history: Array(History)?,
+    history: Array(History),
   )
 
   enum State
@@ -210,9 +210,11 @@ class Booking
       .where("bookings.booking_start >= :period_start AND bookings.booking_end <= :period_end", period_start: period_start, period_end: period_end)
   end
 
+  TRUTHY = {true, "true"}
+
   scope :is_approved do |value|
-    if value
-      check = value == "true"
+    unless value.nil?
+      check = value.in?(TRUTHY)
       where { approved == check }
     else
       self
@@ -220,8 +222,8 @@ class Booking
   end
 
   scope :is_rejected do |value|
-    if value
-      check = value == "true"
+    unless value.nil?
+      check = value.in?(TRUTHY)
       where { rejected == check }
     else
       self
@@ -229,8 +231,8 @@ class Booking
   end
 
   scope :is_checked_in do |value|
-    if value
-      check = value == "true"
+    unless value.nil?
+      check = value.in?(TRUTHY)
       where { checked_in == check }
     else
       self
@@ -345,7 +347,7 @@ class Booking
     end
   end
 
-  def as_h : AsHNamedTuple
+  def as_h : BookingResponse
     {
       id:              id,
       booking_type:    booking_type,
