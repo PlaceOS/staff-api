@@ -43,6 +43,9 @@ dependencies:
   secrets-env:
     github: place-labs/secrets-env
 
+  auto_initialize:
+    github: kostya/auto_initialize
+
 development_dependencies:
   ameba:
     github: veelenga/ameba

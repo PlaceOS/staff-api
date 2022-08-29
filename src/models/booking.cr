@@ -1,43 +1,51 @@
+require "auto_initialize"
 require "./booking/history"
 
 class Booking
   include Clear::Model
-  alias BookingResponse = NamedTuple(
-    id: Int64,
-    booking_type: String,
-    booking_start: Int64,
-    booking_end: Int64,
-    timezone: String | Nil,
-    asset_id: String,
-    user_id: String,
-    user_email: String,
-    user_name: String,
-    zones: Array(String) | Nil,
-    process_state: String | Nil,
-    last_changed: Int64 | Nil,
-    approved: Bool,
-    approved_at: Int64 | Nil,
-    rejected: Bool,
-    rejected_at: Int64 | Nil,
-    approver_id: String | Nil,
-    approver_name: String | Nil,
-    approver_email: String | Nil,
-    department: String | Nil,
-    event_id: String | Nil,
-    title: String | Nil,
-    checked_in: Bool,
-    checked_in_at: Int64 | Nil,
-    checked_out_at: Int64 | Nil,
-    description: String | Nil,
-    deleted: Bool,
-    deleted_at: Int64?,
-    booked_by_email: String,
-    booked_by_name: String,
-    booked_from: String?,
-    extension_data: JSON::Any,
-    current_state: State,
-    history: Array(History),
-  )
+  struct BookingResponse
+    include JSON::Serializable
+    include AutoInitialize
+  
+    getter id : Int64
+    getter booking_type : String
+    getter booking_start : Int64
+    getter booking_end : Int64
+    getter timezone : String?
+    getter asset_id : String
+    getter user_id : String
+    @[JSON::Field(format: "email")]
+    getter user_email : String
+    getter user_name : String
+    getter zones : Array(String)?
+    getter process_state : String?
+    getter last_changed : Int64?
+    getter approved : Bool
+    getter approved_at : Int64?
+    getter rejected : Bool
+    getter rejected_at : Int64?
+    getter approver_id : String?
+    getter approver_name : String?
+    @[JSON::Field(format: "email")]
+    getter approver_email : String?
+    getter department : String?
+    @[JSON::Field(description: "provided if this booking is associated with a calendar event")]
+    getter event_id : String?
+    getter title : String?
+    getter checked_in : Bool
+    getter checked_in_at : Int64?
+    getter checked_out_at : Int64?
+    getter description : String?
+    getter deleted : Bool
+    getter deleted_at : Int64?
+    @[JSON::Field(format: "email")]
+    getter booked_by_email : String
+    getter booked_by_name : String
+    getter booked_from : String?
+    getter extension_data : JSON::Any
+    getter current_state : State
+    getter history : Array(History)
+  end
 
   enum State
     Reserved   # Booking starts in the future, no one has checked-in and it hasn't been deleted
@@ -348,7 +356,7 @@ class Booking
   end
 
   def as_h : BookingResponse
-    {
+    BookingResponse.new(
       id:              id,
       booking_type:    booking_type,
       booking_start:   booking_start,
@@ -383,7 +391,7 @@ class Booking
       extension_data:  extension_data,
       current_state:   current_state,
       history:         history,
-    }
+    )
   end
 end
 

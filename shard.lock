@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 5.3.3
+    version: 5.3.4
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -24,6 +24,10 @@ shards:
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
     version: 0.2.5
+
+  auto_initialize:
+    git: https://github.com/kostya/auto_initialize.git
+    version: 0.1.0
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
@@ -103,7 +107,7 @@ shards:
 
   json-schema:
     git: https://github.com/spider-gazelle/json-schema.git
-    version: 1.2.0
+    version: 1.2.1
 
   jwt:
     git: https://github.com/crystal-community/jwt.git
