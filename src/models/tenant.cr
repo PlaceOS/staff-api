@@ -115,7 +115,7 @@ class Tenant
         domain: domain,
         platform: platform,
         delegated: delegated,
-        booking_limits: booking_limits
+        booking_limits: booking_limits || JSON::Any.from_json("{}")
       })
       if creds = credentials
         tenant.credentials = creds.to_json
