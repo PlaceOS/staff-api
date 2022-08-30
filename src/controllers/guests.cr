@@ -3,30 +3,65 @@ require "csv"
 class Guests < Application
   base "/api/staff/v1/guests"
 
-  getter guest : Guest { find_guest }
+  # =====================
+  # Filters
+  # =====================
 
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :update]
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  def index
-    query = (query_params["q"]? || "").gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
+  @[AC::Route::Filter(:before_action, except: [:index, :create])]
+  private def find_guest(
+    @[AC::Param::Info(name: "id", description: "looks up a guest using either their id or email", example: "external@org.com")]
+    guest_id : Int64 | String
+  )
+    @guest = case guest_id
+    in String
+      Guest.query.by_tenant(tenant.id).find!({email: guest_id.downcase})
+    in Int64
+      Guest.query.by_tenant(tenant.id).find!(guest_id)
+    end
+  end
 
-    if starting = query_params["period_start"]?
-      period_start = Time.unix(starting.to_i64)
-      period_end = Time.unix(query_params["period_end"].to_i64)
+  getter! guest : Guest
+
+  # =====================
+  # Routes
+  # =====================
+
+  # lists known guests (which can be queried) OR locates visitors via meeting start and end times (can be filtered by calendars, zone_ids and system_ids)
+  @[AC::Route::GET("/")]
+  def index(
+    @[AC::Param::Info(name: "q", description: "space seperated search query for guests", example: "steve von")]
+    search_query : String = "",
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64? = nil,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+  ) : Array(Guest::GuestResponse | Attendee::AttendeeResponse)
+    search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
+
+    if starting && ending
+      period_start = Time.unix(starting)
+      period_end = Time.unix(ending)
 
       # Grab the bookings
-      booking_lookup = {} of Int64 => Booking::AsHNamedTuple
+      booking_lookup = {} of Int64 => Booking::BookingResponse
       booking_ids = Set(Int64).new
-      Booking.booked_between(tenant.id, starting.to_i64, query_params["period_end"].to_i64).each do |booking|
+      Booking.booked_between(tenant.id, starting, ending).each do |booking|
         booking_ids << booking.id
         booking_lookup[booking.id] = booking.as_h
       end
 
       # We want a subset of the calendars
-      calendars = matching_calendar_ids
-      render(json: [] of Nil) if calendars.empty? && booking_ids.empty?
+      calendars = matching_calendar_ids(calendars, zone_ids, system_ids)
+      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if calendars.empty? && booking_ids.empty?
 
       # Grab events in batches
       requests = [] of HTTP::Request
@@ -81,7 +116,7 @@ class Guests < Application
       }
 
       # Don't perform the query if there are no calendar or booking entries
-      render(json: [] of Nil) if metadata_ids.empty? && booking_ids.empty?
+      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if metadata_ids.empty? && booking_ids.empty?
 
       # Return the guests visiting today
       attendees = {} of String => Attendee
@@ -109,7 +144,7 @@ class Guests < Application
         attendees[attend.guest.email] = attend
       end
 
-      render(json: [] of Nil) if attendees.empty?
+      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if attendees.empty?
 
       guests = {} of String => Guest
       Guest.query
@@ -117,7 +152,7 @@ class Guests < Application
         .where { var("guests", "email").in?(attendees.keys) }
         .each { |guest| guests[guest.email.not_nil!] = guest }
 
-      render json: attendees.map { |email, visitor|
+      attendees.compact_map do |email, visitor|
         # Prevent a database lookup
         meeting_event = nil
         if meet = (meeting_lookup[visitor.event_metadata.try &.event_id]? || meeting_lookup[visitor.event_metadata.try &.ical_uid]?)
@@ -132,16 +167,16 @@ class Guests < Application
         else
           attending_guest(visitor, guest, meeting_details: meeting_event)
         end
-      }
-    elsif query.empty?
+      end
+    elsif search_query.empty?
       # Return the first 1500 guests
-      render json: Guest.query
+      Guest.query
         .by_tenant(tenant.id)
         .order_by("name")
-        .limit(1500).map { |g| attending_guest(nil, g) }
+        .limit(1500).map { |g| attending_guest(nil, g).as(Guest::GuestResponse | Attendee::AttendeeResponse) }
     else
       # Return guests based on the filter query
-      csv = CSV.new(query, strip: true, separator: ' ')
+      csv = CSV.new(search_query, strip: true, separator: ' ')
       csv.next
       parts = csv.row.to_a
 
@@ -151,27 +186,30 @@ class Guests < Application
         sql_query = sql_query.where("searchable LIKE :query", query: "%#{part}%")
       end
 
-      render json: sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g) }
+      sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g).as(Guest::GuestResponse | Attendee::AttendeeResponse) }
     end
   end
 
-  def show
+  @[AC::Route::GET("/:id")]
+  def show : Guest::GuestResponse | Attendee::AttendeeResponse
     if user_token.guest_scope? && (guest.email != user_token.id)
-      head :forbidden
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit #{guest.email}")
     end
 
     # find out if they are attending today
     attendee = guest.attending_today(tenant.id, get_timezone)
-    result = !attendee.nil? && attendee.for_booking? ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest)
-    render json: result
+    !attendee.nil? && attendee.for_booking? ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest)
   end
 
-  def update
+  # patches a guest record with the changes provided
+  @[AC::Route::PUT("/:id", body: :guest_req)]
+  @[AC::Route::PATCH("/:id", body: :guest_req)]
+  def update(guest_req : ::Guest::Assigner) : Guest::GuestResponse | Attendee::AttendeeResponse
+    changes = guest_req.create(trusted: false)
     if user_token.guest_scope? && (guest.email != user_token.id)
-      head :forbidden
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit #{guest.email}")
     end
 
-    changes = Guest.from_json(request.body.as(IO))
     {% for key in %i(email name preferred_name phone organisation notes photo dangerous banned) %}
       begin
         guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
@@ -189,34 +227,40 @@ class Guests < Application
       guest.extension_data = JSON::Any.new(data)
     end
 
-    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
+    raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !guest.save
 
     attendee = guest.attending_today(tenant.id, get_timezone)
-    render json: attending_guest(attendee, guest)
+    attending_guest(attendee, guest)
   end
 
-  put "/:id", :update_alt { update }
-
-  def create
-    guest = Guest.from_json(request.body.as(IO))
+  # lists the configured tenants
+  @[AC::Route::POST("/", body: :guest_req, status_code: HTTP::Status::CREATED)]
+  def create(guest_req : Guest::Assigner) : Guest::GuestResponse | Attendee::AttendeeResponse
+    guest = guest_req.create(trusted: false)
     guest.tenant_id = tenant.id
 
-    render :unprocessable_entity, json: guest.errors.map(&.to_s) if !guest.save
+    raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !guest.save
 
     attendee = guest.attending_today(tenant.id, get_timezone)
-    render :created, json: attending_guest(attendee, guest)
+    attending_guest(attendee, guest)
   end
 
-  # TODO: Should we be allowing to delete guests that are associated with attendees?
-  def destroy
+  # removes the guest record from the database
+  @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
+  def destroy : Nil
+    # TODO: Should we be allowing to delete guests that are associated with attendees?
     guest.delete
-    head :accepted
   end
 
-  get("/:id/meetings", :meetings) do
-    future_only = query_params["include_past"]? != "true"
-    limit = (query_params["limit"]? || "10").to_i
-
+  # returns the meetings that the provided guest is attending today (approximation based on internal records)
+  @[AC::Route::GET("/:id/meetings")]
+  def meetings(
+    @[AC::Param::Info(description: "shoule we include past events they have visited", example: "true")]
+    include_past : Bool = false,
+    @[AC::Param::Info(description: "how many results to return", example: "10")]
+    limit : Int32 = 10,
+  ) : Array(PlaceCalendar::Event)
+    future_only = !include_past
     placeos_client = get_placeos_client.systems
 
     events = Promise.all(guest.events(future_only, limit).map { |metadata|
@@ -242,30 +286,21 @@ class Guests < Application
       }
     }).get.compact
 
-    render json: events
+    events
   end
 
-  get("/:id/bookings", :bookings) do
+  @[AC::Route::GET("/:id/bookings")]
+  def bookings(
+    @[AC::Param::Info(description: "shoule we include past bookings", example: "true")]
+    include_past : Bool = false,
+    @[AC::Param::Info(description: "how many results to return", example: "10")]
+    limit : Int32 = 10,
+  ) : Array(Booking::BookingResponse)
     if user_token.guest_scope? && (guest.email != user_token.id)
-      head :forbidden
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view bookings for #{guest.email}")
     end
 
-    future_only = query_params["include_past"]? != "true"
-    limit = (query_params["limit"]? || "10").to_i
-
-    render json: guest.bookings(future_only, limit).map { |booking| booking.as_h }
-  end
-
-  # ============================================
-  #              Helper Methods
-  # ============================================
-
-  private def find_guest
-    guest_id = route_params["id"]
-    if guest_id.includes?('@')
-      Guest.query.by_tenant(tenant.id).find!({email: guest_id.downcase})
-    else
-      Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64)
-    end
+    future_only = !include_past
+    guest.bookings(future_only, limit).map { |booking| booking.as_h }
   end
 end

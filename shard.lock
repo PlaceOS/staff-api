@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 5.2.0
+    version: 5.3.9
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -19,11 +19,15 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.0.1
+    version: 1.1.0
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
     version: 0.2.5
+
+  auto_initialize:
+    git: https://github.com/kostya/auto_initialize.git
+    version: 0.1.0
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
@@ -100,6 +104,10 @@ shards:
   json-merge-patch:
     git: https://github.com/caspiano/json-merge-patch.git
     version: 0.1.1
+
+  json-schema:
+    git: https://github.com/spider-gazelle/json-schema.git
+    version: 1.2.1
 
   jwt:
     git: https://github.com/crystal-community/jwt.git

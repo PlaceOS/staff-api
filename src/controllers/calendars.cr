@@ -1,25 +1,67 @@
 class Calendars < Application
   base "/api/staff/v1/calendars"
 
+  @[AC::Route::Filter(:before_action, except: [:index])]
+  private def find_matching_calendars(
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of room features", example: "whiteboard,vidconf")]
+    features : String? = nil,
+    @[AC::Param::Info("the minimum capacity required for an event space", example: "8")]
+    capacity : Int32? = nil,
+    @[AC::Param::Info(description: "only search for bookable or non-bookable rooms", example: "true")]
+    bookable : Bool? = nil,
+  )
+    @matching_calendars = matching_calendar_ids(
+      calendars, zone_ids, system_ids, features, capacity, bookable
+    )
+  end
+
+  getter! matching_calendars : Hash(String, PlaceOS::Client::API::Models::System?)
+
+  struct Availability
+    include JSON::Serializable
+    include AutoInitialize
+
+    getter id : String
+    getter system : PlaceOS::Client::API::Models::System? = nil
+    getter availability : Array(PlaceCalendar::Availability)? = nil
+  end
+
+  # lists the users default calendars
+  @[AC::Route::GET("/")]
   def index
     render json: client.list_calendars(user.email)
   end
 
-  get "/availability", :availability do
+  # checks for availability of matched calendars, returns a list of calendars with availability
+  @[AC::Route::GET("/availability")]
+  def availability(
+    @[AC::Param::Info(description: "search period start as a unix epoch", example: "1661725146")]
+    period_start : Int64,
+    @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
+    period_end : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+  ) : Array(Availability)
     # Grab the system emails
-    candidates = matching_calendar_ids.transform_keys &.downcase
-    calendars = candidates.keys
+    candidates = matching_calendars.transform_keys &.downcase
+    candidate_calendars = candidates.keys
 
     # Append calendars you might not have direct access too
     # As typically a staff member can see anothers availability
-    all_calendars = Set.new((params["calendars"]? || "").split(',').map(&.strip.downcase).reject(&.empty?))
-    all_calendars.concat(calendars)
+    all_calendars = Set.new((calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
+    all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
-    render(json: [] of String) if calendars.empty?
+    return [] of Availability if calendars.empty?
 
     # perform availability request
-    period_start = Time.unix(query_params["period_start"].to_i64)
-    period_end = Time.unix(query_params["period_end"].to_i64)
+    period_start = Time.unix(period_start)
+    period_end = Time.unix(period_end)
     busy = client.get_availability(user.email, calendars, period_start, period_end)
 
     # Remove any rooms that have overlapping bookings
@@ -32,57 +74,50 @@ class Calendars < Application
     end
 
     # Return the results
-    results = calendars.map { |email|
+    calendars.map { |email|
       if system = candidates[email]?
-        {
-          id:     email,
-          system: system,
-        }
+        Availability.new(id: email, system: system)
       else
-        {
-          id: email,
-        }
+        Availability.new(id: email)
       end
     }
-
-    render json: results
   end
 
-  get "/free_busy", :free_busy do
+  @[AC::Route::GET("/free_busy")]
+  def free_busy(
+    @[AC::Param::Info(description: "search period start as a unix epoch", example: "1661725146")]
+    period_start : Int64,
+    @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
+    period_end : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+  ) : Array(Availability)
     # Grab the system emails
-    candidates = matching_calendar_ids.transform_keys &.downcase
-    calendars = candidates.keys
+    candidates = matching_calendars.transform_keys &.downcase
+    candidate_calendars = candidates.keys
 
     # Append calendars you might not have direct access too
     # As typically a staff member can see anothers availability
-    all_calendars = Set.new((params["calendars"]? || "").split(',').map(&.strip.downcase).reject(&.empty?))
-    all_calendars.concat(calendars)
+    all_calendars = Set.new((calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
+    all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
-    render(json: [] of String) if calendars.empty?
+    return [] of Availability if calendars.empty?
 
     # perform availability request
-    period_start = Time.unix(query_params["period_start"].to_i64)
-    period_end = Time.unix(query_params["period_end"].to_i64)
+    period_start = Time.unix(period_start)
+    period_end = Time.unix(period_end)
     duration = period_end - period_start
+    raise AC::Route::Param::ValueError.new("free/busy availability intervals must be greater than 5 minutes", "period_end") if duration.total_minutes < 5
 
-    render :bad_request, json: "free/busy availability intervals must be greater than 5 minutes" if duration.total_minutes < 5
     availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
     busy = client.get_availability(user.email, calendars, period_start, period_end, view_interval: availability_view_interval)
 
-    results = busy.map { |details|
+    busy.map { |details|
       if system = candidates[details.calendar]?
-        {
-          id:           details.calendar,
-          system:       system,
-          availability: details.availability,
-        }
+        Availability.new(id: details.calendar, system: system, availability: details.availability)
       else
-        {
-          id:           details.calendar,
-          availability: details.availability,
-        }
+        Availability.new(id: details.calendar, availability: details.availability)
       end
     }
-    render json: results
   end
 end

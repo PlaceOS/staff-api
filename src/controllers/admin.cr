@@ -1,6 +1,7 @@
 class Admin < Application
   base "/api/staff/v1/admin"
 
+  # Don't upgrade these routes as we don't want them to show up in docs
   get "/create_token", :create_token do
     token = UserJWT.new(
       "Staff-API App",

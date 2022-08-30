@@ -17,11 +17,6 @@ dependencies:
   placeos-models:
     github: placeos/models
 
-  # TODO:: remove in future
-  http-params-serializable:
-    github: place-labs/http-params-serializable
-    branch: chore/0.36.0
-
   placeos:
     github: placeos/crystal-client
 
@@ -42,6 +37,9 @@ dependencies:
 
   secrets-env:
     github: place-labs/secrets-env
+
+  auto_initialize:
+    github: kostya/auto_initialize
 
 development_dependencies:
   ameba:

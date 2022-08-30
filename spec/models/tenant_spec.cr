@@ -73,7 +73,7 @@ describe Tenant do
     }
 
     res = client.post("/api/staff/v1/tenants", headers: headers, body: body)
-    res.status_code.should eq(200)
+    res.status_code.should eq(201)
   end
 
   it "should accept booking limits" do
