@@ -110,13 +110,10 @@ class Tenant
     end
 
     def to_tenant
-      tenant = Tenant.new({
-        name: name,
-        domain: domain,
-        platform: platform,
-        delegated: delegated,
-        booking_limits: booking_limits || JSON::Any.from_json("{}")
-      })
+      tenant = Tenant.new
+      {% for key in [:name, :domain, :platform, :delegated, :booking_limits] %}
+        tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
+      {% end %}
       if creds = credentials
         tenant.credentials = creds.to_json
       end

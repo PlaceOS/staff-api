@@ -1,4 +1,3 @@
-require "auto_initialize"
 require "./booking/history"
 
 class Booking
@@ -394,13 +393,6 @@ class Booking
       history:         history,
     )
   end
-end
-
-class StaffApi::BookingWithAttendees
-  include JSON::Serializable
-  include JSON::Serializable::Unmapped
-
-  property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end
 
 # We're adding `booking_attendees` to the json deserialiser of clear
