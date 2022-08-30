@@ -81,16 +81,16 @@ class Guest
 
   def base_to_h
     GuestResponse.new(
-      id:             id,
-      email:          email,
-      name:           name,
+      id: id,
+      email: email,
+      name: name,
       preferred_name: preferred_name,
-      phone:          phone,
-      organisation:   organisation,
-      notes:          notes,
-      photo:          photo,
-      banned:         banned,
-      dangerous:      dangerous,
+      phone: phone,
+      organisation: organisation,
+      notes: notes,
+      photo: photo,
+      banned: banned,
+      dangerous: dangerous,
       extension_data: extension_data,
     )
   end

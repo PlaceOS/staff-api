@@ -40,9 +40,9 @@ module Utils::PlaceOSHelpers
     zone_ids : String? = nil,
     system_ids : String? = nil,
     features : String? = nil,
-    capacity : Int32? =nil,
+    capacity : Int32? = nil,
     bookable : Bool? = nil,
-    allow_default = false,
+    allow_default = false
   )
     calendars = Set.new((calendars || "").split(',').compact_map(&.strip.downcase.presence))
 

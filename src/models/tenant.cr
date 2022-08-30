@@ -131,11 +131,11 @@ class Tenant
     is_delegated = delegated_column.defined? ? self.delegated : false
     limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
     Responder.new(
-      id:             self.id,
-      name:           self.name,
-      domain:         self.domain,
-      platform:       self.platform,
-      delegated:      is_delegated,
+      id: self.id,
+      name: self.name,
+      domain: self.domain,
+      platform: self.platform,
+      delegated: is_delegated,
       booking_limits: limits,
     )
   end

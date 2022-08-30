@@ -41,10 +41,10 @@ class Attendee
 
   def to_h(is_parent_metadata, meeting_details)
     AttendeeResponse.new(
-      email:          email,
-      checked_in:     is_parent_metadata ? false : checked_in,
+      email: email,
+      checked_in: is_parent_metadata ? false : checked_in,
       visit_expected: visit_expected,
-      event:          meeting_details
+      event: meeting_details
     )
   end
 
