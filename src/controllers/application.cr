@@ -90,38 +90,6 @@ abstract class Application < ActionController::Base
     Log.debug { error.message }
   end
 
-  # returned when there is a booking clash or limit reached
-  struct BookingError
-    include JSON::Serializable
-    include YAML::Serializable
-
-    getter error : String
-    getter limit : Int32? = nil
-    getter bookings : Array(Booking)? = nil
-
-    def initialize(@error, @limit = nil, @bookings = nil)
-    end
-  end
-
-  # 409 if clashing booking
-  @[AC::Route::Exception(Error::BookingConflict, status_code: HTTP::Status::CONFLICT)]
-  def booking_conflict(error) : BookingError
-    Log.debug { error.message }
-    BookingError.new(error.message.not_nil!, bookings: error.bookings)
-  end
-
-  # 410 if booking limit reached
-  @[AC::Route::Exception(Error::BookingLimit, status_code: HTTP::Status::GONE)]
-  def booking_limit_reached(error) : BookingError
-    Log.debug { error.message }
-    {
-      error:    error.message,
-      limit:    error.limit,
-      bookings: error.bookings,
-    }
-    BookingError.new(error.message.not_nil!, error.limit, error.bookings)
-  end
-
   # 501 if request isn't implemented for the current tenent
   @[AC::Route::Exception(Error::NotImplemented, status_code: HTTP::Status::NOT_IMPLEMENTED)]
   def action_not_implemented(error) : CommonError
@@ -184,6 +152,7 @@ abstract class Application < ActionController::Base
   end
 
   # handler for a few different errors
+  @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
   @[AC::Route::Exception(Clear::SQL::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
   @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]

@@ -1,3 +1,5 @@
+require "auto_initialize"
+
 class Guest
   include Clear::Model
 
@@ -39,36 +41,57 @@ class Guest
     set_booleans
   end
 
-  def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
-    result = {
-      checked_in:     is_parent_metadata ? false : visitor.try(&.checked_in) || false,
-      visit_expected: visitor.try(&.visit_expected) || false,
-    }
-    result = result.merge(base_to_h)
+  struct GuestResponse
+    include JSON::Serializable
+    include AutoInitialize
+  
+    getter id : Int64
+    @[JSON::Field(format: "email")]
+    getter email : String
+    getter name : String?
+    getter preferred_name : String?
+    getter phone : String?
+    getter organisation : String?
+    getter notes : String?
+    getter photo : String?
+    getter banned : Bool
+    getter dangerous : Bool
+    getter extension_data : JSON::Any
+    property checked_in : Bool? = nil
+    property visit_expected : Bool? = nil
+    property booking : Booking::BookingResponse? = nil
 
+    # TODO:: fix this one
+    property event : JSON::Any? = nil
+  end
+
+  def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
+    result = base_to_h
+    result.checked_in = is_parent_metadata ? false : visitor.try(&.checked_in) || false
+    result.visit_expected = visitor.try(&.visit_expected) || false
+
+    # TODO:: don't do this parsing
     if meeting_details
-      result = result.merge({event: meeting_details})
+      result.event = JSON.parse(meeting_details.to_json)
     end
 
     result
   end
 
   def for_booking_to_h(visitor : Attendee, booking_details)
-    result = {
-      checked_in:     visitor.checked_in,
-      visit_expected: visitor.visit_expected,
-    }
-    result = result.merge(base_to_h)
+    result = base_to_h
+    result.checked_in = visitor.checked_in || false
+    result.visit_expected = visitor.visit_expected || false
 
     if booking_details
-      result = result.merge({booking: booking_details})
+      result.booking = booking_details
     end
 
     result
   end
 
   def base_to_h
-    {
+    GuestResponse.new(
       id:             id,
       email:          email,
       name:           name,
@@ -80,7 +103,7 @@ class Guest
       banned:         banned,
       dangerous:      dangerous,
       extension_data: extension_data,
-    }
+    )
   end
 
   def attending_today(tenant_id, timezone)

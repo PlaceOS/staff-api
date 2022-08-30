@@ -1,6 +1,10 @@
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
+  # =====================
+  # Filters
+  # =====================
+
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_booking(id : Int64)
     @booking = Booking.query
@@ -24,6 +28,41 @@ class Bookings < Application
   end
 
   getter! booking : Booking
+
+  # =====================
+  # Exception Handlers
+  # =====================
+
+  # returned when there is a booking clash or limit reached
+  struct BookingError
+    include JSON::Serializable
+    include YAML::Serializable
+
+    getter error : String
+    getter limit : Int32? = nil
+    getter bookings : Array(Booking)? = nil
+
+    def initialize(@error, @limit = nil, @bookings = nil)
+    end
+  end
+
+  # 409 if clashing booking
+  @[AC::Route::Exception(Error::BookingConflict, status_code: HTTP::Status::CONFLICT)]
+  def booking_conflict(error) : BookingError
+    Log.debug { error.message }
+    BookingError.new(error.message.not_nil!, bookings: error.bookings)
+  end
+
+  # 410 if booking limit reached
+  @[AC::Route::Exception(Error::BookingLimit, status_code: HTTP::Status::GONE)]
+  def booking_limit_reached(error) : BookingError
+    Log.debug { error.message }
+    BookingError.new(error.message.not_nil!, error.limit, error.bookings)
+  end
+
+  # =====================
+  # Routes
+  # =====================
 
   PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department event_id)
 
@@ -229,16 +268,19 @@ class Bookings < Application
       end
     end
 
+    response.headers["Location"] = "/api/staff/v1/bookings/#{booking.id}"
     booking.as_h
   end
 
-  def update
-    bytes_read, body_io = body_io(request)
+  # patches an existing booking with the changes provided
+  @[AC::Route::PATCH("/:id", body: :booking_req)]
+  def update(
+    booking_req : Booking::Assigner,
 
-    changes = Booking.from_json(body_io)
-    body_io.rewind
-    booking_with_attendees = StaffApi::BookingWithAttendees.from_json(body_io)
-
+    @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
+    limit_override : Int32? = nil
+  ) : Booking::BookingResponse
+    changes = booking_req.create(trusted: false)
     existing_booking = booking
 
     original_start = existing_booking.booking_start
@@ -254,12 +296,12 @@ class Bookings < Application
 
     extension_data = changes.extension_data if changes.extension_data_column.defined?
     if extension_data
-      booking_ext_data = booking.extension_data
+      booking_ext_data = existing_booking.extension_data
       data = booking_ext_data ? booking_ext_data.as_h : Hash(String, JSON::Any).new
       extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
       # Needed for clear to assign the updated json correctly
-      booking.extension_data_column.clear
-      booking.extension_data = JSON::Any.new(data)
+      existing_booking.extension_data_column.clear
+      existing_booking.extension_data = JSON::Any.new(data)
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
@@ -285,14 +327,13 @@ class Bookings < Application
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # check concurrent bookings don't exceed booking limits
-    limit_override = query_params["limit_override"]?
     check_booking_limits(tenant, existing_booking, limit_override) if reset_state
 
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
       # Check if attendees need updating
-      update_attendees = !booking_with_attendees.booking_attendees.nil?
-      attendees = booking_with_attendees.booking_attendees.try(&.map { |a| a.email }) || existing_attendees
+      update_attendees = !booking_req.booking_attendees.nil?
+      attendees = booking_req.booking_attendees.try(&.map { |a| a.email }) || existing_attendees
       attendees.uniq!
 
       if update_attendees
@@ -311,7 +352,7 @@ class Bookings < Application
         end
 
         # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
-        attending = booking_with_attendees.booking_attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
+        attending = booking_req.booking_attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
         if attending
           # Create guests
           attending.each do |attendee|
@@ -379,15 +420,22 @@ class Bookings < Application
     update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
   end
 
-  def show
-    render json: booking.as_h
+  # returns the booking requested
+  @[AC::Route::GET("/:id")]
+  def show : Booking::BookingResponse
+    booking.as_h
   end
 
-  def destroy
+  # marks the provided booking as deleted
+  @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
+  def destroy(
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+  ) : Nil
     booking.set({
       deleted:    true,
       deleted_at: Time.local.to_unix,
-      utm_source: query_params["utm_source"]?,
+      utm_source: utm_source,
     }).save!
 
     spawn do
@@ -419,89 +467,103 @@ class Bookings < Application
         Log.error(exception: error) { "while signaling booking cancelled" }
       end
     end
-
-    head :accepted
   end
 
-  # we don't enforce permissions on these as peoples managers can perform these actions
-  post "/:id/approve", :approve do
+  # approves a booking (if booking approval is required in an organisation)
+  @[AC::Route::POST("/:id/approve")]
+  def approve(
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+  ) : Booking::BookingResponse
     set_approver(booking, true)
     booking.approved_at = Time.utc.to_unix
 
     clashing_bookings = check_clashing(booking)
-    render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
+    booking.utm_source = utm_source
     update_booking(booking, "approved")
   end
 
-  post "/:id/reject", :reject do
+  # rejects a booking
+  @[AC::Route::POST("/:id/reject")]
+  def reject(
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+  ) : Booking::BookingResponse
     set_approver(booking, false)
     booking.rejected_at = Time.utc.to_unix
     booking.approver_id = nil
     booking.approver_email = nil
     booking.approver_name = nil
-    booking.utm_source = params["utm_source"]?
+    booking.utm_source = utm_source
     update_booking(booking, "rejected")
   end
 
-  post "/:id/check_in", :check_in do
-    booking.checked_in = params["state"]? != "false"
+  # indicates that a booking has commenced
+  @[AC::Route::POST("/:id/check_in")]
+  def check_in(
+    @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
+    state : Bool = true,
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+  ) : Booking::BookingResponse
+    booking.checked_in = state
 
     if booking.checked_in
       # check concurrent bookings don't exceed booking limits
-      render :method_not_allowed, json: "a checked out booking cannot be checked back in" if booking.current_state.checked_out?
+      raise Error::NotAllowed.new("a checked out booking cannot be checked back in") if booking.current_state.checked_out?
 
       time_now = Time.utc.to_unix
 
       # Can't checkin after the booking end time
-      render :method_not_allowed, json: "The booking has ended" if booking.booking_end <= time_now
+      raise Error::NotAllowed.new("The booking has ended") if booking.booking_end <= time_now
 
       # Check if we can check into a booking early (on the same day)
-      render :method_not_allowed, json: "Can only check in an hour before the booking start" if (booking.booking_start - time_now) > 3600
+      raise Error::NotAllowed.new("Can only check in an hour before the booking start") if (booking.booking_start - time_now) > 3600
 
       # Check if there are any booking between now and booking start time
       if booking.booking_start > time_now
         clashing_bookings = check_in_clashing(time_now, booking)
-        render :conflict, json: clashing_bookings.first if clashing_bookings.size > 0
+        raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
       end
 
       booking.checked_in_at = Time.utc.to_unix
     else
       # don't allow double checkouts, but might as well return a success response
-      render json: booking.as_h if booking.current_state.checked_out?
+      return booking.as_h if booking.current_state.checked_out?
       booking.checked_out_at = Time.utc.to_unix
     end
 
-    booking.utm_source = params["utm_source"]?
+    booking.utm_source = utm_source
     update_booking(booking, "checked_in")
   end
 
-  post "/:id/update_state", :update_state do
-    booking.process_state = params["state"]?
+  # the current state of a booking, if a custom state machine is being used
+  @[AC::Route::POST("/:id/update_state")]
+  def update_state(
+    @[AC::Param::Info(description: "the user defined process state of the booking", example: "pending_approval")]
+    state : String,
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil,
+  ) : Booking::BookingResponse
+    booking.process_state = state
+    booking.utm_source = utm_source
     update_booking(booking, "process_state")
   end
 
-  #
-  # Booking guests list
-  #
-  get("/:id/guests", :guest_list) do
-    head(:not_found) unless booking
-
-    # Find anyone who is attending
-    visitors = booking.attendees.to_a
-    render(json: [] of Nil) if visitors.empty?
-
-    # Merge the visitor data with guest profiles
-    visitors = visitors.map do |visitor|
+  # returns a list of guests associated with a booking
+  @[AC::Route::GET("/:id/guests")]
+  def guest_list : Array(Guest::GuestResponse)
+    booking.attendees.to_a.map do |visitor|
       visitor.guest.for_booking_to_h(visitor, booking.as_h)
     end
-
-    render json: visitors
   end
 
   # ============================================
   #              Helper Methods
   # ============================================
+
   private def check_clashing(new_booking)
     starting = new_booking.booking_start
     ending = new_booking.booking_end
@@ -570,7 +632,7 @@ class Bookings < Application
   end
 
   private def update_booking(booking, signal = "changed")
-    render :unprocessable_entity, json: booking.errors.map(&.to_s) if !booking.save
+    raise Error::ModelValidation.new(booking.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating booking data") if !booking.save
 
     spawn do
       begin
@@ -602,7 +664,7 @@ class Bookings < Application
       end
     end
 
-    render json: booking.as_h
+    booking.as_h
   end
 
   private def set_approver(booking, approved : Bool)
@@ -614,13 +676,5 @@ class Bookings < Application
       approved:       approved,
       rejected:       !approved,
     })
-  end
-
-  private def body_io(request)
-    body_io = IO::Memory.new
-    bytes_read = IO.copy(request.body.as(IO), body_io)
-    body_io.rewind
-
-    return bytes_read, body_io
   end
 end

@@ -14,6 +14,9 @@ class Error < Exception
   class NotImplemented < Error
   end
 
+  class NotAllowed < Error
+  end
+
   class ModelValidation < Error
     getter failures
 
