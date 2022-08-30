@@ -28,18 +28,24 @@ class Attendee
     guest.email
   end
 
+  struct AttendeeResponse
+    include JSON::Serializable
+    include AutoInitialize
+  
+    @[JSON::Field(format: "email")]
+    getter email : String
+    property checked_in : Bool?
+    property visit_expected : Bool?
+    property event : PlaceCalendar::Event? = nil
+  end
+
   def to_h(is_parent_metadata, meeting_details)
-    result = {
+    AttendeeResponse.new(
       email:          email,
       checked_in:     is_parent_metadata ? false : checked_in,
       visit_expected: visit_expected,
-    }
-
-    if meeting_details
-      result = result.merge({event: meeting_details})
-    end
-
-    result
+      event:          meeting_details
+    )
   end
 
   def for_booking?

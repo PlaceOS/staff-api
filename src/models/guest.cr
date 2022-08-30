@@ -60,33 +60,22 @@ class Guest
     property checked_in : Bool? = nil
     property visit_expected : Bool? = nil
     property booking : Booking::BookingResponse? = nil
-
-    # TODO:: fix this one
-    property event : JSON::Any? = nil
+    property event : PlaceCalendar::Event? = nil
   end
 
-  def to_h(visitor : Attendee?, is_parent_metadata, meeting_details)
+  def to_h(visitor : Attendee?, is_parent_metadata, meeting_details : PlaceCalendar::Event?)
     result = base_to_h
     result.checked_in = is_parent_metadata ? false : visitor.try(&.checked_in) || false
     result.visit_expected = visitor.try(&.visit_expected) || false
-
-    # TODO:: don't do this parsing
-    if meeting_details
-      result.event = JSON.parse(meeting_details.to_json)
-    end
-
+    result.event = meeting_details if meeting_details
     result
   end
 
-  def for_booking_to_h(visitor : Attendee, booking_details)
+  def for_booking_to_h(visitor : Attendee, booking_details : Booking::BookingResponse?)
     result = base_to_h
     result.checked_in = visitor.checked_in || false
     result.visit_expected = visitor.visit_expected || false
-
-    if booking_details
-      result.booking = booking_details
-    end
-
+    result.booking = booking_details if booking_details
     result
   end
 

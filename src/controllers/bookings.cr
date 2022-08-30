@@ -273,6 +273,7 @@ class Bookings < Application
   end
 
   # patches an existing booking with the changes provided
+  @[AC::Route::PUT("/:id", body: :booking_req)]
   @[AC::Route::PATCH("/:id", body: :booking_req)]
   def update(
     booking_req : Booking::Assigner,

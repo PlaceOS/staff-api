@@ -95,6 +95,35 @@ class Tenant
   before :save, :set_delegated
   before :save, :encrypt!
 
+  struct Responder
+    include JSON::Serializable
+
+    getter id : Int64?
+    getter name : String?
+    getter domain : String?
+    getter platform : String?
+    getter delegated : Bool?
+    getter credentials : JSON::Any? = nil
+    getter booking_limits : JSON::Any? = nil
+
+    def initialize(@id, @name, @domain, @platform, @delegated, @credentials = nil, @booking_limits = nil)
+    end
+
+    def to_tenant
+      tenant = Tenant.new({
+        name: name,
+        domain: domain,
+        platform: platform,
+        delegated: delegated,
+        booking_limits: booking_limits
+      })
+      if creds = credentials
+        tenant.credentials = creds.to_json
+      end
+      tenant
+    end
+  end
+
   def validate
     validate_columns
     validate_booking_limits
@@ -104,14 +133,14 @@ class Tenant
   def as_json
     is_delegated = delegated_column.defined? ? self.delegated : false
     limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
-    {
+    Responder.new(
       id:             self.id,
       name:           self.name,
       domain:         self.domain,
       platform:       self.platform,
       delegated:      is_delegated,
       booking_limits: limits,
-    }
+    )
   end
 
   def valid_json?(value : String)

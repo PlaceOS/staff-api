@@ -37,7 +37,7 @@ abstract class Application < ActionController::Base
   # ============================
   @[AC::Route::Filter(:before_action)]
   protected def check_jwt_scope
-    unless user_token.public_scope? || user_token.guest_scope?
+    unless user_token.public_scope?
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
       raise Error::Unauthorized.new "valid scope required for access, provided #{user_token.scope}"
     end
@@ -57,7 +57,12 @@ abstract class Application < ActionController::Base
     end
   end
 
-  protected def attending_guest(visitor : Attendee?, guest : Guest?, is_parent_metadata = false, meeting_details = nil)
+  protected def attending_guest(
+    visitor : Attendee?,
+    guest : Guest?,
+    is_parent_metadata = false,
+    meeting_details = nil
+  ) : Guest::GuestResponse | Attendee::AttendeeResponse
     if guest
       guest.to_h(visitor, is_parent_metadata, meeting_details)
     elsif visitor
@@ -85,9 +90,11 @@ abstract class Application < ActionController::Base
   end
 
   # 404 if resource not present
+  @[AC::Route::Exception(Error::NotFound, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(Clear::SQL::RecordNotFoundError, status_code: HTTP::Status::NOT_FOUND)]
-  def sql_record_not_found(error) : Nil
+  def sql_record_not_found(error) : CommonError
     Log.debug { error.message }
+    render_error(error)
   end
 
   # 501 if request isn't implemented for the current tenent

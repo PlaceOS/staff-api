@@ -35,20 +35,17 @@ module Utils::PlaceOSHelpers
     client.list_calendars(user.email, only_writable: true)
   end
 
-  class CalendarSelection < Params
-    attribute calendars : String?
-    attribute zone_ids : String?
-    attribute system_ids : String?
-    attribute features : String?
-    attribute capacity : Int32?
-    attribute bookable : Bool?
-  end
-
   # ameba:disable Metrics/CyclomaticComplexity
-  def matching_calendar_ids(allow_default = false)
-    args = CalendarSelection.new(params)
-
-    calendars = Set.new((args.calendars || "").split(',').compact_map(&.strip.downcase.presence))
+  def matching_calendar_ids(
+    calendars : String? = nil,
+    zone_ids : String? = nil,
+    system_ids : String? = nil,
+    features : String? = nil,
+    capacity : Int32? =nil,
+    bookable : Bool? = nil,
+    allow_default = false,
+  )
+    calendars = Set.new((calendars || "").split(',').compact_map(&.strip.downcase.presence))
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
@@ -60,7 +57,7 @@ module Utils::PlaceOSHelpers
                        end
 
     # Check if we want to grab systems from zones
-    zones = (args.zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    zones = (zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if zones.size > 0
       systems = get_placeos_client.systems
 
@@ -69,9 +66,9 @@ module Utils::PlaceOSHelpers
         Promise.defer {
           systems.search(
             zone_id: zone_id,
-            features: args.features,
-            capacity: args.capacity,
-            bookable: args.bookable
+            features: features,
+            capacity: capacity,
+            bookable: bookable
           )
         }
       }).get.each do |results|
@@ -84,7 +81,7 @@ module Utils::PlaceOSHelpers
     end
 
     # Check if we want to grab individual systems
-    system_ids = (args.system_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    system_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if system_ids.size > 0
       systems = get_placeos_client.systems
 

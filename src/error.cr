@@ -17,6 +17,9 @@ class Error < Exception
   class NotAllowed < Error
   end
 
+  class NotFound < Error
+  end
+
   class ModelValidation < Error
     getter failures
 
