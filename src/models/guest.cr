@@ -44,7 +44,7 @@ class Guest
   struct GuestResponse
     include JSON::Serializable
     include AutoInitialize
-  
+
     getter id : Int64
     @[JSON::Field(format: "email")]
     getter email : String

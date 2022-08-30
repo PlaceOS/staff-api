@@ -2,7 +2,7 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :update, :patch_metadata, :guest_checkin]
+  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
 
   # lists events occuring in the period provided, by default on the current users calendar
   @[AC::Route::GET("/")]
@@ -540,10 +540,16 @@ class Events < Application
     update_metadata(changes.as_h, original_id, system_id, merge: false)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, merge : Bool = false)
     event_id = original_id
     placeos_client = get_placeos_client
+
+    # Guest access
+    if user_token.guest_scope?
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
+    end
 
     system = placeos_client.systems.fetch(system_id)
     cal_id = system.email.presence
@@ -561,8 +567,7 @@ class Events < Application
 
     # Guests can update extension_data to indicate their order
     if user_token.guest_scope?
-      guest_event_id, guest_system_id = user.roles
-      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id}) && system_id == guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
     else
       attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
@@ -612,18 +617,20 @@ class Events < Application
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    event_id : String,
+    original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
     user_cal : String? = nil
   ) : PlaceCalendar::Event
     placeos_client = get_placeos_client
+    event_id = original_id
 
     # Guest access
     if user_token.guest_scope?
       guest_event_id, guest_system_id = user.roles
-      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless event_id == guest_event_id && system_id == guest_system_id
+      system_id ||= guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless system_id == guest_system_id
     end
 
     if system_id
@@ -640,6 +647,10 @@ class Events < Application
       if client.client_id == :office365 && event.host != cal_id
         event = get_hosts_event(event)
         event_id = event.id.not_nil!
+      end
+
+      if user_token.guest_scope?
+        raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
       end
 
       metadata = get_event_metadata(event, system_id)
@@ -697,7 +708,6 @@ class Events < Application
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: false)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
@@ -762,7 +772,7 @@ class Events < Application
   end
 
   # approves / accepts the meeting on behalf of the event space
-  @[AC::Route::GET("/:id/approve")]
+  @[AC::Route::POST("/:id/approve")]
   def approve(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
@@ -773,7 +783,7 @@ class Events < Application
   end
 
   # rejects / declines the meeting on behalf of the event space
-  @[AC::Route::GET("/:id/reject")]
+  @[AC::Route::POST("/:id/reject")]
   def reject(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
@@ -877,7 +887,7 @@ class Events < Application
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    event_id : String,
+    original_id : String,
     @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
     guest_email : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
@@ -886,11 +896,13 @@ class Events < Application
     checkin : Bool = true,
   )
     guest_id = guest_email.downcase
+    event_id = original_id
 
     if user_token.guest_scope?
-      guest_event_id, system_id = user.roles
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
       guest_token_email = user.email.downcase
-      raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event they are not associated with") unless event_id == guest_event_id && guest_id == guest_token_email
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event they are not associated with") unless system_id == guest_system_id
     else
       raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
     end
@@ -900,6 +912,8 @@ class Events < Application
                   else
                     Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64).email
                   end
+
+    raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event as #{guest_email}") if user_token.guest_scope? && guest_email != guest_token_email
 
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
@@ -933,6 +947,10 @@ class Events < Application
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
       event_id = event.id.not_nil!
+    end
+
+    if user_token.guest_scope?
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id})
     end
 
     eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!({

@@ -35,7 +35,6 @@ module Utils::PlaceOSHelpers
     client.list_calendars(user.email, only_writable: true)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def matching_calendar_ids(
     calendars : String? = nil,
     zone_ids : String? = nil,

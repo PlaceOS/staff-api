@@ -6,7 +6,7 @@ class Booking
   struct BookingResponse
     include JSON::Serializable
     include AutoInitialize
-  
+
     getter id : Int64
     getter booking_type : String
     getter booking_start : Int64
@@ -221,7 +221,7 @@ class Booking
   TRUTHY = {true, "true"}
 
   scope :is_approved do |value|
-    unless value.nil?
+    if !value.nil?
       check = value.in?(TRUTHY)
       where { approved == check }
     else
@@ -230,7 +230,7 @@ class Booking
   end
 
   scope :is_rejected do |value|
-    unless value.nil?
+    if !value.nil?
       check = value.in?(TRUTHY)
       where { rejected == check }
     else
@@ -239,7 +239,7 @@ class Booking
   end
 
   scope :is_checked_in do |value|
-    unless value.nil?
+    if !value.nil?
       check = value.in?(TRUTHY)
       where { checked_in == check }
     else

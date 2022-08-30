@@ -5,7 +5,6 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil, is_parent_metadata = false)
     visitors = {} of String => Attendee
 

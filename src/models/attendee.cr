@@ -31,7 +31,7 @@ class Attendee
   struct AttendeeResponse
     include JSON::Serializable
     include AutoInitialize
-  
+
     @[JSON::Field(format: "email")]
     getter email : String
     property checked_in : Bool?
