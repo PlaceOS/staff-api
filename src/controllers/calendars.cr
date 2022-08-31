@@ -83,6 +83,8 @@ class Calendars < Application
     }
   end
 
+  # Finds the busy times in the period provided on the selected calendars.
+  # Returns the calendars that have meetings overlapping provided period
   @[AC::Route::GET("/free_busy")]
   def free_busy(
     @[AC::Param::Info(description: "search period start as a unix epoch", example: "1661725146")]

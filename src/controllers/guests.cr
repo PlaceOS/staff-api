@@ -190,6 +190,7 @@ class Guests < Application
     end
   end
 
+  # returns the details of a particular guest and if they are expected to attend in person today
   @[AC::Route::GET("/:id")]
   def show : Guest::GuestResponse | Attendee::AttendeeResponse
     if user_token.guest_scope? && (guest.email != user_token.id)
@@ -289,6 +290,7 @@ class Guests < Application
     events
   end
 
+  # returns the list of bookings a guest is expected to or has attended in person
   @[AC::Route::GET("/:id/bookings")]
   def bookings(
     @[AC::Param::Info(description: "shoule we include past bookings", example: "true")]
