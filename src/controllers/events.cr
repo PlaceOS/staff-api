@@ -694,6 +694,8 @@ class Events < Application
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: true)
   end
 
+  # cancels the meeting without deleting it
+  # visually the event will remain on the calendar with a line through it
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
   def decline(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -884,6 +886,8 @@ class Events < Application
     end
   end
 
+  # a guest has arrived for a meeting in person.
+  # This route can be used to notify hosts
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]

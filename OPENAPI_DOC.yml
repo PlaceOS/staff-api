@@ -1424,6 +1424,10 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/calendars/free_busy:
     get:
+      summary: Finds the busy times in the period provided on the selected calendars.
+      description: 'Finds the busy times in the period provided on the selected calendars.
+
+        Returns the calendars that have meetings overlapping provided period'
       tags:
       - Calendars
       operationId: Calendars#free_busy
@@ -2224,6 +2228,10 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/decline:
     post:
+      summary: cancels the meeting without deleting it
+      description: 'cancels the meeting without deleting it
+
+        visually the event will remain on the calendar with a line through it'
       tags:
       - Events
       operationId: Events#decline
@@ -2659,6 +2667,10 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/guests/{guest_id}/checkin:
     post:
+      summary: a guest has arrived for a meeting in person.
+      description: 'a guest has arrived for a meeting in person.
+
+        This route can be used to notify hosts'
       tags:
       - Events
       operationId: Events#guest_checkin
@@ -2753,6 +2765,7 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/groups:
     get:
+      summary: returns a list of user groups in the orgainisations directory
       tags:
       - Groups
       operationId: Groups#index
@@ -2832,6 +2845,7 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/groups/{id}:
     get:
+      summary: returns the details of the provided group id
       tags:
       - Groups
       operationId: Groups#show
@@ -2906,6 +2920,7 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/groups/{id}/members:
     get:
+      summary: returns the list of staff memebers in a particular user group
       tags:
       - Groups
       operationId: Groups#members
@@ -3180,6 +3195,8 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/guests/{id}:
     get:
+      summary: returns the details of a particular guest and if they are expected
+        to attend in person today
       tags:
       - Guests
       operationId: Guests#show
@@ -3602,6 +3619,8 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/guests/{id}/bookings:
     get:
+      summary: returns the list of bookings a guest is expected to or has attended
+        in person
       tags:
       - Guests
       operationId: Guests#bookings
