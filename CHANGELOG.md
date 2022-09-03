@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **Dockerfile**: add support for ARM64 images ([#213](https://github.com/PlaceOS/staff-api/pull/213))
 - refactor for self documenting code ([#211](https://github.com/PlaceOS/staff-api/pull/211))
 - **events**: relax when metadata is returned on events ([#210](https://github.com/PlaceOS/staff-api/pull/210))
 - **bookings**: add event_id column for associating bookings to events ([#207](https://github.com/PlaceOS/staff-api/pull/207))
