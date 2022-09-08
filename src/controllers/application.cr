@@ -27,8 +27,7 @@ abstract class Application < ActionController::Base
     Log.context.set(
       client_ip: client_ip,
       request_id: request_id,
-          # user_id: user_token.id
-)
+    )
     response.headers["X-Request-ID"] = request_id
   end
 
