@@ -30,6 +30,7 @@
 
 ### Fix
 
+- **events**: get event succeed if the host event can't be fetched ([#218](https://github.com/PlaceOS/staff-api/pull/218))
 - **utilities/helpers**: ensure emails are downcased ([#202](https://github.com/PlaceOS/staff-api/pull/202))
 - **calendar**: downcase candidate keys ([#200](https://github.com/PlaceOS/staff-api/pull/200))
 - use correct routes for calendar view with delegated access ([#198](https://github.com/PlaceOS/staff-api/pull/198))
