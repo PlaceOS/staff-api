@@ -645,8 +645,12 @@ class Events < Application
 
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != cal_id
-        event = get_hosts_event(event)
-        event_id = event.id.not_nil!
+        begin
+          event = get_hosts_event(event)
+          event_id = event.id.not_nil!
+        rescue PlaceCalendar::Exception
+          # we might not have access
+        end
       end
 
       if user_token.guest_scope?
@@ -813,12 +817,6 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
-    end
-
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id # ameba:disable Lint/UselessAssign
     end
 
     # Existing attendees without system
