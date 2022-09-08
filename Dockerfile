@@ -21,10 +21,20 @@ RUN adduser \
     "${USER}"
 
 # Add trusted CAs for communicating with external services
-RUN apk add --no-cache \
-        ca-certificates \
-    && \
-    update-ca-certificates
+RUN apk add \
+  --update \
+  --no-cache \
+    ca-certificates \
+    yaml-dev \
+    yaml-static \
+    libxml2-dev \
+    openssl-dev \
+    openssl-libs-static \
+    zlib-dev \
+    zlib-static \
+    tzdata
+
+RUN update-ca-certificates
 
 # Add crystal lang
 # can look up packages here: https://pkgs.alpinelinux.org/packages?name=crystal
@@ -34,15 +44,7 @@ RUN apk add \
   --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
   --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
     crystal \
-    shards \
-    yaml-dev \
-    yaml-static \
-    libxml2-dev \
-    openssl-dev \
-    openssl-libs-static \
-    zlib-dev \
-    zlib-static \
-    tzdata
+    shards
 
 # Install shards for caching
 COPY shard.yml .
@@ -56,14 +58,17 @@ COPY ./src src
 
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    crystal build \
-        --release \
-        --error-trace \
-        --static \
-        -o staff-api \
-        /app/src/staff-api.cr
+    shards build --production --release --error-trace
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
+# Extract binary dependencies
+RUN for binary in /app/bin/*; do \
+        ldd "$binary" | \
+        tr -s '[:blank:]' '\n' | \
+        grep '^/' | \
+        xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
+    done
 
 # Build a minimal docker image
 FROM scratch
@@ -85,13 +90,14 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 
 # Copy the app into place
-COPY --from=build /app/staff-api /app
+COPY --from=build /app/deps /
+COPY --from=build /app/bin /
 
 # Use an unprivileged user.
 USER appuser:appuser
 
 # Run the app binding on port 8080
 EXPOSE 8080
-ENTRYPOINT ["/app"]
-HEALTHCHECK CMD ["/app", "-c", "http://127.0.0.1:8080/api/staff/v1"]
-CMD ["/app", "-b", "0.0.0.0", "-p", "8080"]
+ENTRYPOINT ["/staff-api"]
+HEALTHCHECK CMD ["/staff-api", "-c", "http://127.0.0.1:8080/api/staff/v1"]
+CMD ["/staff-api", "-b", "0.0.0.0", "-p", "8080"]
