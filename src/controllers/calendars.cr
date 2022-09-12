@@ -14,7 +14,7 @@ class Calendars < Application
     @[AC::Param::Info("the minimum capacity required for an event space", example: "8")]
     capacity : Int32? = nil,
     @[AC::Param::Info(description: "only search for bookable or non-bookable rooms", example: "true")]
-    bookable : Bool? = nil,
+    bookable : Bool? = nil
   )
     @matching_calendars = matching_calendar_ids(
       calendars, zone_ids, system_ids, features, capacity, bookable
@@ -46,7 +46,7 @@ class Calendars < Application
     @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
     period_end : Int64,
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
-    calendars : String? = nil,
+    calendars : String? = nil
   ) : Array(Availability)
     # Grab the system emails
     candidates = matching_calendars.transform_keys &.downcase
@@ -92,7 +92,7 @@ class Calendars < Application
     @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
     period_end : Int64,
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
-    calendars : String? = nil,
+    calendars : String? = nil
   ) : Array(Availability)
     # Grab the system emails
     candidates = matching_calendars.transform_keys &.downcase

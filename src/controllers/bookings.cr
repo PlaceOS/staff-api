@@ -107,7 +107,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
     department : String? = nil,
     @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    event_id : String? = nil,
+    event_id : String? = nil
   ) : Array(Booking::BookingResponse)
     query = Booking.query.by_tenant(tenant.id).where(
       %("booking_start" < :ending AND "booking_end" > :starting AND "booking_type" = :booking_type),
@@ -158,7 +158,7 @@ class Bookings < Application
     unless booking.booking_start_column.defined? &&
            booking.booking_end_column.defined? &&
            booking.booking_type_column.defined? &&
-          booking.asset_id_column.defined?
+           booking.asset_id_column.defined?
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_id"}], "error validating booking data")
     end
 
@@ -431,7 +431,7 @@ class Bookings < Application
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
+    utm_source : String? = nil
   ) : Nil
     booking.set({
       deleted:    true,
@@ -474,7 +474,7 @@ class Bookings < Application
   @[AC::Route::POST("/:id/approve")]
   def approve(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
+    utm_source : String? = nil
   ) : Booking::BookingResponse
     set_approver(booking, true)
     booking.approved_at = Time.utc.to_unix
@@ -490,7 +490,7 @@ class Bookings < Application
   @[AC::Route::POST("/:id/reject")]
   def reject(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
+    utm_source : String? = nil
   ) : Booking::BookingResponse
     set_approver(booking, false)
     booking.rejected_at = Time.utc.to_unix
@@ -507,7 +507,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
     state : Bool = true,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
+    utm_source : String? = nil
   ) : Booking::BookingResponse
     booking.checked_in = state
 
@@ -546,7 +546,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the user defined process state of the booking", example: "pending_approval")]
     state : String,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
+    utm_source : String? = nil
   ) : Booking::BookingResponse
     booking.process_state = state
     booking.utm_source = utm_source

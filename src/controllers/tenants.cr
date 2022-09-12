@@ -63,6 +63,7 @@ class Tenants < Application
   # returns the limits for the current domain (Host header)
   @[AC::Route::GET("/current_limits")]
   def current_limits : Limits
+    response.headers["X-Delegated"] = (!!current_tenant.delegated).to_s
     current_tenant.booking_limits.as_h.transform_values(&.as_i)
   end
 
