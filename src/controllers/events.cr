@@ -18,7 +18,7 @@ class Events < Application
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
     @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
-    include_cancelled : Bool = false,
+    include_cancelled : Bool = false
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -523,7 +523,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String,
+    system_id : String
   ) : JSON::Any
     update_metadata(changes.as_h, original_id, system_id, merge: true)
   end
@@ -535,7 +535,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String,
+    system_id : String
   ) : JSON::Any
     update_metadata(changes.as_h, original_id, system_id, merge: false)
   end
@@ -783,7 +783,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String,
+    system_id : String
   ) : PlaceCalendar::Event
     update_status(event_id, system_id, "accepted")
   end
@@ -794,7 +794,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String,
+    system_id : String
   ) : PlaceCalendar::Event
     update_status(event_id, system_id, "declined")
   end
@@ -841,7 +841,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String,
+    system_id : String
   ) : Array(Guest::GuestResponse | Attendee::AttendeeResponse)
     cal_id = get_placeos_client.systems.fetch(system_id).email
     return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless cal_id
@@ -877,7 +877,7 @@ class Events < Application
     @[AC::Param::Info(description: "the field we want to query", example: "status")]
     field_name : String,
     @[AC::Param::Info(description: "value we want to match", example: "approved")]
-    value : String,
+    value : String
   ) : Array(EventMetadata::Assigner)
     EventMetadata.by_ext_data(field_name, value).to_a.map do |metadata|
       EventMetadata::Assigner.from_json(metadata.to_json)
@@ -895,7 +895,7 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
-    checkin : Bool = true,
+    checkin : Bool = true
   )
     guest_id = guest_email.downcase
     event_id = original_id
