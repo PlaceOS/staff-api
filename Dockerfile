@@ -58,17 +58,9 @@ COPY ./src src
 
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --release --error-trace
+    shards build --production --release --error-trace --static
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
-
-# Extract binary dependencies
-RUN for binary in /app/bin/*; do \
-        ldd "$binary" | \
-        tr -s '[:blank:]' '\n' | \
-        grep '^/' | \
-        xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
-    done
 
 # Build a minimal docker image
 FROM scratch
@@ -90,7 +82,6 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 
 # Copy the app into place
-COPY --from=build /app/deps /
 COPY --from=build /app/bin /
 
 # Use an unprivileged user.
