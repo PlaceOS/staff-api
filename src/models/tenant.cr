@@ -87,6 +87,7 @@ class Tenant
   column booking_limits : JSON::Any, presence: false
 
   column delegated : Bool?
+  column service_account : String?
 
   has_many attendees : Attendee, foreign_key: "tenant_id"
   has_many guests : Guest, foreign_key: "tenant_id"
@@ -266,5 +267,15 @@ class Tenant
   #
   def is_encrypted? : Bool
     PlaceOS::Encryption.is_encrypted?(self.credentials)
+  end
+
+  # distribute load as much as possible when using service accounts
+  def which_account(user_email : String, resources = [] of String) : String
+    if service_acct = self.service_account
+      resources << service_acct
+      resources.sample
+    else
+      user_email
+    end
   end
 end
