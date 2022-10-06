@@ -49,8 +49,12 @@ module Utils::PlaceOSHelpers
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
     system_calendars = if calendars.size > 0
-                         user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
-                         (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         if tenant.using_service_account?
+                           calendars.each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         else
+                           user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
+                           (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         end
                        else
                          {} of String => PlaceOS::Client::API::Models::System?
                        end

@@ -34,8 +34,8 @@ class Calendars < Application
 
   # lists the users default calendars
   @[AC::Route::GET("/")]
-  def index
-    render json: client.list_calendars(user.email)
+  def index : Array(PlaceCalendar::Calendar)
+    client.list_calendars(user.email)
   end
 
   # checks for availability of matched calendars, returns a list of calendars with availability
@@ -62,7 +62,8 @@ class Calendars < Application
     # perform availability request
     period_start = Time.unix(period_start)
     period_end = Time.unix(period_end)
-    busy = client.get_availability(user.email, calendars, period_start, period_end)
+    user_email = tenant.which_account(user.email)
+    busy = client.get_availability(user_email, calendars, period_start, period_end)
 
     # Remove any rooms that have overlapping bookings
     busy.each do |status|
@@ -111,8 +112,9 @@ class Calendars < Application
     duration = period_end - period_start
     raise AC::Route::Param::ValueError.new("free/busy availability intervals must be greater than 5 minutes", "period_end") if duration.total_minutes < 5
 
+    user_email = tenant.which_account(user.email)
     availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
-    busy = client.get_availability(user.email, calendars, period_start, period_end, view_interval: availability_view_interval)
+    busy = client.get_availability(user_email, calendars, period_start, period_end, view_interval: availability_view_interval)
 
     busy.map { |details|
       if system = candidates[details.calendar]?

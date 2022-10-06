@@ -271,11 +271,15 @@ class Tenant
 
   # distribute load as much as possible when using service accounts
   def which_account(user_email : String, resources = [] of String) : String
-    if service_acct = self.service_account
+    if service_acct = self.service_account.presence
       resources << service_acct
-      resources.sample
+      resources.sample.downcase
     else
-      user_email
+      user_email.downcase
     end
+  end
+
+  def using_service_account?
+    !self.service_account.presence.nil?
   end
 end
