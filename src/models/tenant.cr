@@ -104,10 +104,11 @@ class Tenant
     getter domain : String?
     getter platform : String?
     getter delegated : Bool?
+    getter service_account : String?
     getter credentials : JSON::Any? = nil
     getter booking_limits : JSON::Any? = nil
 
-    def initialize(@id, @name, @domain, @platform, @delegated, @credentials = nil, @booking_limits = nil)
+    def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil)
     end
 
     def to_tenant
@@ -138,6 +139,7 @@ class Tenant
       platform: self.platform,
       delegated: is_delegated,
       booking_limits: limits,
+      service_account: self.service_account,
     )
   end
 
