@@ -132,14 +132,16 @@ class Tenant
   def as_json
     is_delegated = delegated_column.defined? ? self.delegated : false
     limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
+    service = service_account_column.defined? ? self.service_account : nil
+
     Responder.new(
       id: self.id,
       name: self.name,
       domain: self.domain,
       platform: self.platform,
+      service_account: service,
       delegated: is_delegated,
-      booking_limits: limits,
-      service_account: self.service_account,
+      booking_limits: limits
     )
   end
 
