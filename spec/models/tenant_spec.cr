@@ -107,6 +107,20 @@ describe Tenant do
       credentials: %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
     })
     t.is_encrypted?.should be_true
+    t.using_service_account?.should be_false
+  end
+
+  it "should create a tenant with a service account" do
+    t = TenantsHelper.create_tenant({
+      name:            "Jon2",
+      platform:        "google",
+      domain:          "encrypt.google.staff-api.dev",
+      service_account: "steve@org.com",
+      credentials:     %({"issuer":"1122121212","scopes":["http://example.com"],"signing_key":"-----BEGIN PRIVATE KEY-----SOMEKEY DATA-----END PRIVATE KEY-----","domain":"example.com.au","sub":"jon@example.com.au"}),
+    })
+    t.is_encrypted?.should be_true
+    t.using_service_account?.should be_true
+    t.which_account("otheruser@email.com").should eq("steve@org.com")
   end
 
   describe "#decrypt_for" do

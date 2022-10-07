@@ -117,7 +117,7 @@ class Events < Application
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
     host = (input_event.host || user_email).try(&.downcase)
-    raise Error::Forbidden.new("user #{user_email} is not involved in meeting and no role is permitted to make this change") unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
+    raise Error::Forbidden.new("user #{user_email} does not have write access to #{host} calendar") unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
@@ -744,20 +744,20 @@ class Events < Application
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id.not_nil!
-    end
+    # we don't need host details for delete / decline as we want it to occur on the calendar specified
+    # if client.client_id == :office365 && event.host != cal_id
+    #   event = get_hosts_event(event)
+    #   event_id = event.id.not_nil!
+    # end
 
     if delete
-      client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
+      client.delete_event(user_id: cal_id, id: event_id, calendar_id: cal_id, notify: notify_guests)
     else
       comment = request.body.try &.gets_to_end.presence
       client.decline_event(
-        user_id: host,
+        user_id: cal_id,
         id: event_id,
-        calendar_id: host,
+        calendar_id: cal_id,
         notify: notify_guests,
         comment: comment
       )

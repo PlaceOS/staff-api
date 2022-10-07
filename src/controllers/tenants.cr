@@ -24,7 +24,7 @@ class Tenants < Application
   # lists the configured tenants
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.query.select("id, name, domain, platform, booking_limits, delegated").to_a.map(&.as_json)
+    Tenant.query.select("id, name, domain, platform, booking_limits, delegated, service_account").to_a.map(&.as_json)
   end
 
   # creates a new tenant
@@ -41,7 +41,7 @@ class Tenants < Application
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
     changes = tenant_body.to_tenant
 
-    {% for key in [:name, :domain, :platform, :booking_limits] %}
+    {% for key in [:name, :domain, :platform, :booking_limits, :service_account] %}
       begin
         tenant.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError

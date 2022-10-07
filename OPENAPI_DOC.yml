@@ -1228,6 +1228,12 @@ paths:
       responses:
         200:
           description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceCalendar__Calendar'
         401:
           description: Unauthorized
           content:
@@ -5557,6 +5563,25 @@ components:
       - banned
       - dangerous
       - extension_data
+    PlaceCalendar__Calendar:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        ref:
+          type: string
+          nullable: true
+        summary:
+          type: string
+        primary:
+          type: boolean
+        can_edit:
+          type: boolean
+          nullable: true
+      required:
+      - summary
+      - primary
     Calendars__Availability:
       type: object
       properties:
@@ -6845,25 +6870,6 @@ components:
         username:
           type: string
           nullable: true
-    PlaceCalendar__Calendar:
-      type: object
-      properties:
-        id:
-          type: string
-          nullable: true
-        ref:
-          type: string
-          nullable: true
-        summary:
-          type: string
-        primary:
-          type: boolean
-        can_edit:
-          type: boolean
-          nullable: true
-      required:
-      - summary
-      - primary
     Tenant__Responder:
       type: object
       properties:
@@ -6882,6 +6888,9 @@ components:
           nullable: true
         delegated:
           type: boolean
+          nullable: true
+        service_account:
+          type: string
           nullable: true
         credentials:
           type: object
