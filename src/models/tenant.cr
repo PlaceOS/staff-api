@@ -113,7 +113,7 @@ class Tenant
 
     def to_tenant
       tenant = Tenant.new
-      {% for key in [:name, :domain, :platform, :delegated, :booking_limits] %}
+      {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account] %}
         tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
       if creds = credentials
