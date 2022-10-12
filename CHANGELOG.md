@@ -32,6 +32,7 @@
 
 ### Fix
 
+- **events**: update ext_data ([#224](https://github.com/PlaceOS/staff-api/pull/224))
 - **events**: get event succeed if the host event can't be fetched ([#218](https://github.com/PlaceOS/staff-api/pull/218))
 - **utilities/helpers**: ensure emails are downcased ([#202](https://github.com/PlaceOS/staff-api/pull/202))
 - **calendar**: downcase candidate keys ([#200](https://github.com/PlaceOS/staff-api/pull/200))
