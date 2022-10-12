@@ -615,4 +615,61 @@ describe Events do
       checked_in_guest["checked_in"].should eq(false)
     end
   end
+
+  describe "extension_data" do
+    it "updates extension_data in the database" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+        .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
+        event_start: 20.minutes.from_now.to_unix,
+        event_end: 40.minutes.from_now.to_unix,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        ext_data: JSON.parse({"magic_number": 77}.to_json)
+      )
+
+      update_body = {
+        "count" => 2,
+      }.to_json
+
+      request = client.patch("#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}", headers: headers, body: update_body)
+      request.status_code.should eq(200)
+
+      request_body = JSON.parse(request.body)
+      request_body["magic_number"].should eq(77)
+      request_body["count"].should eq(2)
+
+      db_event = EventMetadata.query.where(event_id: event.event_id).to_a.first
+      db_event.ext_data.not_nil!["magic_number"].should eq(77)
+      db_event.ext_data.not_nil!["count"].should eq(2)
+    end
+
+    it "returnes extension_data from the database" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
+        event_start: 20.minutes.from_now.to_unix,
+        event_end: 40.minutes.from_now.to_unix,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        ext_data: JSON.parse({"magic_number": 77}.to_json)
+      )
+
+      request = client.get("#{EVENTS_BASE}?period_start=#{event.event_start}&period_end=#{event.event_end}", headers: headers)
+      request.status_code.should eq(200)
+
+      request_body = JSON.parse(request.body)
+      request_body[0]["extension_data"]["magic_number"].should eq(77)
+    end
+  end
 end
