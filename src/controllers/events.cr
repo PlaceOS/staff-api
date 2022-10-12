@@ -587,7 +587,7 @@ class Events < Application
 
     # Updating extension data by merging into existing.
     if merge && (meta_ext_data = meta.ext_data)
-      data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
+      data = meta_ext_data.as_h
       changes.each { |key, value| data[key] = value }
     else
       data = changes
