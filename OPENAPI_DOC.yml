@@ -6898,6 +6898,35 @@ components:
         booking_limits:
           type: object
           nullable: true
+        outlook_config:
+          type: object
+          properties:
+            app_id:
+              type: string
+            app_domain:
+              type: string
+              nullable: true
+            app_resource:
+              type: string
+              nullable: true
+            source_location:
+              type: string
+              nullable: true
+            function_file_url:
+              type: string
+              nullable: true
+            taskpane_url:
+              type: string
+              nullable: true
+            rooms_button_url:
+              type: string
+              nullable: true
+            desks_button_url:
+              type: string
+              nullable: true
+          required:
+          - app_id
+          nullable: true
     Hash_String__Int32_:
       type: object
       additionalProperties:
