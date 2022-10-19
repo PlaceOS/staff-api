@@ -86,7 +86,7 @@ class Tenant
   column platform : String
   column credentials : String
   column booking_limits : JSON::Any, presence: false
-  column outlook_config : OutlookConfig, presence: false
+  column outlook_config : OutlookConfig?
 
   column delegated : Bool?
   column service_account : String?
@@ -144,7 +144,6 @@ class Tenant
       service_account: service,
       delegated: is_delegated,
       booking_limits: limits,
-      outlook_config: outlook_config,
     )
   end
 
