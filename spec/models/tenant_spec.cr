@@ -135,11 +135,12 @@ module TenantsHelper
   extend self
 
   MOCK_TENANT_PARAMS = {
-    name:        "Toby",
-    platform:    "office365",
-    domain:      "toby.staff-api.dev",
-    credentials: %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"}),
-    delegated:   false,
+    name:           "Toby",
+    platform:       "office365",
+    domain:         "toby.staff-api.dev",
+    credentials:    %({"tenant":"bb89674a-238b-4b7d-91ec-6bebad83553a","client_id":"6316bc86-b615-49e0-ad24-985b39898cb7","client_secret": "k8S1-0c5PhIh:[XcrmuAIsLo?YA[=-GS"}),
+    delegated:      false,
+    outlook_config: Tenant::OutlookConfig.from_json(%({"app_id": "0114c179-de01-4707-b558-b4b535551b91"})),
   }
 
   def create_tenant(params = MOCK_TENANT_PARAMS)

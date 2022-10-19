@@ -1,6 +1,7 @@
 require "clear"
 require "json"
 require "placeos-models/utilities/encryption"
+require "./tenant/outlook_config"
 
 struct Office365Config
   include JSON::Serializable
@@ -85,6 +86,7 @@ class Tenant
   column platform : String
   column credentials : String
   column booking_limits : JSON::Any, presence: false
+  column outlook_config : OutlookConfig, presence: false
 
   column delegated : Bool?
 
@@ -111,6 +113,7 @@ class Tenant
       platform:       self.platform,
       delegated:      is_delegated,
       booking_limits: limits,
+      outlook_config: outlook_config,
     }
   end
 

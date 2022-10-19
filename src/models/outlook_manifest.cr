@@ -1,8 +1,8 @@
 require "xml"
 
 struct OutlookManifest
-  property app_domain : String
   property app_id : String
+  property app_domain : String
   property app_resource : String
   property source_location : String
   property function_file_url : String
@@ -10,7 +10,16 @@ struct OutlookManifest
   property rooms_button_url : String
   property desks_button_url : String
 
-  def initialize(@app_domain, @app_id, @app_resource, @source_location, @function_file_url, @taskpane_url, @rooms_button_url, @desks_button_url)
+  def initialize(
+    @app_id,
+    @app_domain,
+    @app_resource,
+    @source_location,
+    @function_file_url,
+    @taskpane_url,
+    @rooms_button_url,
+    @desks_button_url
+  )
   end
 
   def to_xml

@@ -7,11 +7,10 @@ describe Outlook do
   describe "get /manifest.xml" do
     it "returns an xml manifest" do
       headers = HTTP::Headers{
-        "Host" => "toby.staff-api.dev",
+        "Host" => get_tenant.domain,
       }
-      app_id = UUID.random
 
-      response = client.get("#{OUTLOOK_BASE}/manifest.xml?app-id=#{app_id}", headers: headers)
+      response = client.get("#{OUTLOOK_BASE}/manifest.xml", headers: headers)
       response.status_code.should eq(200)
       XML.parse(response.body).xml?.should be_true
     end
