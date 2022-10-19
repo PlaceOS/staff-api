@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **outlook**: generate plugin xml manifest ([#208](https://github.com/PlaceOS/staff-api/pull/208))
 - add support for running using a service account ([#223](https://github.com/PlaceOS/staff-api/pull/223))
 - **tenants**: flag if running in delegated mode ([#219](https://github.com/PlaceOS/staff-api/pull/219))
 - **Dockerfile**: add support for ARM64 images ([#213](https://github.com/PlaceOS/staff-api/pull/213))
