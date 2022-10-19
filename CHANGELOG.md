@@ -2,6 +2,11 @@
 
 ### Feat
 
+- add support for running using a service account ([#223](https://github.com/PlaceOS/staff-api/pull/223))
+- **tenants**: flag if running in delegated mode ([#219](https://github.com/PlaceOS/staff-api/pull/219))
+- **Dockerfile**: add support for ARM64 images ([#213](https://github.com/PlaceOS/staff-api/pull/213))
+- refactor for self documenting code ([#211](https://github.com/PlaceOS/staff-api/pull/211))
+- **events**: relax when metadata is returned on events ([#210](https://github.com/PlaceOS/staff-api/pull/210))
 - **bookings**: add event_id column for associating bookings to events ([#207](https://github.com/PlaceOS/staff-api/pull/207))
 - **bookings**: checked_in to canclled state transition ([#196](https://github.com/PlaceOS/staff-api/pull/196))
 - **events**: add dedicated metadata update methods ([#195](https://github.com/PlaceOS/staff-api/pull/195))
@@ -27,6 +32,9 @@
 
 ### Fix
 
+- **events**: patching extension metadata ([#227](https://github.com/PlaceOS/staff-api/pull/227))
+- **events**: update ext_data ([#224](https://github.com/PlaceOS/staff-api/pull/224))
+- **events**: get event succeed if the host event can't be fetched ([#218](https://github.com/PlaceOS/staff-api/pull/218))
 - **utilities/helpers**: ensure emails are downcased ([#202](https://github.com/PlaceOS/staff-api/pull/202))
 - **calendar**: downcase candidate keys ([#200](https://github.com/PlaceOS/staff-api/pull/200))
 - use correct routes for calendar view with delegated access ([#198](https://github.com/PlaceOS/staff-api/pull/198))

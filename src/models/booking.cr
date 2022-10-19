@@ -2,42 +2,50 @@ require "./booking/history"
 
 class Booking
   include Clear::Model
-  alias AsHNamedTuple = NamedTuple(
-    id: Int64,
-    booking_type: String,
-    booking_start: Int64,
-    booking_end: Int64,
-    timezone: String | Nil,
-    asset_id: String,
-    user_id: String,
-    user_email: String,
-    user_name: String,
-    zones: Array(String) | Nil,
-    process_state: String | Nil,
-    last_changed: Int64 | Nil,
-    approved: Bool,
-    approved_at: Int64 | Nil,
-    rejected: Bool,
-    rejected_at: Int64 | Nil,
-    approver_id: String | Nil,
-    approver_name: String | Nil,
-    approver_email: String | Nil,
-    department: String | Nil,
-    event_id: String | Nil,
-    title: String | Nil,
-    checked_in: Bool,
-    checked_in_at: Int64 | Nil,
-    checked_out_at: Int64 | Nil,
-    description: String | Nil,
-    deleted: Bool?,
-    deleted_at: Int64?,
-    booked_by_email: String,
-    booked_by_name: String,
-    booked_from: String?,
-    extension_data: JSON::Any,
-    current_state: State,
-    history: Array(History)?,
-  )
+
+  struct BookingResponse
+    include JSON::Serializable
+    include AutoInitialize
+
+    getter id : Int64
+    getter booking_type : String
+    getter booking_start : Int64
+    getter booking_end : Int64
+    getter timezone : String?
+    getter asset_id : String
+    getter user_id : String
+    @[JSON::Field(format: "email")]
+    getter user_email : String
+    getter user_name : String
+    getter zones : Array(String)?
+    getter process_state : String?
+    getter last_changed : Int64?
+    getter approved : Bool
+    getter approved_at : Int64?
+    getter rejected : Bool
+    getter rejected_at : Int64?
+    getter approver_id : String?
+    getter approver_name : String?
+    @[JSON::Field(format: "email")]
+    getter approver_email : String?
+    getter department : String?
+    @[JSON::Field(description: "provided if this booking is associated with a calendar event")]
+    getter event_id : String?
+    getter title : String?
+    getter checked_in : Bool
+    getter checked_in_at : Int64?
+    getter checked_out_at : Int64?
+    getter description : String?
+    getter deleted : Bool
+    getter deleted_at : Int64?
+    @[JSON::Field(format: "email")]
+    getter booked_by_email : String
+    getter booked_by_name : String
+    getter booked_from : String?
+    getter extension_data : JSON::Any
+    getter current_state : State
+    getter history : Array(History)
+  end
 
   enum State
     Reserved   # Booking starts in the future, no one has checked-in and it hasn't been deleted
@@ -210,9 +218,11 @@ class Booking
       .where("bookings.booking_start >= :period_start AND bookings.booking_end <= :period_end", period_start: period_start, period_end: period_end)
   end
 
+  TRUTHY = {true, "true"}
+
   scope :is_approved do |value|
-    if value
-      check = value == "true"
+    if !value.nil?
+      check = value.in?(TRUTHY)
       where { approved == check }
     else
       self
@@ -220,8 +230,8 @@ class Booking
   end
 
   scope :is_rejected do |value|
-    if value
-      check = value == "true"
+    if !value.nil?
+      check = value.in?(TRUTHY)
       where { rejected == check }
     else
       self
@@ -229,8 +239,8 @@ class Booking
   end
 
   scope :is_checked_in do |value|
-    if value
-      check = value == "true"
+    if !value.nil?
+      check = value.in?(TRUTHY)
       where { checked_in == check }
     else
       self
@@ -345,49 +355,47 @@ class Booking
     end
   end
 
-  def as_h : AsHNamedTuple
-    {
-      id:              id,
-      booking_type:    booking_type,
-      booking_start:   booking_start,
-      booking_end:     booking_end,
-      timezone:        timezone,
-      asset_id:        asset_id,
-      user_id:         user_id,
-      user_email:      user_email.to_s,
-      user_name:       user_name,
-      zones:           zones,
-      process_state:   process_state,
-      last_changed:    last_changed,
-      approved:        approved,
-      approved_at:     approved_at,
-      rejected:        rejected,
-      rejected_at:     rejected_at,
-      approver_id:     approver_id,
-      approver_name:   approver_name,
-      approver_email:  approver_email,
-      department:      department,
-      event_id:        event_id,
-      title:           title,
-      checked_in:      checked_in,
-      checked_in_at:   checked_in_at,
-      checked_out_at:  checked_out_at,
-      description:     description,
-      deleted:         deleted,
-      deleted_at:      deleted_at,
+  def as_h : BookingResponse
+    BookingResponse.new(
+      id: id,
+      booking_type: booking_type,
+      booking_start: booking_start,
+      booking_end: booking_end,
+      timezone: timezone,
+      asset_id: asset_id,
+      user_id: user_id,
+      user_email: user_email.to_s,
+      user_name: user_name,
+      zones: zones,
+      process_state: process_state,
+      last_changed: last_changed,
+      approved: approved,
+      approved_at: approved_at,
+      rejected: rejected,
+      rejected_at: rejected_at,
+      approver_id: approver_id,
+      approver_name: approver_name,
+      approver_email: approver_email,
+      department: department,
+      event_id: event_id,
+      title: title,
+      checked_in: checked_in,
+      checked_in_at: checked_in_at,
+      checked_out_at: checked_out_at,
+      description: description,
+      deleted: deleted,
+      deleted_at: deleted_at,
       booked_by_email: booked_by_email.to_s,
-      booked_by_name:  booked_by_name,
-      booked_from:     booked_from,
-      extension_data:  extension_data,
-      current_state:   current_state,
-      history:         history,
-    }
+      booked_by_name: booked_by_name,
+      booked_from: booked_from,
+      extension_data: extension_data,
+      current_state: current_state,
+      history: history,
+    )
   end
 end
 
-class StaffApi::BookingWithAttendees
-  include JSON::Serializable
-  include JSON::Serializable::Unmapped
-
+# We're adding `booking_attendees` to the json deserialiser of clear
+struct Booking::Assigner
   property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end

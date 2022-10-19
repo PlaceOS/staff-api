@@ -174,7 +174,8 @@ describe Events do
       guests.compact_map(&.extension_data).should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
     end
 
-    it "extension data for guest" do
+    pending "extension data for guest" do
+      # TODO:: guests should use the dedicated metadata patch method
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/jon@example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
@@ -193,7 +194,8 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
 
       req_body = EventsHelper.create_event_input
-      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
+      evt_resp = client.post(EVENTS_BASE, headers: headers, body: req_body)
+      created_event = JSON.parse(evt_resp.body)
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
@@ -250,6 +252,7 @@ describe Events do
     before_each do
       EventsHelper.stub_show_endpoints
     end
+
     it "details for event with limited guest access" do
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/.*/)
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
@@ -386,8 +389,7 @@ describe Events do
 
       evt_meta = EventMetadata.query.find! { event_id == created_event_id }
       evt_meta.recurring_master_id.should eq(master_event_id)
-      # Should not have any exetension information
-      event["extension_data"]?.should eq(nil)
+      event["extension_data"]?.should eq({"foo" => "bar"})
 
       # Show event details for room/system params that is an instance of master event created above
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
@@ -474,7 +476,8 @@ describe Events do
     WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
     # approve
-    accepted_event = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", headers: headers).body)
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", headers: headers).body
+    accepted_event = JSON.parse(resp)
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
   end
@@ -495,13 +498,15 @@ describe Events do
 
     # Create event
     req_body = EventsHelper.create_event_input
-    created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
+    evt_resp = client.post(EVENTS_BASE, headers: headers, body: req_body)
+    created_event = JSON.parse(evt_resp.body)
     created_event_id = created_event["id"].to_s
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # reject
-    declined_event = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", headers: headers).body)
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", headers: headers).body
+    declined_event = JSON.parse(resp)
     room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("declined")
   end
@@ -535,7 +540,8 @@ describe Events do
       guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
-      checked_in_guest = JSON.parse(client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body)
+      resp = client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body
+      checked_in_guest = JSON.parse(resp)
       checked_in_guest["checked_in"].should eq(true)
 
       # guest_checkin via system state = false
@@ -607,6 +613,63 @@ describe Events do
       # guest_checkin via guest_token state = false
       checked_in_guest = JSON.parse client.post("#{EVENTS_BASE}/#{event_instance_id}/guests/jon@example.com/checkin?state=false", headers: Mock::Headers.office365_guest(event_instance_id, "sys-rJQQlR4Cn7")).body
       checked_in_guest["checked_in"].should eq(false)
+    end
+  end
+
+  describe "extension_data" do
+    it "updates extension_data in the database" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+        .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
+        event_start: 20.minutes.from_now.to_unix,
+        event_end: 40.minutes.from_now.to_unix,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        ext_data: JSON.parse({"magic_number": 77}.to_json)
+      )
+
+      update_body = {
+        "count" => 2,
+      }.to_json
+
+      request = client.patch("#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}", headers: headers, body: update_body)
+      request.status_code.should eq(200)
+
+      request_body = JSON.parse(request.body)
+      request_body["magic_number"].should eq(77)
+      request_body["count"].should eq(2)
+
+      db_event = EventMetadata.query.where(event_id: event.event_id).to_a.first
+      db_event.ext_data.not_nil!["magic_number"].should eq(77)
+      db_event.ext_data.not_nil!["count"].should eq(2)
+    end
+
+    it "returnes extension_data from the database" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
+        event_start: 20.minutes.from_now.to_unix,
+        event_end: 40.minutes.from_now.to_unix,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        ext_data: JSON.parse({"magic_number": 77}.to_json)
+      )
+
+      request = client.get("#{EVENTS_BASE}?period_start=#{event.event_start}&period_end=#{event.event_end}", headers: headers)
+      request.status_code.should eq(200)
+
+      request_body = JSON.parse(request.body)
+      request_body[0]["extension_data"]["magic_number"].should eq(77)
     end
   end
 end

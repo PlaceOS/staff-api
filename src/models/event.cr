@@ -5,12 +5,13 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil, is_parent_metadata = false)
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
-      metadata.try &.delete
+      if calendar && metadata && calendar.downcase.in?({metadata.resource_calendar.downcase, metadata.host_email.downcase})
+        metadata.delete
+      end
       metadata = nil
     elsif (staff_api_attendees = metadata.try(&.attendees))
       staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }

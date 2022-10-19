@@ -1,19 +1,32 @@
 class Events < Application
   base "/api/staff/v1/events"
 
-  # Skip scope check for a single route
-  skip_action :check_jwt_scope, only: [:show, :guest_checkin]
+  # Skip scope check for relevant routes
+  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  def index
-    period_start = Time.unix(query_params["period_start"].to_i64)
-    period_end = Time.unix(query_params["period_end"].to_i64)
+  # lists events occuring in the period provided, by default on the current users calendar
+  @[AC::Route::GET("/")]
+  def index(
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
+    include_cancelled : Bool = false
+  ) : Array(PlaceCalendar::Event)
+    period_start = Time.unix(starting)
+    period_end = Time.unix(ending)
 
-    calendars = matching_calendar_ids(allow_default: true)
+    calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: true)
 
     Log.context.set(calendar_size: calendars.size.to_s)
-    render(json: [] of Nil) unless calendars.size > 0
-    include_cancelled = query_params["include_cancelled"]? == "true"
+    return [] of PlaceCalendar::Event unless calendars.size > 0
 
     # Grab events in batches
     requests = [] of HTTP::Request
@@ -55,14 +68,14 @@ class Events < Application
       # NOTE:: we should be able to swtch to using the ical uids only in the future
       # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
       # However they have a new `uid` field on the beta API which we can use when it's moved to production
-      if system
-        metadata_ids << event.id.not_nil!
-        ical_uids << event.ical_uid.not_nil!
 
-        # TODO: Handle recurring O365 events with differing `ical_uid`
-        # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
-        metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
-      end
+      # Attempt to return metadata regardless of system id availability
+      metadata_ids << event.id.not_nil!
+      ical_uids << event.ical_uid.not_nil!
+
+      # TODO: Handle recurring O365 events with differing `ical_uid`
+      # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
+      metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
     end
 
     metadata_ids.uniq!
@@ -96,15 +109,15 @@ class Events < Application
     }
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  def create
-    input_event = PlaceCalendar::Event.from_json(request.body.as(IO))
+  # creates a new calendar event
+  @[AC::Route::POST("/", body: :input_event, status_code: HTTP::Status::CREATED)]
+  def create(input_event : PlaceCalendar::Event) : PlaceCalendar::Event
     placeos_client = get_placeos_client
 
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
     host = (input_event.host || user_email).try(&.downcase)
-    head :forbidden unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
+    raise Error::Forbidden.new("user #{user_email} does not have write access to #{host} calendar") unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
@@ -220,68 +233,55 @@ class Events < Application
           end
         end
 
-        render json: StaffApi::Event.augment(created_event, sys.email, sys, meta)
+        return StaffApi::Event.augment(created_event, sys.email, sys, meta)
       end
 
       Log.info { "no extension data for event #{created_event.id} in #{sys.id}, #{ext_data}" }
-      render json: StaffApi::Event.augment(created_event, sys.email, sys)
+      return StaffApi::Event.augment(created_event, sys.email, sys)
     end
 
     Log.info { "no system provided for event #{created_event.id}" }
-    render json: StaffApi::Event.augment(created_event, host)
+    StaffApi::Event.augment(created_event, host)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  def update
-    event_id = original_id = route_params["id"]
-    changes = PlaceCalendar::Event.from_json(request.body.as(IO))
-    system_id = (query_params["system_id"]? || changes.system_id).presence
+  # patches an existing booking with the changes provided, a system should be specified if the user doesn't own the event
+  @[AC::Route::PATCH("/:id", body: :changes)]
+  def update(
+    changes : PlaceCalendar::Event,
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(name: "system_id", description: "the event space associated with this event", example: "sys-1234")]
+    associated_system : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil
+  ) : PlaceCalendar::Event
+    event_id = original_id
+    system_id = (associated_system || changes.system_id).presence
 
     placeos_client = get_placeos_client
 
-    cal_id = if user_cal = query_params["calendar"]?
+    cal_id = if user_cal
+               user_cal = user_cal.downcase
                found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-               head(:not_found) unless found
+               raise AC::Route::Param::ValueError.new("user doesn't have write access to #{user_cal}", "calendar") unless found
                user_cal
              elsif system_id
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
-               head(:not_found) unless sys_cal
+               raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
                sys_cal
              else
-               # TODO:: should defualt to the current users email
-               head :bad_request
+               # defaults to the current users email
+               user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    render(:not_found, text: "failed to find event searching on #{cal_id} as #{user.email}") unless event
+    raise Error::NotFound.new("failed to find event searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
       event_id = event.id.not_nil!
       changes.id = event_id
-    end
-
-    # Guests can only update the extension_data
-    if user_token.guest_scope?
-      guest_event_id, guest_system_id = user.roles
-      head :forbidden unless changes.extension_data && guest_event_id.in?({original_id, event_id}) && system_id == guest_system_id
-
-      # We expect the metadata to exist when a guest is accessing
-      meta = get_migrated_metadata(event, system_id.not_nil!).not_nil!
-
-      if extension_data = changes.extension_data
-        meta_ext_data = meta.ext_data
-        data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
-        # Updating extension data by merging into existing.
-        extension_data.as_h.each { |key, value| data[key] = value }
-        # Needed for clear to assign the updated json correctly
-        meta.ext_data_column.clear
-        meta.ext_data = JSON.parse(data.to_json)
-        meta.save!
-      end
-
-      render json: StaffApi::Event.augment(event, cal_id, system, meta)
     end
 
     # User details
@@ -292,7 +292,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      render(:forbidden, text: "current user not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # Check if attendees need updating
@@ -331,10 +331,10 @@ class Events < Application
 
       new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence
-      head(:not_found) unless new_sys_cal
+      raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
 
       # Check this room isn't already invited
-      head(:conflict) if existing_attendees.includes?(new_sys_cal)
+      raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) is already marked as a resource", "event.system_id") if existing_attendees.includes?(new_sys_cal)
 
       attendees.delete(cal_id)
       attendees << new_sys_cal
@@ -510,34 +510,54 @@ class Events < Application
         })
       end
 
-      render json: StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
+      StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
     else
-      render json: StaffApi::Event.augment(updated_event.not_nil!, host)
+      StaffApi::Event.augment(updated_event.not_nil!, host)
     end
   end
 
-  put("/:id/metadata/:system_id", :update_metadata) do
-    update_metadata
+  # Patches the metadata on a booking without touching the calendar event, only updates the keys provided in the request
+  @[AC::Route::PATCH("/:id/metadata/:system_id", body: :changes)]
+  def patch_metadata(
+    changes : JSON::Any,
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String
+  ) : JSON::Any
+    update_metadata(changes.as_h, original_id, system_id, merge: true)
   end
 
-  patch("/:id/metadata/:system_id", :update_metadata) do
-    update_metadata merge: true
+  # Replaces the metadata on a booking without touching the calendar event
+  @[AC::Route::PUT("/:id/metadata/:system_id", body: :changes)]
+  def replace_metadata(
+    changes : JSON::Any,
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String
+  ) : JSON::Any
+    update_metadata(changes.as_h, original_id, system_id, merge: false)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  protected def update_metadata(merge : Bool = false)
-    changes = JSON::Any.from_json(request.body.as(IO)).as_h
-    event_id = original_id = route_params["id"]
-    system_id = route_params["system_id"]
-
+  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, merge : Bool = false)
+    event_id = original_id
     placeos_client = get_placeos_client
+
+    # Guest access
+    if user_token.guest_scope?
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
+    end
 
     system = placeos_client.systems.fetch(system_id)
     cal_id = system.email.presence
-    render(:not_found, text: "system does not have a resource email associated with it") unless cal_id
+    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    render(:not_found, text: "event not found on system calendar") unless event
+    user_email = user_token.guest_scope? ? cal_id : user.email.downcase
+    event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -547,12 +567,10 @@ class Events < Application
 
     # Guests can update extension_data to indicate their order
     if user_token.guest_scope?
-      guest_event_id, guest_system_id = user.roles
-      head :forbidden unless merge && guest_event_id.in?({original_id, event_id}) && system_id == guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
     else
       attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-      user_email = user.email.downcase
-      head :forbidden unless is_support? || user_email == event.host || user_email.in?(attendees)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
     end
 
     # attempt to find the metadata
@@ -568,9 +586,8 @@ class Events < Application
     meta.tenant_id = tenant.id
 
     # Updating extension data by merging into existing.
-    if merge
-      meta_ext_data = meta.ext_data
-      data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
+    if merge && meta.ext_data_column.defined? && (meta_ext_data = meta.ext_data)
+      data = meta_ext_data.as_h
       changes.each { |key, value| data[key] = value }
     else
       data = changes
@@ -592,116 +609,128 @@ class Events < Application
       })
     end
 
-    render json: meta.ext_data
+    meta.ext_data.not_nil!
   end
 
-  def show
-    original_event_id = event_id = route_params["id"]
+  # returns the event requested
+  @[AC::Route::GET("/:id")]
+  def show(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil
+  ) : PlaceCalendar::Event
     placeos_client = get_placeos_client
+    event_id = original_id
 
     # Guest access
     if user_token.guest_scope?
-      guest_event_id, system_id = user.roles
-      guest_email = user.email.downcase
-
-      # grab the calendar id
-      calendar_id = placeos_client.systems.fetch(system_id).email.presence
-      head(:not_found) unless calendar_id
-
-      guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email})
-
-      # Get the event using the admin account
-      event = client.get_event(user.email, id: event_id, calendar_id: calendar_id)
-      head(:not_found) unless event
-      original_recurring_event_id = event.recurring_event_id
-
-      # ensure we have the host event details
-      if client.client_id == :office365 && event.host != calendar_id
-        event = get_hosts_event(event)
-        event_id = event.id
-      end
-
-      head :forbidden unless {original_event_id, event_id, event.recurring_event_id, original_recurring_event_id}.includes?(guest_event_id)
-
-      eventmeta = get_event_metadata(event, system_id)
-      head(:not_found) unless eventmeta
-
-      if Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.id})
-        system = placeos_client.systems.fetch(system_id)
-        render json: StaffApi::Event.augment(event.not_nil!, eventmeta.not_nil!.resource_calendar, system, eventmeta)
-      else
-        head :not_found
-      end
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless system_id == guest_system_id
     end
 
-    if system_id = query_params["system_id"]?
+    if system_id
       # Need to grab the calendar associated with this system
       system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
-      head(:not_found) unless cal_id
+      user_email = user_token.guest_scope? ? cal_id : user.email
+      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
-      event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-      head(:not_found) unless event
+      event = client.get_event(user_email.not_nil!, id: event_id, calendar_id: cal_id)
+      raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
       # ensure we have the host event details
       if client.client_id == :office365 && event.host != cal_id
-        event = get_hosts_event(event)
-        event_id = event.id.not_nil!
+        begin
+          event = get_hosts_event(event)
+          event_id = event.id.not_nil!
+        rescue PlaceCalendar::Exception
+          # we might not have access
+        end
+      end
+
+      if user_token.guest_scope?
+        raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
       end
 
       metadata = get_event_metadata(event, system_id)
       parent_meta = metadata && metadata.event_id != event.id
-      render json: StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
+      StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
     else
-      user_cal = query_params["calendar"]?.try(&.downcase)
-
       # Need to confirm the user can access this calendar
       if user_cal
+        user_cal = user_cal.downcase
         found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
       else
         user_cal = user.email
         found = true
       end
-      head(:not_found) unless found
+      raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found
 
       # Grab the event details
       event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
-      head(:not_found) unless event
+      raise Error::NotFound.new("event #{event_id} not found on calendar #{user_cal}") unless event
 
-      render json: StaffApi::Event.augment(event.not_nil!, user_cal)
+      # see if there are any relevent metadata details
+      if ev_ical_uid = event.ical_uid
+        metadata = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+      end
+      StaffApi::Event.augment(event.not_nil!, user_cal, metadata: metadata)
     end
-
-    head :bad_request
   end
 
-  def destroy
-    cancel_event(delete: true)
+  # deletes the event from the calendar, it will not appear as cancelled, it will be gone
+  @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
+  def destroy(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil,
+    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
+    notify_guests : Bool = true
+  ) : Nil
+    cancel_event(event_id, notify_guests, system_id, user_cal, delete: true)
   end
 
-  post "/:id/decline", :decline do
-    cancel_event(delete: false)
+  # cancels the meeting without deleting it
+  # visually the event will remain on the calendar with a line through it
+  @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
+  def decline(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil,
+    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
+    notify_guests : Bool = true
+  ) : Nil
+    cancel_event(event_id, notify_guests, system_id, user_cal, delete: false)
   end
 
-  # ameba:disable Metrics/CyclomaticComplexity
-  protected def cancel_event(delete : Bool)
-    event_id = route_params["id"]
-    notify_guests = query_params["notify"]? != "false"
+  protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    cal_id = if system_id = query_params["system_id"]?
+    cal_id = if system_id
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
-               head(:not_found) unless sys_cal
+               raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
                sys_cal
-             elsif user_cal = query_params["calendar"]?.try(&.downcase)
+             elsif user_cal
+               user_cal = user_cal.try(&.downcase)
                found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
-               head(:not_found) unless found
+               raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found
                user_cal
              else
                user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
+    raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
 
     # User details
     user_email = user.email
@@ -711,23 +740,23 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
       # may be able to delete on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id.not_nil!
-    end
+    # we don't need host details for delete / decline as we want it to occur on the calendar specified
+    # if client.client_id == :office365 && event.host != cal_id
+    #   event = get_hosts_event(event)
+    #   event_id = event.id.not_nil!
+    # end
 
     if delete
-      client.delete_event(user_id: host, id: event_id, calendar_id: host, notify: notify_guests)
+      client.delete_event(user_id: cal_id, id: event_id, calendar_id: cal_id, notify: notify_guests)
     else
       comment = request.body.try &.gets_to_end.presence
       client.decline_event(
-        user_id: host,
+        user_id: cal_id,
         id: event_id,
-        calendar_id: host,
+        calendar_id: cal_id,
         notify: notify_guests,
         comment: comment
       )
@@ -745,35 +774,79 @@ class Events < Application
         })
       end
     end
-
-    head :accepted
   end
 
-  #
-  # Event Approval / Rejection
-  #
-  post "/:id/approve", :approve do
-    update_status("accepted")
+  # approves / accepts the meeting on behalf of the event space
+  @[AC::Route::POST("/:id/approve")]
+  def approve(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String
+  ) : PlaceCalendar::Event
+    update_status(event_id, system_id, "accepted")
   end
 
-  post "/:id/reject", :reject do
-    update_status("declined")
+  # rejects / declines the meeting on behalf of the event space
+  @[AC::Route::POST("/:id/reject")]
+  def reject(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String
+  ) : PlaceCalendar::Event
+    update_status(event_id, system_id, "declined")
   end
 
-  #
+  private def update_status(event_id : String, system_id : String, status : String)
+    # Check this system has an associated resource
+    system = get_placeos_client.systems.fetch(system_id)
+    cal_id = system.email
+    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
+
+    # Check the event was in the calendar
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
+
+    # User details
+    user_email = user.email
+    host = event.host || user_email
+
+    # check permisions
+    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+    end
+
+    # Existing attendees without system
+    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
+    # Adding back system with correct status
+    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
+
+    event.not_nil!.attendees = attendees
+
+    # Update the event (user must be a resource approver)
+    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
+
+    # Return the full event details
+    metadata = get_event_metadata(event, system_id)
+
+    StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
+  end
+
   # Event Guest management
-  #
-  get("/:id/guests", :guest_list) do
-    event_id = route_params["id"]
-    render(json: [] of Nil) if query_params["calendar"]?
-    system_id = query_params["system_id"]?
-    render :bad_request, json: {error: "missing system_id param"} unless system_id
-
+  @[AC::Route::GET("/:id/guests")]
+  def guest_list(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String
+  ) : Array(Guest::GuestResponse | Attendee::AttendeeResponse)
     cal_id = get_placeos_client.systems.fetch(system_id).email
-    render(json: [] of Nil) unless cal_id
+    return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless cal_id
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
+    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -784,46 +857,55 @@ class Events < Application
     # Grab meeting metadata if it exists
     metadata = get_event_metadata(event, system_id)
     parent_meta = metadata && metadata.event_id != event.id
-    render(json: [] of Nil) unless metadata
+    return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless metadata
 
     # Find anyone who is attending
     visitors = metadata.attendees.to_a
-    render(json: [] of Nil) if visitors.empty?
+    return [] of Guest::GuestResponse | Attendee::AttendeeResponse if visitors.empty?
 
     # Grab the guest profiles if they exist
     guests = visitors.each_with_object({} of String => Guest) { |visitor, obj| obj[visitor.guest.email.not_nil!] = visitor.guest }
 
     # Merge the visitor data with guest profiles
-    visitors = visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
-
-    render json: visitors
+    visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
   end
 
   # example route: /extension_metadata?field_name=colour&value=blue
-  get("/extension_metadata", :extension_metadata) do
-    field_name = query_params["field_name"]
-    value = query_params["value"]
-
-    query = EventMetadata.by_ext_data(field_name, value)
-
-    results = query.to_a
-    render json: results
+  @[AC::Route::GET("/extension_metadata")]
+  def extension_metadata(
+    @[AC::Param::Info(description: "the field we want to query", example: "status")]
+    field_name : String,
+    @[AC::Param::Info(description: "value we want to match", example: "approved")]
+    value : String
+  ) : Array(EventMetadata::Assigner)
+    EventMetadata.by_ext_data(field_name, value).to_a.map do |metadata|
+      EventMetadata::Assigner.from_json(metadata.to_json)
+    end
   end
 
-  post("/:id/guests/:guest_id/checkin", :guest_checkin) do
-    checkin = (query_params["state"]? || "true") == "true"
-    event_id = route_params["id"]
-    guest_id = route_params["guest_id"].downcase
-    host_mailbox = query_params["host_mailbox"]?.try &.downcase
+  # a guest has arrived for a meeting in person.
+  # This route can be used to notify hosts
+  @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
+  def guest_checkin(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
+    guest_email : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
+    checkin : Bool = true
+  )
+    guest_id = guest_email.downcase
+    event_id = original_id
 
     if user_token.guest_scope?
-      guest_event_id, system_id = user.roles
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
       guest_token_email = user.email.downcase
-
-      head :forbidden unless event_id == guest_event_id && guest_id == guest_token_email
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event they are not associated with") unless system_id == guest_system_id
     else
-      system_id = query_params["system_id"]?
-      render :bad_request, json: {error: "missing system_id param"} unless system_id
+      raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
     end
 
     guest_email = if guest_id.includes?('@')
@@ -832,20 +914,19 @@ class Events < Application
                     Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64).email
                   end
 
+    raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event as #{guest_email}") if user_token.guest_scope? && guest_email != guest_token_email
+
     system = get_placeos_client.systems.fetch(system_id)
-    sys_email = system.email
-    render :not_found, json: {error: "system #{system_id} missing resource email"} unless sys_email
+    cal_id = system.email
+    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
-    # The provided event id defaults to the system ID however for office365
-    # we may need to explicitly provide the hosts mailbox if the rooms event id is unknown
-    cal_id = host_mailbox || sys_email
-
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    render :not_found, json: {error: "event #{event_id} not found in #{cal_id}"} if event.nil?
+    user_email = user_token.guest_scope? ? cal_id : user.email.downcase
+    event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
     # Check the guest email is in the event
     attendee = event.attendees.find { |attending| attending.email.downcase == guest_email }
-    head(:not_found) unless attendee
+    raise Error::NotFound.new("guest #{guest_email} is not an attendee on the event") unless attendee
 
     # Create the guest model if not already in the database
     guest = begin
@@ -859,7 +940,7 @@ class Events < Application
         dangerous:      false,
         extension_data: JSON::Any.new({} of String => JSON::Any),
       })
-      render :unprocessable_entity, json: g.errors.map(&.to_s) if !g.save
+      raise Error::ModelValidation.new(g.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating guest data") if !g.save
       g
     end
 
@@ -869,13 +950,17 @@ class Events < Application
       event_id = event.id.not_nil!
     end
 
+    if user_token.guest_scope?
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id})
+    end
+
     eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!({
       system_id:           system.id.not_nil!,
       event_id:            event.id.not_nil!,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
       event_start:         event.event_start.not_nil!.to_unix,
       event_end:           event.event_end.not_nil!.to_unix,
-      resource_calendar:   sys_email,
+      resource_calendar:   cal_id,
       host_email:          event.host.not_nil!,
       tenant_id:           tenant.id,
       ical_uid:            event.ical_uid.not_nil!,
@@ -894,7 +979,7 @@ class Events < Application
     end
 
     # Check the event is still on
-    render :not_found, json: {error: "the event #{event_id} in the hosts calendar #{event.host} is cancelled"} unless event && event.status != "cancelled"
+    raise Error::NotFound.new("the event #{event_id} in the hosts calendar #{event.host} is cancelled") unless event && event.status != "cancelled"
 
     # Update PlaceOS with an signal "staff/guest/checkin"
     spawn do
@@ -914,51 +999,5 @@ class Events < Application
     end
 
     render json: attending_guest(attendee, attendee.guest)
-  end
-
-  private def update_status(status)
-    event_id = route_params["id"]
-    system_id = query_params["system_id"]
-
-    # Check this system has an associated resource
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
-    head(:not_found) unless cal_id
-
-    # Check the event was in the calendar
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    head(:not_found) unless event
-
-    # User details
-    user_email = user.email
-    host = event.host || user_email
-
-    # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
-      # may be able to delete on behalf of the user
-      head(:forbidden) if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
-    end
-
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id # ameba:disable Lint/UselessAssign
-    end
-
-    # Existing attendees without system
-    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
-    # Adding back system with correct status
-    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
-
-    event.not_nil!.attendees = attendees
-
-    # Update the event (user must be a resource approver)
-    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
-
-    # Return the full event details
-    metadata = get_event_metadata(event, system_id)
-
-    render json: StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
   end
 end

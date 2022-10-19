@@ -2,15 +2,16 @@ require "./logging"
 
 # Application dependencies
 require "action-controller"
+require "auto_initialize"
 require "active-model"
 require "clear"
 
 require "./constants"
 require "./error"
 require "./controllers/application"
-require "./controllers/*"
 require "./models/*"
 require "./migrations/*"
+require "./controllers/*"
 
 # Add telemetry after application code
 require "./telemetry"

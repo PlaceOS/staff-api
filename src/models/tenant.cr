@@ -89,6 +89,7 @@ class Tenant
   column outlook_config : OutlookConfig, presence: false
 
   column delegated : Bool?
+  column service_account : String?
 
   has_many attendees : Attendee, foreign_key: "tenant_id"
   has_many guests : Guest, foreign_key: "tenant_id"
@@ -96,6 +97,33 @@ class Tenant
 
   before :save, :set_delegated
   before :save, :encrypt!
+
+  struct Responder
+    include JSON::Serializable
+
+    getter id : Int64?
+    getter name : String?
+    getter domain : String?
+    getter platform : String?
+    getter delegated : Bool?
+    getter service_account : String?
+    getter credentials : JSON::Any? = nil
+    getter booking_limits : JSON::Any? = nil
+
+    def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil)
+    end
+
+    def to_tenant
+      tenant = Tenant.new
+      {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account] %}
+        tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
+      {% end %}
+      if creds = credentials
+        tenant.credentials = creds.to_json
+      end
+      tenant
+    end
+  end
 
   def validate
     validate_columns
@@ -106,15 +134,18 @@ class Tenant
   def as_json
     is_delegated = delegated_column.defined? ? self.delegated : false
     limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
-    {
-      id:             self.id,
-      name:           self.name,
-      domain:         self.domain,
-      platform:       self.platform,
-      delegated:      is_delegated,
+    service = service_account_column.defined? ? self.service_account : nil
+
+    Responder.new(
+      id: self.id,
+      name: self.name,
+      domain: self.domain,
+      platform: self.platform,
+      service_account: service,
+      delegated: is_delegated,
       booking_limits: limits,
       outlook_config: outlook_config,
-    }
+    )
   end
 
   def valid_json?(value : String)
@@ -243,5 +274,19 @@ class Tenant
   #
   def is_encrypted? : Bool
     PlaceOS::Encryption.is_encrypted?(self.credentials)
+  end
+
+  # distribute load as much as possible when using service accounts
+  def which_account(user_email : String, resources = [] of String) : String
+    if service_acct = self.service_account.presence
+      resources << service_acct
+      resources.sample.downcase
+    else
+      user_email.downcase
+    end
+  end
+
+  def using_service_account?
+    !self.service_account.presence.nil?
   end
 end

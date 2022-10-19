@@ -15,3 +15,6 @@ Style/VerboseBlock:
   MaxLength: 50
   Enabled: false
   Severity: Convention
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
