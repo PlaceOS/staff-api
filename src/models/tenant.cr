@@ -109,13 +109,14 @@ class Tenant
     getter service_account : String?
     getter credentials : JSON::Any? = nil
     getter booking_limits : JSON::Any? = nil
+    getter outlook_config : OutlookConfig? = nil
 
-    def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil)
+    def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil, @outlook_config = nil)
     end
 
     def to_tenant
       tenant = Tenant.new
-      {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account] %}
+      {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account, :outlook_config] %}
         tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
       if creds = credentials
@@ -135,6 +136,7 @@ class Tenant
     is_delegated = delegated_column.defined? ? self.delegated : false
     limits = booking_limits_column.defined? ? self.booking_limits : JSON::Any.new({} of String => JSON::Any)
     service = service_account_column.defined? ? self.service_account : nil
+    outlook_config = outlook_config_column.defined? ? self.outlook_config : nil
 
     Responder.new(
       id: self.id,
@@ -144,6 +146,7 @@ class Tenant
       service_account: service,
       delegated: is_delegated,
       booking_limits: limits,
+      outlook_config: outlook_config,
     )
   end
 
