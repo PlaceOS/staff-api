@@ -9,8 +9,9 @@ describe Outlook do
       headers = HTTP::Headers{
         "Host" => "toby.staff-api.dev",
       }
+      app_id = UUID.random
 
-      response = client.get("#{OUTLOOK_BASE}/manifest.xml", headers: headers)
+      response = client.get("#{OUTLOOK_BASE}/manifest.xml?app-id=#{app_id}", headers: headers)
       response.status_code.should eq(200)
       XML.parse(response.body).xml?.should be_true
     end

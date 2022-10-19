@@ -2,22 +2,32 @@ require "xml"
 
 struct OutlookManifest
   property app_domain : String
+  property app_id : String
+  property app_resource : String
   property source_location : String
   property function_file_url : String
   property taskpane_url : String
-  property bookings_button_url : String
+  property rooms_button_url : String
+  property desks_button_url : String
 
-  def initialize(@app_domain, @source_location, @function_file_url, @taskpane_url, @bookings_button_url)
+  def initialize(@app_domain, @app_id, @app_resource, @source_location, @function_file_url, @taskpane_url, @rooms_button_url, @desks_button_url)
   end
 
   def to_xml
-    XML.build(indent: "  ") do |xml|
-      xml.element("OfficeApp", "xsi:type": "MailApp") do
-        xml.element("Id") { xml.text "uuid" }
-        xml.element("Version") { xml.text "1.0.0.5" }
+    XML.build(version: "1.0", encoding: "UTF-8", indent: "  ") do |xml|
+      xml.element(
+        "OfficeApp",
+        "xmlns": "http://schemas.microsoft.com/office/appforoffice/1.1",
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xmlns:bt": "http://schemas.microsoft.com/office/officeappbasictypes/1.0",
+        "xmlns:mailappor": "http://schemas.microsoft.com/office/mailappversionoverrides/1.0",
+        "xsi:type": "MailApp"
+      ) do
+        xml.element("Id") { xml.text UUID.random.to_s }
+        xml.element("Version") { xml.text "1.0.1.0" }
         xml.element("ProviderName") { xml.text "PLACEOS" }
         xml.element("DefaultLocale") { xml.text "en-US" }
-        xml.element("DisplayName", "DefaultValue": "Room booking")
+        xml.element("DisplayName", "DefaultValue": "PlaceOS | Book Meeting Plugin")
         xml.element("Description", "DefaultValue": "This add-in allows you to book rooms in your building via the PlaceOS API")
         xml.element("IconUrl", "DefaultValue": "https://s3.ap-southeast-2.amazonaws.com/os.place.tech/outlook-plugin-resources/16x16-01.png")
         xml.element("HighResolutionIconUrl", "DefaultValue": "https://s3.ap-southeast-2.amazonaws.com/os.place.tech/outlook-plugin-resources/80x80-01.png")
@@ -47,7 +57,7 @@ struct OutlookManifest
           xml.element("Rule", "xsi:type": "ItemIs", "ItemType": "Message", "FormType": "Read")
         end
         xml.element("DisableEntityHighlighting") { xml.text "false" }
-        xml.element("VersionOverrides", "xsi:type": "VersionOverridesV1_0") do
+        xml.element("VersionOverrides", "xmlns": "http://schemas.microsoft.com/office/mailappversionoverrides", "xsi:type": "VersionOverridesV1_0") do
           xml.element("Requirements") do
             xml.element("bt:Sets", "DefaultMinVersion": "1.3") do
               xml.element("bt:Set", "Name": "Mailbox")
@@ -76,11 +86,11 @@ struct OutlookManifest
                           xml.element("SourceLocation", "resid": "Taskpane.Url")
                         end
                       end
-                      xml.element("Control", "xsi:type": "Button", "id": "BookingsButton") do
-                        xml.element("Label", "resid": "BookingsButton.Label")
+                      xml.element("Control", "xsi:type": "Button", "id": "RoomsButton") do
+                        xml.element("Label", "resid": "RoomsButton.Label")
                         xml.element("Supertip") do
-                          xml.element("Title", "resid": "BookingsButton.Label")
-                          xml.element("Description", "resid": "BookingsButton.Tooltip")
+                          xml.element("Title", "resid": "RoomsButton.Label")
+                          xml.element("Description", "resid": "RoomsButton.Tooltip")
                         end
                         xml.element("Icon") do
                           xml.element("bt:Image", "size": "16", "resid": "Icon.16x16")
@@ -88,7 +98,22 @@ struct OutlookManifest
                           xml.element("bt:Image", "size": "80", "resid": "Icon.80x80")
                         end
                         xml.element("Action", "xsi:type": "ShowTaskpane") do
-                          xml.element("SourceLocation", "resid": "BookingsButton.Url")
+                          xml.element("SourceLocation", "resid": "RoomsButton.Url")
+                        end
+                      end
+                      xml.element("Control", "xsi:type": "Button", "id": "DesksButton") do
+                        xml.element("Label", "resid": "DesksButton.Label")
+                        xml.element("Supertip") do
+                          xml.element("Title", "resid": "DesksButton.Label")
+                          xml.element("Description", "resid": "DesksButton.Tooltip")
+                        end
+                        xml.element("Icon") do
+                          xml.element("bt:Image", "size": "16", "resid": "Icon.16x16")
+                          xml.element("bt:Image", "size": "32", "resid": "Icon.32x32")
+                          xml.element("bt:Image", "size": "80", "resid": "Icon.80x80")
+                        end
+                        xml.element("Action", "xsi:type": "ShowTaskpane") do
+                          xml.element("SourceLocation", "resid": "DesksButton.Url")
                         end
                       end
                     end
@@ -106,16 +131,30 @@ struct OutlookManifest
             xml.element("bt:Urls") do
               xml.element("bt:Url", "id": "functionFile", "DefaultValue": @function_file_url)
               xml.element("bt:Url", "id": "Taskpane.Url", "DefaultValue": @taskpane_url)
-              xml.element("bt:Url", "id": "BookingsButton.Url", "DefaultValue": @bookings_button_url)
+              xml.element("bt:Url", "id": "RoomsButton.Url", "DefaultValue": @rooms_button_url)
+              xml.element("bt:Url", "id": "DesksButton.Url", "DefaultValue": @desks_button_url)
             end
             xml.element("bt:ShortStrings") do
-              xml.element("bt:String", "id": "GroupLabel", "DefaultValue": "PlaceOS | Room Booking")
-              xml.element("bt:String", "id": "TaskpaneButton.Label", "DefaultValue": "Book a room")
-              xml.element("bt:String", "id": "BookingsButton.Label", "DefaultValue": "Upcoming bookings")
+              xml.element("bt:String", "id": "GroupLabel", "DefaultValue": "PlaceOS | Book Meeting")
+              xml.element("bt:String", "id": "TaskpaneButton.Label", "DefaultValue": "Book a meeting")
+              xml.element("bt:String", "id": "DesksButton.Label", "DefaultValue": "Book a Desk")
+              xml.element("bt:String", "id": "RoomsButton.Label", "DefaultValue": "Upcoming meetings")
             end
             xml.element("bt:LongStrings") do
               xml.element("bt:String", "id": "TaskpaneButton.Tooltip", "DefaultValue": "Opens a pane displaying all available properties.")
-              xml.element("bt:String", "id": "BookingsButton.Tooltip", "DefaultValue": "Opens a pane displaying all available properties.")
+              xml.element("bt:String", "id": "DesksButton.Tooltip", "DefaultValue": "Opens a pane displaying all available properties.")
+              xml.element("bt:String", "id": "RoomsButton.Tooltip", "DefaultValue": "Opens a pane displaying all available properties.")
+            end
+          end
+          xml.element("VersionOverrides", "xmlns": "http://schemas.microsoft.com/office/mailappversionoverrides/1.1", "xsi:type": "VersionOverridesV1_1") do
+            xml.element("WebApplicationInfo") do
+              xml.element("Id") { xml.text @app_id }
+              xml.element("Resource") { xml.text @app_resource }
+              xml.element("Scopes") do
+                xml.element("Scope") { xml.text "User.Read" }
+                xml.element("Scope") { xml.text "profile" }
+                xml.element("Scope") { xml.text "openid" }
+              end
             end
           end
         end
