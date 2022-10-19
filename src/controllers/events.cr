@@ -586,7 +586,7 @@ class Events < Application
     meta.tenant_id = tenant.id
 
     # Updating extension data by merging into existing.
-    if merge && (meta_ext_data = meta.ext_data)
+    if merge && meta.ext_data_column.defined? && (meta_ext_data = meta.ext_data)
       data = meta_ext_data.as_h
       changes.each { |key, value| data[key] = value }
     else
