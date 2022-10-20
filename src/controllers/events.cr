@@ -848,15 +848,9 @@ class Events < Application
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id # ameba:disable Lint/UselessAssign
-    end
-
     # Grab meeting metadata if it exists
     metadata = get_event_metadata(event, system_id)
-    parent_meta = metadata && metadata.event_id != event.id
+    parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
     return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless metadata
 
     # Find anyone who is attending

@@ -225,12 +225,21 @@ abstract class Application < ActionController::Base
     end
   end
 
-  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String, system_calendar : String) : EventMetadata?
     meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
-    if (meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id) && (original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id}))
-      EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
+    return meta if meta
+    return nil unless event.recurring_event_id.presence && event.recurring_event_id != event.id
+
+    # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
+    if client.client_id == :office365
+      original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: system_calendar)
+      original_meta = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([original_event.ical_uid]) }.to_a.first?
     else
-      meta
+      original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+    end
+
+    if original_meta
+      EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
     end
   end
 end
