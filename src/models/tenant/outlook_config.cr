@@ -5,24 +5,18 @@ class Tenant
     include JSON::Serializable
 
     property app_id : String = ""
+    property base_path : String?
     property app_domain : String?
     property app_resource : String?
     property source_location : String?
-    property function_file_url : String?
-    property taskpane_url : String?
-    property rooms_button_url : String?
-    property desks_button_url : String?
 
     def params
       {
-        app_id:            @app_id,
-        app_domain:        @app_domain,
-        app_resource:      @app_resource,
-        source_location:   @source_location,
-        function_file_url: @function_file_url,
-        taskpane_url:      @taskpane_url,
-        rooms_button_url:  @rooms_button_url,
-        desks_button_url:  @desks_button_url,
+        app_id:          @app_id,
+        base_path:       @base_path,
+        app_domain:      @app_domain,
+        app_resource:    @app_resource,
+        source_location: @source_location,
       }
     end
 
