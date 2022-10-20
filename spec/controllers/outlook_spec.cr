@@ -5,7 +5,7 @@ describe Outlook do
   client = AC::SpecHelper.client
 
   describe "get /manifest.xml" do
-    it "returns an xml manifest", focus: true do
+    it "returns an xml manifest" do
       headers = HTTP::Headers{
         "Host" => get_tenant.domain,
       }
