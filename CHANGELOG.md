@@ -33,6 +33,7 @@
 
 ### Fix
 
+- **outlook**: adjust outlook config ([#230](https://github.com/PlaceOS/staff-api/pull/230))
 - **events**: patching extension metadata ([#227](https://github.com/PlaceOS/staff-api/pull/227))
 - **events**: update ext_data ([#224](https://github.com/PlaceOS/staff-api/pull/224))
 - **events**: get event succeed if the host event can't be fetched ([#218](https://github.com/PlaceOS/staff-api/pull/218))
