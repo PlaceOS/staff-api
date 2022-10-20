@@ -8,15 +8,17 @@ class Outlook < ActionController::Base
     render :bad_request, json: "Outlook not configured" unless outlook_config = tenant.outlook_config
     render :bad_request, json: "Missing app_id" if outlook_config.app_id.blank?
 
+    base_path = outlook_config.base_path || "outlook"
+
     manifest = OutlookManifest.new(
       app_id: outlook_config.app_id,
-      app_domain: outlook_config.app_domain || "https://#{tenant.domain}/outlook/",
+      app_domain: outlook_config.app_domain || "https://#{tenant.domain}/#{base_path}/",
       app_resource: outlook_config.app_resource || "api://#{tenant.domain}/#{outlook_config.app_id}",
-      source_location: outlook_config.source_location || "https://#{tenant.domain}/outlook/",
-      function_file_url: outlook_config.function_file_url || "https://#{tenant.domain}/outlook/function-file/function-file.html",
-      taskpane_url: outlook_config.taskpane_url || "https://#{tenant.domain}/outlook/#/book/meeting",
-      rooms_button_url: outlook_config.rooms_button_url || "https://#{tenant.domain}/outlook/#/upcoming",
-      desks_button_url: outlook_config.desks_button_url || "https://#{tenant.domain}/outlook/#/book/desks"
+      source_location: outlook_config.source_location || "https://#{tenant.domain}/#{base_path}/",
+      function_file_url: "https://#{tenant.domain}/#{base_path}/function-file/function-file.html",
+      taskpane_url: "https://#{tenant.domain}/#{base_path}/#/book/meeting",
+      rooms_button_url: "https://#{tenant.domain}/#{base_path}/#/upcoming",
+      desks_button_url: "https://#{tenant.domain}/#{base_path}/#/book/desks"
     )
 
     render xml: manifest.to_xml
