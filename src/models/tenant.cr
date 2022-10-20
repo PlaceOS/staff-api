@@ -121,6 +121,8 @@ class Tenant
       {% end %}
       if creds = credentials
         tenant.credentials = creds.to_json
+      else
+        tenant.credentials = "{}"
       end
       tenant
     end
