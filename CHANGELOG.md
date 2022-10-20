@@ -33,6 +33,7 @@
 
 ### Fix
 
+- **models/tenant**: allow credentials to be nil ([#231](https://github.com/PlaceOS/staff-api/pull/231))
 - **outlook**: adjust outlook config ([#230](https://github.com/PlaceOS/staff-api/pull/230))
 - **events**: patching extension metadata ([#227](https://github.com/PlaceOS/staff-api/pull/227))
 - **events**: update ext_data ([#224](https://github.com/PlaceOS/staff-api/pull/224))
