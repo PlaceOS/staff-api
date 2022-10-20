@@ -21,13 +21,15 @@ module Utils::MultiTenant
 
   @tenant : Tenant? = nil
 
-  def tenant
+  def tenant : Tenant
     current_tenant
   end
 
-  def current_tenant
+  def current_tenant : Tenant
     determine_tenant_from_domain unless @tenant
-    @tenant.as(Tenant)
+    the_tenant = @tenant
+    raise Error::NotImplemented.new("domain does not have a tenant configured") unless the_tenant
+    the_tenant
   end
 
   private def determine_tenant_from_domain
