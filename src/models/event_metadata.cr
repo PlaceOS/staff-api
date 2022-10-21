@@ -29,7 +29,7 @@ class EventMetadata
   end
 
   def for_event_instance?(event, client_id)
-    if client.client_id == :office365
+    if client_id == :office365
       # ical_uid is unique for every instance of an event in office365
       # https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/ (note, they created a new uid field)
       ical_uid == event.ical_uid

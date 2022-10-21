@@ -232,8 +232,9 @@ abstract class Application < ActionController::Base
 
     # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
     if client.client_id == :office365
-      original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: system_calendar)
-      original_meta = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([original_event.ical_uid]) }.to_a.first?
+      if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: system_calendar)
+        original_meta = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([original_event.ical_uid]) }.to_a.first?
+      end
     else
       original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
     end

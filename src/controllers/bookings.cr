@@ -231,10 +231,12 @@ class Bookings < Application
             id:             guest.id,
             booking_id:     booking.id,
             resource_id:    booking.asset_id,
-            title:          booking.title,
-            booking_start:  booking.booking_start,
+            event_summary:  booking.title,
+            event_starting: booking.booking_start,
             attendee_name:  attendee.name,
             attendee_email: attendee.email,
+            host:           booking.user_email,
+            zones:          booking.zones,
           })
         end
       end
@@ -406,10 +408,12 @@ class Bookings < Application
                   id:             guest.id,
                   booking_id:     existing_booking.id,
                   resource_id:    existing_booking.asset_id,
-                  title:          existing_booking.title,
-                  booking_start:  existing_booking.booking_start,
+                  event_summary:  existing_booking.title,
+                  event_starting: existing_booking.booking_start,
                   attendee_name:  attendee.name,
                   attendee_email: attendee.email,
+                  host:           existing_booking.user_email,
+                  zones:          existing_booking.zones,
                 })
               end
             end

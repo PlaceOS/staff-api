@@ -228,6 +228,7 @@ class Events < Application
                 event_starting: created_event.event_start.not_nil!.to_unix,
                 attendee_name:  attendee.name,
                 attendee_email: attendee.email,
+                zones:          sys.zones,
               })
             end
           end
@@ -359,7 +360,7 @@ class Events < Application
     updated_event = client.update_event(user_id: host, event: changes, calendar_id: host).not_nil!
 
     if system
-      meta = get_migrated_metadata(event, system_id.not_nil!) || EventMetadata.new
+      meta = get_migrated_metadata(event, system_id.not_nil!, system.email.not_nil!) || EventMetadata.new
 
       # Changing the room if applicable
       meta.system_id = system.id.not_nil!
@@ -467,6 +468,7 @@ class Events < Application
                   event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
                   attendee_name:  attendee.name,
                   attendee_email: attendee.email,
+                  zones:          sys.zones,
                 })
               end
             end
@@ -488,6 +490,7 @@ class Events < Application
                 event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
                 attendee_name:  guest.name,
                 attendee_email: guest.email,
+                zones:          sys.zones,
               })
             end
           end
@@ -560,9 +563,14 @@ class Events < Application
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
     # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id.not_nil!
+    # TODO:: instead of this we should store ical UID in the guest JWT
+    if client.client_id == :office365 && event.host != user_email
+      begin
+        event = get_hosts_event(event)
+        event_id = event.id.not_nil!
+      rescue PlaceCalendar::Exception
+        # we might not have access
+      end
     end
 
     # Guests can update extension_data to indicate their order
@@ -574,7 +582,7 @@ class Events < Application
     end
 
     # attempt to find the metadata
-    meta = get_migrated_metadata(event, system_id.not_nil!) || EventMetadata.new
+    meta = get_migrated_metadata(event, system_id.not_nil!, cal_id) || EventMetadata.new
     meta.system_id = system.id.not_nil!
     meta.event_id = event.id.not_nil!
     meta.ical_uid = event.ical_uid.not_nil!
@@ -643,6 +651,7 @@ class Events < Application
       raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
       # ensure we have the host event details
+      # TODO:: instead of this we should store ical UID in the guest JWT
       if client.client_id == :office365 && event.host != cal_id
         begin
           event = get_hosts_event(event)
@@ -938,17 +947,11 @@ class Events < Application
       g
     end
 
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
-      event = get_hosts_event(event)
-      event_id = event.id.not_nil!
-    end
-
     if user_token.guest_scope?
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id})
     end
 
-    eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!({
+    eventmeta = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.create!({
       system_id:           system.id.not_nil!,
       event_id:            event.id.not_nil!,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
