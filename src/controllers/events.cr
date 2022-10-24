@@ -247,6 +247,7 @@ class Events < Application
 
   # patches an existing booking with the changes provided, a system should be specified if the user doesn't own the event
   @[AC::Route::PATCH("/:id", body: :changes)]
+  @[AC::Route::PUT("/:id", body: :changes)]
   def update(
     changes : PlaceCalendar::Event,
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -684,9 +685,21 @@ class Events < Application
       raise Error::NotFound.new("event #{event_id} not found on calendar #{user_cal}") unless event
 
       # see if there are any relevent metadata details
-      if ev_ical_uid = event.ical_uid
-        metadata = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+      ev_ical_uid = event.ical_uid
+      metadata = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+
+      # see if there are any relevent systems associated with the event
+      resource_calendars = (event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
+        attend.email if attend.resource
       end
+
+      if !resource_calendars.empty?
+        systems = placeos_client.systems.with_emails(resource_calendars)
+        if system = systems.first?
+          return StaffApi::Event.augment(event.not_nil!, user_cal, system, metadata)
+        end
+      end
+
       StaffApi::Event.augment(event.not_nil!, user_cal, metadata: metadata)
     end
   end
