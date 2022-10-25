@@ -33,6 +33,7 @@
 
 ### Fix
 
+- **visitor_checkin**: when running in delegated permissions mode ([#233](https://github.com/PlaceOS/staff-api/pull/233))
 - **models/tenant**: allow credentials to be nil ([#231](https://github.com/PlaceOS/staff-api/pull/231))
 - **outlook**: adjust outlook config ([#230](https://github.com/PlaceOS/staff-api/pull/230))
 - **events**: patching extension metadata ([#227](https://github.com/PlaceOS/staff-api/pull/227))
