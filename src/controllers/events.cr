@@ -667,7 +667,7 @@ class Events < Application
       end
 
       metadata = get_event_metadata(event, system_id)
-      parent_meta = metadata && metadata.event_id != event.id
+      parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
       StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
     else
       # Need to confirm the user can access this calendar
