@@ -234,7 +234,7 @@ class Guests < Application
     attending_guest(attendee, guest)
   end
 
-  # lists the configured tenants
+  # creates a new guest record
   @[AC::Route::POST("/", body: :guest_req, status_code: HTTP::Status::CREATED)]
   def create(guest_req : Guest::Assigner) : Guest::GuestResponse | Attendee::AttendeeResponse
     guest = guest_req.create(trusted: false)

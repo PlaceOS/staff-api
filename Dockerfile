@@ -1,9 +1,10 @@
-ARG CRYSTAL_VERSION=1.5
-FROM alpine:3.16 as build
+FROM placeos/crystal:latest as build
 WORKDIR /app
 
 # Set the commit through a build arg
 ARG PLACE_COMMIT="DEV"
+# Set the platform version via a build arg
+ARG PLACE_VERSION="DEV"
 
 # Create a non-privileged user, defaults are appuser:10001
 ARG IMAGE_UID="10001"
@@ -19,32 +20,6 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     "${USER}"
-
-# Add trusted CAs for communicating with external services
-RUN apk add \
-  --update \
-  --no-cache \
-    ca-certificates \
-    yaml-dev \
-    yaml-static \
-    libxml2-dev \
-    openssl-dev \
-    openssl-libs-static \
-    zlib-dev \
-    zlib-static \
-    tzdata
-
-RUN update-ca-certificates
-
-# Add crystal lang
-# can look up packages here: https://pkgs.alpinelinux.org/packages?name=crystal
-RUN apk add \
-  --update \
-  --no-cache \
-  --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
-  --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
-    crystal \
-    shards
 
 # Install shards for caching
 COPY shard.yml .

@@ -9,8 +9,12 @@ module Utils::MultiTenant
     tenant = current_tenant
     place_client = if tenant.delegated
                      # Grab a valid token from RestAPI
-                     token = get_placeos_client.users.resource_token
-                     tenant.place_calendar_client token.token, token.expires
+                     begin
+                       token = get_placeos_client.users.resource_token
+                       tenant.place_calendar_client token.token, token.expires
+                     rescue error
+                       raise Error::NotImplemented.new("no available delegated resource token for user #{user_token.user.email}")
+                     end
                    else
                      # Use the credentials in the database
                      tenant.place_calendar_client

@@ -631,7 +631,8 @@ describe Events do
         event_end: 40.minutes.from_now.to_unix,
         system_id: "sys-rJQQlR4Cn7",
         room_email: "room1@example.com",
-        ext_data: JSON.parse({"magic_number": 77}.to_json)
+        ext_data: JSON.parse({"magic_number": 77}.to_json),
+        ical_uid: "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
       )
 
       update_body = {

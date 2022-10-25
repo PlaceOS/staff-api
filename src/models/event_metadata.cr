@@ -28,6 +28,18 @@ class EventMetadata
     where { (ext_data.jsonb(field_name) == value) }
   end
 
+  def for_event_instance?(event, client_id)
+    if client_id == :office365
+      # ical_uid is unique for every instance of an event in office365
+      # https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/ (note, they created a new uid field)
+      ical_uid == event.ical_uid
+    else
+      # for google the event_id is the same across all instances of an event
+      # UID is as per the standard for google
+      event_id == event.id
+    end
+  end
+
   def to_assigner
     EventMetadata::Assigner.new(
       id: id,
