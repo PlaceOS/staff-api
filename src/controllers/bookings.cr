@@ -185,9 +185,7 @@ class Bookings < Application
     raise Error::ModelValidation.new(booking.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating booking data") if !booking.save
 
     # Grab the list of attendees
-    attending = booking_req.booking_attendees.try(&.select { |attendee|
-      attendee.visit_expected
-    })
+    attending = booking_req.attendees
 
     if attending && !attending.empty?
       # Create guests
@@ -335,8 +333,8 @@ class Bookings < Application
     if existing_booking.valid?
       existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
       # Check if attendees need updating
-      update_attendees = !booking_req.booking_attendees.nil?
-      attendees = booking_req.booking_attendees.try(&.map { |a| a.email }) || existing_attendees
+      update_attendees = !booking_req.attendees.nil?
+      attendees = booking_req.attendees.try(&.map { |a| a.email }) || existing_attendees
       attendees.uniq!
 
       if update_attendees
@@ -355,7 +353,7 @@ class Bookings < Application
         end
 
         # rejecting nil as we want to mark them as not attending where they might have otherwise been attending
-        attending = booking_req.booking_attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
+        attending = booking_req.attendees.try(&.reject { |attendee| attendee.visit_expected.nil? })
         if attending
           # Create guests
           attending.each do |attendee|

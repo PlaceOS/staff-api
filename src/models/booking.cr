@@ -45,6 +45,7 @@ class Booking
     getter extension_data : JSON::Any
     getter current_state : State
     getter history : Array(History)
+    getter attendees : Array(Attendee::AttendeeResponse) = [] of Attendee::AttendeeResponse
   end
 
   enum State
@@ -391,11 +392,12 @@ class Booking
       extension_data: extension_data,
       current_state: current_state,
       history: history,
+      attendees: attendees.map(&.to_resp),
     )
   end
 end
 
 # We're adding `booking_attendees` to the json deserialiser of clear
 struct Booking::Assigner
-  property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
+  property attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
 end
