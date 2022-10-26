@@ -5,7 +5,7 @@ class Bookings < Application
   # Filters
   # =====================
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :guest_checkin])]
   private def find_booking(id : Int64)
     @booking = Booking.query
       .by_tenant(tenant.id)
@@ -218,7 +218,7 @@ class Bookings < Application
         Attendee.create!({
           booking_id:     booking.id.not_nil!,
           guest_id:       guest.id,
-          visit_expected: attendee.visit_expected || true,
+          visit_expected: true,
           checked_in:     attendee.checked_in || false,
           tenant_id:      tenant.id,
         })
@@ -231,8 +231,8 @@ class Bookings < Application
             resource_id:    booking.asset_id,
             event_summary:  booking.title,
             event_starting: booking.booking_start,
-            attendee_name:  attendee.name,
-            attendee_email: attendee.email,
+            attendee_name:  guest.name,
+            attendee_email: guest.email,
             host:           booking.user_email,
             zones:          booking.zones,
           })
@@ -331,16 +331,16 @@ class Bookings < Application
     check_booking_limits(tenant, existing_booking, limit_override) if reset_state
 
     if existing_booking.valid?
-      existing_attendees = existing_booking.attendees.try(&.map { |a| a.email }) || [] of String
+      existing_attendees = existing_booking.attendees.try(&.map { |a| a.email.strip.downcase }) || [] of String
       # Check if attendees need updating
       update_attendees = !booking_req.attendees.nil?
-      attendees = booking_req.attendees.try(&.map { |a| a.email }) || existing_attendees
+      attendees = booking_req.attendees.try(&.map { |a| a.email.strip.downcase }) || existing_attendees
       attendees.uniq!
 
       if update_attendees
         existing_lookup = {} of String => Attendee
         existing = existing_booking.attendees.to_a
-        existing.each { |a| existing_lookup[a.email] = a }
+        existing.each { |a| existing_lookup[a.email.strip.downcase] = a }
 
         # Attendees that need to be deleted:
         remove_attendees = existing_attendees - attendees
@@ -505,6 +505,7 @@ class Bookings < Application
 
   # indicates that a booking has commenced
   @[AC::Route::POST("/:id/check_in")]
+  @[AC::Route::POST("/:id/checkin")]
   def check_in(
     @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
     state : Bool = true,
@@ -561,6 +562,41 @@ class Bookings < Application
     booking.attendees.to_a.map do |visitor|
       visitor.guest.for_booking_to_h(visitor, booking.as_h)
     end
+  end
+
+  @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
+  @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
+  def guest_checkin(
+    @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
+    guest_email : String,
+    @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
+    checkin : Bool = true
+  ) : Guest::GuestResponse
+    guest = Guest.query.by_tenant(tenant.id).find!({email: guest_email.strip.downcase})
+    attendee = Attendee.query.by_tenant(tenant.id).find!({guest_id: guest.id, booking_id: booking.id})
+
+    attendee.booking = booking
+    attendee.guest = guest
+    attendee.checked_in = checkin
+    attendee.save!
+
+    spawn do
+      get_placeos_client.root.signal("staff/guest/checkin", {
+        action:         :checkin,
+        id:             guest.id,
+        checkin:        checkin,
+        booking_id:     booking.id,
+        resource_id:    booking.asset_id,
+        event_summary:  booking.title,
+        event_starting: booking.booking_start,
+        attendee_name:  guest.name,
+        attendee_email: guest.email,
+        host:           booking.user_email,
+        zones:          booking.zones,
+      })
+    end
+
+    guest.for_booking_to_h(attendee, booking.as_h(include_attendees: false))
   end
 
   # ============================================

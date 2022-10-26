@@ -224,7 +224,7 @@ class Events < Application
                 event_id:       created_event.id,
                 host:           host,
                 resource:       sys.email,
-                event_summary:  created_event.body,
+                event_summary:  created_event.title,
                 event_starting: created_event.event_start.not_nil!.to_unix,
                 attendee_name:  attendee.name,
                 attendee_email: attendee.email,
@@ -465,7 +465,7 @@ class Events < Application
                   event_id:       event_id,
                   host:           host,
                   resource:       sys.email,
-                  event_summary:  updated_event.not_nil!.body,
+                  event_summary:  updated_event.not_nil!.title,
                   event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
                   attendee_name:  attendee.name,
                   attendee_email: attendee.email,
@@ -487,7 +487,7 @@ class Events < Application
                 event_id:       event_id,
                 host:           host,
                 resource:       sys.email,
-                event_summary:  updated_event.not_nil!.body,
+                event_summary:  updated_event.not_nil!.title,
                 event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
                 attendee_name:  guest.name,
                 attendee_email: guest.email,
@@ -901,6 +901,7 @@ class Events < Application
 
   # a guest has arrived for a meeting in person.
   # This route can be used to notify hosts
+  @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -911,7 +912,7 @@ class Events < Application
     system_id : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
     checkin : Bool = true
-  )
+  ) : Guest::GuestResponse
     guest_id = guest_email.downcase
     event_id = original_id
 
@@ -995,19 +996,20 @@ class Events < Application
     spawn do
       get_placeos_client.root.signal("staff/guest/checkin", {
         action:         :checkin,
+        id:             guest.id,
         checkin:        checkin,
         system_id:      system_id,
         event_id:       event_id,
         host:           event.host,
         resource:       eventmeta.resource_calendar,
-        event_summary:  event.not_nil!.body,
+        event_summary:  event.not_nil!.title,
         event_starting: eventmeta.event_start,
         attendee_name:  guest.name,
         attendee_email: guest.email,
-        ext_data:       eventmeta.ext_data,
+        zones:          system.zones,
       })
     end
 
-    render json: attending_guest(attendee, attendee.guest)
+    attending_guest(attendee, attendee.guest, false, event).as(Guest::GuestResponse)
   end
 end

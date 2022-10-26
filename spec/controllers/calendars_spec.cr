@@ -59,7 +59,7 @@ describe Calendars do
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    
+
     response = client.get(route, headers: headers)
     body = JSON.parse(response.body).as_a
     body.should eq(CalendarsHelper.free_busy_output)
