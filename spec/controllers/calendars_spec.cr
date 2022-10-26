@@ -54,12 +54,14 @@ describe Calendars do
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: "")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
     now = Time.local.to_unix
     later = (Time.local + 1.hour).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = JSON.parse(client.get(route, headers: headers).body).as_a
+    
+    response = client.get(route, headers: headers)
+    body = JSON.parse(response.body).as_a
     body.should eq(CalendarsHelper.free_busy_output)
   end
 
