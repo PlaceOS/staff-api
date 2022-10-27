@@ -9,6 +9,7 @@ struct OutlookManifest
   property taskpane_url : String
   property rooms_button_url : String
   property desks_button_url : String
+  property version : String
 
   def initialize(
     @app_id,
@@ -18,7 +19,8 @@ struct OutlookManifest
     @function_file_url,
     @taskpane_url,
     @rooms_button_url,
-    @desks_button_url
+    @desks_button_url,
+    @version
   )
   end
 
@@ -33,7 +35,7 @@ struct OutlookManifest
         "xsi:type": "MailApp"
       ) do
         xml.element("Id") { xml.text UUID.random.to_s }
-        xml.element("Version") { xml.text "1.0.1.0" }
+        xml.element("Version") { xml.text @version }
         xml.element("ProviderName") { xml.text "PLACEOS" }
         xml.element("DefaultLocale") { xml.text "en-US" }
         xml.element("DisplayName", "DefaultValue": "PlaceOS | Book Meeting Plugin")

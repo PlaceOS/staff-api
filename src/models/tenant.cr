@@ -95,6 +95,8 @@ class Tenant
   has_many guests : Guest, foreign_key: "tenant_id"
   has_many event_metadata : EventMetadata, foreign_key: "tenant_id"
 
+  timestamps
+
   before :save, :set_delegated
   before :save, :encrypt!
 

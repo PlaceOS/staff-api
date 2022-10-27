@@ -18,7 +18,8 @@ class Outlook < ActionController::Base
       function_file_url: "https://#{tenant.domain}/#{base_path}/function-file/function-file.html",
       taskpane_url: "https://#{tenant.domain}/#{base_path}/#/book/meeting",
       rooms_button_url: "https://#{tenant.domain}/#{base_path}/#/upcoming",
-      desks_button_url: "https://#{tenant.domain}/#{base_path}/#/book/desks"
+      desks_button_url: "https://#{tenant.domain}/#{base_path}/#/book/desks",
+      version: (tenant.updated_at.to_unix || tenant.created_at.to_unix).to_s,
     )
 
     render xml: manifest.to_xml
