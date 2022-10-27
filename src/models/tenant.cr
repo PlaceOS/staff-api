@@ -112,16 +112,18 @@ class Tenant
     getter outlook_config : OutlookConfig? = nil
 
     def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil, @outlook_config = nil)
+      @credentials = nil if @credentials.try(&.empty?)
+      @booking_limits = nil if @booking_limits.try(&.empty?)
     end
 
-    def to_tenant
+    def to_tenant(update : Bool = false)
       tenant = Tenant.new
       {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account, :outlook_config] %}
         tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
       if creds = credentials
         tenant.credentials = creds.to_json
-      else
+      elsif !update
         tenant.credentials = "{}"
       end
       tenant
