@@ -516,6 +516,19 @@ class Events < Application
 
       StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
     else
+      # see if there are any relevent systems associated with the event
+      resource_calendars = (updated_event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
+        attend.email if attend.resource
+      end
+
+      if !resource_calendars.empty?
+        systems = placeos_client.systems.with_emails(resource_calendars)
+        if sys = systems.first?
+          meta = get_migrated_metadata(updated_event, sys.id.not_nil!, sys.email.not_nil!)
+          return StaffApi::Event.augment(updated_event.not_nil!, host, sys, meta)
+        end
+      end
+
       StaffApi::Event.augment(updated_event.not_nil!, host)
     end
   end
