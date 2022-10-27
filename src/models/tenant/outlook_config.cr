@@ -10,6 +10,16 @@ class Tenant
     property app_resource : String?
     property source_location : String?
 
+    def clean
+      config = self
+      config.app_id = config.app_id.strip.downcase
+      config.base_path = (c = config.base_path) && !c.blank? ? c.strip.downcase : nil
+      config.app_domain = (c = config.app_domain) && !c.blank? ? c.strip.downcase : nil
+      config.app_resource = (c = config.app_resource) && !c.blank? ? c.strip.downcase : nil
+      config.source_location = (c = config.source_location) && !c.blank? ? c.strip.downcase : nil
+      config
+    end
+
     def params
       {
         app_id:          @app_id,
@@ -37,7 +47,7 @@ class Tenant
       end
 
       def self.to_db(x : OutlookConfig?)
-        x.to_json
+        x.nil? ? x.to_json : x.clean.to_json
       end
     end
   end
