@@ -1331,7 +1331,8 @@ paths:
         in: path
         required: true
         schema:
-          type: "null"
+          type: integer
+          format: Int64
       - name: guest_id
         in: path
         description: the email of the guest we want to checkin
@@ -1431,7 +1432,8 @@ paths:
         in: path
         required: true
         schema:
-          type: "null"
+          type: integer
+          format: Int64
       - name: guest_id
         in: path
         description: the email of the guest we want to checkin
