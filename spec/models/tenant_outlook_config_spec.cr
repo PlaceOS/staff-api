@@ -3,10 +3,10 @@ require "../spec_helper"
 describe Tenant::OutlookConfig, focus: true do
   it "#clean sets blank strings to nil" do
     config = Tenant::OutlookConfig.from_json({
-      app_id: "    ",
-      base_path: "    ",
-      app_domain: "    ",
-      app_resource: "    ",
+      app_id:          "    ",
+      base_path:       "    ",
+      app_domain:      "    ",
+      app_resource:    "    ",
       source_location: "    ",
     }.to_json)
 
@@ -21,10 +21,10 @@ describe Tenant::OutlookConfig, focus: true do
 
   it "#clean removes leading and trailing whitespace" do
     config = Tenant::OutlookConfig.from_json({
-      app_id: "  qwer-asdf-zxcv  ",
-      base_path: "  inlook  ",
-      app_domain: "  https://tenant.example.com/inlook/  ",
-      app_resource: "  api://tenant.example.com/qwer-asdf-zxcv  ",
+      app_id:          "  qwer-asdf-zxcv  ",
+      base_path:       "  inlook  ",
+      app_domain:      "  https://tenant.example.com/inlook/  ",
+      app_resource:    "  api://tenant.example.com/qwer-asdf-zxcv  ",
       source_location: "  https://tenant.example.com/inlook/  ",
     }.to_json)
 
@@ -39,10 +39,10 @@ describe Tenant::OutlookConfig, focus: true do
 
   it "#clean changes uppercase to downcase" do
     config = Tenant::OutlookConfig.from_json({
-      app_id: "  QWER-ASDF-ZXCV  ",
-      base_path: "  InLook  ",
-      app_domain: "  HTTPS://tenant.example.com/inlook/  ",
-      app_resource: "  API://tenant.example.com/QWER-ASDF-ZXCV  ",
+      app_id:          "  QWER-ASDF-ZXCV  ",
+      base_path:       "  InLook  ",
+      app_domain:      "  HTTPS://tenant.example.com/inlook/  ",
+      app_resource:    "  API://tenant.example.com/QWER-ASDF-ZXCV  ",
       source_location: "  HTTPS://tenant.example.com/inlook/  ",
     }.to_json)
 
