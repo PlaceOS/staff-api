@@ -112,8 +112,8 @@ class Tenant
     getter outlook_config : OutlookConfig? = nil
 
     def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil, @outlook_config = nil)
-      @credentials = nil if @credentials.try(&.empty?)
-      @booking_limits = nil if @booking_limits.try(&.empty?)
+      @credentials = nil if @credentials.try(&.as_h.empty?)
+      @booking_limits = nil if @booking_limits.try(&.as_h.empty?)
     end
 
     def to_tenant(update : Bool = false)

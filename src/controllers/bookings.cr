@@ -5,7 +5,7 @@ class Bookings < Application
   # Filters
   # =====================
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :guest_checkin])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_booking(id : Int64)
     @booking = Booking.query
       .by_tenant(tenant.id)
@@ -22,7 +22,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in])]
+  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin])]
   private def check_deleted
     head :method_not_allowed if booking.deleted
   end
@@ -533,6 +533,8 @@ class Bookings < Application
       end
 
       booking.checked_in_at = Time.utc.to_unix
+      attendees = booking.attendees.to_a
+      guest_checkin(attendees.first.email, true) if attendees.size == 1
     else
       # don't allow double checkouts, but might as well return a success response
       return booking.as_h if booking.current_state.checked_out?
