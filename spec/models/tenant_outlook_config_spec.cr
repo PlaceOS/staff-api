@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-describe Tenant::OutlookConfig, focus: true do
+describe Tenant::OutlookConfig do
   it "#clean sets blank strings to nil" do
     config = Tenant::OutlookConfig.from_json({
       app_id:          "    ",
