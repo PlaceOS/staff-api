@@ -1323,6 +1323,8 @@ paths:
                 $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/bookings/{id}/guests/{guest_id}/check_in:
     post:
+      summary: marks the standalone visitor as checked-in or checked-out based on
+        the state param
       tags:
       - Bookings
       operationId: Bookings#guest_checkin
@@ -1424,6 +1426,8 @@ paths:
                 $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/bookings/{id}/guests/{guest_id}/checkin:
     post:
+      summary: marks the standalone visitor as checked-in or checked-out based on
+        the state param
       tags:
       - Bookings
       operationId: Bookings#guest_checkin{2}

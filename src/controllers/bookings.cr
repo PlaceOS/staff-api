@@ -566,6 +566,7 @@ class Bookings < Application
     end
   end
 
+  # marks the standalone visitor as checked-in or checked-out based on the state param
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
