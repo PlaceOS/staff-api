@@ -39,9 +39,9 @@ class Tenants < Application
   @[AC::Route::PUT("/:id", body: :tenant_body)]
   @[AC::Route::PATCH("/:id", body: :tenant_body)]
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
-    changes = tenant_body.to_tenant
+    changes = tenant_body.to_tenant(update: true)
 
-    {% for key in [:name, :domain, :platform, :booking_limits, :service_account, :outlook_config] %}
+    {% for key in [:name, :domain, :platform, :booking_limits, :service_account, :credentials, :outlook_config] %}
       begin
         tenant.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError

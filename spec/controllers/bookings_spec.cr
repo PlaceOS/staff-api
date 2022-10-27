@@ -582,7 +582,7 @@ describe Bookings do
     ending = Random.new.rand(25..39).minutes.from_now.to_unix
 
     created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
-      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
       {
           "name": "#{user_name}",
           "email": "#{user_email}",
@@ -609,7 +609,7 @@ describe Bookings do
     updated_user_email = Faker::Internet.email
 
     # instantiate the controller
-    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers, body: %({"title":"new title","extension_data":{"other":"stuff"},"booking_attendees": [
+    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers, body: %({"title":"new title","extension_data":{"other":"stuff"},"attendees": [
       {
         "name": "#{updated_user_name}",
         "email": "#{updated_user_email}",
@@ -650,7 +650,7 @@ describe Bookings do
     starting = 5.minutes.from_now.to_unix
     ending = 20.minutes.from_now.to_unix
 
-    created = client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+    created = client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
       {
           "name": "#{user_name}",
           "email": "#{user_email}",
@@ -662,7 +662,7 @@ describe Bookings do
 
     sleep 3
 
-    client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","booking_attendees": [
+    client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
       {
           "name": "#{user_name}",
           "email": "#{user_email}",

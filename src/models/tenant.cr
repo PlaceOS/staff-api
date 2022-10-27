@@ -114,16 +114,22 @@ class Tenant
     def initialize(@id, @name, @domain, @platform, @delegated, @service_account, @credentials = nil, @booking_limits = nil, @outlook_config = nil)
     end
 
-    def to_tenant
+    def to_tenant(update : Bool = false)
       tenant = Tenant.new
-      {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account, :outlook_config] %}
+      {% for key in [:name, :domain, :platform, :delegated, :service_account, :outlook_config] %}
         tenant.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
+
       if creds = credentials
-        tenant.credentials = creds.to_json
-      else
+        tenant.credentials = creds.to_json unless update && creds.as_h.empty?
+      elsif !update
         tenant.credentials = "{}"
       end
+
+      if limits = booking_limits
+        tenant.booking_limits = limits unless update && limits.as_h.empty?
+      end
+
       tenant
     end
   end
