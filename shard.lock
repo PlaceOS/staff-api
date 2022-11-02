@@ -17,10 +17,6 @@ shards:
     git: https://github.com/jwaldrip/admiral.cr.git
     version: 1.12.1
 
-  ameba:
-    git: https://github.com/veelenga/ameba.git
-    version: 1.2.0
-
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
     version: 0.2.5
@@ -145,8 +141,8 @@ shards:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
     version: 0.5.0
 
-  opentelemetry-instrumentation:
-    git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
+  opentelemetry-instrumentation: # Overridden
+    git: https://github.com/stakach/opentelemetry-instrumentation.cr.git
     version: 0.5.0+git.commit.7d83b9a53c9540fbc159f06eeed5d4bdad5c4377
 
   opentelemetry-sdk:
