@@ -35,7 +35,7 @@ shards:
 
   bindata:
     git: https://github.com/spider-gazelle/bindata.git
-    version: 1.11.0
+    version: 1.11.1
 
   clear:
     git: https://github.com/place-labs/clear.git
@@ -145,9 +145,9 @@ shards:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
     version: 0.5.0
 
-  opentelemetry-instrumentation:
-    git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.5.0+git.commit.7d83b9a53c9540fbc159f06eeed5d4bdad5c4377
+  opentelemetry-instrumentation: # Overridden
+    git: https://github.com/stakach/opentelemetry-instrumentation.cr.git
+    version: 0.5.0+git.commit.8dc0a4ed085ab8f928b3681990676d818ea9db6d
 
   opentelemetry-sdk:
     git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
@@ -179,7 +179,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.12.1
+    version: 8.12.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
