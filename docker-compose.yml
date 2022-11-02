@@ -20,7 +20,7 @@ services:
       - 5432:5432
 
   test:
-    image: placeos/service-spec-runner:latest
+    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-latest}
     hostname: staff_api
     volumes:
       - ${PWD}/spec:/app/spec
