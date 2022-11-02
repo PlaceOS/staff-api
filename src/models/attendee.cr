@@ -24,9 +24,7 @@ class Attendee
       .where { var("attendees", "booking_id").in?(booking_ids) }
   end
 
-  def email
-    guest.email
-  end
+  delegate email, name, preferred_name, phone, organisation, notes, photo, to: guest
 
   struct AttendeeResponse
     include JSON::Serializable
@@ -34,17 +32,44 @@ class Attendee
 
     @[JSON::Field(format: "email")]
     getter email : String
+    getter name : String?
+    getter preferred_name : String?
+    getter phone : String?
+    getter organisation : String?
+    getter notes : String?
+    getter photo : String?
+
     property checked_in : Bool?
     property visit_expected : Bool?
     property event : PlaceCalendar::Event? = nil
   end
 
-  def to_h(is_parent_metadata, meeting_details)
+  def to_h(is_parent_metadata : Bool?, meeting_details : PlaceCalendar::Event?)
     AttendeeResponse.new(
       email: email,
+      name: name,
+      preferred_name: preferred_name,
+      phone: phone,
+      organisation: organisation,
+      notes: notes,
+      photo: photo,
       checked_in: is_parent_metadata ? false : checked_in,
       visit_expected: visit_expected,
       event: meeting_details
+    )
+  end
+
+  def to_resp
+    AttendeeResponse.new(
+      email: email,
+      name: name,
+      preferred_name: preferred_name,
+      phone: phone,
+      organisation: organisation,
+      notes: notes,
+      photo: photo,
+      checked_in: checked_in,
+      visit_expected: visit_expected,
     )
   end
 

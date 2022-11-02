@@ -45,6 +45,7 @@ class Booking
     getter extension_data : JSON::Any
     getter current_state : State
     getter history : Array(History)
+    getter attendees : Array(Attendee::AttendeeResponse)? = nil
   end
 
   enum State
@@ -355,7 +356,7 @@ class Booking
     end
   end
 
-  def as_h : BookingResponse
+  def as_h(include_attendees : Bool = true) : BookingResponse
     BookingResponse.new(
       id: id,
       booking_type: booking_type,
@@ -391,11 +392,12 @@ class Booking
       extension_data: extension_data,
       current_state: current_state,
       history: history,
+      attendees: include_attendees ? attendees.map(&.to_resp) : nil,
     )
   end
 end
 
 # We're adding `booking_attendees` to the json deserialiser of clear
 struct Booking::Assigner
-  property booking_attendees : Array(PlaceCalendar::Event::Attendee) = [] of PlaceCalendar::Event::Attendee
+  property attendees : Array(PlaceCalendar::Event::Attendee)? = nil
 end
