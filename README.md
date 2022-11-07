@@ -14,10 +14,7 @@ These environment variables are required for configuring an instance of Staff AP
 SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
 
 # Database config:
-PG_DATABASE_URL=postgresql://user:password@hostname/placeos
-
-# Size of the connection pool
-PG_CONNECTION_POOL_SIZE=5
+PG_DATABASE_URL=postgresql://user:password@hostname/placeos?max_pool_size=5&max_idle_pool_size=5
 
 # Public key for decrypting and validating JWT tokens
 JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
