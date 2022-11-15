@@ -62,7 +62,7 @@ class Survey
 
   private def validate_question_order
     if question_order_column.defined?
-      question_order == question_order.unique
+      add_error("question_order", "must not have duplicate questions") unless question_order == question_order.unique
     end
   end
 end
