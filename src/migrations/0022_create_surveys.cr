@@ -22,7 +22,7 @@ class CreateSurveyMigration
         t.references to: "questions", name: "question_id", on_delete: "cascade", null: false
         t.references to: "surveys", name: "survey_id", on_delete: "cascade", null: false
 
-        t.column :answer, :text
+        t.column :answer_text, :text
         t.timestamps
       end
     end

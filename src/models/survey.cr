@@ -15,9 +15,9 @@ class Survey
     include JSON::Serializable
 
     getter id : Int64?
-    getter title : String?
-    getter description : String?
-    getter question_order : Array(Int64)?
+    getter title : String? = nil
+    getter description : String? = nil
+    getter question_order : Array(Int64)? = nil
 
     def initialize(@id, @title = nil, @description = nil, @question_order = nil)
     end
