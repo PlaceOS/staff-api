@@ -6,7 +6,7 @@ class CreateSurveyMigration
       create_table(:surveys) do |t|
         t.column :title, :text
         t.column :description, :text
-        t.column :question_order, :bigint[]
+        t.column :question_order, "bigint[]"
         t.timestamps
       end
 

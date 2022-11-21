@@ -7,7 +7,7 @@ class Survey
   column question_order : Array(Int64)
 
   # has_many questions : Survey::Question, foreign_key: "survey_id"
-  has_many answers : Survey::Answer, foreign_key: "answer_id"
+  # has_many answers : Survey::Answer, foreign_key: "answer_id"
 
   timestamps
 
@@ -29,7 +29,7 @@ class Survey
       {% end %}
 
       if q_order = question_order
-        survey.question_order = q_order unless update && q_order.as_a.empty?
+        survey.question_order = q_order unless update && q_order.empty?
       elsif !update
         survey.question_order = [] of Int64
       end
@@ -62,7 +62,7 @@ class Survey
 
   private def validate_question_order
     if question_order_column.defined?
-      add_error("question_order", "must not have duplicate questions") unless question_order == question_order.unique
+      add_error("question_order", "must not have duplicate questions") unless question_order == question_order.uniq
     end
   end
 end
