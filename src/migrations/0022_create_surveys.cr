@@ -14,7 +14,7 @@ class CreateSurveyMigration
         t.column :title, :text
         t.column :description, :text
         t.column :type, :text
-        t.column :question_options, :jsonb, default: "'{}'"
+        t.column :options, :jsonb, default: "'{}'"
         t.timestamps
       end
 

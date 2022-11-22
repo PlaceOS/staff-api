@@ -26,7 +26,7 @@ class Surveys < Application
   @[AC::Route::POST("/", body: :survey_body, status_code: HTTP::Status::CREATED)]
   def create(survey_body : Survey::Responder) : Survey::Responder
     survey = survey_body.to_survey
-    raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey data") if !survey.save
+    raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey data") if !survey.save!
     survey.as_json
   end
 

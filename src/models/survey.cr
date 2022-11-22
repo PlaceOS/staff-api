@@ -1,3 +1,5 @@
+require "./survey/*"
+
 class Survey
   include Clear::Model
 
