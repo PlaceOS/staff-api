@@ -34,7 +34,7 @@ describe Surveys do
 
       response = client.put("#{SURVEY_BASE}/#{survey.id}", headers: headers, body: update)
       response.status_code.should eq(200)
-      SON.parse(response.body)["title"].should eq("Updated Title")
+      JSON.parse(response.body)["title"].should eq("Updated Title")
     end
   end
 
