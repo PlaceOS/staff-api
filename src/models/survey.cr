@@ -41,8 +41,8 @@ class Survey
   end
 
   def as_json
-    description = description_column.defined? ? self.description : ""
-    question_order = question_order_column.defined? ? self.question_order : [] of Int64
+    self.description = description_column.defined? ? self.description : ""
+    self.question_order = question_order_column.defined? ? self.question_order : [] of Int64
 
     Responder.new(
       id: self.id,

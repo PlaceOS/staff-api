@@ -2,7 +2,7 @@ require "../spec_helper"
 require "./helpers/spec_clean_up"
 require "./helpers/survey_helper"
 
-describe Surveys, focus: true do
+describe Surveys do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -34,7 +34,7 @@ describe Surveys, focus: true do
 
       response = client.put("#{SURVEY_BASE}/#{survey.id}", headers: headers, body: update)
       response.status_code.should eq(200)
-      json = JSON.parse(response.body)["title"].should eq("Updated Title")
+      SON.parse(response.body)["title"].should eq("Updated Title")
     end
   end
 

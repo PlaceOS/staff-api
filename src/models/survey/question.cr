@@ -45,8 +45,8 @@ class Survey
     end
 
     def as_json
-      description = description_column.defined? ? self.description : ""
-      options = options_column.defined? ? self.options : JSON::Any.new({} of String => JSON::Any)
+      self.description = description_column.defined? ? self.description : ""
+      self.options = options_column.defined? ? self.options : JSON::Any.new({} of String => JSON::Any)
 
       Responder.new(
         id: self.id,
