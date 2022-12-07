@@ -31,8 +31,8 @@ class Survey
       def to_question(update : Bool = false)
         question = Survey::Question.new
         {% for key in [:title, :description, :type] %}
-        question.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
-      {% end %}
+          question.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
+        {% end %}
 
         if o = options
           question.options = JSON.parse(o.to_json) unless update && o.as_h.empty?
