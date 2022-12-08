@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **migrations**: add additional indexes to bookings table ([#240](https://github.com/PlaceOS/staff-api/pull/240))
 - **survey**: add survey models and endpoints ([#236](https://github.com/PlaceOS/staff-api/pull/236))
 - **outlook**: generate plugin xml manifest ([#208](https://github.com/PlaceOS/staff-api/pull/208))
 - add support for running using a service account ([#223](https://github.com/PlaceOS/staff-api/pull/223))
