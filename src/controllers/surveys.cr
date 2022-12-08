@@ -50,7 +50,7 @@ class Surveys < Application
   # show a survey
   @[AC::Route::GET("/:id")]
   def show(
-    @[AC::Param::Info(name: "id", description: "the survey id", example: "...")]
+    @[AC::Param::Info(name: "id", description: "the survey id", example: "1234")]
     survey_id : String
   ) : Survey::Responder
     survey.as_json

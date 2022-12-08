@@ -4,7 +4,7 @@ class Surveys::Answers < Application
   # returns a list of answers
   @[AC::Route::GET("/")]
   def index(
-    @[AC::Param::Info(description: "the survey id to get answers for", example: "123")]
+    @[AC::Param::Info(description: "the survey id to get answers for", example: "1234")]
     survey_id : Int64? = nil
   ) : Array(Survey::Answer::Responder)
     query = Survey::Answer.query.select("id, question_id, survey_id, answer_text, answer_json")
