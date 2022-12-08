@@ -1,3 +1,5 @@
+require "ulid"
+
 class Survey
   class Invitation
     include Clear::Model
@@ -5,22 +7,24 @@ class Survey
     column id : Int64, primary: true, presence: false
     column token : String
     column email : String
-    column sent : Bool = false
+    column sent : Bool, presence: false
 
     belongs_to survey : Survey
 
     timestamps
 
+    before :create, :generate_token
+
     struct Responder
       include JSON::Serializable
 
       getter id : Int64?
-      getter survey_id : Int64?
-      getter token : String?
-      getter email : String?
-      getter sent : Bool = false
+      getter survey_id : Int64? = nil
+      getter token : String? = nil
+      getter email : String? = nil
+      getter sent : Bool? = nil
 
-      def initialize(@id, @survey_id, @token, @email, @sent = false)
+      def initialize(@id, @survey_id = nil, @token = nil, @email = nil, @sent = nil)
       end
 
       def to_invitation(update : Bool = false)
@@ -43,6 +47,10 @@ class Survey
       )
     end
 
+    def generate_token
+      self.token = ULID.generate
+    end
+
     def validate
       validate_columns
     end
@@ -51,7 +59,6 @@ class Survey
       add_error("survey_id", "must be defined") unless survey_id_column.defined?
       add_error("token", "must be defined") unless token_column.defined?
       add_error("email", "must be defined") unless email_column.defined?
-      add_error("sent", "must be defined") unless sent_column.defined?
     end
   end
 end

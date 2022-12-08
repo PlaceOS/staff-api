@@ -41,6 +41,10 @@ dependencies:
   auto_initialize:
     github: kostya/auto_initialize
 
+  ulid:
+    github: place-labs/ulid
+    branch: master
+
 development_dependencies:
   ameba:
     github: veelenga/ameba
