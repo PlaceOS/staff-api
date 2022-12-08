@@ -4792,10 +4792,11 @@ paths:
       - name: id
         in: path
         description: the survey id
-        example: '...'
+        example: "1234"
         required: true
         schema:
-          type: string
+          type: integer
+          format: Int64
       responses:
         200:
           description: OK

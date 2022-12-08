@@ -8,7 +8,7 @@ class CreateSurveyinvitation
 
         t.column :token, :text, unique: true, index: true
         t.column :email, :text
-        t.column :sent, :boolean, default: "false"
+        t.column :sent, :boolean, default: "false", index: true
         t.timestamps
       end
     end
