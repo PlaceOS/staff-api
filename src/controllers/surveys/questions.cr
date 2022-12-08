@@ -10,7 +10,7 @@ class Surveys::Questions < Application
     @question = Question.find!(id)
   end
 
-  getter! question : Survey
+  getter! question : Survey::Question
 
   # =====================
   # Routes
@@ -45,7 +45,7 @@ class Surveys::Questions < Application
   def show(
     @[AC::Param::Info(name: "id", description: "the question id", example: "1234")]
     question_id : Int64
-  ) : Question::Responder
+  ) : Survey::Question::Responder
     question.as_json
   end
 

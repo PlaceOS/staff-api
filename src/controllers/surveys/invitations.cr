@@ -10,7 +10,7 @@ class Surveys::Invitations < Application
     @invitation = Invitation.find!({token: token})
   end
 
-  getter! invitation : Invitation
+  getter! invitation : Survey::Invitation
 
   # =====================
   # Routes
@@ -24,12 +24,12 @@ class Surveys::Invitations < Application
     invitation.as_json
   end
 
-  # show a survey
+  # show an invitation
   @[AC::Route::GET("/:token")]
   def show(
     @[AC::Param::Info(name: "token", description: "the invitation token", example: "ABCDEF")]
     token : String
-  ) : Survey::Responder
+  ) : Survey::Invitation::Responder
     invitation.as_json
   end
 
