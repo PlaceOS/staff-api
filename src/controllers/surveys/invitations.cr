@@ -16,6 +16,23 @@ class Surveys::Invitations < Application
   # Routes
   # =====================
 
+  # returns a list of invitations
+  @[AC::Route::GET("/")]
+  def index(
+    @[AC::Param::Info(description: "the survey id to get invitations for", example: "1234")]
+    survey_id : Int64? = nil,
+    @[AC::Param::Info(description: "filter by sent status", example: "false")]
+    sent : Bool? = nil
+  ) : Array(Survey::Invitation::Responder)
+    query = Survey::Invitation.query.select("id, survey_id, token, email, sent")
+
+    # filter
+    query.where(survey_id: survey_id) if survey_id
+    query.where(sent: sent) if sent
+
+    query.to_a.map(&.as_json)
+  end
+
   # creates a new invitation
   @[AC::Route::POST("/", body: :invitation_body, status_code: HTTP::Status::CREATED)]
   def create(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
