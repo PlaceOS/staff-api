@@ -16,10 +16,20 @@ class Surveys::Questions < Application
   # Routes
   # =====================
 
-  # returns a list of surveys
+  # returns a list of questions
   @[AC::Route::GET("/")]
-  def index : Array(Survey::Question::Responder)
-    Survey::Question.query.select("id, title, description, type question_options").to_a.map(&.as_json)
+  def index(
+    @[AC::Param::Info(description: "the survey id to get questions for", example: "1234")]
+    survey_id : Int64? = nil
+  ) : Array(Survey::Question::Responder)
+    query = Survey::Question.query.select("id, title, description, type question_options")
+
+    if survey_id
+      query.inner_join("surveys", "questions.survey_id = surveys.id")
+      query.where(survey_id: survey_id)
+    end
+
+    query.to_a.map(&.as_json)
   end
 
   # creates a new question
@@ -27,6 +37,15 @@ class Surveys::Questions < Application
   def create(question_body : Survey::Question::Responder) : Survey::Question::Responder
     question = question_body.to_question
     raise Error::ModelValidation.new(question.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating question data") if !question.create
+    question.as_json
+  end
+
+  # show a question
+  @[AC::Route::GET("/:id")]
+  def show(
+    @[AC::Param::Info(name: "id", description: "the question id", example: "1234")]
+    question_id : Int64
+  ) : Question::Responder
     question.as_json
   end
 
