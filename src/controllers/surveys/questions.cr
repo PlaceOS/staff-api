@@ -25,8 +25,8 @@ class Surveys::Questions < Application
     query = Survey::Question.query.select("id, title, description, type question_options")
 
     if survey_id
-      query.inner_join("surveys", "questions.survey_id = surveys.id")
-      query.where(survey_id: survey_id)
+      survey = Survey.find!(survey_id)
+      query.where { id.in(survey.question_order) }
     end
 
     query.to_a.map(&.as_json)
