@@ -7,7 +7,7 @@ class Surveys::Questions < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_question(id : Int64)
-    @question = Question.find!(id)
+    @question = Survey::Question.find!(id)
   end
 
   getter! question : Survey::Question
@@ -26,7 +26,11 @@ class Surveys::Questions < Application
 
     if survey_id
       survey = Survey.find!(survey_id)
-      query.where { id.in(survey.question_order) }
+      if (question_order = survey.question_order) && !question_order.empty?
+        query = query.where { id.in?(question_order) }
+      else
+        return [] of Survey::Question::Responder
+      end
     end
 
     query.to_a.map(&.as_json)
@@ -36,7 +40,7 @@ class Surveys::Questions < Application
   @[AC::Route::POST("/", body: :question_body, status_code: HTTP::Status::CREATED)]
   def create(question_body : Survey::Question::Responder) : Survey::Question::Responder
     question = question_body.to_question
-    raise Error::ModelValidation.new(question.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating question data") if !question.create
+    raise Error::ModelValidation.new(question.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating question data") if !question.save
     question.as_json
   end
 

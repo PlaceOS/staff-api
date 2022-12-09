@@ -18,7 +18,7 @@ class Surveys::Answers < Application
   def create(answer_body : Array(Survey::Answer::Responder)) : Array(Survey::Answer::Responder)
     answers = answer_body.map(&.to_answer)
     answers.each do |answer|
-      raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.create
+      raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.save
     end
     answers.map(&.as_json)
   end

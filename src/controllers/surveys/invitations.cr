@@ -7,7 +7,7 @@ class Surveys::Invitations < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_invitation(token : String)
-    @invitation = Invitation.find!({token: token})
+    @invitation = Survey::Invitation.find!({token: token})
   end
 
   getter! invitation : Survey::Invitation
@@ -27,8 +27,8 @@ class Surveys::Invitations < Application
     query = Survey::Invitation.query.select("id, survey_id, token, email, sent")
 
     # filter
-    query.where(survey_id: survey_id) if survey_id
-    query.where(sent: sent) if sent
+    query = query.where(survey_id: survey_id) if survey_id
+    query = query.where(sent: sent) if sent
 
     query.to_a.map(&.as_json)
   end
@@ -37,7 +37,7 @@ class Surveys::Invitations < Application
   @[AC::Route::POST("/", body: :invitation_body, status_code: HTTP::Status::CREATED)]
   def create(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
     invitation = invitation_body.to_invitation
-    raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating invitation data") if !invitation.create
+    raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating invitation data") if !invitation.save
     invitation.as_json
   end
 

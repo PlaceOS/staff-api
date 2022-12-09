@@ -52,7 +52,7 @@ class Survey
         id: self.id,
         title: self.title,
         description: self.description,
-        type: self.question_order,
+        type: self.type,
         options: self.options,
       )
     end

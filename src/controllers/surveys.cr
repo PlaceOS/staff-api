@@ -62,3 +62,5 @@ class Surveys < Application
     survey.delete
   end
 end
+
+require "./surveys/*"
