@@ -33,8 +33,8 @@ module SurveyHelper
     ]
   end
 
-  def create_questions
-    question_responders.map { |q| q.to_question.save }
+  def create_questions : Array(Survey::Question)
+    question_responders.map { |q| q.to_question.save! }
   end
 
   def survey_responder(questions_order = [] of Int64)
