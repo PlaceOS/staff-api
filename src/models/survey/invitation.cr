@@ -3,6 +3,7 @@ require "ulid"
 class Survey
   class Invitation
     include Clear::Model
+    self.table = "invitations"
 
     column id : Int64, primary: true, presence: false
     column token : String

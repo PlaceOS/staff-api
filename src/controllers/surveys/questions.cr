@@ -22,7 +22,7 @@ class Surveys::Questions < Application
     @[AC::Param::Info(description: "the survey id to get questions for", example: "1234")]
     survey_id : Int64? = nil
   ) : Array(Survey::Question::Responder)
-    query = Survey::Question.query.select("id, title, description, type question_options")
+    query = Survey::Question.query.select("id, title, description, type, options")
 
     if survey_id
       survey = Survey.find!(survey_id)

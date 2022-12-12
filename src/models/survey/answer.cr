@@ -1,6 +1,7 @@
 class Survey
   class Answer
     include Clear::Model
+    self.table = "answers"
 
     column id : Int64, primary: true, presence: false
     column answer_text : String
