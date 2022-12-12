@@ -18,7 +18,7 @@ describe Surveys::Questions do
 
     it "should return a list of questions for a survey" do
       questions = SurveyHelper.create_questions
-      question_order = questions[0..1].map(&.id).shuffle
+      question_order = questions[0..1].map(&.id).shuffle!
       survey = SurveyHelper.create_survey(questions_order: question_order)
 
       response = client.get("#{QUESTIONS_BASE}?survey_id=#{survey.id}", headers: headers)
