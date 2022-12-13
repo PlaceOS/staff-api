@@ -5492,20 +5492,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-  /api/staff/v1/surveys/invitations/{id}:
     delete:
       summary: deletes the invitation
       tags:
       - Invitations
       operationId: Surveys::Invitations#destroy
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: "null"
       - name: token
-        in: query
+        in: path
+        description: the invitation token
+        example: ABCDEF
         required: true
         schema:
           type: string

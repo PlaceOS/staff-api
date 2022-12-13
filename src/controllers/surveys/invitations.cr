@@ -51,8 +51,11 @@ class Surveys::Invitations < Application
   end
 
   # deletes the invitation
-  @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
-  def destroy : Nil
+  @[AC::Route::DELETE("/:token", status_code: HTTP::Status::ACCEPTED)]
+  def destroy(
+    @[AC::Param::Info(name: "token", description: "the invitation token", example: "ABCDEF")]
+    token : String
+  ) : Nil
     invitation.delete
   end
 end
