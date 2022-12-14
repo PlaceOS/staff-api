@@ -41,6 +41,23 @@ class Surveys::Invitations < Application
     invitation.as_json
   end
 
+  # patches an existing survey invitation
+  @[AC::Route::PUT("/:token", body: :survey_body)]
+  @[AC::Route::PATCH("/:token", body: :survey_body)]
+  def update(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
+    changes = invitation_body.to_invitation(update: true)
+
+    {% for key in [:survey_id, :email, :sent] %}
+      begin
+        invitation.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
+      rescue NilAssertionError
+      end
+    {% end %}
+
+    raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey invitation data") if !invitation.save
+    invitation.as_json
+  end
+
   # show an invitation
   @[AC::Route::GET("/:token")]
   def show(
