@@ -42,8 +42,8 @@ class Surveys::Invitations < Application
   end
 
   # patches an existing survey invitation
-  @[AC::Route::PUT("/:token", body: :survey_body)]
-  @[AC::Route::PATCH("/:token", body: :survey_body)]
+  @[AC::Route::PUT("/:token", body: :invitation_body)]
+  @[AC::Route::PATCH("/:token", body: :invitation_body)]
   def update(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
     changes = invitation_body.to_invitation(update: true)
 
