@@ -27,6 +27,13 @@ class Bookings < Application
     head :method_not_allowed if booking.deleted
   end
 
+  @[AC::Route::Filter(:around_action, only: [:create, :update])]
+  def wrap_in_transaction
+    Clear::SQL.transaction do
+      yield
+    end
+  end
+
   getter! booking : Booking
 
   # =====================
