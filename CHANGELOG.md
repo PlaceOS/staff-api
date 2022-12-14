@@ -35,6 +35,7 @@
 
 ### Fix
 
+- **bookings**: add transaction lock to prevent duplicate bookings ([#242](https://github.com/PlaceOS/staff-api/pull/242))
 - **outlook**: minor manifest fixes ([#235](https://github.com/PlaceOS/staff-api/pull/235))
 - **bookings**: improve consistency between requests and responses ([#234](https://github.com/PlaceOS/staff-api/pull/234))
 - **visitor_checkin**: when running in delegated permissions mode ([#233](https://github.com/PlaceOS/staff-api/pull/233))
