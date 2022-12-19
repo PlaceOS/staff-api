@@ -12,7 +12,3 @@ dependencies:
   db:
     github: place-labs/crystal-db
     branch: master
-
-  opentelemetry-instrumentation:
-    github: stakach/opentelemetry-instrumentation.cr
-    branch: patch-1

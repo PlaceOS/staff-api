@@ -2,6 +2,7 @@ require "./survey/*"
 
 class Survey
   include Clear::Model
+  self.table = "surveys"
 
   column id : Int64, primary: true, presence: false
   column title : String

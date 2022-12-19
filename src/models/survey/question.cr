@@ -1,6 +1,7 @@
 class Survey
   class Question
     include Clear::Model
+    self.table = "questions"
 
     column id : Int64, primary: true, presence: false
     column title : String
@@ -31,8 +32,8 @@ class Survey
       def to_question(update : Bool = false)
         question = Survey::Question.new
         {% for key in [:title, :description, :type] %}
-        question.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
-      {% end %}
+          question.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
+        {% end %}
 
         if o = options
           question.options = JSON.parse(o.to_json) unless update && o.as_h.empty?
@@ -52,7 +53,7 @@ class Survey
         id: self.id,
         title: self.title,
         description: self.description,
-        type: self.question_order,
+        type: self.type,
         options: self.options,
       )
     end

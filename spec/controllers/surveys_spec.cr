@@ -46,6 +46,17 @@ describe Surveys do
       response.status_code.should eq(200)
       response.body.should eq(survey.as_json.to_json)
     end
+
+    it "should maintain the question_order" do
+      questions = SurveyHelper.create_questions
+      question_order = questions[0..1].map(&.id).shuffle!
+      survey = SurveyHelper.create_survey(questions_order: question_order)
+
+      response = client.get("#{SURVEY_BASE}/#{survey.id}", headers: headers)
+      response.status_code.should eq(200)
+      response_json = JSON.parse(response.body)
+      response_json["question_order"].should eq(question_order)
+    end
   end
 
   describe "#destroy" do
