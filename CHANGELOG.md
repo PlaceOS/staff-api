@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: allow meetings to be booked by service accounts ([#243](https://github.com/PlaceOS/staff-api/pull/243))
 - **surveys**: survey improvements ([#239](https://github.com/PlaceOS/staff-api/pull/239))
 - **migrations**: add additional indexes to bookings table ([#240](https://github.com/PlaceOS/staff-api/pull/240))
 - **survey**: add survey models and endpoints ([#236](https://github.com/PlaceOS/staff-api/pull/236))
