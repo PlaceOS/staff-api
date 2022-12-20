@@ -109,6 +109,16 @@ class Events < Application
     }
   end
 
+  protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
+    # if the current user is not then host then they should be an attendee
+    return true if user_email == host_email
+    service_account = tenant.service_account.try(&.downcase)
+    if host_email == service_account
+      return attendees.includes?(user_email)
+    end
+    !!get_user_calendars.find { |cal| cal.id.try(&.downcase) == host_email }
+  end
+
   # creates a new calendar event
   @[AC::Route::POST("/", body: :input_event, status_code: HTTP::Status::CREATED)]
   def create(input_event : PlaceCalendar::Event) : PlaceCalendar::Event
@@ -116,8 +126,9 @@ class Events < Application
 
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
-    host = (input_event.host || user_email).try(&.downcase)
-    raise Error::Forbidden.new("user #{user_email} does not have write access to #{host} calendar") unless host == user_email || get_user_calendars.find { |cal| cal.id.try(&.downcase) == host }
+    host = input_event.host.try(&.downcase) || user_email
+    attendee_emails = input_event.attendees.map { |attend| attend.email.downcase }
+    raise Error::Forbidden.new("user #{user_email} does not have write access to #{host} calendar") unless can_create?(user_email, host, attendee_emails)
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
@@ -128,7 +139,7 @@ class Events < Application
     end
 
     # Ensure the host is configured to be attending the meeting and has accepted the meeting
-    attendees = input_event.attendees.uniq.reject { |attendee| attendee.email == host }
+    attendees = input_event.attendees.uniq.reject { |attendee| attendee.email.downcase == host }
     input_event.attendees = attendees
     host_attendee = PlaceCalendar::Event::Attendee.new(name: host, email: host, response_status: "accepted")
     host_attendee.visit_expected = true
@@ -287,19 +298,19 @@ class Events < Application
     end
 
     # User details
-    user_email = user.email
-    host = event.host || user_email
+    user_email = user.email.downcase
+    host = event.host.try(&.downcase) || user_email
 
     # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
     # Check if attendees need updating
     update_attendees = !changes.attendees.nil?
-    attendees = changes.attendees.try(&.map { |a| a.email }) || existing_attendees
+    attendees = changes.attendees.try(&.map { |a| a.email.downcase }) || existing_attendees
 
     # Ensure the host is configured to be attending the meeting and has accepted the meeting
     unless host.in?(attendees)
@@ -768,12 +779,12 @@ class Events < Application
     raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
 
     # User details
-    user_email = user.email
-    host = event.host || user_email
+    user_email = user.email.downcase
+    host = event.host.try(&.downcase) || user_email
 
     # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees)
       # may be able to delete on behalf of the user
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
@@ -844,12 +855,12 @@ class Events < Application
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
     # User details
-    user_email = user.email
-    host = event.host || user_email
+    user_email = user.email.downcase
+    host = event.host.try(&.downcase) || user_email
 
     # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees) || host.in?(existing_attendees)
+    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+    unless user_email == host || user_email.in?(existing_attendees)
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
     end
 
