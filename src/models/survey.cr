@@ -9,6 +9,9 @@ class Survey
   column description : String?
   column question_order : Array(Int64)
 
+  Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
+  column trigger : TriggerType, presence: false
+
   # has_many questions : Survey::Question, foreign_key: "survey_id"
   # has_many answers : Survey::Answer, foreign_key: "answer_id"
 
@@ -21,13 +24,14 @@ class Survey
     getter title : String? = nil
     getter description : String? = nil
     getter question_order : Array(Int64)? = nil
+    getter trigger : TriggerType? = nil
 
-    def initialize(@id, @title = nil, @description = nil, @question_order = nil)
+    def initialize(@id, @title = nil, @description = nil, @question_order = nil, @trigger = nil)
     end
 
     def to_survey(update : Bool = false)
       survey = Survey.new
-      {% for key in [:title, :description] %}
+      {% for key in [:title, :description, :trigger] %}
         survey.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
 
@@ -44,12 +48,14 @@ class Survey
   def as_json
     self.description = description_column.defined? ? self.description : ""
     self.question_order = question_order_column.defined? ? self.question_order : [] of Int64
+    self.trigger = trigger_column.defined? ? self.trigger : TriggerType::NONE
 
     Responder.new(
       id: self.id,
       title: self.title,
       description: self.description,
       question_order: self.question_order,
+      trigger: self.trigger,
     )
   end
 

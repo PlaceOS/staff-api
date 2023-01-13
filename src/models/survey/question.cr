@@ -8,6 +8,10 @@ class Survey
     column description : String?
     column type : String
     column options : JSON::Any, presence: false
+    column required : Bool = false
+    column choices : JSON::Any, presence: false
+    column max_rating : Int32? = nil
+    column tags : Array(String), presence: false
 
     has_many answers : Survey::Answer, foreign_key: "answer_id"
     # belongs_to surveys : Array(Survey)
@@ -25,21 +29,37 @@ class Survey
       getter description : String? = nil
       getter type : String? = nil
       getter options : JSON::Any? = nil
+      getter required : Bool? = nil
+      getter choices : JSON::Any? = nil
+      getter max_rating : Int32? = nil
+      getter tags : Array(String)? = nil
 
-      def initialize(@id, @title = nil, @description = nil, @type = nil, @options = nil)
+      def initialize(
+        @id,
+        @title = nil,
+        @description = nil,
+        @type = nil,
+        @options = nil,
+        @required = nil,
+        @choices = nil,
+        @max_rating = nil,
+        @tags = nil
+      )
       end
 
       def to_question(update : Bool = false)
         question = Survey::Question.new
-        {% for key in [:title, :description, :type] %}
+        {% for key in [:title, :description, :type, :required, :max_rating, :tags] %}
           question.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
         {% end %}
 
-        if o = options
-          question.options = JSON.parse(o.to_json) unless update && o.as_h.empty?
-        elsif !update
-          question.options = JSON.parse("{}")
-        end
+        {% for key in [:options, :choices] %}
+          if json = {{key.id}}
+            question.{{key.id}} = JSON.parse(json.to_json) unless update && json.as_h.empty?
+          elsif !update
+            question.{{key.id}} = JSON.parse("{}")
+          end
+        {% end %}
 
         question
       end
@@ -48,6 +68,9 @@ class Survey
     def as_json
       self.description = description_column.defined? ? self.description : ""
       self.options = options_column.defined? ? self.options : JSON::Any.new({} of String => JSON::Any)
+      self.required = required_column.defined? ? self.required : false
+      self.choices = choices_column.defined? ? self.choices : JSON::Any.new({} of String => JSON::Any)
+      self.tags = tags_column.defined? ? self.tags : [] of String
 
       Responder.new(
         id: self.id,
@@ -55,6 +78,10 @@ class Survey
         description: self.description,
         type: self.type,
         options: self.options,
+        required: self.required,
+        choices: self.choices,
+        max_rating: self.max_rating,
+        tags: self.tags,
       )
     end
 
