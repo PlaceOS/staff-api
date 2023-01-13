@@ -1,5 +1,7 @@
 require "./survey/*"
 
+Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
+
 class Survey
   include Clear::Model
   self.table = "surveys"
@@ -8,8 +10,6 @@ class Survey
   column title : String
   column description : String?
   column question_order : Array(Int64)
-
-  Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
   column trigger : TriggerType, presence: false
 
   # has_many questions : Survey::Question, foreign_key: "survey_id"

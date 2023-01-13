@@ -9740,6 +9740,9 @@ components:
             type: integer
             format: Int64
           nullable: true
+        trigger:
+          type: object
+          nullable: true
     Survey__Answer__Responder:
       type: object
       properties:
@@ -9822,6 +9825,21 @@ components:
           nullable: true
         options:
           type: object
+          nullable: true
+        required:
+          type: boolean
+          nullable: true
+        choices:
+          type: object
+          nullable: true
+        max_rating:
+          type: integer
+          format: Int32
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
           nullable: true
     Tenant__Responder:
       type: object
