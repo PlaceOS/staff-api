@@ -7,7 +7,7 @@ class AddFieldsToQuestions
       execute("ALTER TABLE questions ADD COLUMN required boolean DEFAULT 'false'")
       execute("ALTER TABLE questions ADD COLUMN choices JSONB DEFAULT '{}'::jsonb")
       execute("ALTER TABLE questions ADD COLUMN max_rating integer")
-      execute("ALTER TABLE questions ADD COLUMN tags text[] DEFAULT '[]'")
+      execute("ALTER TABLE questions ADD COLUMN tags text[] DEFAULT '{}'")
     end
 
     dir.down do
