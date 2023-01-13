@@ -8,9 +8,9 @@ class Survey
     column description : String?
     column type : String
     column options : JSON::Any, presence: false
-    column required : Bool = false
+    column required : Bool, presence: false
     column choices : JSON::Any, presence: false
-    column max_rating : Int32? = nil
+    column max_rating : Int32?
     column tags : Array(String), presence: false
 
     has_many answers : Survey::Answer, foreign_key: "answer_id"
@@ -70,6 +70,7 @@ class Survey
       self.options = options_column.defined? ? self.options : JSON::Any.new({} of String => JSON::Any)
       self.required = required_column.defined? ? self.required : false
       self.choices = choices_column.defined? ? self.choices : JSON::Any.new({} of String => JSON::Any)
+      self.max_rating = max_rating_column.defined? ? self.max_rating : 0
       self.tags = tags_column.defined? ? self.tags : [] of String
 
       Responder.new(
