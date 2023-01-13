@@ -9,7 +9,7 @@ struct Office365Config
   property tenant : String
   property client_id : String
   property client_secret : String
-  property conference_type : String? = PlaceCalendar::Office365::DEFAULT_CONFERENCE
+  property conference_type : String? # = PlaceCalendar::Office365::DEFAULT_CONFERENCE
   property scopes : String = PlaceCalendar::Office365::DEFAULT_SCOPE
 
   def params
@@ -32,7 +32,7 @@ struct GoogleConfig
   property domain : String
   property sub : String = ""
   property user_agent : String = "PlaceOS"
-  property conference_type : String? = PlaceCalendar::Google::DEFAULT_CONFERENCE
+  property conference_type : String? # = PlaceCalendar::Google::DEFAULT_CONFERENCE
 
   def params
     {
