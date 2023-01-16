@@ -25,7 +25,7 @@ class Surveys::Questions < Application
     query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags")
 
     if survey_id
-      question_ids = Page.find!(survey_id).question_ids
+      question_ids = Survey.find!(survey_id).question_ids
       query = query.where { id.in?(question_ids) }
     end
 

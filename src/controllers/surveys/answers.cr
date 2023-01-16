@@ -21,7 +21,7 @@ class Surveys::Answers < Application
     survey_id = answers.first.survey_id
     raise "All answers must be for the same survey" unless answers.all? { |answer| answer.survey_id == survey_id }
 
-    all_survey_questions = Page.find!(survey_id).question_ids
+    all_survey_questions = Survey.find!(survey_id).question_ids
     required_questions = Survey::Question
       .query.select("id")
       .where { id.in?(all_survey_questions) }
