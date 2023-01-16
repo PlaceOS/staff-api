@@ -22,16 +22,17 @@ class Surveys::Questions < Application
     @[AC::Param::Info(description: "the survey id to get questions for", example: "1234")]
     survey_id : Int64? = nil
   ) : Array(Survey::Question::Responder)
-    query = Survey::Question.query.select("id, title, description, type, options")
+    query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags")
 
-    if survey_id
-      survey = Survey.find!(survey_id)
-      if (question_order = survey.question_order) && !question_order.empty?
-        query = query.where { id.in?(question_order) }
-      else
-        return [] of Survey::Question::Responder
-      end
-    end
+    # TODO: join surveys with pages to get questions if survey_id is provided
+    # if survey_id
+    #   survey = Page.find!(survey_id)
+    #   if (question_order = survey.question_order) && !question_order.empty?
+    #     query = query.where { id.in?(question_order) }
+    #   else
+    #     return [] of Survey::Question::Responder
+    #   end
+    # end
 
     query.to_a.map(&.as_json)
   end
