@@ -11,7 +11,6 @@ class Survey
   column description : String?
   column trigger : TriggerType, presence: false
   column zone_id : String?
-
   column pages : Array(Survey::Page) = [] of Survey::Page
 
   has_many answers : Survey::Answer, foreign_key: "survey_id"
@@ -70,5 +69,9 @@ class Survey
   private def validate_columns
     add_error("title", "must be defined") unless title_column.defined?
     add_error("pages", "must be defined") unless pages_column.defined?
+  end
+
+  def question_ids
+    pages.map(&.question_order).flatten.uniq
   end
 end

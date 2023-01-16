@@ -24,15 +24,10 @@ class Surveys::Questions < Application
   ) : Array(Survey::Question::Responder)
     query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags")
 
-    # TODO: join surveys with pages to get questions if survey_id is provided
-    # if survey_id
-    #   survey = Page.find!(survey_id)
-    #   if (question_order = survey.question_order) && !question_order.empty?
-    #     query = query.where { id.in?(question_order) }
-    #   else
-    #     return [] of Survey::Question::Responder
-    #   end
-    # end
+    if survey_id
+      question_ids = Page.find!(survey_id).question_ids
+      query = query.where { id.in?(question_ids) }
+    end
 
     query.to_a.map(&.as_json)
   end
