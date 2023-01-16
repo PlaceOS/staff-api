@@ -18,7 +18,18 @@ class Surveys::Answers < Application
   def create(answer_body : Array(Survey::Answer::Responder)) : Array(Survey::Answer::Responder)
     answers = answer_body.map(&.to_answer)
 
-    # TODO: check that all required answers are included
+    survey_id = answers.first.survey_id
+    raise "All answers must be for the same survey" unless answers.all? { |answer| answer.survey_id == survey_id }
+
+    all_survey_questions = Page.find!(survey_id).question_ids
+    required_questions = Survey::Question
+      .query.select("id")
+      .where { id.in?(all_survey_questions) }
+      .where { required == true }
+      .to_a.map(&.id)
+
+    missing = required_questions - answers.map(&.question_id)
+    raise "Missing required answers for questions: #{missing.join(", ")}" if missing.any?
 
     answers.each do |answer|
       raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.save
