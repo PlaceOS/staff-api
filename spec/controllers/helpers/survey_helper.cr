@@ -42,6 +42,10 @@ module SurveyHelper
       title:          "New Survey",
       description:    "This is a new survey",
       question_order: questions_order,
+      pages:          [{
+        title:          "Page 1",
+        question_order: questions_order,
+      }],
     }.to_json)
   end
 

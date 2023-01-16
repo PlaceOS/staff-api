@@ -55,7 +55,7 @@ describe Surveys do
       response = client.get("#{SURVEY_BASE}/#{survey.id}", headers: headers)
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
-      response_json["question_order"].should eq(question_order)
+      response_json["pages"].as_a.first["question_order"].should eq(question_order)
     end
   end
 
