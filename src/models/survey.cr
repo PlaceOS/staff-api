@@ -14,7 +14,7 @@ class Survey
   column zone_id : String?
 
   # has_many pages : Survey::Page, foreign_key: "survey_id"
-  # has_many answers : Survey::Answer, foreign_key: "survey_id"
+  has_many answers : Survey::Answer, foreign_key: "survey_id"
 
   timestamps
 

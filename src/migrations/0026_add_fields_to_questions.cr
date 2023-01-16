@@ -6,7 +6,7 @@ class AddFieldsToQuestions
       # Add the new columns
       execute("ALTER TABLE questions ADD COLUMN required boolean DEFAULT 'false'")
       execute("ALTER TABLE questions ADD COLUMN choices JSONB DEFAULT '{}'::jsonb")
-      execute("ALTER TABLE questions ADD COLUMN max_rating integer DEFAULT 0")
+      execute("ALTER TABLE questions ADD COLUMN max_rating integer")
       execute("ALTER TABLE questions ADD COLUMN tags text[] DEFAULT '{}'")
     end
 

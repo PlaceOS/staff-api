@@ -17,6 +17,9 @@ class Surveys::Answers < Application
   @[AC::Route::POST("/", body: :answer_body, status_code: HTTP::Status::CREATED)]
   def create(answer_body : Array(Survey::Answer::Responder)) : Array(Survey::Answer::Responder)
     answers = answer_body.map(&.to_answer)
+
+    # TODO: check that all required answers are included
+
     answers.each do |answer|
       raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.save
     end
