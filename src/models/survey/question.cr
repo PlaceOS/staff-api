@@ -10,11 +10,10 @@ class Survey
     column options : JSON::Any, presence: false
     column required : Bool, presence: false
     column choices : JSON::Any, presence: false
-    column max_rating : Int32?
+    column max_rating : Int32, presence: false
     column tags : Array(String), presence: false
 
     has_many answers : Survey::Answer, foreign_key: "answer_id"
-    # belongs_to surveys : Array(Survey)
 
     timestamps
 
