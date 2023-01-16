@@ -26,13 +26,14 @@ class Survey
     getter description : String? = nil
     getter question_order : Array(Int64)? = nil
     getter trigger : TriggerType? = nil
+    getter zone_id : String? = nil
 
-    def initialize(@id, @title = nil, @description = nil, @question_order = nil, @trigger = nil)
+    def initialize(@id, @title = nil, @description = nil, @question_order = nil, @trigger = nil, @zone_id = nil)
     end
 
     def to_survey(update : Bool = false)
       survey = Survey.new
-      {% for key in [:title, :description, :trigger] %}
+      {% for key in [:title, :description, :trigger, :zone_id] %}
         survey.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
 
@@ -50,6 +51,7 @@ class Survey
     self.description = description_column.defined? ? self.description : ""
     self.question_order = question_order_column.defined? ? self.question_order : [] of Int64
     self.trigger = trigger_column.defined? ? self.trigger : TriggerType::NONE
+    self.zone_id = zone_id_column.defined? ? self.zone_id : ""
 
     Responder.new(
       id: self.id,
@@ -57,6 +59,7 @@ class Survey
       description: self.description,
       question_order: self.question_order,
       trigger: self.trigger,
+      zone_id: self.zone_id,
     )
   end
 
