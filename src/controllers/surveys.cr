@@ -19,7 +19,7 @@ class Surveys < Application
   # returns a list of surveys
   @[AC::Route::GET("/")]
   def index : Array(Survey::Responder)
-    Survey.query.select("id, title, description, trigger, zone_id, page_order").to_a.map(&.as_json)
+    Survey.query.select("id, title, description, trigger, zone_id, pages").to_a.map(&.as_json)
   end
 
   # creates a new survey
@@ -36,7 +36,7 @@ class Surveys < Application
   def update(survey_body : Survey::Responder) : Survey::Responder
     changes = survey_body.to_survey(update: true)
 
-    {% for key in [:title, :description, :trigger, :zone_id, :page_order] %}
+    {% for key in [:title, :description, :trigger, :zone_id, :pages] %}
       begin
         survey.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError

@@ -11,7 +11,9 @@ class Survey
   column description : String?
   column trigger : TriggerType, presence: false
   column zone_id : String?
-  column page_order : Array(Int64)
+  # column page_order : Array(Int64)
+
+  column pages : Array(Survey::Page) = [] of Survey::Page
 
   has_many answers : Survey::Answer, foreign_key: "survey_id"
 
@@ -25,9 +27,10 @@ class Survey
     getter description : String? = nil
     getter trigger : TriggerType? = nil
     getter zone_id : String? = nil
-    getter page_order : Array(Int64)? = nil
+    # getter page_order : Array(Int64)? = nil
+    getter pages : Array(Survey::Page)? = nil
 
-    def initialize(@id, @title = nil, @description = nil, @trigger = nil, @zone_id = nil, @page_order = nil)
+    def initialize(@id, @title = nil, @description = nil, @trigger = nil, @zone_id = nil, @pages = nil)
     end
 
     def to_survey(update : Bool = false)
@@ -36,10 +39,10 @@ class Survey
         survey.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
 
-      if order = page_order
-        survey.page_order = order unless update && order.empty?
+      if survey_pages = pages
+        survey.pages = survey_pages unless update && survey_pages.empty?
       elsif !update
-        survey.page_order = [] of Int64
+        survey.pages = [] of Survey::Page
       end
 
       survey
@@ -50,7 +53,7 @@ class Survey
     self.description = description_column.defined? ? self.description : ""
     self.trigger = trigger_column.defined? ? self.trigger : TriggerType::NONE
     self.zone_id = zone_id_column.defined? ? self.zone_id : ""
-    self.page_order = page_order_column.defined? ? self.page_order : [] of Int64
+    self.pages = pages_column.defined? ? self.pages : [] of Survey::Page
 
     Responder.new(
       id: self.id,
@@ -58,23 +61,23 @@ class Survey
       description: self.description,
       trigger: self.trigger,
       zone_id: self.zone_id,
-      page_order: self.page_order,
+      pages: self.pages,
     )
   end
 
   def validate
     validate_columns
-    validate_page_order
+    # validate_page_order
   end
 
   private def validate_columns
     add_error("title", "must be defined") unless title_column.defined?
-    add_error("page_order", "must be defined") unless page_order_column.defined?
+    add_error("pages", "must be defined") unless pages_column.defined?
   end
 
-  private def validate_page_order
-    if page_order_column.defined?
-      add_error("page_order", "must not have duplicate pages") unless page_order == page_order.uniq
-    end
-  end
+  # private def validate_page_order
+  #   if page_order_column.defined?
+  #     add_error("page_order", "must not have duplicate pages") unless page_order == page_order.uniq
+  #   end
+  # end
 end
