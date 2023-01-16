@@ -11,7 +11,6 @@ class Survey
   column description : String?
   column trigger : TriggerType, presence: false
   column zone_id : String?
-  # column page_order : Array(Int64)
 
   column pages : Array(Survey::Page) = [] of Survey::Page
 
@@ -27,7 +26,6 @@ class Survey
     getter description : String? = nil
     getter trigger : TriggerType? = nil
     getter zone_id : String? = nil
-    # getter page_order : Array(Int64)? = nil
     getter pages : Array(Survey::Page)? = nil
 
     def initialize(@id, @title = nil, @description = nil, @trigger = nil, @zone_id = nil, @pages = nil)
@@ -67,17 +65,10 @@ class Survey
 
   def validate
     validate_columns
-    # validate_page_order
   end
 
   private def validate_columns
     add_error("title", "must be defined") unless title_column.defined?
     add_error("pages", "must be defined") unless pages_column.defined?
   end
-
-  # private def validate_page_order
-  #   if page_order_column.defined?
-  #     add_error("page_order", "must not have duplicate pages") unless page_order == page_order.uniq
-  #   end
-  # end
 end
