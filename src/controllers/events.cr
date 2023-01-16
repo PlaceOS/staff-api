@@ -773,7 +773,7 @@ class Events < Application
                raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found
                user_cal
              else
-               user.email
+               tenant.service_account.try(&.downcase) || user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
