@@ -11,9 +11,10 @@ class Survey
   column description : String?
   column question_order : Array(Int64)
   column trigger : TriggerType, presence: false
+  column zone_id : String?
 
-  # has_many questions : Survey::Question, foreign_key: "survey_id"
-  # has_many answers : Survey::Answer, foreign_key: "answer_id"
+  # has_many pages : Survey::Page, foreign_key: "survey_id"
+  # has_many answers : Survey::Answer, foreign_key: "survey_id"
 
   timestamps
 
