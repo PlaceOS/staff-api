@@ -5,6 +5,9 @@ class Error < Exception
     super(message)
   end
 
+  class BadRequest < Error
+  end
+
   class Unauthorized < Error
   end
 

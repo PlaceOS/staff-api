@@ -76,6 +76,13 @@ abstract class Application < ActionController::Base
   # ERROR HANDLERS
   # =========================================
 
+  # 400 if no bearer token
+  @[AC::Route::Exception(Error::BadRequest, status_code: HTTP::Status::BAD_REQUEST)]
+  def bad_request(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
+
   # 401 if no bearer token
   @[AC::Route::Exception(Error::Unauthorized, status_code: HTTP::Status::UNAUTHORIZED)]
   def resource_requires_authentication(error) : CommonError
