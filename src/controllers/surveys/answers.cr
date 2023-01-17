@@ -7,7 +7,7 @@ class Surveys::Answers < Application
     @[AC::Param::Info(description: "the survey id to get answers for", example: "1234")]
     survey_id : Int64? = nil
   ) : Array(Survey::Answer::Responder)
-    query = Survey::Answer.query.select("id, question_id, survey_id, answer_text, answer_json")
+    query = Survey::Answer.query.select("id, question_id, survey_id, type, answer_json")
     query.where(survey_id: survey_id) if survey_id
 
     query.to_a.map(&.as_json)

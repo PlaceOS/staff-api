@@ -15,17 +15,26 @@ describe Surveys::Answers do
         {
           question_id: questions[0].id,
           survey_id:   survey.id,
-          answer_text: "Green",
+          type:        "single_choice",
+          answer_json: {
+            text: "Green",
+          },
         },
         {
           question_id: questions[1].id,
           survey_id:   survey.id,
-          answer_text: "Cat",
+          type:        "single_choice",
+          answer_json: {
+            text: "Cat",
+          },
         },
         {
           question_id: questions[2].id,
           survey_id:   survey.id,
-          answer_text: "Pizza",
+          type:        "single_choice",
+          answer_json: {
+            text: "Pizza",
+          },
         },
       ].to_json
 
@@ -41,12 +50,18 @@ describe Surveys::Answers do
         {
           question_id: questions[1].id,
           survey_id:   survey.id,
-          answer_text: "Cat",
+          type:        "single_choice",
+          answer_json: {
+            text: "Cat",
+          },
         },
         {
           question_id: questions[2].id,
           survey_id:   survey.id,
-          answer_text: "Pizza",
+          type:        "single_choice",
+          answer_json: {
+            text: "Pizza",
+          },
         },
       ].to_json
 
@@ -63,12 +78,18 @@ describe Surveys::Answers do
         {
           question_id: questions[0].id,
           survey_id:   survey1.id,
-          answer_text: "Green",
+          type:        "single_choice",
+          answer_json: {
+            text: "Green",
+          },
         },
         {
           question_id: questions[1].id,
           survey_id:   survey2.id,
-          answer_text: "Cat",
+          type:        "single_choice",
+          answer_json: {
+            text: "Cat",
+          },
         },
       ].to_json
 

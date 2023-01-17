@@ -4,7 +4,7 @@ class Survey
     self.table = "answers"
 
     column id : Int64, primary: true, presence: false
-    column answer_text : String
+    column type : String
     column answer_json : JSON::Any, presence: false
 
     belongs_to question : Survey::Question
@@ -18,15 +18,15 @@ class Survey
       getter id : Int64?
       getter question_id : Int64?
       getter survey_id : Int64?
-      getter answer_text : String? = nil
+      getter type : String? = nil
       getter answer_json : JSON::Any? = nil
 
-      def initialize(@id, @question_id, @survey_id, @answer_text = nil, @answer_json = nil)
+      def initialize(@id, @question_id, @survey_id, @type = nil, @answer_json = nil)
       end
 
       def to_answer(update : Bool = false)
         answer = Survey::Answer.new
-        {% for key in [:question_id, :survey_id, :answer_text] %}
+        {% for key in [:question_id, :survey_id, :type] %}
           answer.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
         {% end %}
 
@@ -41,14 +41,13 @@ class Survey
     end
 
     def as_json
-      answer_text = answer_text_column.defined? ? self.answer_text : ""
       self.answer_json = answer_json_column.defined? ? self.answer_json : JSON::Any.new({} of String => JSON::Any)
 
       Responder.new(
         id: self.id,
         question_id: self.question_id,
         survey_id: self.survey_id,
-        answer_text: self.answer_text,
+        type: self.type,
         answer_json: self.answer_json,
       )
     end
@@ -60,7 +59,7 @@ class Survey
     private def validate_columns
       add_error("question_id", "must be defined") unless question_id_column.defined?
       add_error("survey_id", "must be defined") unless survey_id_column.defined?
-      add_error("answer_text", "must be defined") unless answer_text_column.defined?
+      add_error("type", "must be defined") unless type_column.defined?
     end
   end
 end

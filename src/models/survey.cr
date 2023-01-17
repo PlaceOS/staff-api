@@ -72,6 +72,6 @@ class Survey
   end
 
   def question_ids
-    pages.map(&.question_order).flatten.uniq
+    pages.flat_map(&.question_order).uniq!
   end
 end

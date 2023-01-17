@@ -15,6 +15,9 @@ class ChangeSurveyTables
       execute("ALTER TABLE surveys ADD COLUMN zone_id text")
       execute("ALTER TABLE surveys DROP COLUMN question_order")
       execute("ALTER TABLE surveys ADD COLUMN pages JSONB DEFAULT '[]'::jsonb")
+
+      execute("ALTER TABLE answers ADD COLUMN type text")
+      execute("ALTER TABLE answers DROP COLUMN answer_text")
     end
 
     dir.down do
@@ -30,6 +33,9 @@ class ChangeSurveyTables
       execute("ALTER TABLE surveys DROP COLUMN zone_id")
       execute("ALTER TABLE surveys ADD COLUMN question_order bigint[] DEFAULT '{}'")
       execute("ALTER TABLE surveys DROP COLUMN pages")
+
+      execute("ALTER TABLE answers DROP COLUMN type")
+      execute("ALTER TABLE answers ADD COLUMN answer_text text")
     end
   end
 end

@@ -174,6 +174,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -212,12 +218,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -278,6 +278,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -316,12 +322,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -366,6 +366,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -404,12 +410,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -468,6 +468,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -506,12 +512,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -559,6 +559,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -597,12 +603,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -661,6 +661,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -699,12 +705,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -757,6 +757,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -795,12 +801,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -853,6 +853,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -891,12 +897,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -956,6 +956,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -994,12 +1000,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1059,6 +1059,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1097,12 +1103,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1163,6 +1163,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1201,12 +1207,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1253,6 +1253,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Guest__GuestResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1291,12 +1297,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1356,6 +1356,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Guest__GuestResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1394,12 +1400,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1459,6 +1459,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Guest__GuestResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1497,12 +1503,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1543,6 +1543,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1581,12 +1587,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1681,6 +1681,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1719,12 +1725,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1821,6 +1821,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1859,12 +1865,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -1942,6 +1942,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -1980,12 +1986,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2017,6 +2017,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2055,12 +2061,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2110,6 +2110,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2148,12 +2154,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2209,6 +2209,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2247,12 +2253,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2305,6 +2305,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2343,12 +2349,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2404,6 +2404,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2442,12 +2448,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2494,6 +2494,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2532,12 +2538,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2584,6 +2584,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2622,12 +2628,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2683,6 +2683,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2721,12 +2727,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2767,6 +2767,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2805,12 +2811,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2851,6 +2851,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2889,12 +2895,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -2937,6 +2937,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -2975,12 +2981,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3023,6 +3023,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EventMetadata__Assigner'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3061,12 +3067,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3125,6 +3125,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Guest__GuestResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3163,12 +3169,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3227,6 +3227,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Guest__GuestResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3265,12 +3271,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3307,6 +3307,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3345,12 +3351,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3382,6 +3382,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Group'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3420,12 +3426,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3459,6 +3459,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Member'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3497,12 +3503,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3582,6 +3582,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3620,12 +3626,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3657,6 +3657,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3695,12 +3701,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3738,6 +3738,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3776,12 +3782,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3823,6 +3823,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3861,12 +3867,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3898,6 +3898,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -3936,12 +3942,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -3983,6 +3983,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4021,12 +4027,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4081,6 +4081,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4119,12 +4125,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4179,6 +4179,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Booking__BookingResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4217,12 +4223,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4273,6 +4273,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__User'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4311,12 +4317,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4350,6 +4350,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4388,12 +4394,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4427,6 +4427,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4465,12 +4471,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4502,6 +4502,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4540,12 +4546,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4579,6 +4579,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4617,12 +4623,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4651,6 +4651,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Survey__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4689,12 +4695,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4726,6 +4726,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4764,12 +4770,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4804,6 +4804,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4842,12 +4848,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4885,6 +4885,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4923,12 +4929,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -4956,6 +4956,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -4994,12 +5000,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5037,6 +5037,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5075,12 +5081,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5118,6 +5118,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Survey__Answer__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5156,12 +5162,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5195,6 +5195,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Survey__Answer__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5233,12 +5239,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5284,6 +5284,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Survey__Invitation__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5322,12 +5328,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5359,6 +5359,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Invitation__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5397,12 +5403,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5436,6 +5436,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Invitation__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5474,12 +5480,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5516,6 +5516,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Invitation__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5554,12 +5560,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5588,6 +5588,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5626,12 +5632,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5668,6 +5668,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Invitation__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5706,12 +5712,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5749,6 +5749,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Survey__Question__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5787,12 +5793,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5824,6 +5824,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Question__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5862,12 +5868,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5902,6 +5902,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Survey__Question__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -5940,12 +5946,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -5973,6 +5973,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6011,12 +6017,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6045,6 +6045,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Tenant__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6083,12 +6089,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6120,6 +6120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tenant__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6158,12 +6164,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6202,6 +6202,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tenant__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6240,12 +6246,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6273,6 +6273,12 @@ paths:
       responses:
         202:
           description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6311,12 +6317,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6354,6 +6354,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tenant__Responder'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6392,12 +6398,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6424,6 +6424,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6462,12 +6468,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6500,6 +6500,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6538,12 +6544,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -6581,6 +6581,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         401:
           description: Unauthorized
           content:
@@ -6619,12 +6625,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__ValidationError'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application__CommonError'
         500:
           description: Internal Server Error
           content:
@@ -9774,7 +9774,7 @@ components:
           type: integer
           format: Int64
           nullable: true
-        answer_text:
+        type:
           type: string
           nullable: true
         answer_json:
@@ -9797,7 +9797,7 @@ components:
             type: integer
             format: Int64
             nullable: true
-          answer_text:
+          type:
             type: string
             nullable: true
           answer_json:
