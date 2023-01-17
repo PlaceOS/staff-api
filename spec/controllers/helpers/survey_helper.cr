@@ -4,9 +4,10 @@ module SurveyHelper
   def question_responders
     [
       Survey::Question::Responder.from_json({
-        title:   "What is your favorite color?",
-        type:    "single_choice",
-        options: [
+        title:    "What is your favorite color?",
+        type:     "single_choice",
+        required: true,
+        choices:  [
           {title: "Red"},
           {title: "Blue"},
           {title: "Green"},
@@ -15,7 +16,7 @@ module SurveyHelper
       Survey::Question::Responder.from_json({
         title:   "What is your favorite animal?",
         type:    "single_choice",
-        options: [
+        choices: [
           {title: "Dog"},
           {title: "Cat"},
           {title: "Bird"},
@@ -24,7 +25,7 @@ module SurveyHelper
       Survey::Question::Responder.from_json({
         title:   "What is your favorite food?",
         type:    "single_choice",
-        options: [
+        choices: [
           {title: "Pizza"},
           {title: "Burgers"},
           {title: "Salad"},
@@ -37,19 +38,19 @@ module SurveyHelper
     question_responders.map { |q| q.to_question.save! }
   end
 
-  def survey_responder(questions_order = [] of Int64)
+  def survey_responder(question_order = [] of Int64)
     Survey::Responder.from_json({
-      title:          "New Survey",
-      description:    "This is a new survey",
-      question_order: questions_order,
-      pages:          [{
+      title:       "New Survey",
+      description: "This is a new survey",
+      pages:       [{
         title:          "Page 1",
-        question_order: questions_order,
+        description:    "This is page 1",
+        question_order: question_order,
       }],
     }.to_json)
   end
 
-  def create_survey(questions_order = [] of Int64)
-    survey_responder(questions_order).to_survey.save!
+  def create_survey(question_order = [] of Int64)
+    survey_responder(question_order).to_survey.save!
   end
 end

@@ -50,7 +50,7 @@ describe Surveys do
     it "should maintain the question_order" do
       questions = SurveyHelper.create_questions
       question_order = questions[0..1].map(&.id).shuffle!
-      survey = SurveyHelper.create_survey(questions_order: question_order)
+      survey = SurveyHelper.create_survey(question_order: question_order)
 
       response = client.get("#{SURVEY_BASE}/#{survey.id}", headers: headers)
       response.status_code.should eq(200)
