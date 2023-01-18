@@ -1,5 +1,6 @@
 require "../spec_helper"
 require "./helpers/spec_clean_up"
+require "./helpers/booking_helper"
 require "../../src/constants"
 
 describe Guests do
