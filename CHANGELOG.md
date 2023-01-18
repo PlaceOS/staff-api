@@ -38,6 +38,7 @@
 
 ### Fix
 
+- **events**: fix cancel with service account ([#250](https://github.com/PlaceOS/staff-api/pull/250))
 - **tenant**: don't set a default conference type ([#247](https://github.com/PlaceOS/staff-api/pull/247))
 - **bookings**: add transaction lock to prevent duplicate bookings ([#242](https://github.com/PlaceOS/staff-api/pull/242))
 - **outlook**: minor manifest fixes ([#235](https://github.com/PlaceOS/staff-api/pull/235))
