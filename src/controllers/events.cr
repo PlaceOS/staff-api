@@ -790,10 +790,11 @@ class Events < Application
     end
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
-    # if client.client_id == :office365 && event.host != cal_id
-    #   event = get_hosts_event(event)
-    #   event_id = event.id.not_nil!
-    # end
+    # unless using a service account and then we can only use the host calendar
+    if client.client_id == :office365 && event.host != cal_id && tenant.service_account
+      event = get_hosts_event(event)
+      event_id = event.id.not_nil!
+    end
 
     if delete
       client.delete_event(user_id: cal_id, id: event_id, calendar_id: cal_id, notify: notify_guests)
