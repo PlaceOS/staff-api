@@ -38,10 +38,12 @@ module SurveyHelper
     question_responders.map { |q| q.to_question.save! }
   end
 
-  def survey_responder(question_order = [] of Int64)
+  def survey_responder(question_order = [] of Int64, zone_id = nil, building_id = nil)
     Survey::Responder.from_json({
       title:       "New Survey",
       description: "This is a new survey",
+      zone_id:     zone_id,
+      building_id: building_id,
       pages:       [{
         title:          "Page 1",
         description:    "This is page 1",
@@ -50,7 +52,7 @@ module SurveyHelper
     }.to_json)
   end
 
-  def create_survey(question_order = [] of Int64)
+  def create_survey(question_order = [] of Int64, zone_id = nil, building_id = nil)
     survey_responder(question_order).to_survey.save!
   end
 end
