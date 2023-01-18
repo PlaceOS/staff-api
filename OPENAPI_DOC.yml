@@ -9740,6 +9740,9 @@ components:
         zone_id:
           type: string
           nullable: true
+        building_id:
+          type: string
+          nullable: true
         pages:
           type: array
           items:
