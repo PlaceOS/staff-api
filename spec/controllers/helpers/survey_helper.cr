@@ -53,6 +53,6 @@ module SurveyHelper
   end
 
   def create_survey(question_order = [] of Int64, zone_id = nil, building_id = nil)
-    survey_responder(question_order).to_survey.save!
+    survey_responder(question_order, zone_id, building_id).to_survey.save!
   end
 end
