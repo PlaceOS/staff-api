@@ -1,6 +1,6 @@
 require "./survey/*"
 
-Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "REJECTED", "CANCELLED"
+Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
 
 class Survey
   include Clear::Model
@@ -24,6 +24,7 @@ class Survey
     getter id : Int64?
     getter title : String? = nil
     getter description : String? = nil
+    @[JSON::Field(description: "Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT, REJECTED, CANCELLED")]
     getter trigger : TriggerType? = nil
     getter zone_id : String? = nil
     getter building_id : String? = nil
