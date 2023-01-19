@@ -9752,6 +9752,8 @@ components:
           nullable: true
         trigger:
           type: object
+          description: 'Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT,
+            REJECTED, CANCELLED'
           nullable: true
         zone_id:
           type: string
