@@ -1,6 +1,6 @@
 require "./survey/*"
 
-Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
+Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "REJECTED", "CANCELLED"
 
 class Survey
   include Clear::Model
