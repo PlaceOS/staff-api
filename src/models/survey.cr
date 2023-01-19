@@ -11,6 +11,7 @@ class Survey
   column description : String?
   column trigger : TriggerType, presence: false
   column zone_id : String?
+  column building_id : String?
   column pages : Array(Survey::Page) = [] of Survey::Page
 
   has_many answers : Survey::Answer, foreign_key: "survey_id"
@@ -23,16 +24,18 @@ class Survey
     getter id : Int64?
     getter title : String? = nil
     getter description : String? = nil
+    @[JSON::Field(description: "Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT, REJECTED, CANCELLED")]
     getter trigger : TriggerType? = nil
     getter zone_id : String? = nil
+    getter building_id : String? = nil
     getter pages : Array(Survey::Page)? = nil
 
-    def initialize(@id, @title = nil, @description = nil, @trigger = nil, @zone_id = nil, @pages = nil)
+    def initialize(@id, @title = nil, @description = nil, @trigger = nil, @zone_id = nil, @building_id = nil, @pages = nil)
     end
 
     def to_survey(update : Bool = false)
       survey = Survey.new
-      {% for key in [:title, :description, :trigger, :zone_id] %}
+      {% for key in [:title, :description, :trigger, :zone_id, :building_id] %}
         survey.{{key.id}} = self.{{key.id}}.not_nil! unless self.{{key.id}}.nil?
       {% end %}
 
@@ -50,6 +53,7 @@ class Survey
     self.description = description_column.defined? ? self.description : ""
     self.trigger = trigger_column.defined? ? self.trigger : TriggerType::NONE
     self.zone_id = zone_id_column.defined? ? self.zone_id : ""
+    self.building_id = building_id_column.defined? ? self.building_id : ""
     self.pages = pages_column.defined? ? self.pages : [] of Survey::Page
 
     Responder.new(
@@ -58,6 +62,7 @@ class Survey
       description: self.description,
       trigger: self.trigger,
       zone_id: self.zone_id,
+      building_id: self.building_id,
       pages: self.pages,
     )
   end

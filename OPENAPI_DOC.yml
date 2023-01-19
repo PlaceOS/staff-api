@@ -4641,7 +4641,23 @@ paths:
       tags:
       - Surveys
       operationId: Surveys#index
-      parameters: []
+      parameters:
+      - name: zone_id
+        in: query
+        description: filters surveys by zone_id
+        example: zone1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: building_id
+        in: query
+        description: filters surveys by building_id
+        example: building1234
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -9736,8 +9752,13 @@ components:
           nullable: true
         trigger:
           type: object
+          description: 'Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT,
+            REJECTED, CANCELLED'
           nullable: true
         zone_id:
+          type: string
+          nullable: true
+        building_id:
           type: string
           nullable: true
         pages:

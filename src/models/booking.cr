@@ -137,6 +137,25 @@ class Booking
       message: "History contains more than 3 events.",
       id:      booking_model.id,
     } } if booking_model.history.size > 3
+    booking_model.survey_trigger
+  end
+
+  def survey_trigger
+    return unless history_column.changed?
+    state = history.last.state.to_s.upcase
+
+    query = Survey.query.select("id").where(trigger: state)
+    if (zone_list = zones) && !zone_list.empty?
+      query = query.where { var("zone_id").in?(zone_list) & var("building_id").in?(zone_list) }
+    end
+
+    surveys = query.to_a
+    surveys.each do |survey|
+      Survey::Invitation.create!(
+        survey_id: survey.id,
+        email: user_email.to_s,
+      )
+    end
   end
 
   def current_history : Array(History)

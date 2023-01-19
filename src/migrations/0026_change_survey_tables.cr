@@ -9,7 +9,11 @@ class ChangeSurveyTables
       execute("ALTER TABLE questions ADD COLUMN max_rating integer")
       execute("ALTER TABLE questions ADD COLUMN tags text[] DEFAULT '{}'")
 
-      create_enum(:survey_trigger_type, TriggerType)
+      # create_enum(:survey_trigger_type, TriggerType)
+      # changed to explicitly define enum values to avoid future issues
+      # that may arise from changing the TriggerType enum but not the database,
+      # if using the TriggerType enum directly then those issues would not be caught in dev/test
+      create_enum(:survey_trigger_type, %w(NONE RESERVED CHECKEDIN CHECKEDOUT NOSHOW REJECTED CANCELLED ENDED))
       execute("ALTER TABLE surveys ADD COLUMN trigger survey_trigger_type DEFAULT 'NONE'")
 
       execute("ALTER TABLE surveys ADD COLUMN zone_id text")

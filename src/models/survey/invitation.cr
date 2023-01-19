@@ -3,10 +3,10 @@ require "ulid"
 class Survey
   class Invitation
     include Clear::Model
-    self.table = "invitations"
+    self.table = "survey_invitations"
 
     column id : Int64, primary: true, presence: false
-    column token : String
+    column token : String, presence: false
     column email : String
     column sent : Bool, presence: false
 
@@ -58,7 +58,6 @@ class Survey
 
     private def validate_columns
       add_error("survey_id", "must be defined") unless survey_id_column.defined?
-      add_error("token", "must be defined") unless token_column.defined?
       add_error("email", "must be defined") unless email_column.defined?
     end
   end
