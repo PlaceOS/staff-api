@@ -477,7 +477,7 @@ describe Events do
 
     # ensure the user has permissions to update the event
     system_id = "sys-rJQQlR4Cn7"
-    stub_permissions_check(system_id)
+    EventsHelper.stub_permissions_check(system_id)
 
     # approve
     resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=#{system_id}", headers: headers).body
