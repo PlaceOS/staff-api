@@ -41,18 +41,7 @@ class EventMetadata
   end
 
   def to_assigner
-    EventMetadata::Assigner.new(
-      id: id,
-      system_id: system_id,
-      event_id: event_id,
-      recurring_master_id: recurring_master_id,
-      ical_uid: ical_uid,
-      host_email: host_email,
-      resource_calendar: resource_calendar,
-      event_start: event_start,
-      event_end: event_end,
-      ext_data: ext_data,
-    )
+    self.to_json
   end
 
   def self.migrate_recurring_metadata(system_id : String, recurrance : PlaceCalendar::Event, parent_metadata : EventMetadata)

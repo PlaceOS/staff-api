@@ -775,11 +775,11 @@ class Events < Application
              else
                tenant.service_account.try(&.downcase) || user.email
              end
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    user_email = tenant.service_account.try(&.downcase) || user.email.downcase
+    event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
 
     # User details
-    user_email = user.email.downcase
     host = event.host.try(&.downcase) || user_email
 
     # check permisions
@@ -791,9 +791,10 @@ class Events < Application
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
     # unless using a service account and then we can only use the host calendar
-    if client.client_id == :office365 && event.host != cal_id && tenant.service_account
-      event = get_hosts_event(event)
+    if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
+      event = get_hosts_event(event, tenant.service_account)
       event_id = event.id.not_nil!
+      cal_id = srv_acct
     end
 
     if delete
