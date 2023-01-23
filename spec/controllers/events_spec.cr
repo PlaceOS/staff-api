@@ -475,8 +475,12 @@ describe Events do
 
     WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
 
+    # ensure the user has permissions to update the event
+    system_id = "sys-rJQQlR4Cn7"
+    stub_permissions_check(system_id)
+
     # approve
-    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=sys-rJQQlR4Cn7", headers: headers).body
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=#{system_id}", headers: headers).body
     accepted_event = JSON.parse(resp)
     room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
