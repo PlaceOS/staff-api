@@ -288,7 +288,7 @@ class Events < Application
                user.email
              end
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("failed to find event searching on #{cal_id} as #{user.email}") unless event
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
@@ -762,24 +762,25 @@ class Events < Application
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    cal_id = if system_id
+    cal_id = if user_cal
+               user_cal = user_cal.downcase
+               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
+               raise AC::Route::Param::ValueError.new("user doesn't have write access to #{user_cal}", "calendar") unless found
+               user_cal
+             elsif system_id
                system = placeos_client.systems.fetch(system_id)
                sys_cal = system.email.presence
                raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
                sys_cal
-             elsif user_cal
-               user_cal = user_cal.try(&.downcase)
-               found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
-               raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found
-               user_cal
              else
-               tenant.service_account.try(&.downcase) || user.email
+               # defaults to the current users email
+               user.email
              end
-    user_email = tenant.service_account.try(&.downcase) || user.email.downcase
-    event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # User details
+    user_email = tenant.service_account.try(&.downcase) || user.email.downcase
     host = event.host.try(&.downcase) || user_email
 
     # check permisions
