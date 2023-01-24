@@ -39,6 +39,7 @@
 
 ### Fix
 
+- **events**: delete event with a service account user
 - **events**: delete event with a service account user ([#251](https://github.com/PlaceOS/staff-api/pull/251))
 - **events**: fix cancel with service account ([#250](https://github.com/PlaceOS/staff-api/pull/250))
 - **tenant**: don't set a default conference type ([#247](https://github.com/PlaceOS/staff-api/pull/247))
