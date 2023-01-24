@@ -145,7 +145,7 @@ class Booking
     state = history.last.state.to_s.upcase
 
     query = Survey.query.select("id").where(trigger: state)
-    if (zone_list = zones) && !zone_list.empty?
+    if zones_column.defined? && (zone_list = zones) && !zone_list.empty?
       query = query.where { var("zone_id").in?(zone_list) & var("building_id").in?(zone_list) }
     end
 

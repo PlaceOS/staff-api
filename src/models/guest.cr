@@ -61,13 +61,20 @@ class Guest
     property visit_expected : Bool? = nil
     property booking : Booking::BookingResponse? = nil
     property event : PlaceCalendar::Event? = nil
+
+    @[JSON::Field(converter: String::RawConverter)]
+    property event_metadata : String? = nil
   end
 
   def to_h(visitor : Attendee?, is_parent_metadata, meeting_details : PlaceCalendar::Event?)
     result = base_to_h
     result.checked_in = is_parent_metadata ? false : visitor.try(&.checked_in) || false
     result.visit_expected = visitor.try(&.visit_expected) || false
-    result.event = meeting_details if meeting_details
+    if meeting_details
+      result.event = meeting_details
+    elsif meta = visitor.try(&.event_metadata)
+      result.event_metadata = meta.to_assigner
+    end
     result
   end
 

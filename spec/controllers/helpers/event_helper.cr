@@ -47,6 +47,32 @@ module EventsHelper
     })
   end
 
+  def stub_permissions_check(system_id)
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/#{system_id}?name=permissions")
+      .to_return(body: %({
+        "permissions": {
+          "name": "permissions",
+          "description": "",
+          "parent_id": "#{system_id}",
+          "details": {
+            "admin": ["#{system_id}", "admin"]
+          }
+        }
+      }))
+
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
+      .to_return(body: %({
+        "permissions": {
+          "name": "permissions",
+          "description": "",
+          "parent_id": "zone-rGhCRp_aUD",
+          "details": {
+            "admin": ["#{system_id}", "admin"]
+          }
+        }
+      }))
+  end
+
   def event_query_response(id)
     {
       "value" => [EventsHelper.mock_event_id(id)],
