@@ -53,9 +53,21 @@ module EventsHelper
         "permissions": {
           "name": "permissions",
           "description": "",
-          "parent_id": "zone-1234",
+          "parent_id": "#{system_id}",
           "details": {
-            "admin": ["#{system_id}"]
+            "admin": ["#{system_id}", "admin"]
+          }
+        }
+      }))
+
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
+      .to_return(body: %({
+        "permissions": {
+          "name": "permissions",
+          "description": "",
+          "parent_id": "zone-rGhCRp_aUD",
+          "details": {
+            "admin": ["#{system_id}", "admin"]
           }
         }
       }))

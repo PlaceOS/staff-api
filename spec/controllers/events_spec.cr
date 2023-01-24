@@ -149,8 +149,9 @@ describe Events do
         .to_return(EventsHelper.event_query_response(created_event_id))
 
       req_body = EventsHelper.update_event_input
-
-      updated_event = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers, body: req_body).body
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+      updated_event = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body).body
       updated_event.includes?(%(some updated notes))
       # .should eq(EventsHelper.update_event_output)
       # Should have updated metadata record
@@ -241,8 +242,10 @@ describe Events do
 
       # Update
       req_body = EventsHelper.update_event_input
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
 
-      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers, body: req_body).body)
+      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body).body)
       updated_event["event_start"].should eq(1598504460)
       updated_event["event_end"].should eq(1598508120)
     end
@@ -509,7 +512,9 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # reject
-    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=sys-rJQQlR4Cn7", headers: headers).body
+    system_id = "sys-rJQQlR4Cn7"
+    EventsHelper.stub_permissions_check(system_id)
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=#{system_id}", headers: headers).body
     declined_event = JSON.parse(resp)
     room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
     room_attendee.not_nil!["response_status"].as_s.should eq("declined")
