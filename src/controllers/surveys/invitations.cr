@@ -28,7 +28,7 @@ class Surveys::Invitations < Application
 
     # filter
     query = query.where(survey_id: survey_id) if survey_id
-    query = query.where(sent: sent) if sent
+    query = query.where(sent: sent) if !sent.nil?
 
     query.to_a.map(&.as_json)
   end
