@@ -9,6 +9,7 @@ class Outlook < ActionController::Base
     render :bad_request, json: "Missing app_id" if outlook_config.app_id.blank?
 
     base_path = outlook_config.base_path || "outlook"
+    version = outlook_config.version || "1.0.0.01"
 
     manifest = OutlookManifest.new(
       app_id: outlook_config.app_id,
@@ -19,7 +20,7 @@ class Outlook < ActionController::Base
       taskpane_url: "https://#{tenant.domain}/#{base_path}/#/book/meeting",
       rooms_button_url: "https://#{tenant.domain}/#{base_path}/#/upcoming",
       desks_button_url: "https://#{tenant.domain}/#{base_path}/#/book/desks",
-      version: (tenant.updated_at.to_unix || tenant.created_at.to_unix).to_s,
+      version: version,
     )
 
     render xml: manifest.to_xml

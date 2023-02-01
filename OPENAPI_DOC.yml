@@ -8098,6 +8098,9 @@ components:
           - all_day
           - attachments
           nullable: true
+        event_metadata:
+          type: string
+          nullable: true
       required:
       - id
       - email
@@ -9578,6 +9581,9 @@ components:
             - all_day
             - attachments
             nullable: true
+          event_metadata:
+            type: string
+            nullable: true
         required:
         - id
         - email
@@ -9921,6 +9927,9 @@ components:
               type: string
               nullable: true
             source_location:
+              type: string
+              nullable: true
+            version:
               type: string
               nullable: true
           required:

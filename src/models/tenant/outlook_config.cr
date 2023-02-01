@@ -9,6 +9,7 @@ class Tenant
     property app_domain : String?
     property app_resource : String?
     property source_location : String?
+    property version : String?
 
     def clean
       config = self
@@ -17,6 +18,7 @@ class Tenant
       config.app_domain = (c = config.app_domain) && !c.blank? ? c.strip.downcase : nil
       config.app_resource = (c = config.app_resource) && !c.blank? ? c.strip.downcase : nil
       config.source_location = (c = config.source_location) && !c.blank? ? c.strip.downcase : nil
+      config.version = (c = config.version) && !c.blank? ? c.strip : nil
       config
     end
 
@@ -27,6 +29,7 @@ class Tenant
         app_domain:      @app_domain,
         app_resource:    @app_resource,
         source_location: @source_location,
+        version:         @version,
       }
     end
 
