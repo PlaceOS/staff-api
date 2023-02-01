@@ -39,6 +39,7 @@
 
 ### Fix
 
+- **outlook**: xml manifest version ([#252](https://github.com/PlaceOS/staff-api/pull/252))
 - **events**: delete event with a service account user
 - **events**: delete event with a service account user ([#251](https://github.com/PlaceOS/staff-api/pull/251))
 - **events**: fix cancel with service account ([#250](https://github.com/PlaceOS/staff-api/pull/250))
