@@ -153,7 +153,7 @@ class Booking
     surveys.each do |survey|
       Survey::Invitation.create!(
         survey_id: survey.id,
-        email: user_email.to_s,
+        email: extension_data["host_override"]? || user_email.to_s,
       )
     end
   end
