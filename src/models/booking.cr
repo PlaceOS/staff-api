@@ -149,11 +149,13 @@ class Booking
       query = query.where { var("zone_id").in?(zone_list) & var("building_id").in?(zone_list) }
     end
 
+    email = extension_data_column.defined? ? extension_data["host_override"]? || user_email.to_s : user_email.to_s
+
     surveys = query.to_a
     surveys.each do |survey|
       Survey::Invitation.create!(
         survey_id: survey.id,
-        email: user_email.to_s,
+        email: email,
       )
     end
   end
