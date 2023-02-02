@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **survey**: use host_override if defined ([#254](https://github.com/PlaceOS/staff-api/pull/254))
 - **survey**: triggers ([#249](https://github.com/PlaceOS/staff-api/pull/249))
 - **survey**: add fields ([#246](https://github.com/PlaceOS/staff-api/pull/246))
 - **events**: allow meetings to be booked by service accounts ([#243](https://github.com/PlaceOS/staff-api/pull/243))
