@@ -5,10 +5,19 @@ class Surveys::Answers < Application
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(description: "the survey id to get answers for", example: "1234")]
-    survey_id : Int64? = nil
+    survey_id : Int64? = nil,
+    @[AC::Param::Info(description: "filters answers that were created after the unix epoch specified", example: "1661743123")]
+    created_after : Int64? = nil,
+    @[AC::Param::Info(description: "filters answers that were created before the unix epoch specified", example: "1661743123")]
+    created_before : Int64? = nil
   ) : Array(Survey::Answer::Responder)
     query = Survey::Answer.query.select("id, question_id, survey_id, type, answer_json")
-    query.where(survey_id: survey_id) if survey_id
+
+    # filter
+    query = query.where(survey_id: survey_id) if survey_id
+    after_time = created_after ? Time.unix(created_after) : Time.unix(0)
+    before_time = created_before ? Time.unix(created_before) : Time.local
+    query = query.where { created_at.between(after_time, before_time) }
 
     query.to_a.map(&.as_json)
   end
