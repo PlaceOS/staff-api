@@ -38,7 +38,7 @@ class Surveys::Answers < Application
       .to_a.map(&.id)
 
     missing = required_questions - answers.map(&.question_id)
-    raise Error::BadRequest.new("Missing required answers for questions: #{missing.join(", ")}") if missing.any?
+    raise Error::BadRequest.new("Missing required answers for questions: #{missing.join(", ")}") if !missing.empty?
 
     answers.each do |answer|
       raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.save
