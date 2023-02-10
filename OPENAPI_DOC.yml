@@ -5125,6 +5125,24 @@ paths:
           type: integer
           format: Int64
           nullable: true
+      - name: created_after
+        in: query
+        description: filters answers that were created after the unix epoch specified
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: created_before
+        in: query
+        description: filters answers that were created before the unix epoch specified
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
