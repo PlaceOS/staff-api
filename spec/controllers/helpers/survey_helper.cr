@@ -89,4 +89,16 @@ module SurveyHelper
   def create_answers(survey = create_survey, questions = create_questions)
     answer_responders(survey, questions).map { |a| a.to_answer.save! }
   end
+
+  def invitation_responder(survey = create_survey, email = "someone@spec.test", sent = false)
+    Survey::Invitation::Responder.from_json({
+      survey_id: survey.id,
+      email:     email,
+      sent:      sent,
+    }.to_json)
+  end
+
+  def create_invitation(survey = create_survey, email = "someone@spec.test", sent = false)
+    invitation_responder(survey, email, sent).to_invitation.save!
+  end
 end
