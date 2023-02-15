@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **survey**: [PPT-91] filter answers on date range ([#255](https://github.com/PlaceOS/staff-api/pull/255))
 - **survey**: use host_override if defined ([#254](https://github.com/PlaceOS/staff-api/pull/254))
 - **survey**: triggers ([#249](https://github.com/PlaceOS/staff-api/pull/249))
 - **survey**: add fields ([#246](https://github.com/PlaceOS/staff-api/pull/246))
