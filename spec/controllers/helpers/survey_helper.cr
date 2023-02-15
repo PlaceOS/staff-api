@@ -57,6 +57,39 @@ module SurveyHelper
     survey_responder(question_order, zone_id, building_id, trigger).to_survey.save!
   end
 
+  def answer_responders(survey = create_survey, questions = create_questions)
+    [
+      Survey::Answer::Responder.from_json({
+        question_id: questions[0].id,
+        survey_id:   survey.id,
+        type:        "single_choice",
+        answer_json: {
+          text: "Green",
+        },
+      }.to_json),
+      Survey::Answer::Responder.from_json({
+        question_id: questions[1].id,
+        survey_id:   survey.id,
+        type:        "single_choice",
+        answer_json: {
+          text: "Cat",
+        },
+      }.to_json),
+      Survey::Answer::Responder.from_json({
+        question_id: questions[2].id,
+        survey_id:   survey.id,
+        type:        "single_choice",
+        answer_json: {
+          text: "Pizza",
+        },
+      }.to_json),
+    ]
+  end
+
+  def create_answers(survey = create_survey, questions = create_questions)
+    answer_responders(survey, questions).map { |a| a.to_answer.save! }
+  end
+
   def invitation_responder(survey = create_survey, email = "someone@spec.test", sent = false)
     Survey::Invitation::Responder.from_json({
       survey_id: survey.id,
