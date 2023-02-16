@@ -43,7 +43,7 @@ describe Surveys::Questions, tags: ["survey"] do
   end
 
   describe "#update" do
-    context "when there are no answers" do
+    context "when there are no linked answers" do
       it "should update a question" do
         questions = SurveyHelper.create_questions
         update = {title: "Updated Title"}.to_json
@@ -55,7 +55,7 @@ describe Surveys::Questions, tags: ["survey"] do
       end
     end
 
-    context "when there are answers" do
+    context "when there are linked answers" do
       it "should create a new question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
@@ -74,6 +74,7 @@ describe Surveys::Questions, tags: ["survey"] do
       end
 
       pending "should replace the question on surveys" do
+        # if query param
       end
     end
   end
@@ -89,7 +90,7 @@ describe Surveys::Questions, tags: ["survey"] do
   end
 
   describe "#destroy" do
-    context "when there are no answers" do
+    context "when there are no linked answers" do
       it "should delete a question" do
         questions = SurveyHelper.create_questions
 
@@ -98,8 +99,13 @@ describe Surveys::Questions, tags: ["survey"] do
       end
     end
 
-    context "when there are answers" do
+    context "when there are linked answers" do
       pending "should soft delete the question" do
+      end
+
+      pending "should remove the question from surveys" do
+        # if query param
+        # else it should fail
       end
     end
   end
