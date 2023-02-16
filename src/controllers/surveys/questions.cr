@@ -40,6 +40,23 @@ class Surveys::Questions < Application
     question.as_json
   end
 
+  # patches an existing question
+  @[AC::Route::PUT("/:id", body: :question_body)]
+  @[AC::Route::PATCH("/:id", body: :question_body)]
+  def update(question_body : Survey::Question::Responder) : Survey::Question::Responder
+    changes = question_body.to_question(update: true)
+
+    {% for key in [:title, :description, :type, :options, :required, :choices, :max_rating, :tags] %}
+      begin
+        question.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
+      rescue NilAssertionError
+      end
+    {% end %}
+
+    raise Error::ModelValidation.new(question.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating question data") if !question.save
+    question.as_json
+  end
+
   # show a question
   @[AC::Route::GET("/:id")]
   def show(

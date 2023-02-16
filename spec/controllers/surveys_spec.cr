@@ -2,7 +2,7 @@ require "../spec_helper"
 require "./helpers/spec_clean_up"
 require "./helpers/survey_helper"
 
-describe Surveys do
+describe Surveys, tags: ["survey"] do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 

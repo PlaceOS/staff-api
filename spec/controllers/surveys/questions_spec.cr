@@ -2,7 +2,7 @@ require "../../spec_helper"
 require "../helpers/spec_clean_up"
 require "../helpers/survey_helper"
 
-describe Surveys::Questions do
+describe Surveys::Questions, tags: ["survey"] do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -42,6 +42,42 @@ describe Surveys::Questions do
     end
   end
 
+  describe "#update" do
+    context "when there are no answers" do
+      it "should update a question" do
+        questions = SurveyHelper.create_questions
+        update = {title: "Updated Title"}.to_json
+
+        response = client.put("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers, body: update)
+        response.status_code.should eq(200)
+        response_body = JSON.parse(response.body)
+        response_body["title"].should eq("Updated Title")
+      end
+    end
+
+    context "when there are answers" do
+      it "should create a new question" do
+        questions = SurveyHelper.create_questions
+        survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
+        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+
+        update = {title: "Updated Title"}.to_json
+
+        response = client.put("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers, body: update)
+        response.status_code.should eq(200)
+        response_body = JSON.parse(response.body)
+        response_body["title"].should eq("Updated Title")
+        response_body["id"].should_not eq(questions.first.id)
+      end
+
+      pending "should soft delete the question" do
+      end
+
+      pending "should replace the question on surveys" do
+      end
+    end
+  end
+
   describe "#show" do
     it "should return a question" do
       questions = SurveyHelper.create_questions
@@ -53,11 +89,18 @@ describe Surveys::Questions do
   end
 
   describe "#destroy" do
-    it "should delete a question" do
-      questions = SurveyHelper.create_questions
+    context "when there are no answers" do
+      it "should delete a question" do
+        questions = SurveyHelper.create_questions
 
-      response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
-      response.status_code.should eq(202)
+        response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
+        response.status_code.should eq(202)
+      end
+    end
+
+    context "when there are answers" do
+      pending "should soft delete the question" do
+      end
     end
   end
 end

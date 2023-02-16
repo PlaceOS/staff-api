@@ -20,6 +20,11 @@ class Survey
     # TODO: check question is not used by a survey before deleting
     # before :delete, :ensure_not_used
 
+    before(:save) do |m|
+      question_model = m.as(Question)
+      question_model.clear_persisted if question_model.persisted? && Survey::Answer.query.where(question_id: question_model.id).count > 0
+    end
+
     struct Responder
       include JSON::Serializable
 
@@ -81,6 +86,13 @@ class Survey
         max_rating: self.max_rating_column.value(nil),
         tags: self.tags,
       )
+    end
+
+    def clear_persisted
+      @persisted = false
+      self.id_column.clear
+      self.created_at_column.clear
+      self.updated_at_column.clear
     end
 
     def validate
