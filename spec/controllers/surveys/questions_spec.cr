@@ -121,10 +121,6 @@ describe Surveys::Questions, tags: ["survey"] do
         Survey::Question.find(response_body["id"]).not_nil!.deleted_at.should be_nil
         Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
       end
-
-      pending "should replace the question on surveys" do
-        # if query param
-      end
     end
   end
 
@@ -158,11 +154,6 @@ describe Surveys::Questions, tags: ["survey"] do
         response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
         response.status_code.should eq(202)
         Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
-      end
-
-      pending "should remove the question from surveys" do
-        # if query param
-        # else it should fail
       end
     end
   end
