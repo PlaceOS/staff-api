@@ -20,14 +20,18 @@ class Surveys::Questions < Application
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(description: "the survey id to get questions for", example: "1234")]
-    survey_id : Int64? = nil
+    survey_id : Int64? = nil,
+    @[AC::Param::Info(description: "filter by soft-deleted", example: "true")]
+    deleted : Bool? = nil
   ) : Array(Survey::Question::Responder)
     query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags")
 
+    # filter
     if survey_id
       question_ids = Survey.find!(survey_id).question_ids
       query = query.where { id.in?(question_ids) }
     end
+    query = deleted ? query.where { deleted_at != nil } : query.where { deleted_at == nil }
 
     query.to_a.map(&.as_json)
   end
