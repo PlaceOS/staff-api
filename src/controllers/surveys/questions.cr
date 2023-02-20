@@ -41,6 +41,7 @@ class Surveys::Questions < Application
   end
 
   # patches an existing question
+  # This will create a new version of the question if there are any linked answers, and then soft delete the old version.
   @[AC::Route::PUT("/:id", body: :question_body)]
   @[AC::Route::PATCH("/:id", body: :question_body)]
   def update(question_body : Survey::Question::Responder) : Survey::Question::Responder
@@ -67,8 +68,9 @@ class Surveys::Questions < Application
   end
 
   # deletes the question
+  # This will soft delete the question if there are any linked answers.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
-    question.delete
+    question.maybe_soft_delete
   end
 end

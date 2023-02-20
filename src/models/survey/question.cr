@@ -12,17 +12,18 @@ class Survey
     column choices : JSON::Any, presence: false
     column max_rating : Int32?
     column tags : Array(String), presence: false
+    column deleted_at : Int64?
 
     has_many answers : Survey::Answer, foreign_key: "answer_id"
 
     timestamps
 
-    # TODO: check question is not used by a survey before deleting
-    # before :delete, :ensure_not_used
-
     before(:save) do |m|
       question_model = m.as(Question)
-      question_model.clear_persisted if question_model.persisted? && Survey::Answer.query.where(question_id: question_model.id).count > 0
+      if question_model.persisted? && Survey::Answer.query.where(question_id: question_model.id).count > 0
+        question_model.soft_delete
+        question_model.clear_persisted
+      end
     end
 
     struct Responder
@@ -88,11 +89,25 @@ class Survey
       )
     end
 
+    def soft_delete
+      # Using Clear::SQL.raw here to avoid an infinite loop with the before(:save) hook
+      Clear::SQL.execute Clear::SQL.raw("UPDATE questions SET deleted_at = :deleted_at WHERE id = :id", deleted_at: Time.local.to_unix, id: self.id)
+    end
+
+    def maybe_soft_delete
+      if Survey::Answer.query.where(question_id: self.id).count > 0
+        soft_delete
+      else
+        delete
+      end
+    end
+
     def clear_persisted
       @persisted = false
       self.id_column.clear
       self.created_at_column.clear
       self.updated_at_column.clear
+      self.deleted_at_column.clear
     end
 
     def validate
