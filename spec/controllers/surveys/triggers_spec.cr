@@ -3,7 +3,7 @@ require "../helpers/spec_clean_up"
 require "../helpers/survey_helper"
 require "../helpers/booking_helper"
 
-describe "Survey Triggers" do
+describe "Survey Triggers", tags: ["survey"] do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
