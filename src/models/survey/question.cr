@@ -20,6 +20,7 @@ class Survey
 
     before(:save) do |m|
       question_model = m.as(Question)
+      # If the question is in the database and has answers, we need to insert a new question and soft delete the old one
       if question_model.persisted? && Survey::Answer.query.where(question_id: question_model.id).count > 0
         question_model.soft_delete
         question_model.clear_persisted
