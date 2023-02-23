@@ -2075,7 +2075,14 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}:
     get:
-      summary: returns the event requested
+      summary: returns the event requested.
+      description: 'returns the event requested.
+
+        by default it assumes the event exists on the users calendar.
+
+        you can provide a calendar param to override this default
+
+        or you can provide a system id if the event exists on a resource calendar'
       tags:
       - Events
       operationId: Events#show
@@ -2167,8 +2174,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
     put:
-      summary: patches an existing booking with the changes provided, a system should
-        be specified if the user doesn't own the event
+      summary: patches an existing booking with the changes provided
+      description: 'patches an existing booking with the changes provided
+
+        by default it assumes the event exists on the users calendar.
+
+        you can provide a calendar param to override this default
+
+        or you can provide a system id if the event exists on a resource calendar
+
+
+        Note: event metadata is associated with a resource calendar, not the hosts
+        event.
+
+        so if you want to update an event and the metadata then you need to provide
+        both
+
+        the `calendar` param and the `system_id` param'
       tags:
       - Events
       operationId: Events#update
@@ -2196,7 +2218,7 @@ paths:
           nullable: true
       - name: calendar
         in: query
-        description: the users calendar associated with this event
+        description: the calendar associated with this event id
         example: user@org.com
         required: false
         schema:
@@ -2362,8 +2384,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
     patch:
-      summary: patches an existing booking with the changes provided, a system should
-        be specified if the user doesn't own the event
+      summary: patches an existing booking with the changes provided
+      description: 'patches an existing booking with the changes provided
+
+        by default it assumes the event exists on the users calendar.
+
+        you can provide a calendar param to override this default
+
+        or you can provide a system id if the event exists on a resource calendar
+
+
+        Note: event metadata is associated with a resource calendar, not the hosts
+        event.
+
+        so if you want to update an event and the metadata then you need to provide
+        both
+
+        the `calendar` param and the `system_id` param'
       tags:
       - Events
       operationId: Events#update{2}
@@ -2391,7 +2428,7 @@ paths:
           nullable: true
       - name: calendar
         in: query
-        description: the users calendar associated with this event
+        description: the calendar associated with this event id
         example: user@org.com
         required: false
         schema:
@@ -2463,6 +2500,12 @@ paths:
   /api/staff/v1/events/{id}/metadata/{system_id}:
     put:
       summary: Replaces the metadata on a booking without touching the calendar event
+      description: 'Replaces the metadata on a booking without touching the calendar
+        event
+
+        by default it assumes the event exists on the resource calendar.
+
+        you can provide a calendar param to override this default'
       tags:
       - Events
       operationId: Events#replace_metadata
@@ -2487,6 +2530,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: calendar
+        in: query
+        description: the calendar associated with this event id
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -2551,8 +2602,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
     patch:
-      summary: Patches the metadata on a booking without touching the calendar event,
+      summary: Patches the metadata on a booking without touching the calendar event
+      description: 'Patches the metadata on a booking without touching the calendar
+        event
+
         only updates the keys provided in the request
+
+
+        by default it assumes the event exists on the resource calendar.
+
+        you can provide a calendar param to override this default'
       tags:
       - Events
       operationId: Events#patch_metadata
@@ -2577,6 +2636,14 @@ paths:
         required: true
         schema:
           type: string
+      - name: calendar
+        in: query
+        description: the calendar associated with this event id
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
