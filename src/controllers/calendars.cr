@@ -68,7 +68,7 @@ class Calendars < Application
     # Remove any rooms that have overlapping bookings
     busy.each do |status|
       status.availability.each do |avail|
-        if (avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start <= avail.ends_at) && (period_end >= avail.starts_at))
+        if avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start <= avail.ends_at) && (period_end >= avail.starts_at)
           calendars.delete(status.calendar.downcase)
         end
       end

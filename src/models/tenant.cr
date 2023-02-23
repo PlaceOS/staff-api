@@ -277,7 +277,7 @@ class Tenant
   # Decrypts (if user has correct privilege) and returns the credentials string
   #
   def decrypt_for(user) : String
-    raise PlaceOS::Model::Error::NoParent.new unless (encryption_id = self.domain)
+    raise PlaceOS::Model::Error::NoParent.new unless encryption_id = self.domain
 
     PlaceOS::Encryption.decrypt_for(user: user, string: self.credentials, level: PlaceOS::Encryption::Level::NeverDisplay, id: encryption_id)
   end

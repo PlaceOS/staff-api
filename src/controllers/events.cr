@@ -169,6 +169,7 @@ class Events < Application
           event_id:  created_event.id,
           host:      host,
           resource:  sys.email,
+          event:     created_event,
           ext_data:  input_event.extension_data,
         })
       end
@@ -256,7 +257,14 @@ class Events < Application
     StaffApi::Event.augment(created_event, host)
   end
 
-  # patches an existing booking with the changes provided, a system should be specified if the user doesn't own the event
+  # patches an existing booking with the changes provided
+  # by default it assumes the event exists on the users calendar.
+  # you can provide a calendar param to override this default
+  # or you can provide a system id if the event exists on a resource calendar
+  #
+  # Note: event metadata is associated with a resource calendar, not the hosts event.
+  # so if you want to update an event and the metadata then you need to provide both
+  # the `calendar` param and the `system_id` param
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
@@ -265,7 +273,7 @@ class Events < Application
     original_id : String,
     @[AC::Param::Info(name: "system_id", description: "the event space associated with this event", example: "sys-1234")]
     associated_system : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil
   ) : PlaceCalendar::Event
     event_id = original_id
@@ -273,20 +281,23 @@ class Events < Application
 
     placeos_client = get_placeos_client
 
-    cal_id = if user_cal
-               user_cal = user_cal.downcase
-               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-               raise AC::Route::Param::ValueError.new("user doesn't have write access to #{user_cal}", "calendar") unless found
-               user_cal
-             elsif system_id
-               system = placeos_client.systems.fetch(system_id)
-               sys_cal = system.email.presence
-               raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
-               sys_cal
-             else
-               # defaults to the current users email
-               user.email
-             end
+    if user_cal
+      cal_id = user_cal.downcase
+      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
+    end
+
+    if system_id
+      system = placeos_client.systems.fetch(system_id)
+      if cal_id.nil?
+        sys_cal = cal_id = system.email.presence
+        raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+      end
+    end
+
+    # defaults to the current users email
+    cal_id = user.email unless cal_id
+
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
@@ -521,6 +532,7 @@ class Events < Application
           event_id:  original_id,
           host:      host,
           resource:  sys.email,
+          event:     updated_event,
           ext_data:  eventmeta.try &.ext_data,
         })
       end
@@ -544,31 +556,41 @@ class Events < Application
     end
   end
 
-  # Patches the metadata on a booking without touching the calendar event, only updates the keys provided in the request
+  # Patches the metadata on a booking without touching the calendar event
+  # only updates the keys provided in the request
+  #
+  # by default it assumes the event exists on the resource calendar.
+  # you can provide a calendar param to override this default
   @[AC::Route::PATCH("/:id/metadata/:system_id", body: :changes)]
   def patch_metadata(
     changes : JSON::Any,
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String
+    system_id : String,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, merge: true)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, merge: true)
   end
 
   # Replaces the metadata on a booking without touching the calendar event
+  # by default it assumes the event exists on the resource calendar.
+  # you can provide a calendar param to override this default
   @[AC::Route::PUT("/:id/metadata/:system_id", body: :changes)]
   def replace_metadata(
     changes : JSON::Any,
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String
+    system_id : String,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, merge: false)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, merge: false)
   end
 
-  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, merge : Bool = false)
+  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, merge : Bool = false)
     event_id = original_id
     placeos_client = get_placeos_client
 
@@ -584,6 +606,7 @@ class Events < Application
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
+    cal_id = event_calendar || cal_id
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
@@ -638,6 +661,7 @@ class Events < Application
         event_id:  original_id,
         host:      event.host,
         resource:  system.email,
+        event:     event,
         ext_data:  meta.ext_data,
       })
     end
@@ -645,7 +669,10 @@ class Events < Application
     meta.ext_data.not_nil!
   end
 
-  # returns the event requested
+  # returns the event requested.
+  # by default it assumes the event exists on the users calendar.
+  # you can provide a calendar param to override this default
+  # or you can provide a system id if the event exists on a resource calendar
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -762,20 +789,23 @@ class Events < Application
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    cal_id = if user_cal
-               user_cal = user_cal.downcase
-               found = get_user_calendars.reject { |cal| cal.id != user_cal }.first?
-               raise AC::Route::Param::ValueError.new("user doesn't have write access to #{user_cal}", "calendar") unless found
-               user_cal
-             elsif system_id
-               system = placeos_client.systems.fetch(system_id)
-               sys_cal = system.email.presence
-               raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
-               sys_cal
-             else
-               # defaults to the current users email
-               user.email
-             end
+    if user_cal
+      cal_id = user_cal.downcase
+      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
+    end
+
+    if system_id
+      system = placeos_client.systems.fetch(system_id)
+      if cal_id.nil?
+        sys_cal = cal_id = system.email.presence
+        raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+      end
+    end
+
+    # defaults to the current users email
+    cal_id = user.email unless cal_id
+
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
@@ -820,6 +850,7 @@ class Events < Application
           system_id: system.not_nil!.id,
           event_id:  event_id,
           resource:  system.not_nil!.email,
+          event:     event,
         })
       end
     end
