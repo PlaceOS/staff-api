@@ -13,7 +13,7 @@ class StaffApi::Event
         metadata.delete
       end
       metadata = nil
-    elsif (staff_api_attendees = metadata.try(&.attendees))
+    elsif staff_api_attendees = metadata.try(&.attendees)
       staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
     end
 

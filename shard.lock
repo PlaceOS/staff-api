@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 5.5.3
+    version: 5.6.2
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -19,7 +19,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.3.1
+    version: 1.4.2
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -139,7 +139,7 @@ shards:
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
-    version: 2.2.1
+    version: 2.3.0
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
@@ -179,7 +179,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 8.13.1
+    version: 8.13.2
 
   promise:
     git: https://github.com/spider-gazelle/promise.git

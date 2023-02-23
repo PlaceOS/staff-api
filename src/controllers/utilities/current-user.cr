@@ -16,7 +16,7 @@ module Utils::CurrentUser
     return if @user_token
 
     # check for X-API-Key use
-    if (token = request.headers["X-API-Key"]?)
+    if token = request.headers["X-API-Key"]?
       begin
         @user_token = user_token = get_placeos_client.apikeys.inspect_jwt
         return user_token
@@ -83,10 +83,10 @@ module Utils::CurrentUser
     if token = @access_token
       token
     else
-      @access_token = if (token = request.headers["Authorization"]?)
+      @access_token = if token = request.headers["Authorization"]?
                         token = token.lchop("Bearer ").rstrip
                         token unless token.empty?
-                      elsif (token = params["bearer_token"]?)
+                      elsif token = params["bearer_token"]?
                         token.strip
                       end
     end
