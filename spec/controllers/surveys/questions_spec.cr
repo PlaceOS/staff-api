@@ -95,7 +95,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should create a new question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         update = {title: "Updated Title"}.to_json
 
@@ -109,7 +109,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should soft delete the question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         update = {title: "Updated Title"}.to_json
 
@@ -149,7 +149,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should soft delete the question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
         response.status_code.should eq(202)
