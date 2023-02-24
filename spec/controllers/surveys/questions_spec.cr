@@ -53,14 +53,14 @@ describe Surveys::Questions, tags: ["survey"] do
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
     end
 
-    it "should not include soft-deleted question by default" do
+    it "should include soft-deleted question by default" do
       questions = SurveyHelper.create_questions
       questions.first.soft_delete
 
       response = client.get(QUESTIONS_BASE, headers: headers)
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
-      response_json.as_a.map(&.["id"]).should_not contain(questions[0].id)
+      response_json.as_a.map(&.["id"]).should contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
     end

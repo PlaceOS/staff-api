@@ -39,6 +39,7 @@ class Survey
       getter choices : JSON::Any? = nil
       getter max_rating : Int32? = nil
       getter tags : Array(String)? = nil
+      getter deleted : Bool? = nil
 
       def initialize(
         @id,
@@ -49,7 +50,8 @@ class Survey
         @required = nil,
         @choices = nil,
         @max_rating = nil,
-        @tags = nil
+        @tags = nil,
+        @deleted = nil
       )
       end
 
@@ -87,6 +89,7 @@ class Survey
         choices: self.choices,
         max_rating: self.max_rating_column.value(nil),
         tags: self.tags,
+        deleted: self.deleted_at_column.defined?
       )
     end
 
