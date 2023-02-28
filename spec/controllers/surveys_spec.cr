@@ -16,7 +16,7 @@ describe Surveys, tags: ["survey"] do
     end
 
     it "should return a list of surveys filtered by zone_id" do
-      survey1 = SurveyHelper.create_survey(zone_id: "1")
+      _survey1 = SurveyHelper.create_survey(zone_id: "1")
       survey2 = SurveyHelper.create_survey(zone_id: "2")
 
       response = client.get("#{SURVEY_BASE}?zone_id=2", headers: headers)
@@ -26,7 +26,7 @@ describe Surveys, tags: ["survey"] do
 
     it "should return a list of surveys filtered by building_id" do
       survey1 = SurveyHelper.create_survey(building_id: "1")
-      survey2 = SurveyHelper.create_survey(building_id: "2")
+      _survey2 = SurveyHelper.create_survey(building_id: "2")
 
       response = client.get("#{SURVEY_BASE}?building_id=1", headers: headers)
       response.status_code.should eq(200)

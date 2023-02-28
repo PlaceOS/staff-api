@@ -31,7 +31,7 @@ class Surveys::Questions < Application
       question_ids = Survey.find!(survey_id).question_ids
       query = query.where { id.in?(question_ids) }
     end
-    query = deleted ? query.where { deleted_at != nil } : query.where { deleted_at == nil }
+    query = deleted ? query.where { deleted_at != nil } : query.where { deleted_at == nil } unless deleted.nil?
 
     query.to_a.map(&.as_json)
   end

@@ -53,14 +53,14 @@ describe Surveys::Questions, tags: ["survey"] do
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
     end
 
-    it "should not include soft-deleted question by default" do
+    it "should include soft-deleted question by default" do
       questions = SurveyHelper.create_questions
       questions.first.soft_delete
 
       response = client.get(QUESTIONS_BASE, headers: headers)
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
-      response_json.as_a.map(&.["id"]).should_not contain(questions[0].id)
+      response_json.as_a.map(&.["id"]).should contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
     end
@@ -95,7 +95,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should create a new question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         update = {title: "Updated Title"}.to_json
 
@@ -109,7 +109,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should soft delete the question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         update = {title: "Updated Title"}.to_json
 
@@ -149,7 +149,7 @@ describe Surveys::Questions, tags: ["survey"] do
       it "should soft delete the question" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
-        answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
         response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
         response.status_code.should eq(202)
