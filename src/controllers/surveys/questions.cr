@@ -24,7 +24,7 @@ class Surveys::Questions < Application
     @[AC::Param::Info(description: "filter by soft-deleted", example: "true")]
     deleted : Bool? = nil
   ) : Array(Survey::Question::Responder)
-    query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags")
+    query = Survey::Question.query.select("id, title, description, type, options, required, choices, max_rating, tags, deleted_at")
 
     # filter
     if survey_id
