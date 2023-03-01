@@ -6156,7 +6156,8 @@ paths:
       summary: deletes the question
       description: 'deletes the question
 
-        This will soft delete the question if there are any linked answers.'
+        This will soft delete the question if there are any linked answers or if the
+        question is in any surveys.'
       tags:
       - Questions
       operationId: Surveys::Questions#destroy
