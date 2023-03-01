@@ -99,7 +99,8 @@ class Survey
     end
 
     def maybe_soft_delete
-      if Survey::Answer.query.where(question_id: self.id).count > 0
+      # Check if the question has any answers or is used in any surveys
+      if Survey::Answer.query.where(question_id: self.id).count > 0 || Survey.query.where(%(pages @> '[{"question_order": [?]}]'), self.id).count > 0
         soft_delete
       else
         delete

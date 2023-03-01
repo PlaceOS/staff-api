@@ -156,6 +156,17 @@ describe Surveys::Questions, tags: ["survey"] do
         Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
       end
     end
+
+    context "when the question is in a survey" do
+      it "should soft delete the question" do
+        questions = SurveyHelper.create_questions
+        _survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
+
+        response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
+        response.status_code.should eq(202)
+        Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
+      end
+    end
   end
 end
 
