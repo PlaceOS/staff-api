@@ -39,6 +39,8 @@ describe Surveys::Questions, tags: ["survey"] do
       response_json.as_a.map(&.["id"]).should contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should_not contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should_not contain(questions[2].id)
+
+      response_json.as_a.find! { |q| q["id"] == questions[0].id }["deleted"].should be_true
     end
 
     it "should filter on deleted=false" do
@@ -51,6 +53,9 @@ describe Surveys::Questions, tags: ["survey"] do
       response_json.as_a.map(&.["id"]).should_not contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
+
+      response_json.as_a.find! { |q| q["id"] == questions[1].id }["deleted"].should be_false
+      response_json.as_a.find! { |q| q["id"] == questions[2].id }["deleted"].should be_false
     end
 
     it "should include soft-deleted question by default" do
@@ -63,6 +68,10 @@ describe Surveys::Questions, tags: ["survey"] do
       response_json.as_a.map(&.["id"]).should contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should contain(questions[2].id)
+
+      response_json.as_a.find! { |q| q["id"] == questions[0].id }["deleted"].should be_true
+      response_json.as_a.find! { |q| q["id"] == questions[1].id }["deleted"].should be_false
+      response_json.as_a.find! { |q| q["id"] == questions[2].id }["deleted"].should be_false
     end
   end
 
@@ -131,6 +140,25 @@ describe Surveys::Questions, tags: ["survey"] do
       response = client.get("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
       response.status_code.should eq(200)
       response.body.should eq(questions.first.as_json.to_json)
+    end
+
+    it "should show deleted=true for a soft-deleted questions" do
+      questions = SurveyHelper.create_questions
+      questions.first.soft_delete
+
+      response = client.get("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
+      response.status_code.should eq(200)
+      response_body = JSON.parse(response.body)
+      response_body["deleted"].should be_true
+    end
+
+    it "should show deleted=false for a questions that is not deleted" do
+      questions = SurveyHelper.create_questions
+
+      response = client.get("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
+      response.status_code.should eq(200)
+      response_body = JSON.parse(response.body)
+      response_body["deleted"].should be_false
     end
   end
 

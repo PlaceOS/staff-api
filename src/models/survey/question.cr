@@ -78,6 +78,7 @@ class Survey
       self.required = required_column.defined? ? self.required : false
       self.choices = choices_column.defined? ? self.choices : JSON::Any.new({} of String => JSON::Any)
       self.tags = tags_column.defined? ? self.tags : [] of String
+      self.deleted_at = deleted_at_column.defined? ? self.deleted_at : nil
 
       Responder.new(
         id: self.id,
@@ -89,7 +90,7 @@ class Survey
         choices: self.choices,
         max_rating: self.max_rating_column.value(nil),
         tags: self.tags,
-        deleted: self.deleted_at_column.defined?
+        deleted: !self.deleted_at.nil?
       )
     end
 
