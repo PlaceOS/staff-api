@@ -2712,7 +2712,10 @@ paths:
       summary: cancels the meeting without deleting it
       description: 'cancels the meeting without deleting it
 
-        visually the event will remain on the calendar with a line through it'
+        visually the event will remain on the calendar with a line through it
+
+        NOTE:: any body data you post will be used as the message body in the declined
+        message'
       tags:
       - Events
       operationId: Events#decline
@@ -7165,6 +7168,8 @@ components:
                       required:
                       - name
                       - email
+                  hide_attendees:
+                    type: boolean
                   location:
                     type: string
                     nullable: true
@@ -7358,6 +7363,7 @@ components:
                 required:
                 - event_start
                 - attendees
+                - hide_attendees
                 - private
                 - all_day
                 - attachments
@@ -7873,6 +7879,8 @@ components:
                           required:
                           - name
                           - email
+                      hide_attendees:
+                        type: boolean
                       location:
                         type: string
                         nullable: true
@@ -8066,6 +8074,7 @@ components:
                     required:
                     - event_start
                     - attendees
+                    - hide_attendees
                     - private
                     - all_day
                     - attachments
@@ -8168,6 +8177,8 @@ components:
                 required:
                 - name
                 - email
+            hide_attendees:
+              type: boolean
             location:
               type: string
               nullable: true
@@ -8361,6 +8372,7 @@ components:
           required:
           - event_start
           - attendees
+          - hide_attendees
           - private
           - all_day
           - attachments
@@ -8570,6 +8582,8 @@ components:
             required:
             - name
             - email
+        hide_attendees:
+          type: boolean
         location:
           type: string
           nullable: true
@@ -8763,6 +8777,7 @@ components:
       required:
       - event_start
       - attendees
+      - hide_attendees
       - private
       - all_day
       - attachments
@@ -8875,6 +8890,8 @@ components:
                   required:
                   - name
                   - email
+              hide_attendees:
+                type: boolean
               location:
                 type: string
                 nullable: true
@@ -9068,6 +9085,7 @@ components:
             required:
             - event_start
             - attendees
+            - hide_attendees
             - private
             - all_day
             - attachments
@@ -9356,6 +9374,8 @@ components:
                             required:
                             - name
                             - email
+                        hide_attendees:
+                          type: boolean
                         location:
                           type: string
                           nullable: true
@@ -9549,6 +9569,7 @@ components:
                       required:
                       - event_start
                       - attendees
+                      - hide_attendees
                       - private
                       - all_day
                       - attachments
@@ -9651,6 +9672,8 @@ components:
                   required:
                   - name
                   - email
+              hide_attendees:
+                type: boolean
               location:
                 type: string
                 nullable: true
@@ -9844,6 +9867,7 @@ components:
             required:
             - event_start
             - attendees
+            - hide_attendees
             - private
             - all_day
             - attachments

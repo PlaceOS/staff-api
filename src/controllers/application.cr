@@ -162,7 +162,7 @@ abstract class Application < ActionController::Base
   @[AC::Route::Exception(PlaceCalendar::Exception, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
   def handled_calendar_exception(error) : CommonError
     # Adding `http_body` during dev to inspect errors from office/google clients
-    render_error(error, "#{error.message}\n#{error.http_body}")
+    render_error(error, "unexpected upstream response #{error.http_status}: #{error.message}\n#{error.http_body}")
   end
 
   # handler for a few different errors

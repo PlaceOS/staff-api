@@ -772,6 +772,7 @@ class Events < Application
 
   # cancels the meeting without deleting it
   # visually the event will remain on the calendar with a line through it
+  # NOTE:: any body data you post will be used as the message body in the declined message
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
   def decline(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
