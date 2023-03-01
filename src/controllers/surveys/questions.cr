@@ -72,7 +72,7 @@ class Surveys::Questions < Application
   end
 
   # deletes the question
-  # This will soft delete the question if there are any linked answers.
+  # This will soft delete the question if there are any linked answers or if the question is in any surveys.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
     question.maybe_soft_delete
