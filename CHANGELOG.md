@@ -45,6 +45,7 @@
 
 ### Fix
 
+- **survey**: survey questions deleted json property ([#262](https://github.com/PlaceOS/staff-api/pull/262))
 - **staff_api**: check sent for not nil in Surveys::Invitations ([#253](https://github.com/PlaceOS/staff-api/pull/253))
 - **outlook**: xml manifest version ([#252](https://github.com/PlaceOS/staff-api/pull/252))
 - **events**: delete event with a service account user
