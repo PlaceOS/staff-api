@@ -132,6 +132,16 @@ describe Surveys::Questions, tags: ["survey"] do
       response.status_code.should eq(200)
       response.body.should eq(questions.first.as_json.to_json)
     end
+
+    it "should include the deleted status", focus: true do
+      questions = SurveyHelper.create_questions
+      questions.first.soft_delete
+
+      response = client.get("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
+      response.status_code.should eq(200)
+      response_body = JSON.parse(response.body)
+      response_body["deleted"].should eq(true)
+    end
   end
 
   describe "#destroy" do
