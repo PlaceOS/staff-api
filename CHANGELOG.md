@@ -45,6 +45,7 @@
 
 ### Fix
 
+- **events**: regression caused by missing calendar id ([#264](https://github.com/PlaceOS/staff-api/pull/264))
 - **survey**: survey questions deleted json property ([#262](https://github.com/PlaceOS/staff-api/pull/262))
 - **staff_api**: check sent for not nil in Surveys::Invitations ([#253](https://github.com/PlaceOS/staff-api/pull/253))
 - **outlook**: xml manifest version ([#252](https://github.com/PlaceOS/staff-api/pull/252))
