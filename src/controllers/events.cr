@@ -265,6 +265,10 @@ class Events < Application
   # Note: event metadata is associated with a resource calendar, not the hosts event.
   # so if you want to update an event and the metadata then you need to provide both
   # the `calendar` param and the `system_id` param
+  #
+  # when moving a room from one system to another, the `system_id` param should be
+  # set to the current rooms associated system.
+  # Then in the event body, the `system_id` field should be the new system.
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
@@ -289,8 +293,9 @@ class Events < Application
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
+      sys_cal = system.email.presence
       if cal_id.nil?
-        sys_cal = cal_id = system.email.presence
+        cal_id = system.email.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -798,8 +803,9 @@ class Events < Application
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
+      sys_cal = system.email.presence
       if cal_id.nil?
-        sys_cal = cal_id = system.email.presence
+        cal_id = system.email.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
