@@ -2190,7 +2190,15 @@ paths:
         so if you want to update an event and the metadata then you need to provide
         both
 
-        the `calendar` param and the `system_id` param'
+        the `calendar` param and the `system_id` param
+
+
+        when moving a room from one system to another, the `system_id` param should
+        be
+
+        set to the current rooms associated system.
+
+        Then in the event body, the `system_id` field should be the new system.'
       tags:
       - Events
       operationId: Events#update
@@ -2400,7 +2408,15 @@ paths:
         so if you want to update an event and the metadata then you need to provide
         both
 
-        the `calendar` param and the `system_id` param'
+        the `calendar` param and the `system_id` param
+
+
+        when moving a room from one system to another, the `system_id` param should
+        be
+
+        set to the current rooms associated system.
+
+        Then in the event body, the `system_id` field should be the new system.'
       tags:
       - Events
       operationId: Events#update{2}
