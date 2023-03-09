@@ -3079,27 +3079,75 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-  /api/staff/v1/events/extension_metadata:
+  /api/staff/v1/events/extension_metadata/{system_id}:
     get:
-      summary: 'example route: /extension_metadata?field_name=colour&value=blue'
+      summary: This exists to obtain events that have some condition that requires
+        action.
+      description: 'This exists to obtain events that have some condition that requires
+        action.
+
+        i.e. you might have a flag that indicates if an action has taken place and
+        can use this to
+
+        look up events in certain states.
+
+        example route: /extension_metadata?field_name=colour&value=blue'
       tags:
       - Events
       operationId: Events#extension_metadata
       parameters:
+      - name: system_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: field_name
         in: query
         description: the field we want to query
         example: status
-        required: true
+        required: false
         schema:
           type: string
+          nullable: true
       - name: value
         in: query
         description: value we want to match
         example: approved
-        required: true
+        required: false
         schema:
           type: string
+          nullable: true
+      - name: period_start
+        in: query
+        description: event period start as a unix epoch
+        example: "1661725146"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: period_end
+        in: query
+        description: event period end as a unix epoch
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: event_ref
+        in: query
+        description: list of event ids that we're potentially
+        example: event_id,recurring_event_id,ical_uid
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -7112,11 +7160,11 @@ components:
                 type: object
                 properties:
                   event_start:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                   event_end:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                     nullable: true
                   id:
                     type: string
@@ -7233,11 +7281,11 @@ components:
                     type: object
                     properties:
                       range_start:
-                        type: string
-                        format: date-time
+                        type: integer
+                        format: Int64
                       range_end:
-                        type: string
-                        format: date-time
+                        type: integer
+                        format: Int64
                       interval:
                         type: integer
                         format: Int32
@@ -7823,11 +7871,11 @@ components:
                     type: object
                     properties:
                       event_start:
-                        type: string
-                        format: date-time
+                        type: integer
+                        format: Int64
                       event_end:
-                        type: string
-                        format: date-time
+                        type: integer
+                        format: Int64
                         nullable: true
                       id:
                         type: string
@@ -7944,11 +7992,11 @@ components:
                         type: object
                         properties:
                           range_start:
-                            type: string
-                            format: date-time
+                            type: integer
+                            format: Int64
                           range_end:
-                            type: string
-                            format: date-time
+                            type: integer
+                            format: Int64
                           interval:
                             type: integer
                             format: Int32
@@ -8121,11 +8169,11 @@ components:
           type: object
           properties:
             event_start:
-              type: string
-              format: date-time
+              type: integer
+              format: Int64
             event_end:
-              type: string
-              format: date-time
+              type: integer
+              format: Int64
               nullable: true
             id:
               type: string
@@ -8242,11 +8290,11 @@ components:
               type: object
               properties:
                 range_start:
-                  type: string
-                  format: date-time
+                  type: integer
+                  format: Int64
                 range_end:
-                  type: string
-                  format: date-time
+                  type: integer
+                  format: Int64
                 interval:
                   type: integer
                   format: Int32
@@ -8504,14 +8552,14 @@ components:
               status:
                 type: string
                 enum:
-                - free
                 - busy
+                - free
               starts_at:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
               ends_at:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
               timezone:
                 type: string
             required:
@@ -8526,11 +8574,11 @@ components:
       type: object
       properties:
         event_start:
-          type: string
-          format: date-time
+          type: integer
+          format: Int64
         event_end:
-          type: string
-          format: date-time
+          type: integer
+          format: Int64
           nullable: true
         id:
           type: string
@@ -8647,11 +8695,11 @@ components:
           type: object
           properties:
             range_start:
-              type: string
-              format: date-time
+              type: integer
+              format: Int64
             range_end:
-              type: string
-              format: date-time
+              type: integer
+              format: Int64
             interval:
               type: integer
               format: Int32
@@ -8834,11 +8882,11 @@ components:
             type: object
             properties:
               event_start:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
               event_end:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
                 nullable: true
               id:
                 type: string
@@ -8955,11 +9003,11 @@ components:
                 type: object
                 properties:
                   range_start:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                   range_end:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                   interval:
                     type: integer
                     format: Int32
@@ -9318,11 +9366,11 @@ components:
                       type: object
                       properties:
                         event_start:
-                          type: string
-                          format: date-time
+                          type: integer
+                          format: Int64
                         event_end:
-                          type: string
-                          format: date-time
+                          type: integer
+                          format: Int64
                           nullable: true
                         id:
                           type: string
@@ -9439,11 +9487,11 @@ components:
                           type: object
                           properties:
                             range_start:
-                              type: string
-                              format: date-time
+                              type: integer
+                              format: Int64
                             range_end:
-                              type: string
-                              format: date-time
+                              type: integer
+                              format: Int64
                             interval:
                               type: integer
                               format: Int32
@@ -9616,11 +9664,11 @@ components:
             type: object
             properties:
               event_start:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
               event_end:
-                type: string
-                format: date-time
+                type: integer
+                format: Int64
                 nullable: true
               id:
                 type: string
@@ -9737,11 +9785,11 @@ components:
                 type: object
                 properties:
                   range_start:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                   range_end:
-                    type: string
-                    format: date-time
+                    type: integer
+                    format: Int64
                   interval:
                     type: integer
                     format: Int32

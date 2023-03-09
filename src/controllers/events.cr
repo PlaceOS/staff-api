@@ -951,15 +951,42 @@ class Events < Application
     visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
   end
 
+  # This exists to obtain events that have some condition that requires action.
+  # i.e. you might have a flag that indicates if an action has taken place and can use this to
+  # look up events in certain states.
   # example route: /extension_metadata?field_name=colour&value=blue
-  @[AC::Route::GET("/extension_metadata")]
+  @[AC::Route::GET("/extension_metadata/?:system_id", converters: {event_ref: ConvertStringArray})]
   def extension_metadata(
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
     @[AC::Param::Info(description: "the field we want to query", example: "status")]
-    field_name : String,
+    field_name : String? = nil,
     @[AC::Param::Info(description: "value we want to match", example: "approved")]
-    value : String
+    value : String? = nil,
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64? = nil,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64? = nil,
+    @[AC::Param::Info(description: "list of event ids that we're potentially", example: "event_id,recurring_event_id,ical_uid")]
+    event_ref : Array(String)? = nil
   ) : Array(EventMetadata::Assigner)
-    EventMetadata.by_ext_data(field_name, value).to_a.map do |metadata|
+    raise Error::BadRequest.new("must provide one of field_name & value, system_id, period_start or period_end") unless system_id || (field_name && value) || starting || ending
+
+    query = EventMetadata.query.by_tenant(tenant.id).is_ending_after(starting).is_starting_before(ending)
+
+    if system_id
+      query = query.where(system_id: system_id)
+    end
+
+    if event_ref && !event_ref.empty?
+      query = query.by_event_ids(event_ref)
+    end
+
+    if field_name && value.presence
+      query = query.by_ext_data(field_name, value)
+    end
+
+    query.limit(10_000).to_a.map do |metadata|
       EventMetadata::Assigner.from_json(metadata.to_json)
     end
   end
