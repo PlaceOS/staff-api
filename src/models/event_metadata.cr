@@ -28,6 +28,18 @@ class EventMetadata
     where { (ext_data.jsonb(field_name) == value) }
   end
 
+  scope :is_ending_after do |start_time|
+    start_time ? where { event_end > start_time.not_nil!.to_i64 } : self
+  end
+
+  scope :is_starting_before do |end_time|
+    end_time ? where { event_start < end_time.not_nil!.to_i64 } : self
+  end
+
+  scope :by_event_ids do |event_ids|
+    where { var("event_metadatas", "event_id").in?(event_ids) || var("event_metadatas", "ical_uid").in?(event_ids) }
+  end
+
   def for_event_instance?(event, client_id)
     if client_id == :office365
       # ical_uid is unique for every instance of an event in office365

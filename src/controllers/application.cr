@@ -72,6 +72,14 @@ abstract class Application < ActionController::Base
     end
   end
 
+  # for converting comma seperated lists
+  # i.e. `"id-1,id-2,id-3"`
+  struct ConvertStringArray
+    def convert(raw : String)
+      raw.split(',').map!(&.strip).reject(&.empty?).uniq!
+    end
+  end
+
   # =========================================
   # ERROR HANDLERS
   # =========================================
