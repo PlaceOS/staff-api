@@ -970,7 +970,7 @@ class Events < Application
     @[AC::Param::Info(description: "list of event ids that we're potentially", example: "event_id,recurring_event_id,ical_uid")]
     event_ref : Array(String)? = nil
   ) : Array(EventMetadata::Assigner)
-    raise Error::BadRequest.new("must provide one of field_name & value, system_id, period_start or period_end") unless system_id || (field_name && value) || starting || ending
+    raise Error::BadRequest.new("must provide one of field_name & value, system_id, event_ref, period_start or period_end") unless system_id || (field_name && value) || starting || ending || (event_ref && !event_ref.empty?)
 
     query = EventMetadata.query.by_tenant(tenant.id).is_ending_after(starting).is_starting_before(ending)
 
