@@ -23,7 +23,7 @@ module App
   Log         = ::Log.for(NAME)
   LOG_BACKEND = ActionController.default_backend
 
-  PG_DATABASE_URL = if (url = TEST ? ENV["PG_TEST_DATABASE_URL"]? : ENV["PG_DATABASE_URL"]?)
+  PG_DATABASE_URL = if url = TEST ? ENV["PG_TEST_DATABASE_URL"]? : ENV["PG_DATABASE_URL"]?
                       url
                     else
                       pg_host = ENV["PG_HOST"]? || "postgres"
