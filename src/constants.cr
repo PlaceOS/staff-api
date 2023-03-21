@@ -1,3 +1,5 @@
+require "uri"
+
 module App
   NAME = "staff-api"
   {% begin %}
@@ -21,7 +23,19 @@ module App
   Log         = ::Log.for(NAME)
   LOG_BACKEND = ActionController.default_backend
 
-  PG_DATABASE_URL         = TEST ? ENV["PG_TEST_DATABASE_URL"] : ENV["PG_DATABASE_URL"]
+  PG_DATABASE_URL = if (url = TEST ? ENV["PG_TEST_DATABASE_URL"]? : ENV["PG_DATABASE_URL"]?)
+                      url
+                    else
+                      pg_host = ENV["PG_HOST"]? || "postgres"
+                      pg_port = (ENV["PG_PORT"]? || 5432).to_i
+                      pg_path = "/" + (ENV["PG_DB"]? || ENV["PG_DATABASE"])
+                      pg_user = ENV["PG_USER"]? || "postgres"
+                      pg_pass = ENV["PG_PASSWORD"]? || ""
+                      pgquery = ENV["PG_QUERY"]?
+
+                      URI.new("postgresql", pg_host, pg_port, pg_path, pgquery, pg_user, pg_pass).to_s
+                    end
+
   PG_CONNECTION_POOL_SIZE = ENV["PG_CONNECTION_POOL_SIZE"]?.presence.try(&.to_i?) || 5
 
   PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
