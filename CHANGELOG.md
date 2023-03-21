@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **db**: support additional connection details ([#266](https://github.com/PlaceOS/staff-api/pull/266))
 - **event_metadata**: provide additional options for metadata queries ([#265](https://github.com/PlaceOS/staff-api/pull/265))
 - **survey**: soft-delete questions if they are used in a survey ([#260](https://github.com/PlaceOS/staff-api/pull/260))
 - **survey**: include deleted questions by default and include delete… ([#259](https://github.com/PlaceOS/staff-api/pull/259))
