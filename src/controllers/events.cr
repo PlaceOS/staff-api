@@ -574,9 +574,11 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
-    user_cal : String? = nil
+    user_cal : String? = nil,
+    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    ical_uid : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, merge: true)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: true)
   end
 
   # Replaces the metadata on a booking without touching the calendar event
@@ -590,12 +592,14 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
-    user_cal : String? = nil
+    user_cal : String? = nil,
+    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    ical_uid : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, merge: false)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: false)
   end
 
-  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, merge : Bool = false)
+  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false)
     event_id = original_id
     placeos_client = get_placeos_client
 
@@ -607,44 +611,62 @@ class Events < Application
     end
 
     system = placeos_client.systems.fetch(system_id)
-    cal_id = system.email.presence
+    cal_id = system.email.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     cal_id = event_calendar || cal_id
-    event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
-
-    # ensure we have the host event details
-    # TODO:: instead of this we should store ical UID in the guest JWT
-    if client.client_id == :office365 && event.host != user_email
-      begin
-        event = get_hosts_event(event)
-        event_id = event.id.not_nil!
-      rescue PlaceCalendar::Exception
-        # we might not have access
-      end
-    end
-
-    # Guests can update extension_data to indicate their order
-    if user_token.guest_scope?
-      raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
-    else
-      attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
-    end
 
     # attempt to find the metadata
-    meta = get_migrated_metadata(event, system_id.not_nil!, cal_id) || EventMetadata.new
-    meta.system_id = system.id.not_nil!
-    meta.event_id = event.id.not_nil!
-    meta.ical_uid = event.ical_uid.not_nil!
-    meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring
-    meta.event_start = event.event_start.not_nil!.to_unix
-    meta.event_end = event.event_end.not_nil!.to_unix
-    meta.resource_calendar = system.email.not_nil!
-    meta.host_email = event.host.not_nil!
-    meta.tenant_id = tenant.id
+    query = EventMetadata.query.by_tenant(tenant.id).where(system_id: system_id)
+    if client.client_id == :office365 && uuid.presence
+      query = query.where { ical_uid.in?({uuid, event_id}) | (raw("event_id") == event_id) }
+    else
+      query = query.where(event_id: event_id)
+    end
+
+    # if it doesn't exist then we need to fallback to getting the events
+    meta = if mdata = query.to_a.first?
+             if user_token.guest_scope?
+               raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({mdata.event_id, mdata.recurring_master_id, mdata.ical_uid})
+             end
+             mdata
+           else
+             event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
+             raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
+
+             # ensure we have the host event details
+             # TODO:: instead of this we should store ical UID in the guest JWT
+             if client.client_id == :office365 && event.host != user_email
+               begin
+                 event = get_hosts_event(event)
+                 event_id = event.id.not_nil!
+               rescue PlaceCalendar::Exception
+                 # we might not have access
+               end
+             end
+
+             # Guests can update extension_data to indicate their order
+             if user_token.guest_scope?
+               raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id})
+             else
+               attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
+               raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
+             end
+
+             # attempt to find the metadata
+             mdata = get_migrated_metadata(event, system_id.not_nil!, cal_id) || EventMetadata.new
+             mdata.system_id = system.id.not_nil!
+             mdata.event_id = event.id.not_nil!
+             mdata.ical_uid = event.ical_uid.not_nil!
+             mdata.recurring_master_id = event.recurring_event_id || event.id if event.recurring
+             mdata.event_start = event.event_start.not_nil!.to_unix
+             mdata.event_end = event.event_end.not_nil!.to_unix
+             mdata.resource_calendar = system.email.not_nil!
+             mdata.host_email = event.host.not_nil!
+             mdata.tenant_id = tenant.id
+             mdata
+           end
 
     # Updating extension data by merging into existing.
     if merge && meta.ext_data_column.defined? && (meta_ext_data = meta.ext_data)
@@ -664,7 +686,7 @@ class Events < Application
         action:    :update,
         system_id: system.id,
         event_id:  original_id,
-        host:      event.host,
+        host:      meta.host_email,
         resource:  system.email,
         event:     event,
         ext_data:  meta.ext_data,

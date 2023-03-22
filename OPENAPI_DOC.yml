@@ -2554,6 +2554,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: ical_uid
+        in: query
+        description: an alternative lookup for finding event-metadata
+        example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -2656,6 +2664,14 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: ical_uid
+        in: query
+        description: an alternative lookup for finding event-metadata
+        example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
         required: false
         schema:
           type: string
