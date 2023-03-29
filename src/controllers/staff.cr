@@ -5,9 +5,15 @@ class Staff < Application
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "q", description: "optional search query", example: "steve")]
-    query : String? = nil
+    query : String? = nil,
+    @[AC::Param::Info(name: "filter", description: "optional search filter using Azure AD filter syntax", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
+    filter : String? = nil
   ) : Array(PlaceCalendar::User)
-    client.list_users(query)
+    if filter
+      client.list_users(filter: filter)
+    else
+      client.list_users(query)
+    end
   end
 
   # returns user details for the id provided
