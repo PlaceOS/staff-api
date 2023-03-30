@@ -64,6 +64,9 @@ class Events < Application
     metadata_ids = Array(String).new(initial_capacity: results.size)
     ical_uids = Array(String).new(initial_capacity: results.size)
 
+    # find any missing system ids (event_id => calendar_id)
+    event_resources = {} of String => String
+
     results.each do |(_calendar_id, system, event)|
       # NOTE:: we should be able to swtch to using the ical uids only in the future
       # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
@@ -76,6 +79,11 @@ class Events < Application
       # TODO: Handle recurring O365 events with differing `ical_uid`
       # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
       metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
+
+      # check if there is possible system information available
+      if system.nil? && (attendee = event.attendees.find(&.resource))
+        event_resources[event.id.as(String)] = attendee.email.downcase
+      end
     end
 
     metadata_ids.uniq!
@@ -95,6 +103,13 @@ class Events < Application
       }
     end
 
+    # grab the system details for resource calendars, if they exist
+    system_emails = {} of String => PlaceOS::Client::API::Models::System
+    if !event_resources.empty?
+      systems = get_placeos_client.systems.with_emails event_resources.values.uniq!
+      systems.each { |sys| system_emails[sys.email.as(String).downcase] = sys }
+    end
+
     # return array of standardised events
     render json: results.map { |(calendar_id, system, event)|
       parent_meta = false
@@ -103,6 +118,13 @@ class Events < Application
         metadata = metadatas[event.recurring_event_id]?
         parent_meta = true if metadata
       end
+
+      if system.nil?
+        if cal_id = event_resources[event.id.as(String)]?
+          system = system_emails[cal_id]?
+        end
+      end
+
       # Workaround for Office365 where ical_uid is unique for each occurance and event_id is different in each calendar
       metadata = metadata || metadatas[event.ical_uid]? if client.client_id == :office365
       StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
