@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 5.6.2
+    version: 5.6.4
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -131,7 +131,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.18.5
+    version: 1.19.0
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -165,6 +165,10 @@ shards:
     git: https://github.com/wyhaines/parsedate.cr.git
     version: 0.1.2
 
+  pegmatite:
+    git: https://github.com/jemc/crystal-pegmatite.git
+    version: 0.2.3+git.commit.f1b6d99b71774f82b6bd17b825d6d7fdd5de38f9
+
   pg: # Overridden
     git: https://github.com/will/crystal-pg.git
     version: 0.26.0
@@ -175,7 +179,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.15.7
+    version: 4.16.1
 
   placeos:
     git: https://github.com/placeos/crystal-client.git

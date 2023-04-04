@@ -1,13 +1,22 @@
 class Staff < Application
   base "/api/staff/v1/people"
 
-  # lists users in the organisation directory
+  # Retrieves a list of users from the organization directory
+  # This function supports advanced filtering using Azure AD filter syntax.
+  # For more information on Azure AD filter syntax, visit:
+  # https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http
   @[AC::Route::GET("/")]
   def index(
-    @[AC::Param::Info(name: "q", description: "optional search query", example: "steve")]
-    query : String? = nil
+    @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
+    query : String? = nil,
+    @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax. Provides more control over the search criteria and takes precedence over the 'q' parameter. Supports both Azure AD and Google providers.", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
+    filter : String? = nil
   ) : Array(PlaceCalendar::User)
-    client.list_users(query)
+    if filter
+      client.list_users(filter: filter)
+    else
+      client.list_users(query)
+    end
   end
 
   # returns user details for the id provided
