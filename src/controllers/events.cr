@@ -307,8 +307,11 @@ class Events < Application
 
     placeos_client = get_placeos_client
 
-    if user_cal
-      cal_id = user_cal.downcase
+    user_cal = user_cal.try &.downcase
+    if user_cal == user.email
+      cal_id = user_cal
+    elsif user_cal
+      cal_id = user_cal
       found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
@@ -771,14 +774,16 @@ class Events < Application
       StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
     else
       # Need to confirm the user can access this calendar
-      if user_cal
-        user_cal = user_cal.downcase
+      user_cal = user_cal.try &.downcase
+      if user_cal == user.email
+        found = true
+      elsif user_cal
         found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
       else
         user_cal = user.email
         found = true
       end
-      raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found
+      raise Error::Forbidden.new("user #{user.email} is not permitted to view calendar #{user_cal}") unless found && user_cal
 
       # Grab the event details
       event = client.get_event(user.email, id: event_id, calendar_id: user_cal)
@@ -839,8 +844,11 @@ class Events < Application
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    if user_cal
-      cal_id = user_cal.downcase
+    user_cal = user_cal.try &.downcase
+    if user_cal == user.email
+      cal_id = user_cal
+    elsif user_cal
+      cal_id = user_cal
       found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
