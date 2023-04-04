@@ -4401,15 +4401,33 @@ paths:
                 $ref: '#/components/schemas/HealthCheck__BuildInfo'
   /api/staff/v1/people:
     get:
-      summary: lists users in the organisation directory
+      summary: Retrieves a list of users from the organization directory
+      description: 'Retrieves a list of users from the organization directory
+
+        This function supports advanced filtering using Azure AD filter syntax.
+
+        For more information on Azure AD filter syntax, visit:
+
+        https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http'
       tags:
       - Staff
       operationId: Staff#index
       parameters:
       - name: q
         in: query
-        description: optional search query
+        description: An optional search query to filter users by name or email. If
+          both 'q' and 'filter' parameters are provided, 'filter' takes precedence.
         example: steve
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: filter
+        in: query
+        description: An optional advanced search filter using Azure AD filter syntax.
+          Provides more control over the search criteria and takes precedence over
+          the 'q' parameter. Supports both Azure AD and Google providers.
+        example: startsWith(givenName,'ben') or startsWith(surname,'ben')
         required: false
         schema:
           type: string
