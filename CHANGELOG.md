@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: add events filter with ical uid ([#271](https://github.com/PlaceOS/staff-api/pull/271))
 - **staff**: [PPT-89] support Azure AD filter ([#269](https://github.com/PlaceOS/staff-api/pull/269))
 - **events**: decorate events with system data where possible ([#268](https://github.com/PlaceOS/staff-api/pull/268))
 - **events**: patch metadata lookup using ical uid ([#267](https://github.com/PlaceOS/staff-api/pull/267))
