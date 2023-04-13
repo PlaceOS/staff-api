@@ -155,7 +155,7 @@ shards:
 
   opentelemetry-sdk:
     git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
-    version: 0.5.1
+    version: 0.6.1
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
