@@ -1933,6 +1933,14 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: ical_uid
+        in: query
+        description: the ical uid of the event you are looking for
+        example: sqvitruh3ho3mrq896tplad4v8
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK

@@ -18,7 +18,9 @@ class Events < Application
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
     @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
-    include_cancelled : Bool = false
+    include_cancelled : Bool = false,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -36,7 +38,8 @@ class Events < Application
         calendar_id,
         period_start: period_start,
         period_end: period_end,
-        showDeleted: include_cancelled
+        showDeleted: include_cancelled,
+        ical_uid: icaluid
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
