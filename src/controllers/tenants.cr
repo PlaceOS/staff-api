@@ -41,7 +41,7 @@ class Tenants < Application
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
     changes = tenant_body.to_tenant(update: true)
 
-    {% for key in [:name, :domain, :platform, :booking_limits, :service_account, :credentials, :outlook_config] %}
+    {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account, :credentials, :outlook_config] %}
       begin
         tenant.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
       rescue NilAssertionError
