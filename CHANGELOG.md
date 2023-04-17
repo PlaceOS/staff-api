@@ -51,6 +51,7 @@
 
 ### Fix
 
+- **migration**: alter attendees booking_id column type ([#273](https://github.com/PlaceOS/staff-api/pull/273))
 - **events**: skip calendar check if it matches user ([#270](https://github.com/PlaceOS/staff-api/pull/270))
 - **events**: regression caused by missing calendar id ([#264](https://github.com/PlaceOS/staff-api/pull/264))
 - **survey**: survey questions deleted json property ([#262](https://github.com/PlaceOS/staff-api/pull/262))
