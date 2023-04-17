@@ -28,7 +28,7 @@ class Bookings < Application
   end
 
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
-  def wrap_in_transaction
+  def wrap_in_transaction(&)
     Clear::SQL.transaction do
       yield
     end
