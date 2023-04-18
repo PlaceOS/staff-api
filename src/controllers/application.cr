@@ -101,7 +101,7 @@ abstract class Application < ActionController::Base
   # 403 if user role invalid for a route
   @[AC::Route::Exception(Error::Forbidden, status_code: HTTP::Status::FORBIDDEN)]
   def resource_access_forbidden(error) : Nil
-    Log.debug { error.inspect_with_backtrace }
+    Log.warn(exception: error) { "access attempt to restricted resource" }
   end
 
   # 404 if resource not present

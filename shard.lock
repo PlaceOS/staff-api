@@ -11,7 +11,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 4.3.0
+    version: 4.3.1
 
   admiral:
     git: https://github.com/jwaldrip/admiral.cr.git
@@ -127,7 +127,7 @@ shards:
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
-    version: 1.12.2
+    version: 1.13.0
 
   office365:
     git: https://github.com/placeos/office365.git
@@ -175,7 +175,7 @@ shards:
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 1.0.0+git.commit.2bbafec9579f175880281279d33168360176540c
+    version: 1.0.0+git.commit.648bbb3af8917adcc868788d19d705e7811352dc
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
@@ -195,7 +195,7 @@ shards:
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
-    version: 0.3.0
+    version: 0.2.4
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
@@ -211,7 +211,7 @@ shards:
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
-    version: 2.9.0
+    version: 2.9.1
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
