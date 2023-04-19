@@ -51,6 +51,7 @@
 
 ### Fix
 
+- **shard.lock**: bump models for JWT email downcasing ([#276](https://github.com/PlaceOS/staff-api/pull/276))
 - bump forbidden log levels ([#274](https://github.com/PlaceOS/staff-api/pull/274))
 - **tenants**: enable patching delegated state ([#272](https://github.com/PlaceOS/staff-api/pull/272))
 - **migration**: alter attendees booking_id column type ([#273](https://github.com/PlaceOS/staff-api/pull/273))
