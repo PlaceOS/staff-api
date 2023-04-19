@@ -151,7 +151,7 @@ shards:
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.5.1+git.commit.30000cdca2d17db6f42db2eafc49f109f57a5afc
+    version: 0.5.1+git.commit.d698621cdc7722475e56e6dd8a7c07272432f270
 
   opentelemetry-sdk:
     git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
@@ -191,7 +191,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.0.2
+    version: 9.0.4
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
