@@ -1,6 +1,7 @@
 require "./survey/*"
 
-Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED"
+# No trigger actually fires on NOSHOW or ENDED, but Postgres doesn't support removing enum values
+Clear.enum TriggerType, "NONE", "RESERVED", "CHECKEDIN", "CHECKEDOUT", "NOSHOW", "REJECTED", "CANCELLED", "ENDED", "VISITOR_CHECKEDIN", "VISITOR_CHECKEDOUT"
 
 class Survey
   include Clear::Model
@@ -24,7 +25,7 @@ class Survey
     getter id : Int64?
     getter title : String? = nil
     getter description : String? = nil
-    @[JSON::Field(description: "Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT, REJECTED, CANCELLED")]
+    @[JSON::Field(description: "Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT, REJECTED, CANCELLED, VISITOR_CHECKEDIN, VISITOR_CHECKEDOUT")]
     getter trigger : TriggerType? = nil
     getter zone_id : String? = nil
     getter building_id : String? = nil

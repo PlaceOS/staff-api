@@ -26,6 +26,33 @@ class Attendee
 
   delegate email, name, preferred_name, phone, organisation, notes, photo, to: guest
 
+  before(:save) do |m|
+    attendee_model = m.as(Booking)
+    attendee_model.survey_trigger
+  end
+
+  def survey_trigger
+    return unless checked_in.changed?
+    state = checked_in ? TriggerType::VISITOR_CHECKEDIN : TriggerType::VISITOR_CHECKEDOUT
+
+    query = Survey.query.select("id").where(trigger: state)
+
+    if (zones = booking.zones) && !zones.empty?
+      query = query.where { var("zone_id").in?(zones) & var("building_id").in?(zones) }
+    end
+
+    email = guest.email
+    unless email.empty?
+      surveys = query.to_a
+      surveys.each do |survey|
+        Survey::Invitation.create!(
+          survey_id: survey.id,
+          email: email,
+        )
+      end
+    end
+  end
+
   struct AttendeeResponse
     include JSON::Serializable
     include AutoInitialize
