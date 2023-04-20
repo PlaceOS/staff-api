@@ -35,6 +35,17 @@ module BookingsHelper
     booking.save!
   end
 
+  def create_booking(tenant_id : Int64, user_email : String, zones : Array(String), booking_start : Int64, booking_end : Int64)
+    booking = create_booking(
+      tenant_id: tenant_id,
+      user_email: user_email,
+      zones: zones,
+    )
+    booking.booking_start = booking_start
+    booking.booking_end = booking_end
+    booking.save!
+  end
+
   def create_booking(tenant_id : Int64, booking_start : Int64, booking_end : Int64, asset_id : String)
     booking = create_booking(tenant_id)
     booking.booking_start = booking_start

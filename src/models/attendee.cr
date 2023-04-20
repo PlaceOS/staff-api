@@ -27,17 +27,17 @@ class Attendee
   delegate email, name, preferred_name, phone, organisation, notes, photo, to: guest
 
   before(:save) do |m|
-    attendee_model = m.as(Booking)
+    attendee_model = m.as(Attendee)
     attendee_model.survey_trigger
   end
 
   def survey_trigger
-    return unless checked_in.changed?
-    state = checked_in ? TriggerType::VISITOR_CHECKEDIN : TriggerType::VISITOR_CHECKEDOUT
+    return unless checked_in_column.changed?
+    state = checked_in ? "VISITOR_CHECKEDIN" : "VISITOR_CHECKEDOUT"
 
     query = Survey.query.select("id").where(trigger: state)
 
-    if (zones = booking.zones) && !zones.empty?
+    if (b = booking) && (zones = b.zones) && !zones.empty?
       query = query.where { var("zone_id").in?(zones) & var("building_id").in?(zones) }
     end
 
