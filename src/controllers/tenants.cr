@@ -12,7 +12,7 @@ class Tenants < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :create, :current_limits])]
   private def find_tenant(id : Int64)
-    @tenant = Tenant.find!(id)
+    @tenant = Tenant.find(id)
   end
 
   getter! tenant : Tenant
@@ -24,14 +24,14 @@ class Tenants < Application
   # lists the configured tenants
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.query.select("id, name, domain, platform, booking_limits, delegated, service_account, outlook_config").to_a.map(&.as_json)
+    Tenant.select(:id, :name, :domain, :platform, :booking_limits, :delegated, :service_account, :outlook_config).to_a.map(&.as_json)
   end
 
   # creates a new tenant
   @[AC::Route::POST("/", body: :tenant_body, status_code: HTTP::Status::CREATED)]
   def create(tenant_body : Tenant::Responder) : Tenant::Responder
     tenant = tenant_body.to_tenant
-    raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !tenant.save
+    tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
   end
 
@@ -41,14 +41,14 @@ class Tenants < Application
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
     changes = tenant_body.to_tenant(update: true)
 
-    {% for key in [:name, :domain, :platform, :booking_limits, :service_account, :credentials, :outlook_config] %}
+    {% for key in [:name, :domain, :platform, :delegated, :booking_limits, :service_account, :credentials, :outlook_config] %}
       begin
-        tenant.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
+        tenant.{{key.id}} = changes.{{key.id}} unless changes.{{key.id}}.nil?
       rescue NilAssertionError
       end
     {% end %}
 
-    raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !tenant.save
+    tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
   end
 
@@ -77,7 +77,8 @@ class Tenants < Application
   @[AC::Route::POST("/:id/limits", body: :limits)]
   def update_limits(limits : Limits) : Limits
     tenant.booking_limits = JSON.parse(limits.to_json)
-    raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating booking limits") if !tenant.save
+    raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking limits") if !tenant.valid?
+    tenant.save!
     tenant.booking_limits.as_h.transform_values(&.as_i)
   end
 end

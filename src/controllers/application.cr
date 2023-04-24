@@ -62,7 +62,7 @@ abstract class Application < ActionController::Base
     guest : Guest?,
     is_parent_metadata = false,
     meeting_details = nil
-  ) : Guest::GuestResponse | Attendee::AttendeeResponse
+  ) : Guest | Attendee
     if guest
       guest.to_h(visitor, is_parent_metadata, meeting_details)
     elsif visitor
@@ -101,12 +101,12 @@ abstract class Application < ActionController::Base
   # 403 if user role invalid for a route
   @[AC::Route::Exception(Error::Forbidden, status_code: HTTP::Status::FORBIDDEN)]
   def resource_access_forbidden(error) : Nil
-    Log.debug { error.inspect_with_backtrace }
+    Log.warn(exception: error) { "access attempt to restricted resource" }
   end
 
   # 404 if resource not present
   @[AC::Route::Exception(Error::NotFound, status_code: HTTP::Status::NOT_FOUND)]
-  @[AC::Route::Exception(Clear::SQL::RecordNotFoundError, status_code: HTTP::Status::NOT_FOUND)]
+  @[AC::Route::Exception(PgORM::Error::RecordNotFound, status_code: HTTP::Status::NOT_FOUND)]
   def sql_record_not_found(error) : CommonError
     Log.debug { error.message }
     render_error(error)
@@ -175,7 +175,7 @@ abstract class Application < ActionController::Base
 
   # handler for a few different errors
   @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
-  @[AC::Route::Exception(Clear::SQL::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
+  @[AC::Route::Exception(PgORM::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
   @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]
   @[AC::Route::Exception(::Enumerable::EmptyError, status_code: HTTP::Status::NOT_FOUND)] # TODO: Should be caught where it's happening, or the code refactored.
@@ -230,20 +230,20 @@ abstract class Application < ActionController::Base
   end
 
   protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
-    meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.id, system_id: system_id})
+    meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
     if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+      EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
     elsif meta.nil? && (ev_ical_uid = event.ical_uid)
-      EventMetadata.query.by_tenant(tenant.id).where(system_id: system_id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+      EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: [ev_ical_uid]).to_a.first?
     else
       meta
     end
   end
 
   protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String, system_calendar : String) : EventMetadata?
-    query = EventMetadata.query.by_tenant(tenant.id).where(system_id: system_id)
+    query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
     if client.client_id == :office365
-      query = query.where { ical_uid.in?([event.ical_uid]) }
+      query = query.where(ical_uid: [event.ical_uid])
     else
       query = query.where(event_id: event.id)
     end
@@ -254,10 +254,10 @@ abstract class Application < ActionController::Base
     # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
     if client.client_id == :office365
       if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: system_calendar)
-        original_meta = EventMetadata.query.by_tenant(tenant.id).where(system_id: system_id).where { ical_uid.in?([original_event.ical_uid]) }.to_a.first?
+        original_meta = EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: [original_event.ical_uid]).to_a.first?
       end
     else
-      original_meta = EventMetadata.query.by_tenant(tenant.id).find({event_id: event.recurring_event_id, system_id: system_id})
+      original_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
     end
 
     if original_meta

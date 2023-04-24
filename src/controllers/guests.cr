@@ -17,9 +17,9 @@ class Guests < Application
   )
     @guest = case guest_id
              in String
-               Guest.query.by_tenant(tenant.id).find!({email: guest_id.downcase})
+               Guest.by_tenant(tenant.id).find_by(email: guest_id.downcase)
              in Int64
-               Guest.query.by_tenant(tenant.id).find!(guest_id)
+               Guest.by_tenant(tenant.id).find(guest_id)
              end
   end
 
@@ -44,7 +44,7 @@ class Guests < Application
     zone_ids : String? = nil,
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil
-  ) : Array(Guest::GuestResponse | Attendee::AttendeeResponse)
+  ) : Array(Guest | Attendee)
     search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
     if starting && ending
@@ -52,16 +52,16 @@ class Guests < Application
       period_end = Time.unix(ending)
 
       # Grab the bookings
-      booking_lookup = {} of Int64 => Booking::BookingResponse
+      booking_lookup = {} of Int64 => Booking
       booking_ids = Set(Int64).new
       Booking.booked_between(tenant.id, starting, ending).each do |booking|
-        booking_ids << booking.id
-        booking_lookup[booking.id] = booking.as_h
+        booking_ids << booking.id.not_nil!
+        booking_lookup[booking.id.not_nil!] = booking
       end
 
       # We want a subset of the calendars
       calendars = matching_calendar_ids(calendars, zone_ids, system_ids)
-      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if calendars.empty? && booking_ids.empty?
+      return [] of Guest | Attendee if calendars.empty? && booking_ids.empty?
 
       # Grab events in batches
       requests = [] of HTTP::Request
@@ -116,41 +116,43 @@ class Guests < Application
       }
 
       # Don't perform the query if there are no calendar or booking entries
-      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if metadata_ids.empty? && booking_ids.empty?
+      return [] of Guest | Attendee if metadata_ids.empty? && booking_ids.empty?
 
       # Return the guests visiting today
       attendees = {} of String => Attendee
 
-      query = Attendee.query
-        .with_guest
-        .by_tenant(tenant.id)
-        .inner_join("event_metadatas") { var("event_metadatas", "id") == var("attendees", "event_id") }
-        .inner_join("guests") { var("guests", "id") == var("attendees", "guest_id") }
+      sql = <<-SQL
+        SELECT a.* FROM "attendees" a INNER JOIN "event_metadatas" m ON m.id = a.event_id
+        INNER JOIN "guests" g ON g.id = a.guest_id
+        WHERE a.tenant_id = $1
+      SQL
 
-      case client.client_id
-      when :office365
-        query = query.where { event_metadatas.ical_uid.in?(ical_uids.to_a) }
-      else
-        query = query.where { event_metadatas.event_id.in?(metadata_ids.to_a) }
-      end
+      param_tmp = case client.client_id
+                  when :office365
+                    sql += " AND m.ical_uid IN (#{Guest.build_clause(ical_uids, 2)})"
+                    ical_uids.to_a
+                  else
+                    sql += " AND m.event_id IN (#{Guest.build_clause(metadata_ids, 2)})"
+                    metadata_ids.to_a
+                  end
 
-      query.each do |attend|
+      Attendee.find_all_by_sql(sql, tenant.id.not_nil!, args: param_tmp).each do |attend|
         attend.checked_in = false if attend.event_metadata.try &.event_id.try &.in?(metadata_recurring_ids)
-        attendees[attend.guest.email] = attend
+        attendees[attend.guest.not_nil!.email] = attend
       end
 
       booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
       booking_attendees.each do |attend|
-        attendees[attend.guest.email] = attend
+        attendees[attend.guest.not_nil!.email] = attend
       end
 
-      return [] of Guest::GuestResponse | Attendee::AttendeeResponse if attendees.empty?
+      return [] of Guest | Attendee if attendees.empty?
 
       guests = {} of String => Guest
-      Guest.query
+      Guest
         .by_tenant(tenant.id)
-        .where { var("guests", "email").in?(attendees.keys) }
-        .each { |guest| guests[guest.email.not_nil!] = guest }
+        .where(email: attendees.keys)
+        .each { |guest| guests[guest.not_nil!.email.not_nil!] = guest }
 
       attendees.compact_map do |email, visitor|
         # Prevent a database lookup
@@ -170,29 +172,29 @@ class Guests < Application
       end
     elsif search_query.empty?
       # Return the first 1500 guests
-      Guest.query
-        .by_tenant(tenant.id)
-        .order_by("name")
-        .limit(1500).map { |g| attending_guest(nil, g).as(Guest::GuestResponse | Attendee::AttendeeResponse) }
+      Guest
+        .by_tenant(tenant.id.not_nil!)
+        .order(:name)
+        .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
     else
       # Return guests based on the filter query
       csv = CSV.new(search_query, strip: true, separator: ' ')
       csv.next
       parts = csv.row.to_a
 
-      sql_query = Guest.query.by_tenant(tenant.id)
+      sql_query = Guest.by_tenant(tenant.id)
       parts.each do |part|
         next if part.empty?
-        sql_query = sql_query.where("searchable LIKE :query", query: "%#{part}%")
+        sql_query = sql_query.where("searchable LIKE ?", "%#{part}%")
       end
 
-      sql_query.order_by("name").limit(1500).map { |g| attending_guest(nil, g).as(Guest::GuestResponse | Attendee::AttendeeResponse) }
+      sql_query.order(:name).limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
     end
   end
 
   # returns the details of a particular guest and if they are expected to attend in person today
   @[AC::Route::GET("/:id")]
-  def show : Guest::GuestResponse | Attendee::AttendeeResponse
+  def show : Guest | Attendee
     if user_token.guest_scope? && (guest.email != user_token.id)
       raise Error::Forbidden.new("guest #{user_token.id} attempting to edit #{guest.email}")
     end
@@ -205,42 +207,39 @@ class Guests < Application
   # patches a guest record with the changes provided
   @[AC::Route::PUT("/:id", body: :guest_req)]
   @[AC::Route::PATCH("/:id", body: :guest_req)]
-  def update(guest_req : ::Guest::Assigner) : Guest::GuestResponse | Attendee::AttendeeResponse
-    changes = guest_req.create(trusted: false)
+  def update(guest_req : ::Guest) : Guest | Attendee
     if user_token.guest_scope? && (guest.email != user_token.id)
       raise Error::Forbidden.new("guest #{user_token.id} attempting to edit #{guest.email}")
     end
 
-    {% for key in %i(email name preferred_name phone organisation notes photo dangerous banned) %}
-      begin
-        guest.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
-      rescue NilAssertionError
+    begin
+      guest.patch(guest_req)
+    rescue ex
+      if ex.is_a?(PgORM::Error::RecordInvalid)
+        raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
+      else
+        raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating tenant data")
       end
-    {% end %}
-
-    extension_data = changes.extension_data if changes.extension_data_column.defined?
-    if extension_data
-      guest_ext_data = guest.extension_data
-      data = guest_ext_data ? guest_ext_data.as_h : Hash(String, JSON::Any).new
-      extension_data.not_nil!.as_h.each { |key, value| data[key] = value }
-      # Needed for clear to assign the updated json correctly
-      guest.extension_data_column.clear
-      guest.extension_data = JSON::Any.new(data)
     end
-
-    raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !guest.save
 
     attendee = guest.attending_today(tenant.id, get_timezone)
     attending_guest(attendee, guest)
   end
 
   # creates a new guest record
-  @[AC::Route::POST("/", body: :guest_req, status_code: HTTP::Status::CREATED)]
-  def create(guest_req : Guest::Assigner) : Guest::GuestResponse | Attendee::AttendeeResponse
-    guest = guest_req.create(trusted: false)
+  @[AC::Route::POST("/", body: :guest, status_code: HTTP::Status::CREATED)]
+  def create(guest : Guest) : Guest | Attendee
     guest.tenant_id = tenant.id
 
-    raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating tenant data") if !guest.save
+    begin
+      guest.save!
+    rescue ex
+      if ex.is_a?(PgORM::Error::RecordInvalid)
+        raise Error::ModelValidation.new(guest.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
+      else
+        raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating tenant data")
+      end
+    end
 
     attendee = guest.attending_today(tenant.id, get_timezone)
     attending_guest(attendee, guest)
@@ -297,12 +296,12 @@ class Guests < Application
     include_past : Bool = false,
     @[AC::Param::Info(description: "how many results to return", example: "10")]
     limit : Int32 = 10
-  ) : Array(Booking::BookingResponse)
+  ) : Array(Booking)
     if user_token.guest_scope? && (guest.email != user_token.id)
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view bookings for #{guest.email}")
     end
 
     future_only = !include_past
-    guest.bookings(future_only, limit).map { |booking| booking.as_h }
+    guest.bookings(future_only, limit).to_a
   end
 end

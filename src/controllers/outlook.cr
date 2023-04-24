@@ -3,7 +3,7 @@ class Outlook < ActionController::Base
 
   get("/manifest.xml") do
     domain_host = request.hostname.as(String)
-    render :not_found, json: "Tenant not found" unless tenant = Tenant.query.find { domain == domain_host }
+    render :not_found, json: "Tenant not found" unless tenant = Tenant.find_by?(domain: domain_host)
     render :bad_request, json: "Tenant platform must be office365" unless tenant.platform == "office365"
     render :bad_request, json: "Outlook not configured" unless outlook_config = tenant.outlook_config
     render :bad_request, json: "Missing app_id" if outlook_config.app_id.blank?

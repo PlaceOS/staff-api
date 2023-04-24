@@ -1,8 +1,9 @@
 require "../spec_helper"
-require "./helpers/spec_clean_up"
 require "./helpers/survey_helper"
 
 describe Surveys, tags: ["survey"] do
+  Spec.before_each { Survey.truncate }
+
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -12,7 +13,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get(SURVEY_BASE, headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey.as_json].to_json)
+      response.body.should eq([survey].to_json)
     end
 
     it "should return a list of surveys filtered by zone_id" do
@@ -21,7 +22,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get("#{SURVEY_BASE}?zone_id=2", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey2.as_json].to_json)
+      response.body.should eq([survey2].to_json)
     end
 
     it "should return a list of surveys filtered by building_id" do
@@ -30,7 +31,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get("#{SURVEY_BASE}?building_id=1", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey1.as_json].to_json)
+      response.body.should eq([survey1].to_json)
     end
   end
 
@@ -62,7 +63,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get("#{SURVEY_BASE}/#{survey.id}", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq(survey.as_json.to_json)
+      response.body.should eq(survey.to_json)
     end
 
     it "should maintain the question_order" do

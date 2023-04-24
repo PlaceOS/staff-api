@@ -18,7 +18,9 @@ class Events < Application
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
     @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
-    include_cancelled : Bool = false
+    include_cancelled : Bool = false,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -36,7 +38,8 @@ class Events < Application
         calendar_id,
         period_start: period_start,
         period_end: period_end,
-        showDeleted: include_cancelled
+        showDeleted: include_cancelled,
+        ical_uid: icaluid
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
@@ -90,7 +93,7 @@ class Events < Application
 
     # Don't perform the query if there are no calendar entries
     if !metadata_ids.empty?
-      EventMetadata.query.by_tenant(tenant.id).where { event_id.in?(metadata_ids) }.each { |meta|
+      EventMetadata.by_tenant(tenant.id).where(event_id: metadata_ids).each { |meta|
         metadatas[meta.event_id] = meta
       }
     end
@@ -98,7 +101,7 @@ class Events < Application
     # Metadata is stored against a resource calendar which in office365 can only
     # be matched by the `ical_uid`
     if (client.client_id == :office365) && ical_uids.uniq! && !ical_uids.empty?
-      EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?(ical_uids) }.each { |meta|
+      EventMetadata.by_tenant(tenant.id).where(ical_uid: ical_uids).each { |meta|
         metadatas[meta.ical_uid] = meta
       }
     end
@@ -199,18 +202,18 @@ class Events < Application
       # Save custom data
       ext_data = input_event.extension_data
       if ext_data || (attending && !attending.empty?)
-        meta = EventMetadata.create!({
-          system_id:           sys.id.not_nil!,
-          event_id:            created_event.id.not_nil!,
+        meta = EventMetadata.create!(
+          system_id: sys.id.not_nil!,
+          event_id: created_event.id.not_nil!,
           recurring_master_id: (created_event.recurring_event_id || created_event.id if created_event.recurring),
-          event_start:         created_event.event_start.not_nil!.to_unix,
-          event_end:           created_event.event_end.not_nil!.to_unix,
-          resource_calendar:   sys.email.not_nil!,
-          host_email:          host,
-          ext_data:            ext_data,
-          tenant_id:           tenant.id,
-          ical_uid:            created_event.ical_uid.not_nil!,
-        })
+          event_start: created_event.event_start.not_nil!.to_unix,
+          event_end: created_event.event_end.not_nil!.to_unix,
+          resource_calendar: sys.email.not_nil!,
+          host_email: host,
+          ext_data: ext_data,
+          tenant_id: tenant.id,
+          ical_uid: created_event.ical_uid.not_nil!,
+        )
 
         Log.info { "saving extension data for event #{created_event.id} in #{sys.id}" }
 
@@ -219,22 +222,22 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
+            guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
                       existing_guest.name = attendee.name if existing_guest.name != attendee.name
                       existing_guest
                     else
-                      Guest.new({
-                        email:          email,
-                        name:           attendee.name,
+                      Guest.new(
+                        email: email,
+                        name: attendee.name,
                         preferred_name: attendee.preferred_name,
-                        phone:          attendee.phone,
-                        organisation:   attendee.organisation,
-                        photo:          attendee.photo,
-                        notes:          attendee.notes,
-                        banned:         attendee.banned || false,
-                        dangerous:      attendee.dangerous || false,
-                        tenant_id:      tenant.id,
-                      })
+                        phone: attendee.phone,
+                        organisation: attendee.organisation,
+                        photo: attendee.photo,
+                        notes: attendee.notes,
+                        banned: attendee.banned || false,
+                        dangerous: attendee.dangerous || false,
+                        tenant_id: tenant.id,
+                      )
                     end
 
             if attendee_ext_data = attendee.extension_data
@@ -243,13 +246,13 @@ class Events < Application
             guest.save!
 
             # Create attendees
-            Attendee.create!({
-              event_id:       meta.id.not_nil!,
-              guest_id:       guest.id,
+            Attendee.create!(
+              event_id: meta.id.not_nil!,
+              guest_id: guest.id,
               visit_expected: true,
-              checked_in:     false,
-              tenant_id:      tenant.id,
-            })
+              checked_in: false,
+              tenant_id: tenant.id,
+            )
 
             spawn do
               placeos_client.root.signal("staff/guest/attending", {
@@ -432,8 +435,6 @@ class Events < Application
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
-        # Needed for clear to assign the updated json correctly
-        meta.ext_data_column.clear
         meta.ext_data = JSON::Any.new(data)
         meta.save!
       elsif changing_room || update_attendees
@@ -448,7 +449,7 @@ class Events < Application
 
         if !remove_attendees.empty?
           remove_attendees.each do |email|
-            existing.select { |attend| attend.guest.email == email }.each do |attend|
+            existing.select { |attend| attend.guest.not_nil!.email == email }.each do |attend|
               existing_lookup.delete(attend.email)
               attend.delete
             end
@@ -463,21 +464,21 @@ class Events < Application
           attending.each do |attendee|
             email = attendee.email.strip.downcase
 
-            guest = if existing_guest = Guest.query.by_tenant(tenant.id).find({email: email})
+            guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
                       existing_guest
                     else
-                      Guest.new({
-                        email:          email,
-                        name:           attendee.name,
+                      Guest.new(
+                        email: email,
+                        name: attendee.name,
                         preferred_name: attendee.preferred_name,
-                        phone:          attendee.phone,
-                        organisation:   attendee.organisation,
-                        photo:          attendee.photo,
-                        notes:          attendee.notes,
-                        banned:         attendee.banned || false,
-                        dangerous:      attendee.dangerous || false,
-                        tenant_id:      tenant.id,
-                      })
+                        phone: attendee.phone,
+                        organisation: attendee.organisation,
+                        photo: attendee.photo,
+                        notes: attendee.notes,
+                        banned: attendee.banned || false,
+                        dangerous: attendee.dangerous || false,
+                        tenant_id: tenant.id,
+                      )
                     end
 
             if attendee_ext_data = attendee.extension_data
@@ -492,18 +493,18 @@ class Events < Application
             previously_visiting = if attend.persisted?
                                     attend.visit_expected
                                   else
-                                    attend.set({
+                                    attend.assign_attributes(
                                       checked_in: false,
-                                      tenant_id:  tenant.id,
-                                    })
+                                      tenant_id: tenant.id,
+                                    )
                                     false
                                   end
 
-            attend.update!({
-              event_id:       meta.id.not_nil!,
-              guest_id:       guest.id,
+            attend.update!(
+              event_id: meta.id.not_nil!,
+              guest_id: guest.id,
               visit_expected: attendee.visit_expected.not_nil!,
-            })
+            )
 
             next unless attend.visit_expected
 
@@ -531,7 +532,7 @@ class Events < Application
             next unless attend.visit_expected
             spawn do
               sys = system.not_nil!
-              guest = attend.guest
+              guest = attend.guest.not_nil!
 
               placeos_client.root.signal("staff/guest/attending", {
                 action:         :meeting_update,
@@ -551,7 +552,8 @@ class Events < Application
       end
 
       # Reloading meta with attendees and guests to avoid n+1
-      eventmeta = EventMetadata.query.by_tenant(tenant.id).with_attendees(&.with_guest).find({event_id: event_id, system_id: system.not_nil!.id.not_nil!})
+      # eventmeta = EventMetadata.by_tenant(tenant.id).with_attendees(&.with_guest).find_by?(event_id: event_id, system_id: system.not_nil!.id.not_nil!)
+      eventmeta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event_id, system_id: system.not_nil!.id.not_nil!)
 
       # Update PlaceOS with an signal "staff/event/changed"
       spawn do
@@ -643,9 +645,9 @@ class Events < Application
     cal_id = event_calendar || cal_id
 
     # attempt to find the metadata
-    query = EventMetadata.query.by_tenant(tenant.id).where(system_id: system_id)
+    query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
     if client.client_id == :office365 && uuid.presence
-      query = query.where { ical_uid.in?({uuid, event_id}) | (raw("event_id") == event_id) }
+      query = query.where("ical_uid in (?,?) OR event_id = ?", uuid, event_id, event_id)
     else
       query = query.where(event_id: event_id)
     end
@@ -694,16 +696,14 @@ class Events < Application
            end
 
     # Updating extension data by merging into existing.
-    if merge && meta.ext_data_column.defined? && (meta_ext_data = meta.ext_data)
+    if merge && meta.ext_data && (meta_ext_data = meta.ext_data)
       data = meta_ext_data.as_h
       changes.each { |key, value| data[key] = value }
     else
       data = changes
     end
 
-    # Needed for clear to assign the updated json correctly
-    meta.ext_data_column.clear
-    meta.ext_data = JSON::Any.new(data)
+    meta.set_ext_data(JSON::Any.new(data))
     meta.save!
 
     spawn do
@@ -791,7 +791,7 @@ class Events < Application
 
       # see if there are any relevent metadata details
       ev_ical_uid = event.ical_uid
-      metadata = EventMetadata.query.by_tenant(tenant.id).where { ical_uid.in?([ev_ical_uid]) }.to_a.first?
+      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: [ev_ical_uid]).to_a.first?
 
       # see if there are any relevent systems associated with the event
       resource_calendars = (event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
@@ -901,7 +901,7 @@ class Events < Application
     end
 
     if system
-      EventMetadata.query.by_tenant(tenant.id).where({event_id: event_id}).delete_all
+      EventMetadata.by_tenant(tenant.id).where({event_id: event_id}).delete_all
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
@@ -980,9 +980,9 @@ class Events < Application
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String
-  ) : Array(Guest::GuestResponse | Attendee::AttendeeResponse)
+  ) : Array(Guest | Attendee)
     cal_id = get_placeos_client.systems.fetch(system_id).email
-    return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless cal_id
+    return [] of Guest | Attendee unless cal_id
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
@@ -990,17 +990,17 @@ class Events < Application
     # Grab meeting metadata if it exists
     metadata = get_event_metadata(event, system_id)
     parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
-    return [] of Guest::GuestResponse | Attendee::AttendeeResponse unless metadata
+    return [] of Guest | Attendee unless metadata
 
     # Find anyone who is attending
     visitors = metadata.attendees.to_a
-    return [] of Guest::GuestResponse | Attendee::AttendeeResponse if visitors.empty?
+    return [] of Guest | Attendee if visitors.empty?
 
     # Grab the guest profiles if they exist
-    guests = visitors.each_with_object({} of String => Guest) { |visitor, obj| obj[visitor.guest.email.not_nil!] = visitor.guest }
+    guests = visitors.each_with_object({} of String => Guest) { |visitor, obj| obj[visitor.guest.not_nil!.email.not_nil!] = visitor.guest.not_nil! }
 
     # Merge the visitor data with guest profiles
-    visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.email]?, parent_meta) }
+    visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.not_nil!.email]?, parent_meta) }
   end
 
   # This exists to obtain events that have some condition that requires action.
@@ -1021,25 +1021,17 @@ class Events < Application
     ending : Int64? = nil,
     @[AC::Param::Info(description: "list of event ids that we're potentially", example: "event_id,recurring_event_id,ical_uid")]
     event_ref : Array(String)? = nil
-  ) : Array(EventMetadata::Assigner)
-    raise Error::BadRequest.new("must provide one of field_name & value, system_id, event_ref, period_start or period_end") unless system_id || (field_name && value) || starting || ending || (event_ref && !event_ref.empty?)
+  ) : Array(EventMetadata)
+    raise Error::BadRequest.new("must provide one of field_name & value, system_id, event_ref, period_start or period_end") unless system_id || (field_name && value) || starting || ending || (event_ref && event_ref.size > 0)
 
-    query = EventMetadata.query.by_tenant(tenant.id).is_ending_after(starting).is_starting_before(ending)
+    query = EventMetadata.by_tenant(tenant.id).is_ending_after(starting).is_starting_before(ending)
 
-    if system_id
-      query = query.where(system_id: system_id)
-    end
-
-    if event_ref && !event_ref.empty?
-      query = query.by_event_ids(event_ref)
-    end
-
-    if field_name && value.presence
-      query = query.by_ext_data(field_name, value)
-    end
+    query = query.where(system_id: system_id) if system_id
+    query = query.by_event_ids(event_ref) if event_ref && !event_ref.empty?
+    query = query.by_ext_data(field_name, value.not_nil!) if field_name && value.presence
 
     query.limit(10_000).to_a.map do |metadata|
-      EventMetadata::Assigner.from_json(metadata.to_json)
+      EventMetadata.from_json(metadata.to_json)
     end
   end
 
@@ -1056,7 +1048,7 @@ class Events < Application
     system_id : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
     checkin : Bool = true
-  ) : Guest::GuestResponse
+  ) : Guest
     guest_id = guest_email.downcase
     event_id = original_id
 
@@ -1072,7 +1064,7 @@ class Events < Application
     guest_email = if guest_id.includes?('@')
                     guest_id.strip.downcase
                   else
-                    Guest.query.by_tenant(tenant.id).find!(guest_id.to_i64).email
+                    Guest.by_tenant(tenant.id).find(guest_id.to_i64).email
                   end
 
     raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event as #{guest_email}") if user_token.guest_scope? && guest_email != guest_token_email
@@ -1091,46 +1083,45 @@ class Events < Application
 
     # Create the guest model if not already in the database
     guest = begin
-      Guest.query.by_tenant(tenant.id).find!({email: guest_email})
-    rescue Clear::SQL::RecordNotFoundError
-      g = Guest.new({
-        tenant_id:      tenant.id,
-        email:          guest_email,
-        name:           attendee.name,
-        banned:         false,
-        dangerous:      false,
+      Guest.by_tenant(tenant.id).find_by(email: guest_email)
+    rescue PgORM::Error::RecordNotFound
+      g = Guest.new(
+        tenant_id: tenant.id,
+        email: guest_email,
+        name: attendee.name,
+        banned: false,
+        dangerous: false,
         extension_data: JSON::Any.new({} of String => JSON::Any),
-      })
-      raise Error::ModelValidation.new(g.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating guest data") if !g.save
-      g
+      )
+      g.save! rescue raise Error::ModelValidation.new(g.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating guest data")
     end
 
     if user_token.guest_scope?
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id})
     end
 
-    eventmeta = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.create!({
-      system_id:           system.id.not_nil!,
-      event_id:            event.id.not_nil!,
+    eventmeta = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.create!(
+      system_id: system.id.not_nil!,
+      event_id: event.id.not_nil!,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
-      event_start:         event.event_start.not_nil!.to_unix,
-      event_end:           event.event_end.not_nil!.to_unix,
-      resource_calendar:   cal_id,
-      host_email:          event.host.not_nil!,
-      tenant_id:           tenant.id,
-      ical_uid:            event.ical_uid.not_nil!,
-    })
+      event_start: event.event_start.not_nil!.to_unix,
+      event_end: event.event_end.not_nil!.to_unix,
+      resource_calendar: cal_id,
+      host_email: event.host.not_nil!,
+      tenant_id: tenant.id,
+      ical_uid: event.ical_uid.not_nil!,
+    )
 
-    if attendee = Attendee.query.by_tenant(tenant.id).find({guest_id: guest.id, event_id: eventmeta.not_nil!.id})
-      attendee.update!({checked_in: checkin})
+    if attendee = Attendee.by_tenant(tenant.id).find_by?(guest_id: guest.id, event_id: eventmeta.not_nil!.id)
+      attendee.update!(checked_in: checkin)
     else
-      attendee = Attendee.create!({
-        event_id:       eventmeta.id.not_nil!,
-        guest_id:       guest.id,
+      attendee = Attendee.create!(
+        event_id: eventmeta.id.not_nil!,
+        guest_id: guest.id,
         visit_expected: true,
-        checked_in:     checkin,
-        tenant_id:      tenant.id,
-      })
+        checked_in: checkin,
+        tenant_id: tenant.id,
+      )
     end
 
     # Check the event is still on
@@ -1154,6 +1145,6 @@ class Events < Application
       })
     end
 
-    attending_guest(attendee, attendee.guest, false, event).as(Guest::GuestResponse)
+    attending_guest(attendee, attendee.guest, false, event).as(Guest)
   end
 end

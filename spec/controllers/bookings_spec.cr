@@ -1,9 +1,13 @@
 require "../spec_helper"
-require "./helpers/spec_clean_up"
 require "./helpers/booking_helper"
+require "./helpers/guest_helper"
 
 describe Bookings do
-  Spec.before_each { Booking.query.each(&.delete) }
+  Spec.before_each {
+    Booking.truncate
+    Attendee.truncate
+    Guest.truncate
+  }
 
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
@@ -12,8 +16,8 @@ describe Bookings do
     it "should return a list of bookings" do
       tenant = get_tenant
 
-      booking1 = BookingsHelper.create_booking(tenant.id)
-      booking2 = BookingsHelper.create_booking(tenant.id)
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
@@ -70,8 +74,8 @@ describe Bookings do
     it "should return a list of bookings when filtered by user" do
       tenant = get_tenant
 
-      booking1 = BookingsHelper.create_booking(tenant.id, "toby@redant.com.au")
-      booking2 = BookingsHelper.create_booking(tenant.id)
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, "toby@redant.com.au")
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
@@ -89,8 +93,8 @@ describe Bookings do
 
     it "should return a list of bookings filtered current user when no zones or user is specified" do
       tenant = get_tenant
-      booking = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
-      BookingsHelper.create_booking(tenant.id)
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
+      BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
@@ -102,9 +106,33 @@ describe Bookings do
     end
   end
 
+  it "should include bookins made on behalf of other users when include_booked_by=true" do
+    tenant = get_tenant
+    booking1 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
+
+    booked_by_email = "josh@redant.com.au"
+    booking2 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
+    booking2.booked_by_email = PlaceOS::Model::Email.new(booked_by_email)
+    booking2.booked_by_id = booked_by_email
+    booking2.booked_by_name = Faker::Internet.user_name
+    booking2.save!
+
+    booking3 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: booked_by_email)
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 40.minutes.from_now.to_unix
+
+    route = "#{BOOKINGS_BASE}?type=desk&period_start=#{starting}&period_end=#{ending}&user=#{booked_by_email}&include_booked_by=true&include_checked_out=true"
+    body = JSON.parse(client.get(route, headers: headers).body).as_a
+    booking_ids = body.map { |r| r["id"] }
+    booking_ids.should_not contain(booking1.id)
+    booking_ids.should contain(booking2.id)
+    booking_ids.should contain(booking3.id)
+  end
+
   it "#show should find booking" do
     tenant = get_tenant
-    booking = BookingsHelper.create_booking(tenant.id)
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
     body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
     body["user_id"].should eq(booking.user_id)
@@ -126,13 +154,14 @@ describe Bookings do
     end
 
     it "booking reserved and no_show" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 6.minutes.from_now.to_unix)
 
       body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
+
       body["current_state"].should eq("reserved")
       body["history"][0]["state"].should eq("reserved")
 
@@ -148,23 +177,24 @@ describe Bookings do
     end
 
     it "booking deleted before booking_start" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
       client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers)
       body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
+
       body["current_state"].should eq("cancelled")
       body["history"].as_a.last["state"].should eq("cancelled")
       body["history"].as_a.size.should eq(2)
     end
 
     it "booking deleted between booking_start and booking_end" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
@@ -176,9 +206,9 @@ describe Bookings do
     end
 
     it "booking deleted between booking_start and booking_end while checked_in" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
@@ -202,7 +232,7 @@ describe Bookings do
         .to_return(body: "")
       tenant = get_tenant
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 30.minutes.from_now.to_unix)
 
@@ -217,7 +247,7 @@ describe Bookings do
         .to_return(body: "")
       tenant = get_tenant
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 70.minutes.from_now.to_unix,
         booking_end: 80.minutes.from_now.to_unix)
 
@@ -234,11 +264,11 @@ describe Bookings do
         .to_return(body: "")
       tenant = get_tenant
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 30.minutes.from_now.to_unix)
 
-      BookingsHelper.create_booking(tenant.id,
+      BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 10.minutes.from_now.to_unix,
         asset_id: booking.asset_id)
@@ -254,7 +284,7 @@ describe Bookings do
         .to_return(body: "")
       tenant = get_tenant
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: Time.utc(2023, 2, 15, 10, 20, 30).to_unix,
         booking_end: Time.utc(2023, 2, 15, 11, 20, 30).to_unix)
 
@@ -263,9 +293,9 @@ describe Bookings do
     end
 
     it "booking rejected before booking_start" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
@@ -277,9 +307,9 @@ describe Bookings do
     end
 
     it "booking checked_in before booking_start" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
@@ -291,9 +321,9 @@ describe Bookings do
     end
 
     it "booking checked_in and checked_out before booking_start" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 15.minutes.from_now.to_unix)
 
@@ -311,9 +341,9 @@ describe Bookings do
     end
 
     it "booking checked_in and checked_out between booking_start and booking_end" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 9.minutes.from_now.to_unix)
 
@@ -335,9 +365,9 @@ describe Bookings do
     end
 
     it "booking checked_in but never checked_out between booking_start and booking_end" do
-      tenant = Tenant.query.find! { domain == "toby.staff-api.dev" }
+      tenant = Tenant.find_by(domain: "toby.staff-api.dev")
 
-      booking = BookingsHelper.create_booking(tenant.id,
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
         booking_end: 6.minutes.from_now.to_unix)
 
@@ -449,13 +479,13 @@ describe Bookings do
   it "#guest_list should list guests for a booking" do
     tenant = get_tenant
     guest = GuestsHelper.create_guest(tenant.id)
-    booking = BookingsHelper.create_booking(tenant.id)
-    Attendee.create!({booking_id:     booking.id,
-                      guest_id:       guest.id,
-                      tenant_id:      guest.tenant_id,
-                      checked_in:     false,
-                      visit_expected: true,
-    })
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+    Attendee.create!(booking_id: booking.id.not_nil!,
+      guest_id: guest.id,
+      tenant_id: guest.tenant_id,
+      checked_in: false,
+      visit_expected: true,
+    )
 
     body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}/guests", headers: headers).body).as_a
     body.map(&.["name"]).should eq([guest.name])
@@ -466,7 +496,7 @@ describe Bookings do
     booking_name = Faker::Name.first_name
     booking_email = "#{booking_name.upcase}@email.com"
 
-    booking = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: booking_email)
+    booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: booking_email)
 
     booking.user_id = booking_name.downcase
     booking.save!
@@ -493,8 +523,8 @@ describe Bookings do
     tenant = get_tenant
 
     user_email = Faker::Internet.email
-    booking1 = BookingsHelper.create_booking(tenant.id, user_email)
-    booking2 = BookingsHelper.create_booking(tenant.id, user_email)
+    booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, user_email)
+    booking2 = BookingsHelper.create_booking(tenant.id.not_nil!, user_email)
 
     # Check both are returned in beginning
     starting = [booking1.booking_start, booking2.booking_start].min
@@ -520,7 +550,7 @@ describe Bookings do
 
     Timecop.scale(600) # 1 second == 10 minutes
 
-    booking = BookingsHelper.create_booking(tenant.id, booking_start: 1.minutes.from_now.to_unix, booking_end: 15.minutes.from_now.to_unix)
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!, booking_start: 1.minutes.from_now.to_unix, booking_end: 15.minutes.from_now.to_unix)
 
     sleep(200.milliseconds) # advance time 2 minutes
     client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
@@ -540,8 +570,8 @@ describe Bookings do
       .to_return(body: "")
     tenant = get_tenant
     user_email = Faker::Internet.email
-    booking1 = BookingsHelper.create_booking(tenant.id, user_email)
-    booking2 = BookingsHelper.create_booking(tenant.id, user_email)
+    booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, user_email)
+    booking2 = BookingsHelper.create_booking(tenant.id.not_nil!, user_email)
 
     # Check both are returned in beginning
     starting = [booking1.booking_start, booking2.booking_start].min
@@ -566,7 +596,7 @@ describe Bookings do
     body.size.should eq(2)
     booking_user_ids = body.map { |r| r["id"].as_i }
     # Sorting ids because both events have the same starting time
-    booking_user_ids.sort.should eq([booking1.id, booking2.id].sort)
+    booking_user_ids.sort.should eq([booking1.id.not_nil!, booking2.id.not_nil!].sort)
   end
 
   it "#create and #update" do
@@ -596,13 +626,13 @@ describe Bookings do
     created["booking_end"].should eq(ending)
 
     # Testing attendees / guests data creation
-    attendees = Booking.query.find! { id == created["id"] }.attendees.to_a
+    attendees = Booking.find(created["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
     attendee.checked_in.should eq(true)
     attendee.visit_expected.should eq(true)
 
-    guest = attendee.guest
+    guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
     guest.email.should eq(user_email)
 
@@ -619,20 +649,20 @@ describe Bookings do
       }]})
     ).body).as_h
     updated["extension_data"].as_h["other"].should eq("stuff")
-    booking = Booking.query.find!({id: updated["id"]})
+    booking = Booking.find(updated["id"].as_i64)
     booking.extension_data.as_h.should eq({"other" => "stuff"})
     updated["title"].should eq("new title")
-    booking = Booking.query.find!(updated["id"])
+    booking = Booking.find(updated["id"].as_i64)
     booking.title.not_nil!.should eq("new title")
 
     # Testing attendees / guests data updates
-    attendees = Booking.query.find! { id == updated["id"] }.attendees.to_a
+    attendees = Booking.find(updated["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
     attendee.checked_in.should eq(false)
     attendee.visit_expected.should eq(true)
 
-    guest = attendee.guest
+    guest = attendee.guest.not_nil!
     guest.name.should eq(updated_user_name)
     guest.email.should eq(updated_user_email)
   end
@@ -895,14 +925,14 @@ describe Bookings do
         limit_override: "2")[1]
       second_booking["asset_id"].should eq("second_desk")
 
-      booking_id = first_booking["id"].to_s
+      booking_id = first_booking["id"].as_i64
 
       # delete booking (without limit_override)
       deleted = client.delete("#{BOOKINGS_BASE}/#{booking_id}/", headers: headers).status_code
       deleted.should eq(202)
 
       # check that it was deleted
-      Booking.find!(booking_id).deleted.should be_true
+      Booking.find(booking_id).deleted.should be_true
     end
 
     it "#check_in only checks limit if checked out" do
@@ -1020,7 +1050,7 @@ describe Bookings do
 
   it "#prevents a booking being saved with an end time before the start time" do
     tenant = get_tenant
-    expect_raises(Clear::Model::InvalidError) do
+    expect_raises(PgORM::Error::RecordInvalid) do
       booking = BookingsHelper.create_booking(tenant_id: tenant.id)
       booking.booking_end = booking.booking_start - 2
       booking.save!
@@ -1036,7 +1066,7 @@ describe Bookings do
       .to_return(body: "")
 
     tenant = get_tenant
-    booking = BookingsHelper.create_booking(tenant.id, 1.minutes.from_now.to_unix, 20.minutes.from_now.to_unix)
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!, 1.minutes.from_now.to_unix, 20.minutes.from_now.to_unix)
     booking.checked_out_at = 10.minutes.from_now.to_unix
     booking.save!
 
@@ -1060,12 +1090,12 @@ describe Bookings do
 
     tenant = get_tenant
     asset_id = "asset-#{Random.new.rand(500)}"
-    booking = BookingsHelper.create_booking(tenant.id, 4.minutes.from_now.to_unix, 20.minutes.from_now.to_unix, asset_id)
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!, 4.minutes.from_now.to_unix, 20.minutes.from_now.to_unix, asset_id)
     booking.checked_out_at = 10.minutes.from_now.to_unix
     booking.checked_in = false
     booking.save!
 
-    BookingsHelper.create_booking(tenant.id, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
+    BookingsHelper.create_booking(tenant.id.not_nil!, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
 
     sleep 2
 
@@ -1090,7 +1120,7 @@ describe Bookings do
 
   it "#prevents a booking being saved with an end time the same as the start time" do
     tenant = get_tenant
-    expect_raises(Clear::Model::InvalidError) do
+    expect_raises(PgORM::Error::RecordInvalid) do
       booking = BookingsHelper.create_booking(tenant_id: tenant.id)
       booking.booking_end = booking.booking_start
       booking.save!
@@ -1103,10 +1133,10 @@ describe Bookings do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
     tenant = get_tenant
-    booking = BookingsHelper.create_booking(tenant.id)
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/approve", headers: headers).body).as_h
-    booking = Booking.query.find! { user_id == booking.user_id }
+    booking = Booking.find_by(user_id: booking.user_id)
     body["approved"].should eq(true)
     body["approver_id"].should eq(booking.approver_id)
     body["approver_email"].should eq(booking.approver_email)
@@ -1128,8 +1158,8 @@ describe Bookings do
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
       .to_return(body: "")
-    tenant = Tenant.query.find!({domain: "toby.staff-api.dev"})
-    booking = BookingsHelper.create_booking(tenant.id)
+    tenant = Tenant.find_by(domain: "toby.staff-api.dev")
+    booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers).body).as_h
     body["checked_in"].should eq(true)
@@ -1138,5 +1168,3 @@ describe Bookings do
     body["checked_in"].should eq(false)
   end
 end
-
-BOOKINGS_BASE = Bookings.base_route

@@ -1,8 +1,9 @@
 require "../../spec_helper"
-require "../helpers/spec_clean_up"
 require "../helpers/survey_helper"
 
 describe Surveys::Invitations, tags: ["survey"] do
+  Spec.before_each { Survey::Invitation.truncate }
+
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 

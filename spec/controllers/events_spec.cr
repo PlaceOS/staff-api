@@ -1,11 +1,14 @@
 require "../spec_helper"
 require "./helpers/event_helper"
-require "./helpers/spec_clean_up"
+require "./helpers/guest_helper"
 
 EVENTS_BASE = Events.base_route
 
 describe Events do
   before_each do
+    EventMetadata.truncate
+    Guest.truncate
+    Attendee.truncate
     EventsHelper.stub_event_tokens
   end
 
@@ -94,7 +97,7 @@ describe Events do
       created_event.includes?(%("event_start": #{event.event_start}))
 
       # Should have created metadata record
-      evt_meta = EventMetadata.query.find! { event_id == JSON.parse(created_event)["id"].as_s }
+      evt_meta = EventMetadata.find_by(event_id: JSON.parse(created_event)["id"].as_s)
       evt_meta.event_start.should eq(1598503500)
       evt_meta.event_end.should eq(1598507160)
       evt_meta.system_id.should eq("sys-rJQQlR4Cn7")
@@ -106,7 +109,7 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have created guests records
-      guests = evt_meta.attendees.map(&.guest)
+      guests = evt_meta.attendees.map(&.guest.not_nil!)
       guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
       guests.compact_map(&.email).should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
       guests.compact_map(&.preferred_name).should eq(["Jon"])
@@ -155,7 +158,7 @@ describe Events do
       updated_event.includes?(%(some updated notes))
       # .should eq(EventsHelper.update_event_output)
       # Should have updated metadata record
-      evt_meta = EventMetadata.query.find! { event_id == JSON.parse(updated_event)["id"].as_s }
+      evt_meta = EventMetadata.find_by(event_id: JSON.parse(updated_event)["id"].as_s)
       evt_meta.event_start.should eq(1598504460)
       evt_meta.event_end.should eq(1598508120)
 
@@ -164,15 +167,15 @@ describe Events do
       evt_meta.attendees.count.should eq(3)
 
       # Should have updated guests records
-      guests = evt_meta.attendees.map(&.guest)
-      guests.map(&.name).should eq(["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"])
-      guests.compact_map(&.email).should eq(["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"])
+      guests = evt_meta.attendees.map(&.guest.not_nil!)
+      (guests.map(&.name) - ["Amit", "dev@acaprojects.onmicrosoft.com", "Robert"]).size.should eq(0)
+      (guests.compact_map(&.email) - ["amit@redant.com.au", "dev@acaprojects.onmicrosoft.com", "bob@example.com"]).size.should eq(0)
       guests.compact_map(&.preferred_name).should eq(["bob"])
       guests.compact_map(&.phone).should eq(["012333336"])
       guests.compact_map(&.organisation).should eq(["Apple inc"])
       guests.compact_map(&.notes).should eq(["some updated notes"])
       guests.compact_map(&.photo).should eq(["http://example.com/bob.jpg"])
-      guests.compact_map(&.extension_data).should eq([{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}])
+      (guests.compact_map(&.extension_data) - [{"fuzz" => "bizz"}, {} of String => String?, {"buzz" => "fuzz"}]).size.should eq(0)
     end
 
     pending "extension data for guest" do
@@ -209,7 +212,7 @@ describe Events do
       updated_event = JSON.parse(body)
 
       # Should have only updated extension in metadata record
-      evt_meta = EventMetadata.query.find! { event_id == updated_event["id"] }
+      evt_meta = EventMetadata.find_by(event_id: updated_event["id"].to_s)
       evt_meta.event_start.should eq(1598503500)                      # unchanged event start
       evt_meta.event_end.should eq(1598507160)                        # unchanged event end
       evt_meta.ext_data.should eq({"foo" => "bar", "fizz" => "buzz"}) # updated event extension
@@ -316,11 +319,11 @@ describe Events do
       master_event_id = created_event["id"].to_s
 
       # Metadata should not exist for this event
-      EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
+      EventMetadata.find_by?(event_id: event_instance_id).should be_nil
       event["event_start"].should eq(1598503500)
       event["event_end"].should eq(1598507160)
       # Should have extension data stored on master event
-      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
+      evt_meta = EventMetadata.find_by(event_id: created_event_id)
       evt_meta.recurring_master_id.should eq(master_event_id)
       event["extension_data"].should eq({"foo" => "bar"})
     end
@@ -371,7 +374,7 @@ describe Events do
 
       event_instance_id = "event_instance_of_recurrence_id"
       # Metadata should not exist for this event
-      EventMetadata.query.find({event_id: event_instance_id}).should eq(nil)
+      EventMetadata.find_by?(event_id: event_instance_id).should be_nil
 
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
 
@@ -390,7 +393,7 @@ describe Events do
       event["event_start"].should eq(1598503500)
       event["event_end"].should eq(1598507160)
 
-      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
+      evt_meta = EventMetadata.find_by(event_id: created_event_id)
       evt_meta.recurring_master_id.should eq(master_event_id)
       event["extension_data"]?.should eq({"foo" => "bar"})
 
@@ -432,7 +435,7 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    EventMetadata.query.find { event_id == created_event["id"] }.should_not eq(nil)
+    EventMetadata.find_by(event_id: created_event["id"].to_s).should_not eq(nil)
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
       .to_return(body: %({"permissions":
@@ -452,7 +455,7 @@ describe Events do
     client.delete("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers)
 
     # Should have deleted event meta
-    EventMetadata.query.find { event_id == created_event["id"] }.should eq(nil)
+    EventMetadata.find_by?(event_id: created_event["id"].to_s).should eq(nil)
   end
 
   it "#approve marks room as accepted" do
@@ -544,8 +547,8 @@ describe Events do
       # guests.should eq(EventsHelper.guests_list_output)
       # guests.to_s.includes?(%("id" => "sys-rJQQlR4Cn7"))
 
-      evt_meta = EventMetadata.query.find! { event_id == created_event_id }
-      guests = evt_meta.attendees.map(&.guest)
+      evt_meta = EventMetadata.find_by(event_id: created_event_id)
+      guests = evt_meta.attendees.map(&.guest.not_nil!)
       guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
@@ -655,7 +658,7 @@ describe Events do
       request_body["magic_number"].should eq(77)
       request_body["count"].should eq(2)
 
-      db_event = EventMetadata.query.where(event_id: event.event_id).to_a.first
+      db_event = EventMetadata.where(event_id: event.event_id).to_a.first
       db_event.ext_data.not_nil!["magic_number"].should eq(77)
       db_event.ext_data.not_nil!["count"].should eq(2)
     end

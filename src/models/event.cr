@@ -35,10 +35,10 @@ class StaffApi::Event
 
     # Ensure metadata is in sync
     if metadata && (event_start != metadata.event_start || (event_end && event_end != metadata.event_end))
-      metadata.update({
+      metadata.update(
         event_start: (start_time = event_start),
-        event_end:   (event_end ? event_end : (start_time + 24.hours.to_i)),
-      })
+        event_end: (event_end ? event_end : (start_time + 24.hours.to_i)),
+      )
     end
 
     event.calendar = calendar
