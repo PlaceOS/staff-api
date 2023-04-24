@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **survey**: [PPT-358] add visitor triggers ([#275](https://github.com/PlaceOS/staff-api/pull/275))
 - **events**: add events filter with ical uid ([#271](https://github.com/PlaceOS/staff-api/pull/271))
 - **staff**: [PPT-89] support Azure AD filter ([#269](https://github.com/PlaceOS/staff-api/pull/269))
 - **events**: decorate events with system data where possible ([#268](https://github.com/PlaceOS/staff-api/pull/268))
@@ -195,8 +196,8 @@
 - **creds**: use placeos encryption model for credentials ([#58](https://github.com/PlaceOS/staff-api/pull/58))
 - **bookings**: don't reset state unless value changed
 - **tenant**: allow editing of tenants
-- metadata not found
 - update visitor name on event creation
+- metadata not found
 - **events**: resources marked as resources in office365
 - **guest checkin**: where user might not have calendar read access
 - get_placeos_client now proxies host header
