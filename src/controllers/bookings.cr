@@ -635,8 +635,8 @@ class Bookings < Application
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    user_id = new_booking.user_id || new_booking.booked_by_id
-    zones = new_booking.zones || [] of String
+    user_id = new_booking.user_id_present? ? new_booking.user_id : new_booking.booked_by_id
+    zones = new_booking.zones_present? ? new_booking.zones : [] of String
 
     query = Booking
       .by_tenant(tenant.id)

@@ -25,14 +25,14 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on RESERVED trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::RESERVED,
     )
 
     tenant = Tenant.find_by(domain: "toby.staff-api.dev")
-    booking = BookingsHelper.create_booking(
+    BookingsHelper.create_booking(
       tenant_id: tenant.id.not_nil!,
       user_email: "user@example.com",
       zones: ["zone-1", "zone-2"],
@@ -42,7 +42,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on CHECKEDIN trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::CHECKEDIN,
@@ -64,7 +64,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on CHECKEDOUT trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::CHECKEDOUT,
@@ -86,7 +86,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on REJECTED trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::REJECTED,
@@ -108,7 +108,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on CANCELLED trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::CANCELLED,
@@ -130,7 +130,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   it "should create an invitation on VISITOR_CHECKEDIN trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::VISITOR_CHECKEDIN,
@@ -167,7 +167,7 @@ describe "Survey Triggers", tags: ["survey"] do
   end
 
   pending "should create an invitation on VISITOR_CHECKEDOUT trigger" do
-    survey = SurveyHelper.create_survey(
+    SurveyHelper.create_survey(
       zone_id: "zone-2",
       building_id: "zone-1",
       trigger: Survey::TriggerType::VISITOR_CHECKEDOUT,
