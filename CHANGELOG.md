@@ -97,6 +97,7 @@
 
 ### Refactor
 
+- migrated staff-api to pg-orm ([#277](https://github.com/PlaceOS/staff-api/pull/277))
 - set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
 - **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
 - **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
