@@ -2,6 +2,8 @@
 
 ### Feat
 
+- **survey**: [PPT-358] add visitor triggers ([#275](https://github.com/PlaceOS/staff-api/pull/275))
+- **events**: add events filter with ical uid ([#271](https://github.com/PlaceOS/staff-api/pull/271))
 - **staff**: [PPT-89] support Azure AD filter ([#269](https://github.com/PlaceOS/staff-api/pull/269))
 - **events**: decorate events with system data where possible ([#268](https://github.com/PlaceOS/staff-api/pull/268))
 - **events**: patch metadata lookup using ical uid ([#267](https://github.com/PlaceOS/staff-api/pull/267))
@@ -50,6 +52,10 @@
 
 ### Fix
 
+- **shard.lock**: bump models for JWT email downcasing ([#276](https://github.com/PlaceOS/staff-api/pull/276))
+- bump forbidden log levels ([#274](https://github.com/PlaceOS/staff-api/pull/274))
+- **tenants**: enable patching delegated state ([#272](https://github.com/PlaceOS/staff-api/pull/272))
+- **migration**: alter attendees booking_id column type ([#273](https://github.com/PlaceOS/staff-api/pull/273))
 - **events**: skip calendar check if it matches user ([#270](https://github.com/PlaceOS/staff-api/pull/270))
 - **events**: regression caused by missing calendar id ([#264](https://github.com/PlaceOS/staff-api/pull/264))
 - **survey**: survey questions deleted json property ([#262](https://github.com/PlaceOS/staff-api/pull/262))
@@ -190,8 +196,8 @@
 - **creds**: use placeos encryption model for credentials ([#58](https://github.com/PlaceOS/staff-api/pull/58))
 - **bookings**: don't reset state unless value changed
 - **tenant**: allow editing of tenants
-- metadata not found
 - update visitor name on event creation
+- metadata not found
 - **events**: resources marked as resources in office365
 - **guest checkin**: where user might not have calendar read access
 - get_placeos_client now proxies host header
