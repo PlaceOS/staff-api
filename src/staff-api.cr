@@ -60,6 +60,15 @@ puts "Launching #{App::NAME} v#{App::VERSION}"
 # Requiring config here ensures that the option parser runs before
 # attempting to connect to databases etc.
 require "./config"
+
+# Configure the database connection. First check if PG_DATABASE_URL environment variable
+# is set. If not, assume database configuration are set via individual environment variables
+if pg_url = ENV["PG_DATABASE_URL"]?
+  PgORM::Database.parse(pg_url)
+else
+  PgORM::Database.configure { |_| }
+end
+
 server = ActionController::Server.new(port, host)
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate

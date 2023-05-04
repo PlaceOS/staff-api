@@ -23,13 +23,8 @@ class Calendars < Application
 
   getter! matching_calendars : Hash(String, PlaceOS::Client::API::Models::System?)
 
-  struct Availability
+  record Availability, id : String, system : PlaceOS::Client::API::Models::System? = nil, availability : Array(PlaceCalendar::Availability)? = nil do
     include JSON::Serializable
-    include AutoInitialize
-
-    getter id : String
-    getter system : PlaceOS::Client::API::Models::System? = nil
-    getter availability : Array(PlaceCalendar::Availability)? = nil
   end
 
   # lists the users default calendars

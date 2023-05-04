@@ -56,7 +56,7 @@ module BookingsHelper
 
   def create_booking(tenant_id)
     user_email = Faker::Internet.email
-    create_booking(tenant_id: tenant_id, user_email: user_email)
+    create_booking(tenant_id: tenant_id.not_nil!, user_email: user_email)
   end
 
   def http_create_booking(
@@ -109,3 +109,5 @@ module BookingsHelper
     end
   end
 end
+
+BOOKINGS_BASE = Bookings.base_route

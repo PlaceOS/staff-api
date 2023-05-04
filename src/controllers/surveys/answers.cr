@@ -10,39 +10,22 @@ class Surveys::Answers < Application
     created_after : Int64? = nil,
     @[AC::Param::Info(description: "filters answers that were created before the unix epoch specified", example: "1661743123")]
     created_before : Int64? = nil
-  ) : Array(Survey::Answer::Responder)
-    query = Survey::Answer.query.select("id, question_id, survey_id, type, answer_json")
-
-    # filter
-    query = query.where(survey_id: survey_id) if survey_id
-    after_time = created_after ? Time.unix(created_after) : Time.unix(0)
-    before_time = created_before ? Time.unix(created_before) : Time.local
-    query = query.where { created_at.between(after_time, before_time) }
-
-    query.to_a.map(&.as_json)
+  ) : Array(Survey::Answer)
+    Survey::Answer.list(survey_id, created_after, created_before)
   end
 
   # creates a new survey answer
-  @[AC::Route::POST("/", body: :answer_body, status_code: HTTP::Status::CREATED)]
-  def create(answer_body : Array(Survey::Answer::Responder)) : Array(Survey::Answer::Responder)
-    answers = answer_body.map(&.to_answer)
-
-    survey_id = answers.first.survey_id
+  @[AC::Route::POST("/", body: :answers, status_code: HTTP::Status::CREATED)]
+  def create(answers : Array(Survey::Answer)) : Array(Survey::Answer)
+    survey_id = answers.first.survey_id.not_nil!
     raise Error::BadRequest.new("All answers must be for the same survey") unless answers.all? { |answer| answer.survey_id == survey_id }
 
-    all_survey_questions = Survey.find!(survey_id).question_ids
-    required_questions = Survey::Question
-      .query.select("id")
-      .where { id.in?(all_survey_questions) }
-      .where { required == true }
-      .to_a.map(&.id)
-
-    missing = required_questions - answers.map(&.question_id)
-    raise Error::BadRequest.new("Missing required answers for questions: #{missing.join(", ")}") if !missing.empty?
+    missing = Survey.missing_answers(survey_id, answers)
+    raise Error::BadRequest.new("Missing required answers for questions: #{missing.join(", ")}") unless missing.empty?
 
     answers.each do |answer|
-      raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating answer data") if !answer.save
+      answer.save! rescue raise Error::ModelValidation.new(answer.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating answer data")
     end
-    answers.map(&.as_json)
+    answers
   end
 end

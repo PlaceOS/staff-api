@@ -2,6 +2,7 @@ require "spec"
 
 # Helper methods for testing controllers (curl, with_server, context)
 require "action-controller/spec_helper"
+require "placeos-models/spec/generator"
 
 require "faker"
 require "timecop"
@@ -12,31 +13,33 @@ require "uuid"
 require "../src/config"
 require "webmock"
 
+PgORM::Database.parse(ENV["PG_DATABASE_URL"])
+
 Spec.before_suite do
   truncate_db
   # Since almost all specs need need tenant to work
-  TenantsHelper.create_tenant
+  PlaceOS::Model::Generator.tenant
 end
 
 Spec.before_suite do
   # -Dquiet
   {% if flag?(:quiet) %}
-    ::Log.setup(:warning)
+    ::Log.setup(:warn)
   {% else %}
     ::Log.setup(:debug)
   {% end %}
 end
 
 def get_tenant
-  Tenant.query.find! { domain == "toby.staff-api.dev" }
+  Tenant.find_by(domain: "toby.staff-api.dev")
 end
 
 def truncate_db
-  Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE guests CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE attendees CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE tenants CASCADE;")
+  Booking.truncate
+  EventMetadata.truncate
+  Guest.truncate
+  Attendee.truncate
+  Tenant.truncate
 end
 
 Spec.before_each &->WebMock.reset
@@ -135,16 +138,16 @@ module EventMetadatasHelper
                    host = Faker::Internet.email,
                    ext_data = JSON.parse({"foo": 123}.to_json),
                    ical_uid = "random_uid-#{Random.new.rand(500)}")
-    EventMetadata.create!({
-      tenant_id:         tenant_id,
-      system_id:         system_id,
-      event_id:          id,
-      host_email:        host,
+    EventMetadata.create!(
+      tenant_id: tenant_id,
+      system_id: system_id,
+      event_id: id,
+      host_email: host,
       resource_calendar: room_email,
-      event_start:       event_start,
-      event_end:         event_end,
-      ext_data:          ext_data,
-      ical_uid:          ical_uid,
-    })
+      event_start: event_start,
+      event_end: event_end,
+      ext_data: ext_data,
+      ical_uid: ical_uid,
+    )
   end
 end

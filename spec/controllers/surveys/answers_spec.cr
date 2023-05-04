@@ -1,8 +1,9 @@
 require "../../spec_helper"
-require "../helpers/spec_clean_up"
 require "../helpers/survey_helper"
 
 describe Surveys::Answers, tags: ["survey"] do
+  Spec.before_each { Survey::Answer.truncate }
+
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -13,7 +14,7 @@ describe Surveys::Answers, tags: ["survey"] do
       response = client.get(ANSWERS_BASE, headers: headers)
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
-      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers.map(&.id).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers.map(&.id.not_nil!).sort!)
     end
 
     it "should return a list of answers for a survey" do
@@ -29,8 +30,8 @@ describe Surveys::Answers, tags: ["survey"] do
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
 
-      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers1.map(&.id).sort!)
-      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers2.map(&.id).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers1.map(&.id.not_nil!).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers2.map(&.id.not_nil!).sort!)
     end
 
     it "should return a list of answers that were created in a range" do
@@ -54,9 +55,9 @@ describe Surveys::Answers, tags: ["survey"] do
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
 
-      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers1.map(&.id).sort!)
-      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers2.map(&.id).sort!)
-      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers3.map(&.id).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers1.map(&.id.not_nil!).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should eq(answers2.map(&.id.not_nil!).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers3.map(&.id.not_nil!).sort!)
     end
 
     it "should return a list of answers that were created after a specific time" do
@@ -79,8 +80,8 @@ describe Surveys::Answers, tags: ["survey"] do
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
 
-      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers1.map(&.id).sort!)
-      response_json.as_a.map(&.["id"].as_i).sort!.should eq((answers2.map(&.id) + answers3.map(&.id)).sort)
+      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers1.map(&.id.not_nil!).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should eq((answers2.map(&.id.not_nil!) + answers3.map(&.id.not_nil!)).sort)
     end
 
     it "should return a list of answers that were created before a specific time" do
@@ -103,8 +104,8 @@ describe Surveys::Answers, tags: ["survey"] do
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
 
-      response_json.as_a.map(&.["id"].as_i).sort!.should eq((answers1.map(&.id) + answers2.map(&.id)).sort)
-      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers3.map(&.id).sort!)
+      response_json.as_a.map(&.["id"].as_i).sort!.should eq((answers1.map(&.id.not_nil!) + answers2.map(&.id.not_nil!)).sort)
+      response_json.as_a.map(&.["id"].as_i).sort!.should_not eq(answers3.map(&.id.not_nil!).sort!)
     end
   end
 

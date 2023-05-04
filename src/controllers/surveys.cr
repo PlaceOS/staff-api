@@ -23,38 +23,33 @@ class Surveys < Application
     zone_id : String? = nil,
     @[AC::Param::Info(name: "building_id", description: "filters surveys by building_id", example: "building1234")]
     building_id : String? = nil
-  ) : Array(Survey::Responder)
-    query = Survey.query.select("id, title, description, trigger, zone_id, building_id, pages")
-
-    query = query.where(zone_id: zone_id) if zone_id
-    query = query.where(building_id: building_id) if building_id
-
-    query.to_a.map(&.as_json)
+  ) : Array(Survey)
+    Survey.list(zone_id, building_id)
   end
 
   # creates a new survey
-  @[AC::Route::POST("/", body: :survey_body, status_code: HTTP::Status::CREATED)]
-  def create(survey_body : Survey::Responder) : Survey::Responder
-    survey = survey_body.to_survey
-    raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey data") if !survey.save!
-    survey.as_json
+  @[AC::Route::POST("/", body: :survey, status_code: HTTP::Status::CREATED)]
+  def create(survey : Survey) : Survey
+    survey.save!
+  rescue ex
+    if ex.is_a?(PgORM::Error::RecordInvalid)
+      raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating survey data")
+    else
+      raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating survey data")
+    end
   end
 
   # patches an existing survey
   @[AC::Route::PUT("/:id", body: :survey_body)]
   @[AC::Route::PATCH("/:id", body: :survey_body)]
-  def update(survey_body : Survey::Responder) : Survey::Responder
-    changes = survey_body.to_survey(update: true)
-
-    {% for key in [:title, :description, :trigger, :zone_id, :building_id, :pages] %}
-      begin
-        survey.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
-      rescue NilAssertionError
-      end
-    {% end %}
-
-    raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey data") if !survey.save
-    survey.as_json
+  def update(survey_body : Survey) : Survey
+    survey.patch(survey_body)
+  rescue ex
+    if ex.is_a?(PgORM::Error::RecordInvalid)
+      raise Error::ModelValidation.new(survey.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating survey data")
+    else
+      raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating survey data")
+    end
   end
 
   # show a survey
@@ -62,8 +57,8 @@ class Surveys < Application
   def show(
     @[AC::Param::Info(name: "id", description: "the survey id", example: "1234")]
     survey_id : Int64
-  ) : Survey::Responder
-    survey.as_json
+  ) : Survey
+    survey
   end
 
   # deletes the survey

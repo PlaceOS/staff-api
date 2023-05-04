@@ -7,7 +7,7 @@ class Surveys::Invitations < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_invitation(token : String)
-    @invitation = Survey::Invitation.find!({token: token})
+    @invitation = Survey::Invitation.find_by(token: token)
   end
 
   getter! invitation : Survey::Invitation
@@ -23,39 +23,33 @@ class Surveys::Invitations < Application
     survey_id : Int64? = nil,
     @[AC::Param::Info(description: "filter by sent status", example: "false")]
     sent : Bool? = nil
-  ) : Array(Survey::Invitation::Responder)
-    query = Survey::Invitation.query.select("id, survey_id, token, email, sent")
-
-    # filter
-    query = query.where(survey_id: survey_id) if survey_id
-    query = query.where(sent: sent) unless sent.nil?
-
-    query.to_a.map(&.as_json)
+  ) : Array(Survey::Invitation)
+    Survey::Invitation.list(survey_id, sent)
   end
 
   # creates a new invitation
-  @[AC::Route::POST("/", body: :invitation_body, status_code: HTTP::Status::CREATED)]
-  def create(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
-    invitation = invitation_body.to_invitation
-    raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating invitation data") if !invitation.save
-    invitation.as_json
+  @[AC::Route::POST("/", body: :invitation, status_code: HTTP::Status::CREATED)]
+  def create(invitation : Survey::Invitation) : Survey::Invitation
+    invitation.save!
+  rescue ex
+    if ex.is_a?(PgORM::Error::RecordInvalid)
+      raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating invitation data")
+    else
+      raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating invitation data")
+    end
   end
 
   # patches an existing survey invitation
   @[AC::Route::PUT("/:token", body: :invitation_body)]
   @[AC::Route::PATCH("/:token", body: :invitation_body)]
-  def update(invitation_body : Survey::Invitation::Responder) : Survey::Invitation::Responder
-    changes = invitation_body.to_invitation(update: true)
-
-    {% for key in [:survey_id, :email, :sent] %}
-      begin
-        invitation.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_column.defined?
-      rescue NilAssertionError
-      end
-    {% end %}
-
-    raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.column, reason: error.reason} }, "error validating survey invitation data") if !invitation.save
-    invitation.as_json
+  def update(invitation_body : Survey::Invitation) : Survey::Invitation
+    invitation.patch(invitation_body)
+  rescue ex
+    if ex.is_a?(PgORM::Error::RecordInvalid)
+      raise Error::ModelValidation.new(invitation.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating survey invitation data")
+    else
+      raise Error::ModelValidation.new([{field: nil, reason: ex.message.to_s}.as({field: String?, reason: String})], "error validating survey invitation data")
+    end
   end
 
   # show an invitation
@@ -63,8 +57,8 @@ class Surveys::Invitations < Application
   def show(
     @[AC::Param::Info(name: "token", description: "the invitation token", example: "ABCDEF")]
     token : String
-  ) : Survey::Invitation::Responder
-    invitation.as_json
+  ) : Survey::Invitation
+    invitation
   end
 
   # deletes the invitation

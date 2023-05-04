@@ -1,8 +1,9 @@
 require "../../spec_helper"
-require "../helpers/spec_clean_up"
 require "../helpers/survey_helper"
 
 describe Surveys::Questions, tags: ["survey"] do
+  Spec.before_each { Survey::Question.truncate }
+
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -36,6 +37,7 @@ describe Surveys::Questions, tags: ["survey"] do
       response = client.get("#{QUESTIONS_BASE}?deleted=true", headers: headers)
       response.status_code.should eq(200)
       response_json = JSON.parse(response.body)
+
       response_json.as_a.map(&.["id"]).should contain(questions[0].id)
       response_json.as_a.map(&.["id"]).should_not contain(questions[1].id)
       response_json.as_a.map(&.["id"]).should_not contain(questions[2].id)
@@ -127,7 +129,7 @@ describe Surveys::Questions, tags: ["survey"] do
         response_body = JSON.parse(response.body)
         response_body["title"].should eq("Updated Title")
         response_body["id"].should_not eq(questions.first.id)
-        Survey::Question.find(response_body["id"]).not_nil!.deleted_at.should be_nil
+        Survey::Question.find(response_body["id"].as_i64).not_nil!.deleted_at.should be_nil
         Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
       end
     end
@@ -139,7 +141,7 @@ describe Surveys::Questions, tags: ["survey"] do
 
       response = client.get("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq(questions.first.as_json.to_json)
+      response.body.should eq(questions.first.to_json)
     end
 
     it "should show deleted=true for a soft-deleted questions" do
@@ -169,7 +171,7 @@ describe Surveys::Questions, tags: ["survey"] do
 
         response = client.delete("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers)
         response.status_code.should eq(202)
-        Survey::Question.find(questions.first.id).should be_nil
+        Survey::Question.find?(questions.first.id).should be_nil
       end
     end
 

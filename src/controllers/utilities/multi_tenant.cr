@@ -50,7 +50,7 @@ module Utils::MultiTenant
     end
 
     begin
-      @tenant = Tenant.query.find { domain == authority_domain_host }
+      @tenant = Tenant.find_by(domain: authority_domain_host)
       Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
     rescue error
       respond_with(:not_found) do

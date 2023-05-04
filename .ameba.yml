@@ -27,3 +27,6 @@ Style/QueryBoolMethods:
 
 Style/PredicateName:
   Enabled: false
+
+Lint/LiteralsComparison:
+  Enabled: false

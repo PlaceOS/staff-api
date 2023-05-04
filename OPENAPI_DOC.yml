@@ -173,7 +173,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Booking__BookingResponse'
+                  $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -251,7 +251,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Booking__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
         required: true
       parameters:
       - name: utm_source
@@ -277,7 +277,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -365,7 +365,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -443,7 +443,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Booking__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
         required: true
       parameters:
       - name: id
@@ -467,7 +467,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -636,7 +636,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Booking__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
         required: true
       parameters:
       - name: id
@@ -660,7 +660,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -756,7 +756,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -852,7 +852,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -955,7 +955,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -1058,7 +1058,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -1162,7 +1162,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Booking__BookingResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -1252,7 +1252,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Guest__GuestResponse'
+                  $ref: '#/components/schemas/PlaceOS__Model__Guest'
         400:
           description: Bad Request
           content:
@@ -1355,7 +1355,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Guest__GuestResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         400:
           description: Bad Request
           content:
@@ -1458,7 +1458,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Guest__GuestResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         400:
           description: Bad Request
           content:
@@ -3046,7 +3046,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
         400:
           description: Bad Request
           content:
@@ -3180,7 +3180,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EventMetadata__Assigner'
+                  $ref: '#/components/schemas/PlaceOS__Model__EventMetadata'
         400:
           description: Bad Request
           content:
@@ -3282,7 +3282,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Guest__GuestResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         400:
           description: Bad Request
           content:
@@ -3384,7 +3384,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Guest__GuestResponse'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         400:
           description: Bad Request
           content:
@@ -3739,7 +3739,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
         400:
           description: Bad Request
           content:
@@ -3805,7 +3805,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Guest__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Guest'
         required: true
       parameters: []
       responses:
@@ -3814,7 +3814,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
         400:
           description: Bad Request
           content:
@@ -3895,7 +3895,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
         400:
           description: Bad Request
           content:
@@ -3961,7 +3961,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Guest__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Guest'
         required: true
       parameters:
       - name: id
@@ -3980,7 +3980,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
         400:
           description: Bad Request
           content:
@@ -4121,7 +4121,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Guest__Assigner'
+              $ref: '#/components/schemas/PlaceOS__Model__Guest'
         required: true
       parameters:
       - name: id
@@ -4140,7 +4140,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_Attendee__AttendeeResponse___Guest__GuestResponse_'
+                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
         400:
           description: Bad Request
           content:
@@ -4336,7 +4336,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Booking__BookingResponse'
+                  $ref: '#/components/schemas/PlaceOS__Model__Booking'
         400:
           description: Bad Request
           content:
@@ -4842,7 +4842,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Survey__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Survey'
         400:
           description: Bad Request
           content:
@@ -4908,7 +4908,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey'
         required: true
       parameters: []
       responses:
@@ -4917,7 +4917,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey'
         400:
           description: Bad Request
           content:
@@ -4995,7 +4995,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey'
         400:
           description: Bad Request
           content:
@@ -5061,7 +5061,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey'
         required: true
       parameters:
       - name: id
@@ -5076,7 +5076,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey'
         400:
           description: Bad Request
           content:
@@ -5213,7 +5213,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey'
         required: true
       parameters:
       - name: id
@@ -5228,7 +5228,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey'
         400:
           description: Bad Request
           content:
@@ -5327,7 +5327,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Survey__Answer__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
         400:
           description: Bad Request
           content:
@@ -5393,7 +5393,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Array_Survey__Answer__Responder_'
+              $ref: '#/components/schemas/Array_PlaceOS__Model__Survey__Answer_'
         required: true
       parameters: []
       responses:
@@ -5404,7 +5404,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Survey__Answer__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
         400:
           description: Bad Request
           content:
@@ -5493,7 +5493,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Survey__Invitation__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         400:
           description: Bad Request
           content:
@@ -5559,7 +5559,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Invitation__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         required: true
       parameters: []
       responses:
@@ -5568,7 +5568,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Invitation__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         400:
           description: Bad Request
           content:
@@ -5645,7 +5645,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Invitation__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         400:
           description: Bad Request
           content:
@@ -5711,7 +5711,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Invitation__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         required: true
       parameters:
       - name: token
@@ -5725,7 +5725,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Invitation__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         400:
           description: Bad Request
           content:
@@ -5863,7 +5863,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Invitation__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         required: true
       parameters:
       - name: token
@@ -5877,7 +5877,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Invitation__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
         400:
           description: Bad Request
           content:
@@ -5966,7 +5966,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Survey__Question__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         400:
           description: Bad Request
           content:
@@ -6032,7 +6032,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Question__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         required: true
       parameters: []
       responses:
@@ -6041,7 +6041,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Question__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         400:
           description: Bad Request
           content:
@@ -6119,7 +6119,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Question__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         400:
           description: Bad Request
           content:
@@ -6189,7 +6189,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Question__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         required: true
       parameters:
       - name: id
@@ -6204,7 +6204,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Question__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         400:
           description: Bad Request
           content:
@@ -6349,7 +6349,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Survey__Question__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         required: true
       parameters:
       - name: id
@@ -6364,7 +6364,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Survey__Question__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
         400:
           description: Bad Request
           content:
@@ -6436,7 +6436,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Tenant__Responder'
+                  $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         400:
           description: Bad Request
           content:
@@ -6502,7 +6502,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Tenant__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         required: true
       parameters: []
       responses:
@@ -6511,7 +6511,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         400:
           description: Bad Request
           content:
@@ -6578,7 +6578,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Tenant__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         required: true
       parameters:
       - name: id
@@ -6593,7 +6593,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         400:
           description: Bad Request
           content:
@@ -6730,7 +6730,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Tenant__Responder'
+              $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         required: true
       parameters:
       - name: id
@@ -6745,7 +6745,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant__Responder'
+                $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
         400:
           description: Bad Request
           content:
@@ -7031,32 +7031,36 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
 components:
   schemas:
-    Booking__BookingResponse:
+    PlaceOS__Model__Booking:
       type: object
       properties:
-        id:
-          type: integer
-          format: Int64
         booking_type:
           type: string
+          nullable: true
         booking_start:
           type: integer
           format: Int64
+          nullable: true
         booking_end:
           type: integer
           format: Int64
+          nullable: true
         timezone:
           type: string
           nullable: true
         asset_id:
           type: string
+          nullable: true
         user_id:
           type: string
+          nullable: true
         user_email:
           type: string
           format: email
+          nullable: true
         user_name:
           type: string
+          nullable: true
         zones:
           type: array
           items:
@@ -7071,12 +7075,14 @@ components:
           nullable: true
         approved:
           type: boolean
+          nullable: true
         approved_at:
           type: integer
           format: Int64
           nullable: true
         rejected:
           type: boolean
+          nullable: true
         rejected_at:
           type: integer
           format: Int64
@@ -7103,6 +7109,7 @@ components:
           nullable: true
         checked_in:
           type: boolean
+          nullable: true
         checked_in_at:
           type: integer
           format: Int64
@@ -7116,6 +7123,7 @@ components:
           nullable: true
         deleted:
           type: boolean
+          nullable: true
         deleted_at:
           type: integer
           format: Int64
@@ -7123,24 +7131,16 @@ components:
         booked_by_email:
           type: string
           format: email
+          nullable: true
         booked_by_name:
           type: string
+          nullable: true
         booked_from:
           type: string
           nullable: true
         extension_data:
           type: object
-        current_state:
-          type: string
-          enum:
-          - reserved
-          - checked_in
-          - checked_out
-          - no_show
-          - rejected
-          - cancelled
-          - ended
-          - unknown
+          nullable: true
         history:
           type: array
           items:
@@ -7166,338 +7166,7 @@ components:
             required:
             - state
             - time
-        attendees:
-          type: array
-          items:
-            type: object
-            properties:
-              email:
-                type: string
-                format: email
-              name:
-                type: string
-                nullable: true
-              preferred_name:
-                type: string
-                nullable: true
-              phone:
-                type: string
-                nullable: true
-              organisation:
-                type: string
-                nullable: true
-              notes:
-                type: string
-                nullable: true
-              photo:
-                type: string
-                nullable: true
-              checked_in:
-                type: boolean
-                nullable: true
-              visit_expected:
-                type: boolean
-                nullable: true
-              event:
-                type: object
-                properties:
-                  event_start:
-                    type: integer
-                    format: Int64
-                  event_end:
-                    type: integer
-                    format: Int64
-                    nullable: true
-                  id:
-                    type: string
-                    nullable: true
-                  recurring_event_id:
-                    type: string
-                    nullable: true
-                  host:
-                    type: string
-                    nullable: true
-                  title:
-                    type: string
-                    nullable: true
-                  body:
-                    type: string
-                    nullable: true
-                  attendees:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                        email:
-                          type: string
-                        response_status:
-                          type: string
-                          nullable: true
-                        resource:
-                          type: boolean
-                          nullable: true
-                        organizer:
-                          type: boolean
-                          nullable: true
-                        checked_in:
-                          type: boolean
-                          nullable: true
-                        visit_expected:
-                          type: boolean
-                          nullable: true
-                        extension_data:
-                          type: object
-                          nullable: true
-                        preferred_name:
-                          type: string
-                          nullable: true
-                        phone:
-                          type: string
-                          nullable: true
-                        organisation:
-                          type: string
-                          nullable: true
-                        photo:
-                          type: string
-                          nullable: true
-                        notes:
-                          type: string
-                          nullable: true
-                        banned:
-                          type: boolean
-                          nullable: true
-                        dangerous:
-                          type: boolean
-                          nullable: true
-                      required:
-                      - name
-                      - email
-                  hide_attendees:
-                    type: boolean
-                  location:
-                    type: string
-                    nullable: true
-                  private:
-                    type: boolean
-                  all_day:
-                    type: boolean
-                  timezone:
-                    type: string
-                    nullable: true
-                  recurring:
-                    type: boolean
-                    nullable: true
-                  created:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  updated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  attachments:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          nullable: true
-                        name:
-                          type: string
-                        content_type:
-                          type: string
-                          nullable: true
-                        content_bytes:
-                          type: string
-                        size:
-                          type: integer
-                          format: Int32
-                          nullable: true
-                      required:
-                      - name
-                      - content_bytes
-                  recurrence:
-                    type: object
-                    properties:
-                      range_start:
-                        type: integer
-                        format: Int64
-                      range_end:
-                        type: integer
-                        format: Int64
-                      interval:
-                        type: integer
-                        format: Int32
-                      pattern:
-                        type: string
-                      days_of_week:
-                        type: string
-                        nullable: true
-                    required:
-                    - range_start
-                    - range_end
-                    - interval
-                    - pattern
-                    nullable: true
-                  status:
-                    type: string
-                    nullable: true
-                  creator:
-                    type: string
-                    nullable: true
-                  ical_uid:
-                    type: string
-                    nullable: true
-                  online_meeting_provider:
-                    type: string
-                    nullable: true
-                  online_meeting_phones:
-                    type: array
-                    items:
-                      type: string
-                    nullable: true
-                  online_meeting_url:
-                    type: string
-                    nullable: true
-                  online_meeting_sip:
-                    type: string
-                    nullable: true
-                  online_meeting_pin:
-                    type: string
-                    nullable: true
-                  online_meeting_id:
-                    type: string
-                    nullable: true
-                  extended_properties:
-                    type: object
-                    additionalProperties:
-                      type: string
-                      nullable: true
-                    nullable: true
-                  calendar:
-                    type: string
-                    nullable: true
-                  system_id:
-                    type: string
-                    nullable: true
-                  system:
-                    anyOf:
-                    - type: object
-                      properties:
-                        id:
-                          type: string
-                      required:
-                      - id
-                    - type: object
-                      properties:
-                        created_at:
-                          type: string
-                          format: date-time
-                        updated_at:
-                          type: string
-                          format: date-time
-                        id:
-                          type: string
-                        name:
-                          type: string
-                        zones:
-                          type: array
-                          items:
-                            type: string
-                        modules:
-                          type: array
-                          items:
-                            type: string
-                        description:
-                          type: string
-                          nullable: true
-                        email:
-                          type: string
-                          nullable: true
-                        display_name:
-                          type: string
-                          nullable: true
-                        code:
-                          type: string
-                          nullable: true
-                        type:
-                          type: string
-                          nullable: true
-                        map_id:
-                          type: string
-                          nullable: true
-                        capacity:
-                          type: integer
-                          format: Int32
-                        features:
-                          type: array
-                          items:
-                            type: string
-                        bookable:
-                          type: boolean
-                        installed_ui_devices:
-                          type: integer
-                          format: Int32
-                        support_url:
-                          type: string
-                          nullable: true
-                        version:
-                          type: integer
-                          format: Int32
-                      required:
-                      - created_at
-                      - updated_at
-                      - id
-                      - name
-                      - zones
-                      - modules
-                      - capacity
-                      - features
-                      - bookable
-                      - installed_ui_devices
-                      - version
-                    nullable: true
-                  extension_data:
-                    type: object
-                    nullable: true
-                  recurring_master_id:
-                    type: string
-                    nullable: true
-                required:
-                - event_start
-                - attendees
-                - hide_attendees
-                - private
-                - all_day
-                - attachments
-                nullable: true
-            required:
-            - email
           nullable: true
-      required:
-      - id
-      - booking_type
-      - booking_start
-      - booking_end
-      - asset_id
-      - user_id
-      - user_email
-      - user_name
-      - approved
-      - rejected
-      - checked_in
-      - deleted
-      - booked_by_email
-      - booked_by_name
-      - extension_data
-      - current_state
-      - history
-    Booking__Assigner:
-      type: object
-      properties:
         attendees:
           type: array
           items:
@@ -7550,167 +7219,29 @@ components:
             - name
             - email
           nullable: true
-        id:
-          type: integer
-          format: Int64
-          nullable: true
-        user_id:
-          type: string
-          nullable: true
-        user_email:
-          type: string
-          format: email
-          nullable: true
-        user_name:
-          type: string
-          nullable: true
-        asset_id:
-          type: string
-          nullable: true
-        zones:
-          type: array
-          items:
-            type: string
-          nullable: true
-        email_digest:
-          type: string
-          nullable: true
-        booking_type:
-          type: string
-          nullable: true
-        booking_start:
-          type: integer
-          format: Int64
-          nullable: true
-        booking_end:
-          type: integer
-          format: Int64
-          nullable: true
-        timezone:
-          type: string
-          nullable: true
-        title:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        deleted:
-          type: boolean
-          nullable: true
-        deleted_at:
-          type: integer
-          format: Int64
-          nullable: true
-        checked_in:
-          type: boolean
-          nullable: true
-        checked_in_at:
-          type: integer
-          format: Int64
-          nullable: true
-        checked_out_at:
-          type: integer
-          format: Int64
-          nullable: true
-        rejected:
-          type: boolean
-          nullable: true
-        rejected_at:
-          type: integer
-          format: Int64
-          nullable: true
-        approved:
-          type: boolean
-          nullable: true
-        approved_at:
-          type: integer
-          format: Int64
-          nullable: true
-        approver_id:
-          type: string
-          nullable: true
-        approver_email:
-          type: string
-          nullable: true
-        approver_name:
-          type: string
-          nullable: true
-        department:
-          type: string
-          nullable: true
-        event_id:
-          type: string
-          nullable: true
-        booked_by_id:
-          type: string
-          nullable: true
-        booked_by_email:
-          type: string
-          format: email
-          nullable: true
-        booked_by_email_digest:
-          type: string
-          nullable: true
-        booked_by_name:
-          type: string
-          nullable: true
-        booked_from:
-          type: string
-          nullable: true
-        process_state:
-          type: string
-          nullable: true
-        last_changed:
-          type: integer
-          format: Int64
-          nullable: true
-        created:
-          type: integer
-          format: Int64
-          nullable: true
-        extension_data:
-          type: object
-          nullable: true
-        history:
-          type: array
-          items:
-            type: object
-            properties:
-              state:
-                type: string
-                enum:
-                - reserved
-                - checked_in
-                - checked_out
-                - no_show
-                - rejected
-                - cancelled
-                - ended
-                - unknown
-              time:
-                type: integer
-                format: Int64
-              source:
-                type: string
-                nullable: true
-            required:
-            - state
-            - time
-          nullable: true
         tenant_id:
           type: integer
           format: Int64
           nullable: true
-    Guest__GuestResponse:
-      type: object
-      properties:
         id:
           type: integer
           format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceOS__Model__Guest:
+      type: object
+      properties:
         email:
           type: string
           format: email
+          nullable: true
         name:
           type: string
           nullable: true
@@ -7731,767 +7262,32 @@ components:
           nullable: true
         banned:
           type: boolean
+          nullable: true
         dangerous:
           type: boolean
-        extension_data:
-          type: object
-        checked_in:
-          type: boolean
           nullable: true
-        visit_expected:
-          type: boolean
-          nullable: true
-        booking:
-          type: object
-          properties:
-            id:
-              type: integer
-              format: Int64
-            booking_type:
-              type: string
-            booking_start:
-              type: integer
-              format: Int64
-            booking_end:
-              type: integer
-              format: Int64
-            timezone:
-              type: string
-              nullable: true
-            asset_id:
-              type: string
-            user_id:
-              type: string
-            user_email:
-              type: string
-              format: email
-            user_name:
-              type: string
-            zones:
-              type: array
-              items:
-                type: string
-              nullable: true
-            process_state:
-              type: string
-              nullable: true
-            last_changed:
-              type: integer
-              format: Int64
-              nullable: true
-            approved:
-              type: boolean
-            approved_at:
-              type: integer
-              format: Int64
-              nullable: true
-            rejected:
-              type: boolean
-            rejected_at:
-              type: integer
-              format: Int64
-              nullable: true
-            approver_id:
-              type: string
-              nullable: true
-            approver_name:
-              type: string
-              nullable: true
-            approver_email:
-              type: string
-              format: email
-              nullable: true
-            department:
-              type: string
-              nullable: true
-            event_id:
-              type: string
-              description: provided if this booking is associated with a calendar
-                event
-              nullable: true
-            title:
-              type: string
-              nullable: true
-            checked_in:
-              type: boolean
-            checked_in_at:
-              type: integer
-              format: Int64
-              nullable: true
-            checked_out_at:
-              type: integer
-              format: Int64
-              nullable: true
-            description:
-              type: string
-              nullable: true
-            deleted:
-              type: boolean
-            deleted_at:
-              type: integer
-              format: Int64
-              nullable: true
-            booked_by_email:
-              type: string
-              format: email
-            booked_by_name:
-              type: string
-            booked_from:
-              type: string
-              nullable: true
-            extension_data:
-              type: object
-            current_state:
-              type: string
-              enum:
-              - reserved
-              - checked_in
-              - checked_out
-              - no_show
-              - rejected
-              - cancelled
-              - ended
-              - unknown
-            history:
-              type: array
-              items:
-                type: object
-                properties:
-                  state:
-                    type: string
-                    enum:
-                    - reserved
-                    - checked_in
-                    - checked_out
-                    - no_show
-                    - rejected
-                    - cancelled
-                    - ended
-                    - unknown
-                  time:
-                    type: integer
-                    format: Int64
-                  source:
-                    type: string
-                    nullable: true
-                required:
-                - state
-                - time
-            attendees:
-              type: array
-              items:
-                type: object
-                properties:
-                  email:
-                    type: string
-                    format: email
-                  name:
-                    type: string
-                    nullable: true
-                  preferred_name:
-                    type: string
-                    nullable: true
-                  phone:
-                    type: string
-                    nullable: true
-                  organisation:
-                    type: string
-                    nullable: true
-                  notes:
-                    type: string
-                    nullable: true
-                  photo:
-                    type: string
-                    nullable: true
-                  checked_in:
-                    type: boolean
-                    nullable: true
-                  visit_expected:
-                    type: boolean
-                    nullable: true
-                  event:
-                    type: object
-                    properties:
-                      event_start:
-                        type: integer
-                        format: Int64
-                      event_end:
-                        type: integer
-                        format: Int64
-                        nullable: true
-                      id:
-                        type: string
-                        nullable: true
-                      recurring_event_id:
-                        type: string
-                        nullable: true
-                      host:
-                        type: string
-                        nullable: true
-                      title:
-                        type: string
-                        nullable: true
-                      body:
-                        type: string
-                        nullable: true
-                      attendees:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            name:
-                              type: string
-                            email:
-                              type: string
-                            response_status:
-                              type: string
-                              nullable: true
-                            resource:
-                              type: boolean
-                              nullable: true
-                            organizer:
-                              type: boolean
-                              nullable: true
-                            checked_in:
-                              type: boolean
-                              nullable: true
-                            visit_expected:
-                              type: boolean
-                              nullable: true
-                            extension_data:
-                              type: object
-                              nullable: true
-                            preferred_name:
-                              type: string
-                              nullable: true
-                            phone:
-                              type: string
-                              nullable: true
-                            organisation:
-                              type: string
-                              nullable: true
-                            photo:
-                              type: string
-                              nullable: true
-                            notes:
-                              type: string
-                              nullable: true
-                            banned:
-                              type: boolean
-                              nullable: true
-                            dangerous:
-                              type: boolean
-                              nullable: true
-                          required:
-                          - name
-                          - email
-                      hide_attendees:
-                        type: boolean
-                      location:
-                        type: string
-                        nullable: true
-                      private:
-                        type: boolean
-                      all_day:
-                        type: boolean
-                      timezone:
-                        type: string
-                        nullable: true
-                      recurring:
-                        type: boolean
-                        nullable: true
-                      created:
-                        type: string
-                        format: date-time
-                        nullable: true
-                      updated:
-                        type: string
-                        format: date-time
-                        nullable: true
-                      attachments:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              nullable: true
-                            name:
-                              type: string
-                            content_type:
-                              type: string
-                              nullable: true
-                            content_bytes:
-                              type: string
-                            size:
-                              type: integer
-                              format: Int32
-                              nullable: true
-                          required:
-                          - name
-                          - content_bytes
-                      recurrence:
-                        type: object
-                        properties:
-                          range_start:
-                            type: integer
-                            format: Int64
-                          range_end:
-                            type: integer
-                            format: Int64
-                          interval:
-                            type: integer
-                            format: Int32
-                          pattern:
-                            type: string
-                          days_of_week:
-                            type: string
-                            nullable: true
-                        required:
-                        - range_start
-                        - range_end
-                        - interval
-                        - pattern
-                        nullable: true
-                      status:
-                        type: string
-                        nullable: true
-                      creator:
-                        type: string
-                        nullable: true
-                      ical_uid:
-                        type: string
-                        nullable: true
-                      online_meeting_provider:
-                        type: string
-                        nullable: true
-                      online_meeting_phones:
-                        type: array
-                        items:
-                          type: string
-                        nullable: true
-                      online_meeting_url:
-                        type: string
-                        nullable: true
-                      online_meeting_sip:
-                        type: string
-                        nullable: true
-                      online_meeting_pin:
-                        type: string
-                        nullable: true
-                      online_meeting_id:
-                        type: string
-                        nullable: true
-                      extended_properties:
-                        type: object
-                        additionalProperties:
-                          type: string
-                          nullable: true
-                        nullable: true
-                      calendar:
-                        type: string
-                        nullable: true
-                      system_id:
-                        type: string
-                        nullable: true
-                      system:
-                        anyOf:
-                        - type: object
-                          properties:
-                            id:
-                              type: string
-                          required:
-                          - id
-                        - type: object
-                          properties:
-                            created_at:
-                              type: string
-                              format: date-time
-                            updated_at:
-                              type: string
-                              format: date-time
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            zones:
-                              type: array
-                              items:
-                                type: string
-                            modules:
-                              type: array
-                              items:
-                                type: string
-                            description:
-                              type: string
-                              nullable: true
-                            email:
-                              type: string
-                              nullable: true
-                            display_name:
-                              type: string
-                              nullable: true
-                            code:
-                              type: string
-                              nullable: true
-                            type:
-                              type: string
-                              nullable: true
-                            map_id:
-                              type: string
-                              nullable: true
-                            capacity:
-                              type: integer
-                              format: Int32
-                            features:
-                              type: array
-                              items:
-                                type: string
-                            bookable:
-                              type: boolean
-                            installed_ui_devices:
-                              type: integer
-                              format: Int32
-                            support_url:
-                              type: string
-                              nullable: true
-                            version:
-                              type: integer
-                              format: Int32
-                          required:
-                          - created_at
-                          - updated_at
-                          - id
-                          - name
-                          - zones
-                          - modules
-                          - capacity
-                          - features
-                          - bookable
-                          - installed_ui_devices
-                          - version
-                        nullable: true
-                      extension_data:
-                        type: object
-                        nullable: true
-                      recurring_master_id:
-                        type: string
-                        nullable: true
-                    required:
-                    - event_start
-                    - attendees
-                    - hide_attendees
-                    - private
-                    - all_day
-                    - attachments
-                    nullable: true
-                required:
-                - email
-              nullable: true
-          required:
-          - id
-          - booking_type
-          - booking_start
-          - booking_end
-          - asset_id
-          - user_id
-          - user_email
-          - user_name
-          - approved
-          - rejected
-          - checked_in
-          - deleted
-          - booked_by_email
-          - booked_by_name
-          - extension_data
-          - current_state
-          - history
-          nullable: true
-        event:
-          type: object
-          properties:
-            event_start:
-              type: integer
-              format: Int64
-            event_end:
-              type: integer
-              format: Int64
-              nullable: true
-            id:
-              type: string
-              nullable: true
-            recurring_event_id:
-              type: string
-              nullable: true
-            host:
-              type: string
-              nullable: true
-            title:
-              type: string
-              nullable: true
-            body:
-              type: string
-              nullable: true
-            attendees:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  email:
-                    type: string
-                  response_status:
-                    type: string
-                    nullable: true
-                  resource:
-                    type: boolean
-                    nullable: true
-                  organizer:
-                    type: boolean
-                    nullable: true
-                  checked_in:
-                    type: boolean
-                    nullable: true
-                  visit_expected:
-                    type: boolean
-                    nullable: true
-                  extension_data:
-                    type: object
-                    nullable: true
-                  preferred_name:
-                    type: string
-                    nullable: true
-                  phone:
-                    type: string
-                    nullable: true
-                  organisation:
-                    type: string
-                    nullable: true
-                  photo:
-                    type: string
-                    nullable: true
-                  notes:
-                    type: string
-                    nullable: true
-                  banned:
-                    type: boolean
-                    nullable: true
-                  dangerous:
-                    type: boolean
-                    nullable: true
-                required:
-                - name
-                - email
-            hide_attendees:
-              type: boolean
-            location:
-              type: string
-              nullable: true
-            private:
-              type: boolean
-            all_day:
-              type: boolean
-            timezone:
-              type: string
-              nullable: true
-            recurring:
-              type: boolean
-              nullable: true
-            created:
-              type: string
-              format: date-time
-              nullable: true
-            updated:
-              type: string
-              format: date-time
-              nullable: true
-            attachments:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    nullable: true
-                  name:
-                    type: string
-                  content_type:
-                    type: string
-                    nullable: true
-                  content_bytes:
-                    type: string
-                  size:
-                    type: integer
-                    format: Int32
-                    nullable: true
-                required:
-                - name
-                - content_bytes
-            recurrence:
-              type: object
-              properties:
-                range_start:
-                  type: integer
-                  format: Int64
-                range_end:
-                  type: integer
-                  format: Int64
-                interval:
-                  type: integer
-                  format: Int32
-                pattern:
-                  type: string
-                days_of_week:
-                  type: string
-                  nullable: true
-              required:
-              - range_start
-              - range_end
-              - interval
-              - pattern
-              nullable: true
-            status:
-              type: string
-              nullable: true
-            creator:
-              type: string
-              nullable: true
-            ical_uid:
-              type: string
-              nullable: true
-            online_meeting_provider:
-              type: string
-              nullable: true
-            online_meeting_phones:
-              type: array
-              items:
-                type: string
-              nullable: true
-            online_meeting_url:
-              type: string
-              nullable: true
-            online_meeting_sip:
-              type: string
-              nullable: true
-            online_meeting_pin:
-              type: string
-              nullable: true
-            online_meeting_id:
-              type: string
-              nullable: true
-            extended_properties:
-              type: object
-              additionalProperties:
-                type: string
-                nullable: true
-              nullable: true
-            calendar:
-              type: string
-              nullable: true
-            system_id:
-              type: string
-              nullable: true
-            system:
-              anyOf:
-              - type: object
-                properties:
-                  id:
-                    type: string
-                required:
-                - id
-              - type: object
-                properties:
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  zones:
-                    type: array
-                    items:
-                      type: string
-                  modules:
-                    type: array
-                    items:
-                      type: string
-                  description:
-                    type: string
-                    nullable: true
-                  email:
-                    type: string
-                    nullable: true
-                  display_name:
-                    type: string
-                    nullable: true
-                  code:
-                    type: string
-                    nullable: true
-                  type:
-                    type: string
-                    nullable: true
-                  map_id:
-                    type: string
-                    nullable: true
-                  capacity:
-                    type: integer
-                    format: Int32
-                  features:
-                    type: array
-                    items:
-                      type: string
-                  bookable:
-                    type: boolean
-                  installed_ui_devices:
-                    type: integer
-                    format: Int32
-                  support_url:
-                    type: string
-                    nullable: true
-                  version:
-                    type: integer
-                    format: Int32
-                required:
-                - created_at
-                - updated_at
-                - id
-                - name
-                - zones
-                - modules
-                - capacity
-                - features
-                - bookable
-                - installed_ui_devices
-                - version
-              nullable: true
-            extension_data:
-              type: object
-              nullable: true
-            recurring_master_id:
-              type: string
-              nullable: true
-          required:
-          - event_start
-          - attendees
-          - hide_attendees
-          - private
-          - all_day
-          - attachments
-          nullable: true
-        event_metadata:
+        searchable:
           type: string
           nullable: true
-      required:
-      - id
-      - email
-      - banned
-      - dangerous
-      - extension_data
+        extension_data:
+          type: object
+          nullable: true
+        tenant_id:
+          type: integer
+          format: Int64
+          nullable: true
+        id:
+          type: integer
+          format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
     PlaceCalendar__Calendar:
       type: object
       properties:
@@ -8791,6 +7587,9 @@ components:
             type: string
             nullable: true
           nullable: true
+        mailbox:
+          type: string
+          nullable: true
         calendar:
           type: string
           nullable: true
@@ -8889,1111 +7688,11 @@ components:
       - attachments
     JSON__Any:
       type: object
-    _Attendee__AttendeeResponse___Guest__GuestResponse_:
-      anyOf:
-      - type: object
-        properties:
-          email:
-            type: string
-            format: email
-          name:
-            type: string
-            nullable: true
-          preferred_name:
-            type: string
-            nullable: true
-          phone:
-            type: string
-            nullable: true
-          organisation:
-            type: string
-            nullable: true
-          notes:
-            type: string
-            nullable: true
-          photo:
-            type: string
-            nullable: true
-          checked_in:
-            type: boolean
-            nullable: true
-          visit_expected:
-            type: boolean
-            nullable: true
-          event:
-            type: object
-            properties:
-              event_start:
-                type: integer
-                format: Int64
-              event_end:
-                type: integer
-                format: Int64
-                nullable: true
-              id:
-                type: string
-                nullable: true
-              recurring_event_id:
-                type: string
-                nullable: true
-              host:
-                type: string
-                nullable: true
-              title:
-                type: string
-                nullable: true
-              body:
-                type: string
-                nullable: true
-              attendees:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    email:
-                      type: string
-                    response_status:
-                      type: string
-                      nullable: true
-                    resource:
-                      type: boolean
-                      nullable: true
-                    organizer:
-                      type: boolean
-                      nullable: true
-                    checked_in:
-                      type: boolean
-                      nullable: true
-                    visit_expected:
-                      type: boolean
-                      nullable: true
-                    extension_data:
-                      type: object
-                      nullable: true
-                    preferred_name:
-                      type: string
-                      nullable: true
-                    phone:
-                      type: string
-                      nullable: true
-                    organisation:
-                      type: string
-                      nullable: true
-                    photo:
-                      type: string
-                      nullable: true
-                    notes:
-                      type: string
-                      nullable: true
-                    banned:
-                      type: boolean
-                      nullable: true
-                    dangerous:
-                      type: boolean
-                      nullable: true
-                  required:
-                  - name
-                  - email
-              hide_attendees:
-                type: boolean
-              location:
-                type: string
-                nullable: true
-              private:
-                type: boolean
-              all_day:
-                type: boolean
-              timezone:
-                type: string
-                nullable: true
-              recurring:
-                type: boolean
-                nullable: true
-              created:
-                type: string
-                format: date-time
-                nullable: true
-              updated:
-                type: string
-                format: date-time
-                nullable: true
-              attachments:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      nullable: true
-                    name:
-                      type: string
-                    content_type:
-                      type: string
-                      nullable: true
-                    content_bytes:
-                      type: string
-                    size:
-                      type: integer
-                      format: Int32
-                      nullable: true
-                  required:
-                  - name
-                  - content_bytes
-              recurrence:
-                type: object
-                properties:
-                  range_start:
-                    type: integer
-                    format: Int64
-                  range_end:
-                    type: integer
-                    format: Int64
-                  interval:
-                    type: integer
-                    format: Int32
-                  pattern:
-                    type: string
-                  days_of_week:
-                    type: string
-                    nullable: true
-                required:
-                - range_start
-                - range_end
-                - interval
-                - pattern
-                nullable: true
-              status:
-                type: string
-                nullable: true
-              creator:
-                type: string
-                nullable: true
-              ical_uid:
-                type: string
-                nullable: true
-              online_meeting_provider:
-                type: string
-                nullable: true
-              online_meeting_phones:
-                type: array
-                items:
-                  type: string
-                nullable: true
-              online_meeting_url:
-                type: string
-                nullable: true
-              online_meeting_sip:
-                type: string
-                nullable: true
-              online_meeting_pin:
-                type: string
-                nullable: true
-              online_meeting_id:
-                type: string
-                nullable: true
-              extended_properties:
-                type: object
-                additionalProperties:
-                  type: string
-                  nullable: true
-                nullable: true
-              calendar:
-                type: string
-                nullable: true
-              system_id:
-                type: string
-                nullable: true
-              system:
-                anyOf:
-                - type: object
-                  properties:
-                    id:
-                      type: string
-                  required:
-                  - id
-                - type: object
-                  properties:
-                    created_at:
-                      type: string
-                      format: date-time
-                    updated_at:
-                      type: string
-                      format: date-time
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    zones:
-                      type: array
-                      items:
-                        type: string
-                    modules:
-                      type: array
-                      items:
-                        type: string
-                    description:
-                      type: string
-                      nullable: true
-                    email:
-                      type: string
-                      nullable: true
-                    display_name:
-                      type: string
-                      nullable: true
-                    code:
-                      type: string
-                      nullable: true
-                    type:
-                      type: string
-                      nullable: true
-                    map_id:
-                      type: string
-                      nullable: true
-                    capacity:
-                      type: integer
-                      format: Int32
-                    features:
-                      type: array
-                      items:
-                        type: string
-                    bookable:
-                      type: boolean
-                    installed_ui_devices:
-                      type: integer
-                      format: Int32
-                    support_url:
-                      type: string
-                      nullable: true
-                    version:
-                      type: integer
-                      format: Int32
-                  required:
-                  - created_at
-                  - updated_at
-                  - id
-                  - name
-                  - zones
-                  - modules
-                  - capacity
-                  - features
-                  - bookable
-                  - installed_ui_devices
-                  - version
-                nullable: true
-              extension_data:
-                type: object
-                nullable: true
-              recurring_master_id:
-                type: string
-                nullable: true
-            required:
-            - event_start
-            - attendees
-            - hide_attendees
-            - private
-            - all_day
-            - attachments
-            nullable: true
-        required:
-        - email
-      - type: object
-        properties:
-          id:
-            type: integer
-            format: Int64
-          email:
-            type: string
-            format: email
-          name:
-            type: string
-            nullable: true
-          preferred_name:
-            type: string
-            nullable: true
-          phone:
-            type: string
-            nullable: true
-          organisation:
-            type: string
-            nullable: true
-          notes:
-            type: string
-            nullable: true
-          photo:
-            type: string
-            nullable: true
-          banned:
-            type: boolean
-          dangerous:
-            type: boolean
-          extension_data:
-            type: object
-          checked_in:
-            type: boolean
-            nullable: true
-          visit_expected:
-            type: boolean
-            nullable: true
-          booking:
-            type: object
-            properties:
-              id:
-                type: integer
-                format: Int64
-              booking_type:
-                type: string
-              booking_start:
-                type: integer
-                format: Int64
-              booking_end:
-                type: integer
-                format: Int64
-              timezone:
-                type: string
-                nullable: true
-              asset_id:
-                type: string
-              user_id:
-                type: string
-              user_email:
-                type: string
-                format: email
-              user_name:
-                type: string
-              zones:
-                type: array
-                items:
-                  type: string
-                nullable: true
-              process_state:
-                type: string
-                nullable: true
-              last_changed:
-                type: integer
-                format: Int64
-                nullable: true
-              approved:
-                type: boolean
-              approved_at:
-                type: integer
-                format: Int64
-                nullable: true
-              rejected:
-                type: boolean
-              rejected_at:
-                type: integer
-                format: Int64
-                nullable: true
-              approver_id:
-                type: string
-                nullable: true
-              approver_name:
-                type: string
-                nullable: true
-              approver_email:
-                type: string
-                format: email
-                nullable: true
-              department:
-                type: string
-                nullable: true
-              event_id:
-                type: string
-                description: provided if this booking is associated with a calendar
-                  event
-                nullable: true
-              title:
-                type: string
-                nullable: true
-              checked_in:
-                type: boolean
-              checked_in_at:
-                type: integer
-                format: Int64
-                nullable: true
-              checked_out_at:
-                type: integer
-                format: Int64
-                nullable: true
-              description:
-                type: string
-                nullable: true
-              deleted:
-                type: boolean
-              deleted_at:
-                type: integer
-                format: Int64
-                nullable: true
-              booked_by_email:
-                type: string
-                format: email
-              booked_by_name:
-                type: string
-              booked_from:
-                type: string
-                nullable: true
-              extension_data:
-                type: object
-              current_state:
-                type: string
-                enum:
-                - reserved
-                - checked_in
-                - checked_out
-                - no_show
-                - rejected
-                - cancelled
-                - ended
-                - unknown
-              history:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    state:
-                      type: string
-                      enum:
-                      - reserved
-                      - checked_in
-                      - checked_out
-                      - no_show
-                      - rejected
-                      - cancelled
-                      - ended
-                      - unknown
-                    time:
-                      type: integer
-                      format: Int64
-                    source:
-                      type: string
-                      nullable: true
-                  required:
-                  - state
-                  - time
-              attendees:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    email:
-                      type: string
-                      format: email
-                    name:
-                      type: string
-                      nullable: true
-                    preferred_name:
-                      type: string
-                      nullable: true
-                    phone:
-                      type: string
-                      nullable: true
-                    organisation:
-                      type: string
-                      nullable: true
-                    notes:
-                      type: string
-                      nullable: true
-                    photo:
-                      type: string
-                      nullable: true
-                    checked_in:
-                      type: boolean
-                      nullable: true
-                    visit_expected:
-                      type: boolean
-                      nullable: true
-                    event:
-                      type: object
-                      properties:
-                        event_start:
-                          type: integer
-                          format: Int64
-                        event_end:
-                          type: integer
-                          format: Int64
-                          nullable: true
-                        id:
-                          type: string
-                          nullable: true
-                        recurring_event_id:
-                          type: string
-                          nullable: true
-                        host:
-                          type: string
-                          nullable: true
-                        title:
-                          type: string
-                          nullable: true
-                        body:
-                          type: string
-                          nullable: true
-                        attendees:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              name:
-                                type: string
-                              email:
-                                type: string
-                              response_status:
-                                type: string
-                                nullable: true
-                              resource:
-                                type: boolean
-                                nullable: true
-                              organizer:
-                                type: boolean
-                                nullable: true
-                              checked_in:
-                                type: boolean
-                                nullable: true
-                              visit_expected:
-                                type: boolean
-                                nullable: true
-                              extension_data:
-                                type: object
-                                nullable: true
-                              preferred_name:
-                                type: string
-                                nullable: true
-                              phone:
-                                type: string
-                                nullable: true
-                              organisation:
-                                type: string
-                                nullable: true
-                              photo:
-                                type: string
-                                nullable: true
-                              notes:
-                                type: string
-                                nullable: true
-                              banned:
-                                type: boolean
-                                nullable: true
-                              dangerous:
-                                type: boolean
-                                nullable: true
-                            required:
-                            - name
-                            - email
-                        hide_attendees:
-                          type: boolean
-                        location:
-                          type: string
-                          nullable: true
-                        private:
-                          type: boolean
-                        all_day:
-                          type: boolean
-                        timezone:
-                          type: string
-                          nullable: true
-                        recurring:
-                          type: boolean
-                          nullable: true
-                        created:
-                          type: string
-                          format: date-time
-                          nullable: true
-                        updated:
-                          type: string
-                          format: date-time
-                          nullable: true
-                        attachments:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                nullable: true
-                              name:
-                                type: string
-                              content_type:
-                                type: string
-                                nullable: true
-                              content_bytes:
-                                type: string
-                              size:
-                                type: integer
-                                format: Int32
-                                nullable: true
-                            required:
-                            - name
-                            - content_bytes
-                        recurrence:
-                          type: object
-                          properties:
-                            range_start:
-                              type: integer
-                              format: Int64
-                            range_end:
-                              type: integer
-                              format: Int64
-                            interval:
-                              type: integer
-                              format: Int32
-                            pattern:
-                              type: string
-                            days_of_week:
-                              type: string
-                              nullable: true
-                          required:
-                          - range_start
-                          - range_end
-                          - interval
-                          - pattern
-                          nullable: true
-                        status:
-                          type: string
-                          nullable: true
-                        creator:
-                          type: string
-                          nullable: true
-                        ical_uid:
-                          type: string
-                          nullable: true
-                        online_meeting_provider:
-                          type: string
-                          nullable: true
-                        online_meeting_phones:
-                          type: array
-                          items:
-                            type: string
-                          nullable: true
-                        online_meeting_url:
-                          type: string
-                          nullable: true
-                        online_meeting_sip:
-                          type: string
-                          nullable: true
-                        online_meeting_pin:
-                          type: string
-                          nullable: true
-                        online_meeting_id:
-                          type: string
-                          nullable: true
-                        extended_properties:
-                          type: object
-                          additionalProperties:
-                            type: string
-                            nullable: true
-                          nullable: true
-                        calendar:
-                          type: string
-                          nullable: true
-                        system_id:
-                          type: string
-                          nullable: true
-                        system:
-                          anyOf:
-                          - type: object
-                            properties:
-                              id:
-                                type: string
-                            required:
-                            - id
-                          - type: object
-                            properties:
-                              created_at:
-                                type: string
-                                format: date-time
-                              updated_at:
-                                type: string
-                                format: date-time
-                              id:
-                                type: string
-                              name:
-                                type: string
-                              zones:
-                                type: array
-                                items:
-                                  type: string
-                              modules:
-                                type: array
-                                items:
-                                  type: string
-                              description:
-                                type: string
-                                nullable: true
-                              email:
-                                type: string
-                                nullable: true
-                              display_name:
-                                type: string
-                                nullable: true
-                              code:
-                                type: string
-                                nullable: true
-                              type:
-                                type: string
-                                nullable: true
-                              map_id:
-                                type: string
-                                nullable: true
-                              capacity:
-                                type: integer
-                                format: Int32
-                              features:
-                                type: array
-                                items:
-                                  type: string
-                              bookable:
-                                type: boolean
-                              installed_ui_devices:
-                                type: integer
-                                format: Int32
-                              support_url:
-                                type: string
-                                nullable: true
-                              version:
-                                type: integer
-                                format: Int32
-                            required:
-                            - created_at
-                            - updated_at
-                            - id
-                            - name
-                            - zones
-                            - modules
-                            - capacity
-                            - features
-                            - bookable
-                            - installed_ui_devices
-                            - version
-                          nullable: true
-                        extension_data:
-                          type: object
-                          nullable: true
-                        recurring_master_id:
-                          type: string
-                          nullable: true
-                      required:
-                      - event_start
-                      - attendees
-                      - hide_attendees
-                      - private
-                      - all_day
-                      - attachments
-                      nullable: true
-                  required:
-                  - email
-                nullable: true
-            required:
-            - id
-            - booking_type
-            - booking_start
-            - booking_end
-            - asset_id
-            - user_id
-            - user_email
-            - user_name
-            - approved
-            - rejected
-            - checked_in
-            - deleted
-            - booked_by_email
-            - booked_by_name
-            - extension_data
-            - current_state
-            - history
-            nullable: true
-          event:
-            type: object
-            properties:
-              event_start:
-                type: integer
-                format: Int64
-              event_end:
-                type: integer
-                format: Int64
-                nullable: true
-              id:
-                type: string
-                nullable: true
-              recurring_event_id:
-                type: string
-                nullable: true
-              host:
-                type: string
-                nullable: true
-              title:
-                type: string
-                nullable: true
-              body:
-                type: string
-                nullable: true
-              attendees:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    email:
-                      type: string
-                    response_status:
-                      type: string
-                      nullable: true
-                    resource:
-                      type: boolean
-                      nullable: true
-                    organizer:
-                      type: boolean
-                      nullable: true
-                    checked_in:
-                      type: boolean
-                      nullable: true
-                    visit_expected:
-                      type: boolean
-                      nullable: true
-                    extension_data:
-                      type: object
-                      nullable: true
-                    preferred_name:
-                      type: string
-                      nullable: true
-                    phone:
-                      type: string
-                      nullable: true
-                    organisation:
-                      type: string
-                      nullable: true
-                    photo:
-                      type: string
-                      nullable: true
-                    notes:
-                      type: string
-                      nullable: true
-                    banned:
-                      type: boolean
-                      nullable: true
-                    dangerous:
-                      type: boolean
-                      nullable: true
-                  required:
-                  - name
-                  - email
-              hide_attendees:
-                type: boolean
-              location:
-                type: string
-                nullable: true
-              private:
-                type: boolean
-              all_day:
-                type: boolean
-              timezone:
-                type: string
-                nullable: true
-              recurring:
-                type: boolean
-                nullable: true
-              created:
-                type: string
-                format: date-time
-                nullable: true
-              updated:
-                type: string
-                format: date-time
-                nullable: true
-              attachments:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      nullable: true
-                    name:
-                      type: string
-                    content_type:
-                      type: string
-                      nullable: true
-                    content_bytes:
-                      type: string
-                    size:
-                      type: integer
-                      format: Int32
-                      nullable: true
-                  required:
-                  - name
-                  - content_bytes
-              recurrence:
-                type: object
-                properties:
-                  range_start:
-                    type: integer
-                    format: Int64
-                  range_end:
-                    type: integer
-                    format: Int64
-                  interval:
-                    type: integer
-                    format: Int32
-                  pattern:
-                    type: string
-                  days_of_week:
-                    type: string
-                    nullable: true
-                required:
-                - range_start
-                - range_end
-                - interval
-                - pattern
-                nullable: true
-              status:
-                type: string
-                nullable: true
-              creator:
-                type: string
-                nullable: true
-              ical_uid:
-                type: string
-                nullable: true
-              online_meeting_provider:
-                type: string
-                nullable: true
-              online_meeting_phones:
-                type: array
-                items:
-                  type: string
-                nullable: true
-              online_meeting_url:
-                type: string
-                nullable: true
-              online_meeting_sip:
-                type: string
-                nullable: true
-              online_meeting_pin:
-                type: string
-                nullable: true
-              online_meeting_id:
-                type: string
-                nullable: true
-              extended_properties:
-                type: object
-                additionalProperties:
-                  type: string
-                  nullable: true
-                nullable: true
-              calendar:
-                type: string
-                nullable: true
-              system_id:
-                type: string
-                nullable: true
-              system:
-                anyOf:
-                - type: object
-                  properties:
-                    id:
-                      type: string
-                  required:
-                  - id
-                - type: object
-                  properties:
-                    created_at:
-                      type: string
-                      format: date-time
-                    updated_at:
-                      type: string
-                      format: date-time
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    zones:
-                      type: array
-                      items:
-                        type: string
-                    modules:
-                      type: array
-                      items:
-                        type: string
-                    description:
-                      type: string
-                      nullable: true
-                    email:
-                      type: string
-                      nullable: true
-                    display_name:
-                      type: string
-                      nullable: true
-                    code:
-                      type: string
-                      nullable: true
-                    type:
-                      type: string
-                      nullable: true
-                    map_id:
-                      type: string
-                      nullable: true
-                    capacity:
-                      type: integer
-                      format: Int32
-                    features:
-                      type: array
-                      items:
-                        type: string
-                    bookable:
-                      type: boolean
-                    installed_ui_devices:
-                      type: integer
-                      format: Int32
-                    support_url:
-                      type: string
-                      nullable: true
-                    version:
-                      type: integer
-                      format: Int32
-                  required:
-                  - created_at
-                  - updated_at
-                  - id
-                  - name
-                  - zones
-                  - modules
-                  - capacity
-                  - features
-                  - bookable
-                  - installed_ui_devices
-                  - version
-                nullable: true
-              extension_data:
-                type: object
-                nullable: true
-              recurring_master_id:
-                type: string
-                nullable: true
-            required:
-            - event_start
-            - attendees
-            - hide_attendees
-            - private
-            - all_day
-            - attachments
-            nullable: true
-          event_metadata:
-            type: string
-            nullable: true
-        required:
-        - id
-        - email
-        - banned
-        - dangerous
-        - extension_data
-    EventMetadata__Assigner:
+    PlaceOS__Model__ModelWithAutoKey:
+      type: object
+    PlaceOS__Model__EventMetadata:
       type: object
       properties:
-        id:
-          type: integer
-          format: Int64
-          nullable: true
         system_id:
           type: string
           nullable: true
@@ -10024,6 +7723,18 @@ components:
           type: object
           nullable: true
         tenant_id:
+          type: integer
+          format: Int64
+          nullable: true
+        id:
+          type: integer
+          format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
           type: integer
           format: Int64
           nullable: true
@@ -10059,50 +7770,8 @@ components:
       - id
       - email
       - username
-    Guest__Assigner:
+    _PlaceOS__Model__Attendee___PlaceOS__Model__Guest_:
       type: object
-      properties:
-        id:
-          type: integer
-          format: Int64
-          nullable: true
-        email:
-          type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
-        preferred_name:
-          type: string
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-        organisation:
-          type: string
-          nullable: true
-        notes:
-          type: string
-          nullable: true
-        photo:
-          type: string
-          nullable: true
-        banned:
-          type: boolean
-          nullable: true
-        dangerous:
-          type: boolean
-          nullable: true
-        searchable:
-          type: string
-          nullable: true
-        extension_data:
-          type: object
-          nullable: true
-        tenant_id:
-          type: integer
-          format: Int64
-          nullable: true
     HealthCheck__BuildInfo:
       type: object
       properties:
@@ -10140,13 +7809,9 @@ components:
         username:
           type: string
           nullable: true
-    Survey__Responder:
+    PlaceOS__Model__Survey:
       type: object
       properties:
-        id:
-          type: integer
-          format: Int64
-          nullable: true
         title:
           type: string
           nullable: true
@@ -10154,7 +7819,18 @@ components:
           type: string
           nullable: true
         trigger:
-          type: object
+          type: string
+          enum:
+          - none
+          - reserved
+          - checkedin
+          - checkedout
+          - noshow
+          - rejected
+          - cancelled
+          - ended
+          - visitor_checkedin
+          - visitor_checkedout
           description: 'Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT,
             REJECTED, CANCELLED, VISITOR_CHECKEDIN, VISITOR_CHECKEDOUT'
           nullable: true
@@ -10183,12 +7859,26 @@ components:
             - title
             - question_order
           nullable: true
-    Survey__Answer__Responder:
-      type: object
-      properties:
         id:
           type: integer
           format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceOS__Model__Survey__Answer:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        answer_json:
+          type: object
           nullable: true
         question_id:
           type: integer
@@ -10198,20 +7888,28 @@ components:
           type: integer
           format: Int64
           nullable: true
-        type:
-          type: string
+        id:
+          type: integer
+          format: Int64
           nullable: true
-        answer_json:
-          type: object
+        created_at:
+          type: integer
+          format: Int64
           nullable: true
-    Array_Survey__Answer__Responder_:
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    Array_PlaceOS__Model__Survey__Answer_:
       type: array
       items:
         type: object
         properties:
-          id:
-            type: integer
-            format: Int64
+          type:
+            type: string
+            nullable: true
+          answer_json:
+            type: object
             nullable: true
           question_id:
             type: integer
@@ -10221,23 +7919,21 @@ components:
             type: integer
             format: Int64
             nullable: true
-          type:
-            type: string
+          id:
+            type: integer
+            format: Int64
             nullable: true
-          answer_json:
-            type: object
+          created_at:
+            type: integer
+            format: Int64
             nullable: true
-    Survey__Invitation__Responder:
+          updated_at:
+            type: integer
+            format: Int64
+            nullable: true
+    PlaceOS__Model__Survey__Invitation:
       type: object
       properties:
-        id:
-          type: integer
-          format: Int64
-          nullable: true
-        survey_id:
-          type: integer
-          format: Int64
-          nullable: true
         token:
           type: string
           nullable: true
@@ -10247,13 +7943,25 @@ components:
         sent:
           type: boolean
           nullable: true
-    Survey__Question__Responder:
-      type: object
-      properties:
+        survey_id:
+          type: integer
+          format: Int64
+          nullable: true
         id:
           type: integer
           format: Int64
           nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceOS__Model__Survey__Question:
+      type: object
+      properties:
         title:
           type: string
           nullable: true
@@ -10281,10 +7989,23 @@ components:
           items:
             type: string
           nullable: true
-        deleted:
-          type: boolean
+        deleted_at:
+          type: integer
+          format: Int64
           nullable: true
-    Tenant__Responder:
+        id:
+          type: integer
+          format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceOS__Model__Tenant__Responder:
       type: object
       properties:
         id:
@@ -10414,6 +8135,209 @@ components:
           type: array
           items:
             type: object
+            properties:
+              booking_type:
+                type: string
+                nullable: true
+              booking_start:
+                type: integer
+                format: Int64
+                nullable: true
+              booking_end:
+                type: integer
+                format: Int64
+                nullable: true
+              timezone:
+                type: string
+                nullable: true
+              asset_id:
+                type: string
+                nullable: true
+              user_id:
+                type: string
+                nullable: true
+              user_email:
+                type: string
+                format: email
+                nullable: true
+              user_name:
+                type: string
+                nullable: true
+              zones:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              process_state:
+                type: string
+                nullable: true
+              last_changed:
+                type: integer
+                format: Int64
+                nullable: true
+              approved:
+                type: boolean
+                nullable: true
+              approved_at:
+                type: integer
+                format: Int64
+                nullable: true
+              rejected:
+                type: boolean
+                nullable: true
+              rejected_at:
+                type: integer
+                format: Int64
+                nullable: true
+              approver_id:
+                type: string
+                nullable: true
+              approver_name:
+                type: string
+                nullable: true
+              approver_email:
+                type: string
+                format: email
+                nullable: true
+              department:
+                type: string
+                nullable: true
+              event_id:
+                type: string
+                description: provided if this booking is associated with a calendar
+                  event
+                nullable: true
+              title:
+                type: string
+                nullable: true
+              checked_in:
+                type: boolean
+                nullable: true
+              checked_in_at:
+                type: integer
+                format: Int64
+                nullable: true
+              checked_out_at:
+                type: integer
+                format: Int64
+                nullable: true
+              description:
+                type: string
+                nullable: true
+              deleted:
+                type: boolean
+                nullable: true
+              deleted_at:
+                type: integer
+                format: Int64
+                nullable: true
+              booked_by_email:
+                type: string
+                format: email
+                nullable: true
+              booked_by_name:
+                type: string
+                nullable: true
+              booked_from:
+                type: string
+                nullable: true
+              extension_data:
+                type: object
+                nullable: true
+              history:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    state:
+                      type: string
+                      enum:
+                      - reserved
+                      - checked_in
+                      - checked_out
+                      - no_show
+                      - rejected
+                      - cancelled
+                      - ended
+                      - unknown
+                    time:
+                      type: integer
+                      format: Int64
+                    source:
+                      type: string
+                      nullable: true
+                  required:
+                  - state
+                  - time
+                nullable: true
+              attendees:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    response_status:
+                      type: string
+                      nullable: true
+                    resource:
+                      type: boolean
+                      nullable: true
+                    organizer:
+                      type: boolean
+                      nullable: true
+                    checked_in:
+                      type: boolean
+                      nullable: true
+                    visit_expected:
+                      type: boolean
+                      nullable: true
+                    extension_data:
+                      type: object
+                      nullable: true
+                    preferred_name:
+                      type: string
+                      nullable: true
+                    phone:
+                      type: string
+                      nullable: true
+                    organisation:
+                      type: string
+                      nullable: true
+                    photo:
+                      type: string
+                      nullable: true
+                    notes:
+                      type: string
+                      nullable: true
+                    banned:
+                      type: boolean
+                      nullable: true
+                    dangerous:
+                      type: boolean
+                      nullable: true
+                  required:
+                  - name
+                  - email
+                nullable: true
+              tenant_id:
+                type: integer
+                format: Int64
+                nullable: true
+              id:
+                type: integer
+                format: Int64
+                nullable: true
+              created_at:
+                type: integer
+                format: Int64
+                nullable: true
+              updated_at:
+                type: integer
+                format: Int64
+                nullable: true
           nullable: true
       required:
       - error
