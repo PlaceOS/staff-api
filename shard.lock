@@ -55,7 +55,7 @@ shards:
 
   eventbus:
     git: https://github.com/spider-gazelle/eventbus.git
-    version: 0.9.9+git.commit.086b2ba92475b88e8481b0387eb56c735cbfd7bd
+    version: 0.9.9+git.commit.1f0e2524e766b10d9dc72705fa6578858e8e0b1b
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -108,7 +108,6 @@ shards:
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
     version: 1.13.0
-    version: 1.13.0
 
   office365:
     git: https://github.com/placeos/office365.git
@@ -133,11 +132,9 @@ shards:
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
     version: 0.5.1+git.commit.d698621cdc7722475e56e6dd8a7c07272432f270
-    version: 0.5.1+git.commit.d698621cdc7722475e56e6dd8a7c07272432f270
 
   opentelemetry-sdk:
     git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
-    version: 0.6.1
     version: 0.6.1
 
   pars:
@@ -158,8 +155,7 @@ shards:
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 1.0.0+git.commit.648bbb3af8917adcc868788d19d705e7811352dc
-    version: 1.0.0+git.commit.648bbb3af8917adcc868788d19d705e7811352dc
+    version: 1.0.0+git.commit.6bbddb37fc24ce3253937b54f12fe86882b83e14
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
@@ -167,7 +163,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.7.3
+    version: 2.7.5
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -179,7 +175,6 @@ shards:
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
-    version: 0.2.4
     version: 0.2.4
 
   promise:
@@ -196,7 +191,6 @@ shards:
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
-    version: 2.9.1
     version: 2.9.1
 
   retriable:
