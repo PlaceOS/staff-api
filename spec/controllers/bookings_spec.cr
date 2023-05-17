@@ -1167,4 +1167,79 @@ describe Bookings do
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers).body).as_h
     body["checked_in"].should eq(false)
   end
+
+  it "#create and #update parent child" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    user_name = Faker::Internet.user_name
+    user_email = Faker::Internet.email
+    starting = Random.new.rand(5..19).minutes.from_now.to_unix
+    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
+    created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
+      {
+          "name": "#{user_name}",
+          "email": "#{user_email}",
+          "checked_in": true,
+          "visit_expected": true
+      }]})
+    ).body)
+    created["asset_id"].should eq("some_desk")
+    created["booking_start"].should eq(starting)
+    created["booking_end"].should eq(ending)
+
+    parent_id = created["id"]
+
+    child = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+      body: %({"parent_id": #{parent_id},"asset_id":"some_locker","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
+    {
+        "name": "#{user_name}",
+        "email": "#{user_email}",
+        "checked_in": true,
+        "visit_expected": true
+    }]})
+    ).body)
+    child["asset_id"].should eq("some_locker")
+    child["booking_start"].should eq(starting)
+    child["booking_end"].should eq(ending)
+    child["parent_id"].should eq(parent_id)
+
+    child_id = child["id"]
+
+    # Changing start/end time should be cascaded to children
+    starting = Random.new.rand(5..19).minutes.from_now.to_unix
+    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
+    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{parent_id}", headers: headers,
+      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
+
+    updated["booking_start"].should eq(starting)
+    updated["booking_end"].should eq(ending)
+    updated["linked_bookings"][0]["booking_start"].should eq(starting)
+    updated["linked_bookings"][0]["booking_end"].should eq(ending)
+
+    # Updating start/end on child should fail
+    starting = Random.new.rand(5..19).minutes.from_now.to_unix
+    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
+    updated = client.patch("#{BOOKINGS_BASE}/#{child_id}", headers: headers,
+      body: %({"asset_id":"some_locker","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).status_code
+
+    updated.should eq(405)
+
+    # Deleting parent booking should delete all its children as well
+    deleted = client.delete("#{BOOKINGS_BASE}/#{parent_id}/", headers: headers).status_code
+    deleted.should eq(202)
+    booking = Booking.find(parent_id.as_i64)
+    booking.children.not_nil!.size.should be > 0
+    # check that it was deleted
+    booking.deleted.should be_true
+    booking.children.not_nil!.all? { |b| b.deleted == true }.should be_true
+  end
 end
