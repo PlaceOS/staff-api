@@ -5,6 +5,13 @@ class Bookings < Application
   # Filters
   # =====================
 
+  @[AC::Route::Filter(:around_action, only: [:create, :update])]
+  def wrap_in_transaction(&)
+    PgORM::Database.transaction do
+      yield
+    end
+  end
+
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_booking(id : Int64)
     @booking = Booking
