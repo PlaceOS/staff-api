@@ -6,7 +6,7 @@ class Bookings < Application
   # =====================
 
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
-  def wrap_in_transaction
+  def wrap_in_transaction(&)
     PgORM::Database.transaction do
       yield
     end
