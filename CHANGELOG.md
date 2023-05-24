@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: include ical_uid in signals
 - **bookings**: [PPT-387] implement linked bookings child parent relationship ([#278](https://github.com/PlaceOS/staff-api/pull/278))
 - **survey**: [PPT-358] add visitor triggers ([#275](https://github.com/PlaceOS/staff-api/pull/275))
 - **events**: add events filter with ical uid ([#271](https://github.com/PlaceOS/staff-api/pull/271))
