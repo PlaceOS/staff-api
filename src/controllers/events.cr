@@ -189,13 +189,14 @@ class Events < Application
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
-          action:    :create,
-          system_id: input_event.system_id,
-          event_id:  created_event.id,
-          host:      host,
-          resource:  sys.email,
-          event:     created_event,
-          ext_data:  input_event.extension_data,
+          action:         :create,
+          system_id:      input_event.system_id,
+          event_id:       created_event.id,
+          event_ical_uid: created_event.ical_uid,
+          host:           host,
+          resource:       sys.email,
+          event:          created_event,
+          ext_data:       input_event.extension_data,
         })
       end
 
@@ -259,6 +260,7 @@ class Events < Application
                 action:         :meeting_created,
                 system_id:      sys.id,
                 event_id:       created_event.id,
+                event_ical_uid: created_event.ical_uid,
                 host:           host,
                 resource:       sys.email,
                 event_summary:  created_event.title,
@@ -516,6 +518,7 @@ class Events < Application
                   action:         :meeting_update,
                   system_id:      sys.id,
                   event_id:       event_id,
+                  event_ical_uid: updated_event.ical_uid,
                   host:           host,
                   resource:       sys.email,
                   event_summary:  updated_event.not_nil!.title,
@@ -538,6 +541,7 @@ class Events < Application
                 action:         :meeting_update,
                 system_id:      sys.id,
                 event_id:       event_id,
+                event_ical_uid: updated_event.ical_uid,
                 host:           host,
                 resource:       sys.email,
                 event_summary:  updated_event.not_nil!.title,
@@ -559,13 +563,14 @@ class Events < Application
       spawn do
         sys = system.not_nil!
         placeos_client.root.signal("staff/event/changed", {
-          action:    :update,
-          system_id: sys.id,
-          event_id:  original_id,
-          host:      host,
-          resource:  sys.email,
-          event:     updated_event,
-          ext_data:  eventmeta.try &.ext_data,
+          action:         :update,
+          system_id:      sys.id,
+          event_id:       original_id,
+          event_ical_uid: updated_event.ical_uid,
+          host:           host,
+          resource:       sys.email,
+          event:          updated_event,
+          ext_data:       eventmeta.try &.ext_data,
         })
       end
 
@@ -708,13 +713,14 @@ class Events < Application
 
     spawn do
       placeos_client.root.signal("staff/event/changed", {
-        action:    :update,
-        system_id: system.id,
-        event_id:  original_id,
-        host:      meta.host_email,
-        resource:  system.email,
-        event:     event,
-        ext_data:  meta.ext_data,
+        action:         :update,
+        system_id:      system.id,
+        event_id:       original_id,
+        event_ical_uid: meta.ical_uid,
+        host:           meta.host_email,
+        resource:       system.email,
+        event:          event,
+        ext_data:       meta.ext_data,
       })
     end
 
@@ -905,11 +911,12 @@ class Events < Application
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
-          action:    :cancelled,
-          system_id: system.not_nil!.id,
-          event_id:  event_id,
-          resource:  system.not_nil!.email,
-          event:     event,
+          action:         :cancelled,
+          system_id:      system.not_nil!.id,
+          event_id:       event_id,
+          event_ical_uid: event.ical_uid,
+          resource:       system.not_nil!.email,
+          event:          event,
         })
       end
     end
@@ -1135,6 +1142,7 @@ class Events < Application
         checkin:        checkin,
         system_id:      system_id,
         event_id:       event_id,
+        event_ical_uid: eventmeta.ical_uid,
         host:           event.host,
         resource:       eventmeta.resource_calendar,
         event_summary:  event.not_nil!.title,
