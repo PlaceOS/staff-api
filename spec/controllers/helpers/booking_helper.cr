@@ -32,7 +32,10 @@ module BookingsHelper
     booking = create_booking(tenant_id)
     booking.booking_start = booking_start
     booking.booking_end = booking_end
-    booking.save!
+    unless booking.save
+      raise booking.errors.inspect
+    end
+    booking
   end
 
   def create_booking(tenant_id : Int64, user_email : String, zones : Array(String), booking_start : Int64, booking_end : Int64)
