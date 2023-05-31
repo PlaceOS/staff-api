@@ -71,17 +71,19 @@ class Bookings < Application
   # Routes
   # =====================
 
-  PARAMS = %w(checked_in created_before created_after approved rejected extension_data state department event_id)
+  PARAMS = %w(booking_type checked_in created_before created_after approved rejected extension_data state department)
 
   # lists bookings based on the parameters provided
+  #
+  # booking_type is required unless event_id or ical_uid is present
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
-    starting : Int64,
+    starting : Int64 = Time.utc.to_unix,
     @[AC::Param::Info(name: "period_end", description: "booking period end as a unix epoch", example: "1661743123")]
-    ending : Int64,
+    ending : Int64 = 1.hours.from_now.to_unix,
     @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
-    booking_type : String,
+    booking_type : String? = nil,
     @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
     deleted_flag : Bool = false,
     @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
@@ -113,23 +115,41 @@ class Bookings < Application
     state : String? = nil,
     @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
     department : String? = nil,
+
     @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    event_id : String? = nil
+    event_id : String? = nil,
+    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    ical_uid : String? = nil
   ) : Array(Booking)
-    query = Booking.by_tenant(tenant.id).where(
-      %("booking_start" < ? AND "booking_end" > ? AND "booking_type" = ?),
-      ending, starting, booking_type)
+    query = Booking.by_tenant(tenant.id)
+    event_ids = [event_id.presence, ical_uid.presence].compact
 
-    zones = Set.new((zones || "").split(',').map(&.strip).reject(&.empty?)).to_a
-    query = query.by_zones(zones) unless zones.empty?
+    if event_ids.empty?
+      raise AC::Route::Param::MissingError.new("missing required parameter", "booking_type", "String") unless booking_type.presence
 
-    # We want to do a special current user query if no user details are provided
-    if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
-      user_id = user_token.id
-      user_email = user.email
+      query = query.where(
+        %("booking_start" < ? AND "booking_end" > ?),
+        ending, starting
+      )
+
+      zones = Set.new((zones || "").split(',').map(&.strip).reject(&.empty?)).to_a
+      query = query.by_zones(zones) unless zones.empty?
+
+      # We want to do a special current user query if no user details are provided
+      if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
+        user_id = user_token.id
+        user_email = user.email
+      end
+
+      query = query.by_user_or_email(user_id, user_email, include_booked_by)
+    else
+      metadata_ids = EventMetadata.by_tenant(tenant.id).where(
+        %["event_id" IN (?) OR "ical_uid" IN (?)"], event_ids.join(","), event_ids.join(",")
+      ).ids.to_a
+
+      return [] of Booking if metadata_ids.empty?
+      query = query.where({:event_id => metadata_ids})
     end
-
-    query = query.by_user_or_email(user_id, user_email, include_booked_by)
 
     {% for param in PARAMS %}
       if !{{param.id}}.nil?
@@ -158,7 +178,12 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil,
     @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
-    limit_override : Int32? = nil
+    limit_override : Int32? = nil,
+
+    @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String? = nil,
+    @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    ical_uid : String? = nil
   ) : Booking
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
@@ -170,11 +195,20 @@ class Bookings < Application
     # check there isn't a clashing booking
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
+
+    event_ids = [event_id.presence, ical_uid.presence].compact
+    if !event_ids.empty?
+      id_query = event_ids.join(",")
+      metadata_ids = EventMetadata.by_tenant(tenant.id).where(
+        %["event_id" IN (?) OR "ical_uid" IN (?)"], id_query, id_query
+      ).ids.to_a
+
+      raise Error::ModelValidation.new([{field: "event_id".as(String?), reason: "Could not find metadata for event #{id_query}"}], "error linking booking to event") if metadata_ids.empty?
+      booking.event_id = metadata_ids.first
+    end
+
     # Add utm_source
     booking.utm_source = utm_source
-
-    # clear history
-    booking.history = [] of Booking::History
 
     # Add the tenant details
     booking.tenant_id = tenant.id.not_nil!
