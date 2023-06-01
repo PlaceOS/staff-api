@@ -45,6 +45,7 @@ class StaffApi::Event
     event.attendees = attendees
     event.system = system
     event.extension_data = metadata.try(&.ext_data)
+    event.linked_bookings = metadata.try(&.bookings.to_a.tap &.each(&.render_event=(false)))
     event.recurring_master_id = event.recurring_event_id
 
     event
@@ -70,6 +71,9 @@ class PlaceCalendar::Event
 
   property extension_data : JSON::Any?
   property recurring_master_id : String?
+
+  @[JSON::Field(ignore_deserialize: true)]
+  property linked_bookings : Array(PlaceOS::Model::Booking)? = nil
 
   struct Attendee
     property checked_in : Bool?

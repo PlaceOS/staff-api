@@ -144,7 +144,7 @@ class Bookings < Application
       query = query.by_user_or_email(user_id, user_email, include_booked_by)
     else
       metadata_ids = EventMetadata.by_tenant(tenant.id).where(
-        %["event_id" IN (?) OR "ical_uid" IN (?)"], event_ids.join(","), event_ids.join(",")
+        %["event_id" IN (?) OR "ical_uid" IN (?)], event_ids.join(","), event_ids.join(",")
       ).ids.to_a
 
       return [] of Booking if metadata_ids.empty?
@@ -200,7 +200,7 @@ class Bookings < Application
     if !event_ids.empty?
       id_query = event_ids.join(",")
       metadata_ids = EventMetadata.by_tenant(tenant.id).where(
-        %["event_id" IN (?) OR "ical_uid" IN (?)"], id_query, id_query
+        %["event_id" IN (?) OR "ical_uid" IN (?)], id_query, id_query
       ).ids.to_a
 
       raise Error::ModelValidation.new([{field: "event_id".as(String?), reason: "Could not find metadata for event #{id_query}"}], "error linking booking to event") if metadata_ids.empty?
