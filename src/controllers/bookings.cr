@@ -213,6 +213,9 @@ class Bookings < Application
     # Add the tenant details
     booking.tenant_id = tenant.id.not_nil!
 
+    # clear history
+    booking.history = [] of Booking::History
+
     # Add the user details
     booking.booked_by_id = user_token.id
     booking.booked_by_email = PlaceOS::Model::Email.new(user.email)
