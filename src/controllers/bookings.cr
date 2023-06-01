@@ -184,6 +184,16 @@ class Bookings < Application
     booking.booked_by_email = PlaceOS::Model::Email.new(user.email)
     booking.booked_by_name = user.name
 
+    attendees = booking.req_attendees
+
+    if attendees && !attendees.empty?
+      attendees.each do |attendee|
+        unless attendee.response_status
+          attendee.response_status = "needsAction"
+        end
+      end
+    end
+
     # check concurrent bookings don't exceed booking limits
     check_booking_limits(tenant, booking, limit_override)
     booking.save! rescue raise Error::ModelValidation.new(booking.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking data")
