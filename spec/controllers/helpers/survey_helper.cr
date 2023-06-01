@@ -35,7 +35,7 @@ module SurveyHelper
   end
 
   def create_questions : Array(Survey::Question)
-    question_responders.map { |q| q.save! }
+    question_responders.map { |q| q.save!.reload! }
   end
 
   def survey_responder(question_order = [] of Int64, zone_id = nil, building_id = nil, trigger = nil)

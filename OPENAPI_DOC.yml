@@ -8,6 +8,10 @@ paths:
   /api/staff/v1/bookings:
     get:
       summary: lists bookings based on the parameters provided
+      description: 'lists bookings based on the parameters provided
+
+
+        booking_type is required unless event_id or ical_uid is present'
       tags:
       - Bookings
       operationId: Bookings#index
@@ -16,7 +20,7 @@ paths:
         in: query
         description: booking period start as a unix epoch
         example: "1661725146"
-        required: true
+        required: false
         schema:
           type: integer
           format: Int64
@@ -24,7 +28,7 @@ paths:
         in: query
         description: booking period end as a unix epoch
         example: "1661743123"
-        required: true
+        required: false
         schema:
           type: integer
           format: Int64
@@ -32,9 +36,10 @@ paths:
         in: query
         description: the generic name of the asset whose bookings you wish to view
         example: desk
-        required: true
+        required: false
         schema:
           type: string
+          nullable: true
       - name: deleted
         in: query
         description: when true, it returns deleted bookings
@@ -165,6 +170,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: ical_uid
+        in: query
+        description: filters bookings associated with an event, such as an Office365
+          Calendar event ical_uid
+        example: 19rh93h5t893h5v@calendar.iCloud.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -270,6 +284,24 @@ paths:
         schema:
           type: integer
           format: Int32
+          nullable: true
+      - name: event_id
+        in: query
+        description: links booking with an event, such as an Office365 Calendar event
+          id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: ical_uid
+        in: query
+        description: links booking with an event, such as an Office365 Calendar event
+          ical_uid
+        example: 19rh93h5t893h5v@calendar.iCloud.com
+        required: false
+        schema:
+          type: string
           nullable: true
       responses:
         201:
@@ -7100,10 +7132,6 @@ components:
         department:
           type: string
           nullable: true
-        event_id:
-          type: string
-          description: provided if this booking is associated with a calendar event
-          nullable: true
         title:
           type: string
           nullable: true
@@ -7166,6 +7194,15 @@ components:
             required:
             - state
             - time
+          nullable: true
+        parent_id:
+          type: integer
+          format: Int64
+          nullable: true
+        event_id:
+          type: integer
+          format: Int64
+          description: provided if this booking is associated with a calendar event
           nullable: true
         attendees:
           type: array
@@ -7719,6 +7756,9 @@ components:
           type: integer
           format: Int64
           nullable: true
+        cancelled:
+          type: boolean
+          nullable: true
         ext_data:
           type: object
           nullable: true
@@ -8202,11 +8242,6 @@ components:
               department:
                 type: string
                 nullable: true
-              event_id:
-                type: string
-                description: provided if this booking is associated with a calendar
-                  event
-                nullable: true
               title:
                 type: string
                 nullable: true
@@ -8269,6 +8304,16 @@ components:
                   required:
                   - state
                   - time
+                nullable: true
+              parent_id:
+                type: integer
+                format: Int64
+                nullable: true
+              event_id:
+                type: integer
+                format: Int64
+                description: provided if this booking is associated with a calendar
+                  event
                 nullable: true
               attendees:
                 type: array
