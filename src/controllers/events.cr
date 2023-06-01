@@ -1037,9 +1037,7 @@ class Events < Application
     query = query.by_event_ids(event_ref) if event_ref && !event_ref.empty?
     query = query.by_ext_data(field_name, value.not_nil!) if field_name && value.presence
 
-    query.limit(10_000).to_a.map do |metadata|
-      EventMetadata.from_json(metadata.to_json)
-    end
+    query.limit(10_000).to_a
   end
 
   # a guest has arrived for a meeting in person.
