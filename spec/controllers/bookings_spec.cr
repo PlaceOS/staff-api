@@ -60,6 +60,9 @@ describe Bookings do
       body.includes?(%("id" => "#{event.system_id}"))
       body.includes?(%("extension_data" => {#{event.ext_data}}))
 
+      puts "\n\n======================================="
+      puts body.inspect
+      puts "=======================================\n\n"
       body.includes?("linked_bookings")
       body.first["linked_bookings"].as_a.size.should eq 2
 
