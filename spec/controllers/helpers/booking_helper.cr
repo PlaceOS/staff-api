@@ -5,7 +5,7 @@ module BookingsHelper
     ["zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}"]
   end
 
-  def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones)
+  def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones, event_id = nil)
     user_name = Faker::Internet.user_name
     Booking.create!(
       tenant_id: tenant_id,
@@ -25,6 +25,7 @@ module BookingsHelper
       booked_by_name: user_name,
       utm_source: "desktop",
       history: [] of Booking::History,
+      event_id: event_id,
     )
   end
 
@@ -55,6 +56,11 @@ module BookingsHelper
     booking.booking_end = booking_end
     booking.asset_id = asset_id
     booking.save!
+  end
+
+  def create_booking(tenant_id, event_id)
+    user_email = Faker::Internet.email
+    create_booking(tenant_id: tenant_id.not_nil!, user_email: user_email, event_id: event_id)
   end
 
   def create_booking(tenant_id)

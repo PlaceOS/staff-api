@@ -38,6 +38,21 @@ describe Bookings do
       body.size.should eq(1)
     end
 
+    it "should return linked event" do
+      tenant = get_tenant
+      event = EventMetadatasHelper.create_event(tenant.id)
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.size.should eq(1)
+
+      body.includes?("linked_event")
+      body.first["linked_event"]["event_id"].as_s.should eq event.event_id
+    end
+
     it "should filter by ext data" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -1148,9 +1163,9 @@ describe Bookings do
     body["rejected"].should eq(true)
     body["approved"].should eq(false)
     # Reset approver info
-    body["approver_id"]?.should eq(nil)
-    body["approver_email"]?.should eq(nil)
-    body["approver_name"]?.should eq(nil)
+    body["approver_id"]?.should eq(booking.approver_id)
+    body["approver_email"]?.should eq(booking.approver_email)
+    body["approver_name"]?.should eq(booking.approver_name)
   end
 
   it "#check_in should set checked_in state of a booking" do

@@ -550,9 +550,6 @@ class Bookings < Application
   ) : Booking
     set_approver(booking, false)
     booking.rejected_at = Time.utc.to_unix
-    booking.approver_id = nil
-    booking.approver_email = nil
-    booking.approver_name = nil
     booking.utm_source = utm_source
     update_booking(booking, "rejected")
   end
