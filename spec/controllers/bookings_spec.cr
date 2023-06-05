@@ -38,34 +38,11 @@ describe Bookings do
       body.size.should eq(1)
     end
 
-    it "should return a list of linked bookings", focus: true do
-      EventsHelper.stub_event_tokens
-
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
-        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
-        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
-
+    it "should return linked event" do
       tenant = get_tenant
       event = EventMetadatasHelper.create_event(tenant.id)
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
       booking2 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
-
-      body = JSON.parse(client.get("#{EVENTS_BASE}?zone_ids=z1&period_start=#{event.event_start}&period_end=#{event.event_end}", headers: headers).body).as_a
-
-      body.includes?(event.system_id)
-      body.includes?(%("host" => "#{event.host_email}"))
-      body.includes?(%("id" => "#{event.system_id}"))
-      body.includes?(%("extension_data" => {#{event.ext_data}}))
-
-      puts "\n\n======================================="
-      puts body.inspect
-      puts "\n ---- #{event.ext_data}"
-      puts "=======================================\n\n"
-      # body.includes?("linked_bookings")
-      # body.first["linked_bookings"].as_a.size.should eq 2
 
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
