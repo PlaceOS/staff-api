@@ -39,6 +39,8 @@ describe Bookings do
     end
 
     it "should return a list of linked bookings", focus: true do
+      EventsHelper.stub_event_tokens
+
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
       WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
