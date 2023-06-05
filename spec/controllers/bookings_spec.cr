@@ -38,6 +38,20 @@ describe Bookings do
       body.size.should eq(1)
     end
 
+    it "should return a list of linked bookings", focus: true do
+      tenant = get_tenant
+
+      event = EventMetadatasHelper.create_event(tenant.id)
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.size.should eq(1)
+    end
+
     it "should filter by ext data" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
