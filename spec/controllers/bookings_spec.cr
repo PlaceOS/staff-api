@@ -42,7 +42,6 @@ describe Bookings do
       tenant = get_tenant
       event = EventMetadatasHelper.create_event(tenant.id)
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
-      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!, event_id: event.id)
 
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
