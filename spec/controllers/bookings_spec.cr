@@ -77,7 +77,7 @@ describe Bookings do
       puts "=======================================\n\n"
 
       body.includes?("linked_event")
-      body.first["linked_event"]["event_id"].as_s.should eq event.id
+      body.first["linked_event"]["event_id"].as_s.should eq event.event_id
     end
 
     it "should filter by ext data" do
