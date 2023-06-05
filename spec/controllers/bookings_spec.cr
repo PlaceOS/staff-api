@@ -1164,9 +1164,9 @@ describe Bookings do
     body["rejected"].should eq(true)
     body["approved"].should eq(false)
     # Reset approver info
-    body["approver_id"]?.should eq(nil)
-    body["approver_email"]?.should eq(nil)
-    body["approver_name"]?.should eq(nil)
+    body["approver_id"]?.should eq(booking.approver_id)
+    body["approver_email"]?.should eq(booking.approver_email)
+    body["approver_name"]?.should eq(booking.approver_name)
   end
 
   it "#check_in should set checked_in state of a booking" do
