@@ -389,21 +389,21 @@ class Events < Application
       new_system_id = changes.system_id.presence.not_nil!
 
       new_system = placeos_client.systems.fetch(new_system_id)
-      new_sys_cal = new_system.email.presence
+      new_sys_cal = new_system.email.presence.try &.downcase
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
 
       # Check this room isn't already invited
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) is already marked as a resource", "event.system_id") if existing_attendees.includes?(new_sys_cal)
 
-      attendees.delete(cal_id)
-      attendees << new_sys_cal
+      # Remove old and new room from attendees
+      attendees_without_old_room = changes.attendees.uniq.reject do |attendee|
+        attendee.email == new_sys_cal || (attendee.email == sys_cal && attendee.resource)
+      end
       update_attendees = true
       remove_attendees = [] of String
-
-      # Remove old room from attendees
-      attendees_without_old_room = changes.attendees.uniq.reject { |attendee| attendee.email == sys_cal }
       changes.attendees = attendees_without_old_room
-      # Add the updated system attendee to the payload for update
+
+      # Add the updated system as an attendee to the payload for update
       changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_system.display_name.presence || new_system.name, email: new_sys_cal, resource: true)
 
       new_sys_cal # cal_id
