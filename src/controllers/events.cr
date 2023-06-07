@@ -394,7 +394,7 @@ class Events < Application
     # are we moving the event room?
     changing_room = system_id != (changes.system_id.presence || system_id)
     if changing_room
-      new_system_id = changes.system_id.presence.not_nil!
+      new_system_id = changes.system_id.not_nil!
 
       new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence.try &.downcase
@@ -420,8 +420,8 @@ class Events < Application
       # Add the updated system as an attendee to the payload for update
       changes.attendees << PlaceCalendar::Event::Attendee.new(name: new_system.display_name.presence || new_system.name, email: new_sys_cal, resource: true)
 
-      new_sys_cal # cal_id
       system = new_system
+      system_id = system.id
     else
       # If room is not changing and it is not an attendee, add it.
       if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
@@ -437,7 +437,7 @@ class Events < Application
       # Changing the room if applicable
       meta.system_id = system.id.not_nil!
 
-      meta.event_id = event.id.not_nil!
+      meta.event_id = updated_event.id.not_nil!
       meta.ical_uid = updated_event.ical_uid.not_nil!
       meta.recurring_master_id = updated_event.recurring_event_id || updated_event.id if updated_event.recurring
       meta.event_start = changes.not_nil!.event_start.not_nil!.to_unix
@@ -452,6 +452,7 @@ class Events < Application
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
         meta.ext_data = JSON::Any.new(data)
+        meta.ext_data_will_change!
         meta.save!
       elsif changing_room || update_attendees
         meta.save!
@@ -571,7 +572,7 @@ class Events < Application
 
       # Reloading meta with attendees and guests to avoid n+1
       # eventmeta = EventMetadata.by_tenant(tenant.id).with_attendees(&.with_guest).find_by?(event_id: event_id, system_id: system.not_nil!.id.not_nil!)
-      eventmeta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event_id, system_id: system.not_nil!.id.not_nil!)
+      eventmeta = meta || get_migrated_metadata(updated_event, system_id.as(String), cal_id)
 
       # Update PlaceOS with an signal "staff/event/changed"
       spawn do

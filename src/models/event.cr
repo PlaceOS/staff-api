@@ -44,8 +44,11 @@ class StaffApi::Event
     event.calendar = calendar
     event.attendees = attendees
     event.system = system
-    event.extension_data = metadata.try(&.ext_data)
-    event.linked_bookings = metadata.try(&.bookings.to_a.tap &.each(&.render_event=(false)))
+    if meta_id = metadata.try(&.id)
+      bookings = Booking.where(event_id: meta_id, deleted: false, rejected: false).to_a.tap &.each(&.render_event=(false))
+      event.linked_bookings = bookings
+      event.extension_data = metadata.try(&.ext_data)
+    end
     event.recurring_master_id = event.recurring_event_id
 
     event
