@@ -58,6 +58,7 @@
 
 ### Fix
 
+- **events**: ensure metadata patching applied on room change
 - **bookings**: add default response status to attendees
 - **shard.lock**: bump models for JWT email downcasing ([#276](https://github.com/PlaceOS/staff-api/pull/276))
 - bump forbidden log levels ([#274](https://github.com/PlaceOS/staff-api/pull/274))
