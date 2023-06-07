@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: allow moving room to one that exists in the meeting
 - **events**: provide method to keep old resources when moving room
 - **events**: destroy metadata when event deleted
 - **bookings**: add support for linking bookings ([#280](https://github.com/PlaceOS/staff-api/pull/280))
