@@ -907,7 +907,13 @@ class Events < Application
     end
 
     if system
-      EventMetadata.by_tenant(tenant.id).where({event_id: event_id}).delete_all
+      query = EventMetadata.by_tenant(tenant.id).where(system_id: system.id)
+      if client.client_id == :office365
+        query = query.where(ical_uid: [event.ical_uid])
+      else
+        query = query.where(event_id: event.id)
+      end
+      query.to_a.each &.destroy
 
       spawn do
         placeos_client.root.signal("staff/event/changed", {
