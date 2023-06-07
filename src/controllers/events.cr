@@ -4,6 +4,14 @@ class Events < Application
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
 
+  # update includes a bunch of moving parts so we want to roll back if something fails
+  @[AC::Route::Filter(:around_action, only: [:update])]
+  def wrap_in_transaction(&)
+    PgORM::Database.transaction do
+      yield
+    end
+  end
+
   # lists events occuring in the period provided, by default on the current users calendar
   @[AC::Route::GET("/")]
   def index(
@@ -392,8 +400,14 @@ class Events < Application
       new_sys_cal = new_system.email.presence.try &.downcase
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
 
+      # NOTE:: we're allowing this now, the expected behaviour is to overwrite the metadata
       # Check this room isn't already invited
-      raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) is already marked as a resource", "event.system_id") if existing_attendees.includes?(new_sys_cal)
+      # raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) is already marked as a resource", "event.system_id") if existing_attendees.includes?(new_sys_cal)
+
+      # remove metadata from the existing room as new metadata will be used
+      if existing_attendees.includes?(new_sys_cal) && (existing_meta = get_event_metadata(event, new_system_id))
+        existing_meta.destroy
+      end
 
       # Remove old and new room from attendees
       attendees_without_old_room = changes.attendees.uniq.reject do |attendee|

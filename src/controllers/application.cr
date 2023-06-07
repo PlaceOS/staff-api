@@ -231,12 +231,11 @@ abstract class Application < ActionController::Base
 
   protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
-    if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+    return meta if meta
+    if event.recurring_event_id.presence && event.recurring_event_id != event.id
       EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
-    elsif meta.nil? && (ev_ical_uid = event.ical_uid)
+    elsif ev_ical_uid = event.ical_uid
       EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: [ev_ical_uid]).to_a.first?
-    else
-      meta
     end
   end
 
