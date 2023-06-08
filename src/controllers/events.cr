@@ -122,7 +122,9 @@ class Events < Application
     end
 
     # return array of standardised events
-    render json: results.map { |(calendar_id, system, event)|
+    render json: results.compact_map { |(calendar_id, system, event)|
+      next if icaluid && event.ical_uid != icaluid
+
       parent_meta = false
       metadata = metadatas[event.id]?
       if metadata.nil? && event.recurring_event_id
