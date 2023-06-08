@@ -58,6 +58,7 @@
 
 ### Fix
 
+- **events**: only return matching ical_uid when requested
 - **events**: ensure metadata patching applied on room change
 - **bookings**: add default response status to attendees
 - **shard.lock**: bump models for JWT email downcasing ([#276](https://github.com/PlaceOS/staff-api/pull/276))
