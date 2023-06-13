@@ -916,8 +916,17 @@ class Events < Application
     end
 
     if system
-      get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
-      get_event_metadata(event, system.id, search_recurring: false).try &.destroy
+      # get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
+      # get_event_metadata(event, system.id, search_recurring: false).try &.destroy
+
+      query = EventMetadata.by_tenant(tenant.id).where(system_id: system.id)
+      if client.client_id == :office365
+        query = query.where(ical_uid: [event.ical_uid, original_event.try &.ical_uid].compact!)
+      else
+        query = query.where(event_id: [event.id, original_event.try &.id].compact!)
+      end
+      query.to_a.each &.destroy
+
       spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
   end
