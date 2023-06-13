@@ -452,7 +452,8 @@ describe Events do
          "details":{"admin": ["admin"]}}}))
 
     # delete
-    client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
+    resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
+    resp.success?.should be_true
 
     # Should have deleted event meta
     EventMetadata.find_by?(event_id: created_event_id.to_s).should eq(nil)
