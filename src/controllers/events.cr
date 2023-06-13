@@ -805,7 +805,7 @@ class Events < Application
 
       # see if there are any relevent metadata details
       ev_ical_uid = event.ical_uid
-      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: [ev_ical_uid]).to_a.first?
+      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ev_ical_uid).to_a.first?
 
       # see if there are any relevent systems associated with the event
       resource_calendars = (event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
@@ -916,22 +916,8 @@ class Events < Application
     end
 
     if system
-      # get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
-      # get_event_metadata(event, system.id, search_recurring: false).try &.destroy
-
-      query = EventMetadata.by_tenant(tenant.id).where(system_id: system.id)
-      if client.client_id == :office365
-        query = query.where(ical_uid: [event.ical_uid, original_event.try &.ical_uid].compact!)
-      else
-        query = query.where(event_id: [event.id, original_event.try &.id].compact!)
-      end
-      results = query.to_a
-
-      puts "\n\n=========\nRESULTS:"
-      puts results.inspect
-      puts "\n\n ================"
-
-      results.each &.destroy
+      get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
+      get_event_metadata(event, system.id, search_recurring: false).try &.destroy
 
       spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
