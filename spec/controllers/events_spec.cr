@@ -435,7 +435,7 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    EventMetadata.find_by(event_id: created_event["id"].to_s).should_not eq(nil)
+    EventMetadata.find_by(event_id: created_event_id.to_s).should_not eq(nil)
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
       .to_return(body: %({"permissions":
@@ -452,10 +452,10 @@ describe Events do
          "details":{"admin": ["admin"]}}}))
 
     # delete
-    client.delete("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers)
+    client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
 
     # Should have deleted event meta
-    EventMetadata.find_by?(event_id: created_event["id"].to_s).should eq(nil)
+    EventMetadata.find_by?(event_id: created_event_id.to_s).should eq(nil)
   end
 
   it "#approve marks room as accepted" do

@@ -229,10 +229,10 @@ abstract class Application < ActionController::Base
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
-  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String, search_recurring : Bool = true) : EventMetadata?
     meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
     return meta if meta
-    if event.recurring_event_id.presence && event.recurring_event_id != event.id
+    if search_recurring && event.recurring_event_id.presence && event.recurring_event_id != event.id
       EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
     elsif ev_ical_uid = event.ical_uid
       EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: [ev_ical_uid]).to_a.first?

@@ -709,16 +709,24 @@ class Events < Application
 
       # sleep just in case we're creating the event with metadata
       sleep 0.5
-      meta = get_event_metadata(event, system_id)
+      meta = get_event_metadata(event, system_id, search_recurring: false)
       return if meta
       notify_created_or_updated(:create, system, event, meta)
     in .updated?
       raise "no event provided" unless event
-      meta = get_event_metadata(event, system_id)
+      meta = get_event_metadata(event, system_id, search_recurring: false)
+
+      # we might be just changing the date or time of an individual event
+      if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+        if rec_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
+          meta = EventMetadata.migrate_recurring_metadata(system_id, event, rec_meta)
+        end
+      end
+
       notify_created_or_updated(:update, system, event, meta)
     in .deleted?
       meta = if event
-               get_event_metadata(event, system_id)
+               get_event_metadata(event, system_id, search_recurring: false)
              else
                EventMetadata.find_by?(event_id: event_id, system_id: system_id)
              end
@@ -850,7 +858,7 @@ class Events < Application
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    user_cal = user_cal.try &.downcase
+    user_cal = user_cal.try &.strip.downcase
     if user_cal == user.email
       cal_id = user_cal
     elsif user_cal
@@ -861,9 +869,9 @@ class Events < Application
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      sys_cal = system.email.presence.try(&.strip.downcase)
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = sys_cal
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -888,6 +896,7 @@ class Events < Application
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
     # unless using a service account and then we can only use the host calendar
     if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
+      original_event = event
       event = get_hosts_event(event, tenant.service_account)
       event_id = event.id.not_nil!
       cal_id = srv_acct
@@ -907,14 +916,8 @@ class Events < Application
     end
 
     if system
-      query = EventMetadata.by_tenant(tenant.id).where(system_id: system.id)
-      if client.client_id == :office365
-        query = query.where(ical_uid: [event.ical_uid])
-      else
-        query = query.where(event_id: event.id)
-      end
-      query.to_a.each &.destroy
-
+      get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
+      get_event_metadata(event, system.id, search_recurring: false).try &.destroy
       spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
   end
