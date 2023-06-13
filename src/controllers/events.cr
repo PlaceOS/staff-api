@@ -916,8 +916,8 @@ class Events < Application
     end
 
     if system
-      get_event_metadata(original_event, system.id, search_recurring: false).try(&.destroy) if original_event
-      get_event_metadata(event, system.id, search_recurring: false).try &.destroy
+      get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
+      get_event_metadata(event, system_id, search_recurring: false).try &.destroy
 
       spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
