@@ -925,7 +925,13 @@ class Events < Application
       else
         query = query.where(event_id: [event.id, original_event.try &.id].compact!)
       end
-      query.to_a.each &.destroy
+      results = query.to_a
+
+      puts "\n\n=========\nRESULTS:"
+      puts results.inspect
+      puts "\n\n ================"
+
+      results.each &.destroy
 
       spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
