@@ -915,7 +915,7 @@ class Events < Application
       )
     end
 
-    if system
+    if system && system_id
       get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
       get_event_metadata(event, system_id, search_recurring: false).try &.destroy
 

@@ -410,7 +410,7 @@ describe Events do
     end
   end
 
-  it "#destroy the event for system", focus: true do
+  it "#destroy the event for system" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
