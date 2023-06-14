@@ -430,7 +430,7 @@ describe Events do
     req_body = EventsHelper.create_event_input
     created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
     created_event_id = created_event["id"].as_s
-    system_id = created_event["system_id"].as_s
+    system_id = created_event["system"]["id"].as_s
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
