@@ -426,7 +426,7 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
 
     # Create event
-    meta = EventMetadata.find_by(event_id: created_event_id.to_s, system_id: system_id)
+    meta = EventMetadata.find_by(event_id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=", system_id: "sys-rJQQlR4Cn7")
     meta.should eq(nil)
 
     req_body = EventsHelper.create_event_input
