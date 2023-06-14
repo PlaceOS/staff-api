@@ -417,25 +417,28 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     WebMock.stub(:delete, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
       .to_return(body: "")
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
-      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     # Create event
-
     req_body = EventsHelper.create_event_input
     created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
-    created_event_id = created_event["id"].to_s
+    created_event_id = created_event["id"].as_s
+    system_id = created_event["system"]["id"].as_s
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    EventMetadata.find_by(event_id: created_event["id"].to_s).should_not eq(nil)
+    metadata = EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id)
+    metadata.should_not eq(nil)
+
+    meta = metadata.not_nil!
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
       .to_return(body: %({"permissions":
@@ -452,10 +455,11 @@ describe Events do
          "details":{"admin": ["admin"]}}}))
 
     # delete
-    client.delete("#{EVENTS_BASE}/#{created_event["id"]}?system_id=sys-rJQQlR4Cn7", headers: headers)
+    resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=#{meta.try &.system_id}", headers: headers)
+    resp.success?.should be_true
 
     # Should have deleted event meta
-    EventMetadata.find_by?(event_id: created_event["id"].to_s).should eq(nil)
+    EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
   end
 
   it "#approve marks room as accepted" do

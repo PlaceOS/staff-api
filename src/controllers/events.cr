@@ -4,6 +4,11 @@ class Events < Application
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
 
+  @[AC::Route::Filter(:before_action, only: [:notify_change])]
+  private def protected_route
+    raise Error::Forbidden.new unless is_support?
+  end
+
   # update includes a bunch of moving parts so we want to roll back if something fails
   @[AC::Route::Filter(:around_action, only: [:update])]
   def wrap_in_transaction(&)
@@ -197,97 +202,67 @@ class Events < Application
         attendee.visit_expected
       })
 
-      spawn do
-        placeos_client.root.signal("staff/event/changed", {
-          action:         :create,
-          system_id:      input_event.system_id,
-          event_id:       created_event.id,
-          event_ical_uid: created_event.ical_uid,
-          host:           host,
-          resource:       sys.email,
-          event:          created_event,
-          ext_data:       input_event.extension_data,
-        })
-      end
-
       # Save custom data
-      ext_data = input_event.extension_data
-      if ext_data || (attending && !attending.empty?)
-        meta = EventMetadata.create!(
-          system_id: sys.id.not_nil!,
-          event_id: created_event.id.not_nil!,
-          recurring_master_id: (created_event.recurring_event_id || created_event.id if created_event.recurring),
-          event_start: created_event.event_start.not_nil!.to_unix,
-          event_end: created_event.event_end.not_nil!.to_unix,
-          resource_calendar: sys.email.not_nil!,
-          host_email: host,
-          ext_data: ext_data,
-          tenant_id: tenant.id,
-          ical_uid: created_event.ical_uid.not_nil!,
-        )
+      meta = EventMetadata.new
+      meta.ext_data = input_event.extension_data
+      notify_created_or_updated(:create, sys, created_event, meta, can_skip: false)
 
-        Log.info { "saving extension data for event #{created_event.id} in #{sys.id}" }
+      if attending && !attending.empty?
+        # Create guests
+        attending.each do |attendee|
+          email = attendee.email.strip.downcase
 
-        if attending
-          # Create guests
-          attending.each do |attendee|
-            email = attendee.email.strip.downcase
+          guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
+                    existing_guest.name = attendee.name if existing_guest.name != attendee.name
+                    existing_guest
+                  else
+                    Guest.new(
+                      email: email,
+                      name: attendee.name,
+                      preferred_name: attendee.preferred_name,
+                      phone: attendee.phone,
+                      organisation: attendee.organisation,
+                      photo: attendee.photo,
+                      notes: attendee.notes,
+                      banned: attendee.banned || false,
+                      dangerous: attendee.dangerous || false,
+                      tenant_id: tenant.id,
+                    )
+                  end
 
-            guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
-                      existing_guest.name = attendee.name if existing_guest.name != attendee.name
-                      existing_guest
-                    else
-                      Guest.new(
-                        email: email,
-                        name: attendee.name,
-                        preferred_name: attendee.preferred_name,
-                        phone: attendee.phone,
-                        organisation: attendee.organisation,
-                        photo: attendee.photo,
-                        notes: attendee.notes,
-                        banned: attendee.banned || false,
-                        dangerous: attendee.dangerous || false,
-                        tenant_id: tenant.id,
-                      )
-                    end
+          if attendee_ext_data = attendee.extension_data
+            guest.extension_data = attendee_ext_data
+          end
+          guest.save!
 
-            if attendee_ext_data = attendee.extension_data
-              guest.extension_data = attendee_ext_data
-            end
-            guest.save!
+          # Create attendees
+          Attendee.create!(
+            event_id: meta.id.not_nil!,
+            guest_id: guest.id,
+            visit_expected: true,
+            checked_in: false,
+            tenant_id: tenant.id,
+          )
 
-            # Create attendees
-            Attendee.create!(
-              event_id: meta.id.not_nil!,
-              guest_id: guest.id,
-              visit_expected: true,
-              checked_in: false,
-              tenant_id: tenant.id,
-            )
-
-            spawn do
-              placeos_client.root.signal("staff/guest/attending", {
-                action:         :meeting_created,
-                system_id:      sys.id,
-                event_id:       created_event.id,
-                event_ical_uid: created_event.ical_uid,
-                host:           host,
-                resource:       sys.email,
-                event_summary:  created_event.title,
-                event_starting: created_event.event_start.not_nil!.to_unix,
-                attendee_name:  attendee.name,
-                attendee_email: attendee.email,
-                zones:          sys.zones,
-              })
-            end
+          spawn do
+            placeos_client.root.signal("staff/guest/attending", {
+              action:         :meeting_created,
+              system_id:      sys.id,
+              event_id:       created_event.id,
+              event_ical_uid: created_event.ical_uid,
+              host:           host,
+              resource:       sys.email,
+              event_summary:  created_event.title,
+              event_starting: created_event.event_start.not_nil!.to_unix,
+              attendee_name:  attendee.name,
+              attendee_email: attendee.email,
+              zones:          sys.zones,
+            })
           end
         end
-
-        return StaffApi::Event.augment(created_event, sys.email, sys, meta)
       end
 
-      Log.info { "no extension data for event #{created_event.id} in #{sys.id}, #{ext_data}" }
-      return StaffApi::Event.augment(created_event, sys.email, sys)
+      return StaffApi::Event.augment(created_event, sys.email, sys, meta)
     end
 
     Log.info { "no system provided for event #{created_event.id}" }
@@ -435,19 +410,6 @@ class Events < Application
 
     if system
       meta = get_migrated_metadata(event, system_id.not_nil!, system.email.not_nil!) || EventMetadata.new
-
-      # Changing the room if applicable
-      meta.system_id = system.id.not_nil!
-
-      meta.event_id = updated_event.id.not_nil!
-      meta.ical_uid = updated_event.ical_uid.not_nil!
-      meta.recurring_master_id = updated_event.recurring_event_id || updated_event.id if updated_event.recurring
-      meta.event_start = changes.not_nil!.event_start.not_nil!.to_unix
-      meta.event_end = changes.not_nil!.event_end.not_nil!.to_unix
-      meta.resource_calendar = system.email.not_nil!
-      meta.host_email = host
-      meta.tenant_id = tenant.id
-
       if extension_data = changes.extension_data
         meta_ext_data = meta.not_nil!.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
@@ -455,10 +417,8 @@ class Events < Application
         extension_data.as_h.each { |key, value| data[key] = value }
         meta.ext_data = JSON::Any.new(data)
         meta.ext_data_will_change!
-        meta.save!
-      elsif changing_room || update_attendees
-        meta.save!
       end
+      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false)
 
       # Grab the list of externals that might be attending
       if update_attendees || changing_room
@@ -572,26 +532,7 @@ class Events < Application
         end
       end
 
-      # Reloading meta with attendees and guests to avoid n+1
-      # eventmeta = EventMetadata.by_tenant(tenant.id).with_attendees(&.with_guest).find_by?(event_id: event_id, system_id: system.not_nil!.id.not_nil!)
-      eventmeta = meta || get_migrated_metadata(updated_event, system_id.as(String), cal_id)
-
-      # Update PlaceOS with an signal "staff/event/changed"
-      spawn do
-        sys = system.not_nil!
-        placeos_client.root.signal("staff/event/changed", {
-          action:         :update,
-          system_id:      sys.id,
-          event_id:       original_id,
-          event_ical_uid: updated_event.ical_uid,
-          host:           host,
-          resource:       sys.email,
-          event:          updated_event,
-          ext_data:       eventmeta.try &.ext_data,
-        })
-      end
-
-      StaffApi::Event.augment(updated_event.not_nil!, system.not_nil!.email, system, eventmeta)
+      StaffApi::Event.augment(updated_event.not_nil!, meta.resource_calendar, system, meta)
     else
       # see if there are any relevent systems associated with the event
       resource_calendars = (updated_event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
@@ -744,6 +685,56 @@ class Events < Application
     meta.ext_data.not_nil!
   end
 
+  enum ChangeType
+    Created
+    Updated
+    Deleted
+  end
+
+  @[AC::Route::POST("/notify/:change/:system_id/:event_id", body: :event, status_code: HTTP::Status::ACCEPTED)]
+  def notify_change(
+    @[AC::Param::Info(description: "the type of change that has occured", example: "created")]
+    change : ChangeType,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    event_id : String,
+    event : PlaceCalendar::Event? = nil
+  ) : Nil
+    system = get_placeos_client.systems.fetch(system_id)
+
+    case change
+    in .created?
+      raise "no event provided" unless event
+
+      # sleep just in case we're creating the event with metadata
+      sleep 0.5
+      meta = get_event_metadata(event, system_id, search_recurring: false)
+      return if meta
+      notify_created_or_updated(:create, system, event, meta)
+    in .updated?
+      raise "no event provided" unless event
+      meta = get_event_metadata(event, system_id, search_recurring: false)
+
+      # we might be just changing the date or time of an individual event
+      if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
+        if rec_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
+          meta = EventMetadata.migrate_recurring_metadata(system_id, event, rec_meta)
+        end
+      end
+
+      notify_created_or_updated(:update, system, event, meta)
+    in .deleted?
+      meta = if event
+               get_event_metadata(event, system_id, search_recurring: false)
+             else
+               EventMetadata.find_by?(event_id: event_id, system_id: system_id)
+             end
+      meta.try &.destroy
+      notify_destroyed(system, event_id, meta.try &.ical_uid)
+    end
+  end
+
   # returns the event requested.
   # by default it assumes the event exists on the users calendar.
   # you can provide a calendar param to override this default
@@ -814,7 +805,7 @@ class Events < Application
 
       # see if there are any relevent metadata details
       ev_ical_uid = event.ical_uid
-      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: [ev_ical_uid]).to_a.first?
+      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ev_ical_uid).to_a.first?
 
       # see if there are any relevent systems associated with the event
       resource_calendars = (event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
@@ -867,7 +858,7 @@ class Events < Application
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
     placeos_client = get_placeos_client
 
-    user_cal = user_cal.try &.downcase
+    user_cal = user_cal.try &.strip.downcase
     if user_cal == user.email
       cal_id = user_cal
     elsif user_cal
@@ -878,9 +869,9 @@ class Events < Application
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      sys_cal = system.email.presence.try(&.strip.downcase)
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = sys_cal
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -905,6 +896,7 @@ class Events < Application
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
     # unless using a service account and then we can only use the host calendar
     if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
+      original_event = event
       event = get_hosts_event(event, tenant.service_account)
       event_id = event.id.not_nil!
       cal_id = srv_acct
@@ -923,25 +915,11 @@ class Events < Application
       )
     end
 
-    if system
-      query = EventMetadata.by_tenant(tenant.id).where(system_id: system.id)
-      if client.client_id == :office365
-        query = query.where(ical_uid: [event.ical_uid])
-      else
-        query = query.where(event_id: event.id)
-      end
-      query.to_a.each &.destroy
+    if system && system_id
+      get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
+      get_event_metadata(event, system_id, search_recurring: false).try &.destroy
 
-      spawn do
-        placeos_client.root.signal("staff/event/changed", {
-          action:         :cancelled,
-          system_id:      system.not_nil!.id,
-          event_id:       event_id,
-          event_ical_uid: event.ical_uid,
-          resource:       system.not_nil!.email,
-          event:          event,
-        })
-      end
+      spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
     end
   end
 
@@ -1175,5 +1153,60 @@ class Events < Application
     end
 
     attending_guest(attendee, attendee.guest, false, event).as(Guest)
+  end
+
+  # ==========================
+  # NOTIFICATIONS
+  # ==========================
+
+  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true)
+    starting = event.event_start.not_nil!.to_unix
+    ending = event.event_end.not_nil!.to_unix
+    cancelled = event.status == "cancelled"
+
+    skip_signal = can_skip && meta &&
+                  meta.system_id == system.id &&
+                  meta.event_start == starting &&
+                  meta.event_end == ending &&
+                  meta.cancelled == cancelled
+
+    meta = meta || EventMetadata.new
+    meta.system_id = system.id.as(String)
+    meta.event_id = event.id.as(String)
+    meta.ical_uid = event.ical_uid.as(String)
+    meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring
+    meta.event_start = starting
+    meta.event_end = ending
+    meta.resource_calendar = system.email.as(String).downcase
+    meta.host_email = event.host.as(String).downcase
+    meta.tenant_id = tenant.id
+    meta.cancelled = cancelled
+    meta.save!
+
+    return if skip_signal
+
+    spawn do
+      get_placeos_client.root.signal("staff/event/changed", {
+        action:         action,
+        system_id:      system.id,
+        event_id:       meta.event_id,
+        event_ical_uid: meta.ical_uid,
+        host:           meta.host_email,
+        resource:       meta.resource_calendar,
+        event:          event,
+        ext_data:       meta.try &.ext_data,
+      })
+    end
+  end
+
+  def notify_destroyed(system, event_id, event_ical_uid, event = nil)
+    get_placeos_client.root.signal("staff/event/changed", {
+      action:         :cancelled,
+      system_id:      system.id,
+      event_id:       event_id,
+      event_ical_uid: event_ical_uid,
+      resource:       system.email,
+      event:          event,
+    })
   end
 end
