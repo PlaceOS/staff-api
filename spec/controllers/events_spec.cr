@@ -435,7 +435,8 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    EventMetadata.find_by(event_id: created_event_id.to_s).should_not eq(nil)
+    meta = EventMetadata.find_by(event_id: created_event_id.to_s)
+    meta.should_not eq(nil)
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
       .to_return(body: %({"permissions":
@@ -452,7 +453,7 @@ describe Events do
          "details":{"admin": ["admin"]}}}))
 
     # delete
-    resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
+    resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=#{meta.try &.system_id}", headers: headers)
     resp.success?.should be_true
 
     # Should have deleted event meta
