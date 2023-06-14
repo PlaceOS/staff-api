@@ -429,13 +429,14 @@ describe Events do
 
     req_body = EventsHelper.create_event_input
     created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
-    created_event_id = created_event["id"].to_s
+    created_event_id = created_event["id"].as_s
+    system_id = created_event["system_id"].as_s
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    meta = EventMetadata.find_by(event_id: created_event_id.to_s)
+    meta = EventMetadata.find_by(event_id: created_event_id.to_s, system_id: system_id)
     meta.should_not eq(nil)
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
@@ -457,7 +458,7 @@ describe Events do
     resp.success?.should be_true
 
     # Should have deleted event meta
-    EventMetadata.find_by?(event_id: created_event_id.to_s).should eq(nil)
+    EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
   end
 
   it "#approve marks room as accepted" do
