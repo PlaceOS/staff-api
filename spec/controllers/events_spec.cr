@@ -410,7 +410,7 @@ describe Events do
     end
   end
 
-  it "#destroy the event for system" do
+  it "#destroy the event for system", focus: true do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
@@ -426,6 +426,8 @@ describe Events do
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
 
     # Create event
+    meta = EventMetadata.find_by(event_id: created_event_id.to_s, system_id: system_id)
+    meta.should eq(nil)
 
     req_body = EventsHelper.create_event_input
     created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
