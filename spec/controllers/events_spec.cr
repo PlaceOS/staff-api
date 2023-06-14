@@ -410,25 +410,22 @@ describe Events do
     end
   end
 
-  it "#destroy the event for system", focus: true do
+  it "#destroy the event for system" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
-      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     WebMock.stub(:delete, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
       .to_return(body: "")
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/?.*/)
-      .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
     # Create event
-    meta = EventMetadata.find_by(event_id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=", system_id: "sys-rJQQlR4Cn7")
-    meta.should eq(nil)
-
     req_body = EventsHelper.create_event_input
     created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
     created_event_id = created_event["id"].as_s
@@ -438,8 +435,10 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # Should have created event meta
-    meta = EventMetadata.find_by(event_id: created_event_id.to_s, system_id: system_id)
-    meta.should_not eq(nil)
+    metadata = EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id)
+    metadata.should_not eq(nil)
+
+    meta = metadata.not_nil!
 
     WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
       .to_return(body: %({"permissions":
