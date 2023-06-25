@@ -39,7 +39,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.11.0
+    version: 0.12.0
 
   debug:
     git: https://github.com/sija/debug.cr.git
@@ -151,7 +151,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.26.0
+    version: 0.27.0
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
@@ -171,7 +171,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.11.2
+    version: 9.12.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
