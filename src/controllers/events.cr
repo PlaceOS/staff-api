@@ -302,7 +302,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
@@ -322,7 +322,7 @@ class Events < Application
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
       event = get_hosts_event(event)
       event_id = event.id.not_nil!
       changes.id = event_id
@@ -627,7 +627,7 @@ class Events < Application
 
              # ensure we have the host event details
              # TODO:: instead of this we should store ical UID in the guest JWT
-             if client.client_id == :office365 && event.host != user_email
+             if client.client_id == :office365 && event.host.try(&.downcase) != user_email
                begin
                  event = get_hosts_event(event)
                  event_id = event.id.not_nil!
@@ -770,7 +770,7 @@ class Events < Application
 
       # ensure we have the host event details
       # TODO:: instead of this we should store ical UID in the guest JWT
-      if client.client_id == :office365 && event.host != cal_id
+      if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
         begin
           event = get_hosts_event(event)
           event_id = event.id.not_nil!
@@ -863,7 +863,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
