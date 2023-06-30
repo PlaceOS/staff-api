@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **events**: use relative monthly bookings by default ([#285](https://github.com/PlaceOS/staff-api/pull/285)) (PPT-651)
 - **events**: only return matching ical_uid when requested
 - **events**: ensure metadata patching applied on room change
 - **bookings**: add default response status to attendees
