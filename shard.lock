@@ -59,7 +59,7 @@ shards:
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.3.0
+    version: 0.3.1
 
   faker:
     git: https://github.com/askn/faker.git
