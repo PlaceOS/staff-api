@@ -24,7 +24,7 @@ class Tenants < Application
   # lists the configured tenants
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.select(:id, :name, :domain, :platform, :booking_limits, :delegated, :service_account, :outlook_config).to_a.map(&.as_json)
+    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :delegated, :service_account, :outlook_config).to_a.map(&.as_json)
   end
 
   # creates a new tenant
