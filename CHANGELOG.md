@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **tenants**: don't error if no tenant configured
 - **event**: mark metadata as cancelled on augment
 - **event**: mark metadata as cancelled on augment
 - **events**: use relative monthly bookings by default ([#285](https://github.com/PlaceOS/staff-api/pull/285)) (PPT-651)
