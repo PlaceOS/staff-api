@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **tenants**: allow updates to email_domain column
 - **tenants**: don't error if no tenant configured
 - **event**: mark metadata as cancelled on augment
 - **event**: mark metadata as cancelled on augment
