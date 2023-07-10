@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **events**: accepting an event must use a special route ([#286](https://github.com/PlaceOS/staff-api/pull/286))
 - **tenants**: allow updates to email_domain column
 - **tenants**: don't error if no tenant configured
 - **event**: mark metadata as cancelled on augment
