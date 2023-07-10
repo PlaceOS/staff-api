@@ -3019,7 +3019,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlaceCalendar__Event'
+                $ref: '#/components/schemas/Bool'
         400:
           description: Bad Request
           content:
@@ -3103,7 +3103,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlaceCalendar__Event'
+                $ref: '#/components/schemas/Bool'
         400:
           description: Bad Request
           content:
@@ -8119,6 +8119,8 @@ components:
       - all_day
       - attachments
       nullable: true
+    Bool:
+      type: boolean
     PlaceOS__Model__ModelWithAutoKey:
       type: object
     PlaceOS__Model__EventMetadata:
