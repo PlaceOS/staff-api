@@ -465,9 +465,6 @@ describe Events do
   it "#approve marks room as accepted" do
     EventsHelper.stub_create_endpoints
 
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/")
-      .to_return(GuestsHelper.mock_event_query_json)
-
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
@@ -490,10 +487,11 @@ describe Events do
     EventsHelper.stub_permissions_check(system_id)
 
     # approve
-    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=#{system_id}", headers: headers).body
-    accepted_event = JSON.parse(resp)
-    room_attendee = accepted_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee.not_nil!["response_status"].as_s.should eq("accepted")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D/accept")
+      .to_return({sucess: true}.to_json)
+
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/approve?system_id=#{system_id}", headers: headers)
+    resp.success?.should eq true
   end
 
   it "#reject marks room as declined" do
@@ -508,8 +506,6 @@ describe Events do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
-    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_declined.json"))
-
     # Create event
     req_body = EventsHelper.create_event_input
     evt_resp = client.post(EVENTS_BASE, headers: headers, body: req_body)
@@ -519,12 +515,13 @@ describe Events do
       .to_return(EventsHelper.event_query_response(created_event_id))
 
     # reject
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D/decline")
+      .to_return(body: {success: true}.to_json)
+
     system_id = "sys-rJQQlR4Cn7"
     EventsHelper.stub_permissions_check(system_id)
-    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=#{system_id}", headers: headers).body
-    declined_event = JSON.parse(resp)
-    room_attendee = declined_event["attendees"].as_a.find { |a| a["email"] == "rmaudpswissalps@booking.demo.acaengine.com" }
-    room_attendee.not_nil!["response_status"].as_s.should eq("declined")
+    resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=#{system_id}", headers: headers)
+    resp.success?.should eq true
   end
 
   describe "#guest_list" do
