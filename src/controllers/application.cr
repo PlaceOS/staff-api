@@ -173,6 +173,14 @@ abstract class Application < ActionController::Base
     render_error(error, "unexpected upstream response #{error.http_status}: #{error.message}\n#{error.http_body}")
   end
 
+  # handler for errors in upstream requests
+  # like invalid data
+  @[AC::Route::Exception(Error::BadUpstreamResponse, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
+  def bad_upstream_response(error) : CommonError
+    Log.debug { error.message }
+    render_error(error, "bad upstream response #{error.message}")
+  end
+
   # handler for a few different errors
   @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
   @[AC::Route::Exception(PgORM::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]

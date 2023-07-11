@@ -23,6 +23,9 @@ class Error < Exception
   class NotFound < Error
   end
 
+  class BadUpstreamResponse < Error
+  end
+
   class ModelValidation < Error
     getter failures
 
