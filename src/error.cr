@@ -26,6 +26,9 @@ class Error < Exception
   class BadUpstreamResponse < Error
   end
 
+  class InconsistentState < Error
+  end
+
   class ModelValidation < Error
     getter failures
 

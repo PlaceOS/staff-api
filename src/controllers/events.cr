@@ -324,7 +324,7 @@ class Events < Application
     # ensure we have the host event details
     if client.client_id == :office365 && event.host != cal_id
       event = get_hosts_event(event)
-      event_id = event.id.not_nil!
+      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
       changes.id = event_id
     end
 
@@ -366,12 +366,16 @@ class Events < Application
            end
 
     changes.event_start = changes.event_start.in(zone)
-    changes.event_end = changes.event_end.not_nil!.in(zone)
+    changes.event_end = if event_end = changes.event_end
+                          event_end.in(zone)
+                        else
+                          raise Error::BadRequest.new("event_end must be present")
+                        end
 
     # are we moving the event room?
     changing_room = system_id != (changes.system_id.presence || system_id)
     if changing_room
-      new_system_id = changes.system_id.not_nil!
+      raise Error::BadRequest.new("system_id must be present when changing room") unless new_system_id = changes.system_id
 
       new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence.try &.downcase
@@ -401,17 +405,21 @@ class Events < Application
       system_id = system.id
     else
       # If room is not changing and it is not an attendee, add it.
-      if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal)
-        changes.attendees << PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: sys_cal.not_nil!, resource: true)
+      if system && !changes.attendees.map { |a| a.email }.includes?(sys_cal) && !sys_cal.nil?
+        changes.attendees << PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: sys_cal, resource: true)
       end
     end
 
-    updated_event = client.update_event(user_id: host, event: changes, calendar_id: host).not_nil!
+    updated_event = client.update_event(user_id: host, event: changes, calendar_id: host)
+    raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
 
     if system
-      meta = get_migrated_metadata(event, system_id.not_nil!, system.email.not_nil!) || EventMetadata.new
+      raise Error::BadRequest.new("system_id must be present") if system_id.nil?
+      raise Error::BadUpstreamResponse.new("email must be present on system #{system_id}") unless system_email = system.email
+
+      meta = get_migrated_metadata(event, system_id, system_email) || EventMetadata.new
       if extension_data = changes.extension_data
-        meta_ext_data = meta.not_nil!.ext_data
+        meta_ext_data = meta.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
@@ -428,7 +436,7 @@ class Events < Application
 
         if !remove_attendees.empty?
           remove_attendees.each do |email|
-            existing.select { |attend| attend.guest.not_nil!.email == email }.each do |attend|
+            existing.select { |attend| (guest = attend.guest) && (guest.email == email) }.each do |attend|
               existing_lookup.delete(attend.email)
               attend.delete
             end
@@ -479,17 +487,21 @@ class Events < Application
                                     false
                                   end
 
+            raise Error::InconsistentState.new("metadata id must be present") unless meta_id = meta.id
+            raise Error::InconsistentState.new("visit_expected must be present") unless attendee_visit_expected = attendee.visit_expected
+
             attend.update!(
-              event_id: meta.id.not_nil!,
+              event_id: meta_id,
               guest_id: guest.id,
-              visit_expected: attendee.visit_expected.not_nil!,
+              visit_expected: attendee_visit_expected,
             )
 
             next unless attend.visit_expected
 
             if !previously_visiting || changing_room
               spawn do
-                sys = system.not_nil!
+                sys = system
+                raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
                 placeos_client.root.signal("staff/guest/attending", {
                   action:         :meeting_update,
@@ -498,8 +510,8 @@ class Events < Application
                   event_ical_uid: updated_event.ical_uid,
                   host:           host,
                   resource:       sys.email,
-                  event_summary:  updated_event.not_nil!.title,
-                  event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
+                  event_summary:  updated_event.title,
+                  event_starting: updated_event_start.to_unix,
                   attendee_name:  attendee.name,
                   attendee_email: attendee.email,
                   zones:          sys.zones,
@@ -511,8 +523,9 @@ class Events < Application
           existing.each do |attend|
             next unless attend.visit_expected
             spawn do
-              sys = system.not_nil!
-              guest = attend.guest.not_nil!
+              sys = system
+              raise Error::NotFound.new("guest not found for attendee #{attend.id}") unless guest = attend.guest
+              raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
               placeos_client.root.signal("staff/guest/attending", {
                 action:         :meeting_update,
@@ -521,8 +534,8 @@ class Events < Application
                 event_ical_uid: updated_event.ical_uid,
                 host:           host,
                 resource:       sys.email,
-                event_summary:  updated_event.not_nil!.title,
-                event_starting: updated_event.not_nil!.event_start.not_nil!.to_unix,
+                event_summary:  updated_event.title,
+                event_starting: updated_event_start.to_unix,
                 attendee_name:  guest.name,
                 attendee_email: guest.email,
                 zones:          sys.zones,
@@ -532,7 +545,7 @@ class Events < Application
         end
       end
 
-      StaffApi::Event.augment(updated_event.not_nil!, meta.resource_calendar, system, meta)
+      StaffApi::Event.augment(updated_event, meta.resource_calendar, system, meta)
     else
       # see if there are any relevent systems associated with the event
       resource_calendars = (updated_event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|
@@ -542,12 +555,15 @@ class Events < Application
       if !resource_calendars.empty?
         systems = placeos_client.systems.with_emails(resource_calendars)
         if sys = systems.first?
-          meta = get_migrated_metadata(updated_event, sys.id.not_nil!, sys.email.not_nil!)
-          return StaffApi::Event.augment(updated_event.not_nil!, host, sys, meta)
+          raise Error::BadUpstreamResponse.new("id must be present on system") unless sys_id = sys.id
+          raise Error::BadUpstreamResponse.new("email must be present on system #{sys_id}") unless sys_email = sys.email
+
+          meta = get_migrated_metadata(updated_event, sys_id, sys_email)
+          return StaffApi::Event.augment(updated_event, host, sys, meta)
         end
       end
 
-      StaffApi::Event.augment(updated_event.not_nil!, host)
+      StaffApi::Event.augment(updated_event, host)
     end
   end
 

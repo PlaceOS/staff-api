@@ -181,6 +181,12 @@ abstract class Application < ActionController::Base
     render_error(error, "bad upstream response #{error.message}")
   end
 
+  @[AC::Route::Exception(Error::InconsistentState, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
+  def inconsistent_state(error) : CommonError
+    Log.debug { error.message }
+    render_error(error, "inconsistent state #{error.message}")
+  end
+
   # handler for a few different errors
   @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
   @[AC::Route::Exception(PgORM::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
