@@ -88,13 +88,18 @@ class Events < Application
       # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
       # However they have a new `uid` field on the beta API which we can use when it's moved to production
 
+      raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
+      raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless event_ical_uid = event.ical_uid
+
       # Attempt to return metadata regardless of system id availability
-      metadata_ids << event.id.not_nil!
-      ical_uids << event.ical_uid.not_nil!
+      metadata_ids << event_id
+      ical_uids << event_ical_uid
 
       # TODO: Handle recurring O365 events with differing `ical_uid`
       # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
-      metadata_ids << event.recurring_event_id.not_nil! if event.recurring_event_id && event.recurring_event_id != event.id
+      if (recurring_event_id = event.recurring_event_id) && recurring_event_id != event.id
+        metadata_ids << recurring_event_id
+      end
 
       # check if there is possible system information available
       if system.nil? && (attendee = event.attendees.find(&.resource))
@@ -194,9 +199,7 @@ class Events < Application
     created_event = client.create_event(user_id: host, event: input_event, calendar_id: host).not_nil!
 
     # Update PlaceOS with an signal "/staff/event/changed"
-    if system
-      sys = system.not_nil!
-
+    if sys = system
       # Grab the list of externals that might be attending
       attending = input_event.attendees.try(&.select { |attendee|
         attendee.visit_expected
