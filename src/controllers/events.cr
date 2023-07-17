@@ -178,7 +178,8 @@ class Events < Application
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
       system = placeos_client.systems.fetch(system_id)
-      system_email = system.email.presence.not_nil!
+      raise Error::BadUpstreamResponse.new("email.presence must be present on system #{system_id}") unless system_email_presence = system.email.presence
+      system_email = system_email_presence
       system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
     end
@@ -191,12 +192,16 @@ class Events < Application
     input_event.attendees << host_attendee
 
     # Default to system timezone if not passed in
-    zone = input_event.timezone.presence ? Time::Location.load(input_event.timezone.not_nil!) : get_timezone
+    raise Error::BadRequest.new("timezone must be present on input_event") unless input_event_timezone = input_event.timezone
+    zone = input_event.timezone.presence ? Time::Location.load(input_event_timezone) : get_timezone
 
-    input_event.event_start = input_event.event_start.in(zone)
-    input_event.event_end = input_event.event_end.not_nil!.in(zone)
+    raise Error::BadRequest.new("event_start must be present on input_event") unless input_event_start = input_event.event_start
+    raise Error::BadRequest.new("event_end must be present on input_event") unless input_event_end = input_event.event_end
+    input_event.event_start = input_event_start.in(zone)
+    input_event.event_end = input_event_end.in(zone)
 
-    created_event = client.create_event(user_id: host, event: input_event, calendar_id: host).not_nil!
+    created_event = client.create_event(user_id: host, event: input_event, calendar_id: host)
+    raise Error::BadUpstreamResponse.new("event was not created") unless created_event
 
     # Update PlaceOS with an signal "/staff/event/changed"
     if sys = system
@@ -238,9 +243,12 @@ class Events < Application
           end
           guest.save!
 
+          raise Error::InconsistentState.new("metadata id must be present") unless meta_id = meta.id
+          raise Error::BadUpstreamResponse.new("event_start must be present on created_event #{created_event.id}") unless created_event_start = created_event.event_start
+
           # Create attendees
           Attendee.create!(
-            event_id: meta.id.not_nil!,
+            event_id: meta_id,
             guest_id: guest.id,
             visit_expected: true,
             checked_in: false,
@@ -256,7 +264,7 @@ class Events < Application
               host:           host,
               resource:       sys.email,
               event_summary:  created_event.title,
-              event_starting: created_event.event_start.not_nil!.to_unix,
+              event_starting: created_event_start.to_unix,
               attendee_name:  attendee.name,
               attendee_email: attendee.email,
               zones:          sys.zones,
