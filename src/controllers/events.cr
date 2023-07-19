@@ -801,7 +801,8 @@ class Events < Application
       user_email = user_token.guest_scope? ? cal_id : user.email
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
-      event = client.get_event(user_email.not_nil!, id: event_id, calendar_id: cal_id)
+      raise Error::InconsistentState.new("user_email must be present") unless user_email
+      event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
       raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
       # ensure we have the host event details
@@ -809,7 +810,8 @@ class Events < Application
       if client.client_id == :office365 && event.host != cal_id
         begin
           event = get_hosts_event(event)
-          event_id = event.id.not_nil!
+          raise Error::BadUpstreamResponse.new("id must be present on event") if event.id.nil?
+          event_id = event.id
         rescue PlaceCalendar::Exception
           # we might not have access
         end
@@ -821,7 +823,7 @@ class Events < Application
 
       metadata = get_event_metadata(event, system_id)
       parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
-      StaffApi::Event.augment(event.not_nil!, cal_id, system, metadata, parent_meta)
+      StaffApi::Event.augment(event, cal_id, system, metadata, parent_meta)
     else
       # Need to confirm the user can access this calendar
       user_cal = user_cal.try &.downcase
@@ -851,11 +853,11 @@ class Events < Application
       if !resource_calendars.empty?
         systems = placeos_client.systems.with_emails(resource_calendars)
         if system = systems.first?
-          return StaffApi::Event.augment(event.not_nil!, user_cal, system, metadata)
+          return StaffApi::Event.augment(event, user_cal, system, metadata)
         end
       end
 
-      StaffApi::Event.augment(event.not_nil!, user_cal, metadata: metadata)
+      StaffApi::Event.augment(event, user_cal, metadata: metadata)
     end
   end
 
