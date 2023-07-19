@@ -1077,7 +1077,10 @@ class Events < Application
 
     query = query.where(system_id: system_id) if system_id
     query = query.by_event_ids(event_ref) if event_ref && !event_ref.empty?
-    query = query.by_ext_data(field_name, value.not_nil!) if field_name && value.presence
+    if field_name && value.presence
+      raise Error::BadRequest.new("must provide both field_name & value") unless value
+      query = query.by_ext_data(field_name, value)
+    end
 
     query.limit(10_000).to_a
   end
