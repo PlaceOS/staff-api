@@ -1010,15 +1010,16 @@ class Events < Application
     # Adding back system with correct status
     attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
 
-    event.not_nil!.attendees = attendees
+    event.attendees = attendees
 
     # Update the event (user must be a resource approver)
     updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
+    raise Error::BadUpstreamResponse.new("failed to update event #{event_id} on system calendar #{cal_id}") unless updated_event
 
     # Return the full event details
     metadata = get_event_metadata(event, system_id)
 
-    StaffApi::Event.augment(updated_event.not_nil!, system.email, system, metadata)
+    StaffApi::Event.augment(updated_event, system.email, system, metadata)
   end
 
   # Event Guest management
