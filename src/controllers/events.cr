@@ -192,8 +192,11 @@ class Events < Application
     input_event.attendees << host_attendee
 
     # Default to system timezone if not passed in
-    raise Error::BadRequest.new("timezone must be present on input_event") unless input_event_timezone = input_event.timezone
-    zone = input_event.timezone.presence ? Time::Location.load(input_event_timezone) : get_timezone
+    zone = if input_event.timezone.presence && (input_event_timezone = input_event.timezone)
+             Time::Location.load(input_event_timezone)
+           else
+             get_timezone
+           end
 
     raise Error::BadRequest.new("event_start must be present on input_event") unless input_event_start = input_event.event_start
     raise Error::BadRequest.new("event_end must be present on input_event") unless input_event_end = input_event.event_end
