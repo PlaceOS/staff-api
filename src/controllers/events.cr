@@ -810,8 +810,7 @@ class Events < Application
       if client.client_id == :office365 && event.host != cal_id
         begin
           event = get_hosts_event(event)
-          raise Error::BadUpstreamResponse.new("id must be present on event") if event.id.nil?
-          event_id = event.id
+          raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
         rescue PlaceCalendar::Exception
           # we might not have access
         end
@@ -936,8 +935,7 @@ class Events < Application
     if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
       original_event = event
       event = get_hosts_event(event, tenant.service_account)
-      raise Error::BadUpstreamResponse.new("id must be present on event") if event.id.nil?
-      event_id = event.id
+      raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
       cal_id = srv_acct
     end
 
