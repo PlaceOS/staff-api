@@ -936,7 +936,8 @@ class Events < Application
     if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
       original_event = event
       event = get_hosts_event(event, tenant.service_account)
-      event_id = event.id.not_nil!
+      raise Error::BadUpstreamResponse.new("id must be present on event") if event.id.nil?
+      event_id = event.id
       cal_id = srv_acct
     end
 
@@ -957,7 +958,7 @@ class Events < Application
       get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
       get_event_metadata(event, system_id, search_recurring: false).try &.destroy
 
-      spawn { notify_destroyed(system.not_nil!, event_id, event.ical_uid, event) }
+      spawn { notify_destroyed(system, event_id, event.ical_uid, event) }
     end
   end
 
