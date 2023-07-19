@@ -657,7 +657,7 @@ class Events < Application
              if client.client_id == :office365 && event.host != user_email
                begin
                  event = get_hosts_event(event)
-                 event_id = event.id.not_nil!
+                 raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
                rescue PlaceCalendar::Exception
                  # we might not have access
                end
@@ -671,16 +671,25 @@ class Events < Application
                raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
              end
 
+             raise Error::BadRequest.new("system_id must be present") if system_id.nil?
+             raise Error::BadUpstreamResponse.new("id must be present on system") unless upstream_system_id = system.id
+             raise Error::BadUpstreamResponse.new("id must be present on event") unless upstream_event_id = event.id
+             raise Error::BadUpstreamResponse.new("ical_uid must be present on event #{upstream_event_id}") unless event_ical_uid = event.ical_uid
+             raise Error::BadUpstreamResponse.new("event_start must be present on event") unless event_start = event.event_start
+             raise Error::BadUpstreamResponse.new("event_end must be present on event") unless event_end = event.event_end
+             raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email
+             raise Error::BadUpstreamResponse.new("host must be present on event") unless event_host = event.host
+
              # attempt to find the metadata
-             mdata = get_migrated_metadata(event, system_id.not_nil!, cal_id) || EventMetadata.new
-             mdata.system_id = system.id.not_nil!
-             mdata.event_id = event.id.not_nil!
-             mdata.ical_uid = event.ical_uid.not_nil!
+             mdata = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.new
+             mdata.system_id = upstream_system_id
+             mdata.event_id = upstream_event_id
+             mdata.ical_uid = event_ical_uid
              mdata.recurring_master_id = event.recurring_event_id || event.id if event.recurring
-             mdata.event_start = event.event_start.not_nil!.to_unix
-             mdata.event_end = event.event_end.not_nil!.to_unix
-             mdata.resource_calendar = system.email.not_nil!
-             mdata.host_email = event.host.not_nil!
+             mdata.event_start = event_start.to_unix
+             mdata.event_end = event_end.to_unix
+             mdata.resource_calendar = system_email
+             mdata.host_email = event_host
              mdata.tenant_id = tenant.id
              mdata
            end
