@@ -721,7 +721,8 @@ class Events < Application
       })
     end
 
-    meta.ext_data.not_nil!
+    raise Error::InconsistentState.new("ext_data must be present on metadata") unless meta_ext_data = meta.ext_data
+    meta_ext_data
   end
 
   enum ChangeType
