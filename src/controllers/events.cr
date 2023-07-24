@@ -1150,23 +1150,32 @@ class Events < Application
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id})
     end
 
+    raise Error::BadUpstreamResponse.new("id must be present on system") unless meta_system_id = system.id
+    raise Error::BadUpstreamResponse.new("id must be present on event") unless meta_event_id = event.id
+    raise Error::BadUpstreamResponse.new("event_start must be present on event") unless meta_event_start = event.event_start
+    raise Error::BadUpstreamResponse.new("event_end must be present on event") unless meta_event_end = event.event_end
+    raise Error::BadUpstreamResponse.new("host must be present on event") unless meta_event_host = event.host
+    raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless meta_event_ical_uid = event.ical_uid
+
     eventmeta = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.create!(
-      system_id: system.id.not_nil!,
-      event_id: event.id.not_nil!,
+      system_id: meta_system_id,
+      event_id: meta_event_id,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
-      event_start: event.event_start.not_nil!.to_unix,
-      event_end: event.event_end.not_nil!.to_unix,
+      event_start: meta_event_start.to_unix,
+      event_end: meta_event_end.to_unix,
       resource_calendar: cal_id,
-      host_email: event.host.not_nil!,
+      host_email: meta_event_host,
       tenant_id: tenant.id,
-      ical_uid: event.ical_uid.not_nil!,
+      ical_uid: meta_event_ical_uid,
     )
 
-    if attendee = Attendee.by_tenant(tenant.id).find_by?(guest_id: guest.id, event_id: eventmeta.not_nil!.id)
+    raise Error::BadUpstreamResponse.new("id must be present on event metadata") unless eventmeta_id = eventmeta.id
+
+    if attendee = Attendee.by_tenant(tenant.id).find_by?(guest_id: guest.id, event_id: eventmeta_id)
       attendee.update!(checked_in: checkin)
     else
       attendee = Attendee.create!(
-        event_id: eventmeta.id.not_nil!,
+        event_id: eventmeta_id,
         guest_id: guest.id,
         visit_expected: true,
         checked_in: checkin,
@@ -1188,7 +1197,7 @@ class Events < Application
         event_ical_uid: eventmeta.ical_uid,
         host:           event.host,
         resource:       eventmeta.resource_calendar,
-        event_summary:  event.not_nil!.title,
+        event_summary:  event.title,
         event_starting: eventmeta.event_start,
         attendee_name:  guest.name,
         attendee_email: guest.email,
