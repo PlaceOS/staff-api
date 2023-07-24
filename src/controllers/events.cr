@@ -1213,8 +1213,11 @@ class Events < Application
   # ==========================
 
   def notify_created_or_updated(action, system, event, meta = nil, can_skip = true)
-    starting = event.event_start.not_nil!.to_unix
-    ending = event.event_end.not_nil!.to_unix
+    raise Error::InconsistentState.new("event_start must be present on event") unless event_start = event.event_start
+    raise Error::InconsistentState.new("event_end must be present on event") unless event_end = event.event_end
+
+    starting = event_start.to_unix
+    ending = event_end.to_unix
     cancelled = event.status == "cancelled"
 
     skip_signal = can_skip && meta &&
