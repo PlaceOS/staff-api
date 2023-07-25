@@ -119,7 +119,11 @@ class Bookings < Application
     @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String? = nil,
     @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
-    ical_uid : String? = nil
+    ical_uid : String? = nil,
+    @[AC::Param::Info(description: "the maximum number of results to return", example: "10000")]
+    limit : Int32 = 100,
+    @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
+    offset : Int32 = 0
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
     event_ids = [event_id.presence, ical_uid.presence].compact
@@ -159,17 +163,35 @@ class Bookings < Application
       end
     {% end %}
 
-    query = query
-      .order(booking_start: :desc)
-      .where(deleted: deleted_flag)
-      .limit(20000)
+    query = query.where(deleted: deleted_flag)
 
     unless include_checked_out
       query = checked_out_flag ? query.where("checked_out_at != ?", nil) : query.where(checked_out_at: nil)
     end
 
+    total = query.count
+    range_start = offset > 0 ? offset - 1 : 0
+
+    query = query
+      .order(booking_start: :desc)
+      .offset(range_start)
+      .limit(limit)
+
+    result = query.to_a
+    range_end = result.size + range_start
+
+    response.headers["X-Total-Count"] = total.to_s
+    response.headers["Content-Range"] = "bookings #{offset}-#{range_end}/#{total}"
+
+    # Set link
+    if range_end < total
+      params["offset"] = (range_end + 1).to_s
+      params["limit"] = limit.to_s
+      response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+    end
+
     response.headers["x-placeos-rawsql"] = query.to_sql
-    query.to_a # map &.as_h
+    result
   end
 
   # creates a new booking

@@ -29,12 +29,50 @@ describe Bookings do
       zones1 = booking1.zones.not_nil!
       zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+
       body = JSON.parse(client.get(route, headers: headers).body).as_a
       body.size.should eq(2)
 
       # More filters by zones
       route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
       body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.size.should eq(1)
+    end
+
+    it "should supports pagination on list of bookings request" do
+      tenant = get_tenant
+
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      booking3 = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      zones1 = booking1.zones.not_nil!
+      zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last},,#{booking3.zones.not_nil!.last}"
+      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&limit=2"
+      result = client.get(route, headers: headers)
+
+      result.success?.should be_true
+      result.headers["X-Total-Count"].should eq "3"
+      result.headers["Content-Range"].should eq "bookings 0-2/3"
+
+      body = JSON.parse(result.body).as_a
+      body.size.should eq(2)
+
+      link = URI.decode(result.headers["Link"])
+      link.should eq(%(<#{route}&offset=3>; rel="next"))
+      next_link = link.split(">;")[0][1..]
+
+      result = client.get(next_link, headers: headers)
+
+      result.success?.should be_true
+      result.headers["X-Total-Count"].should eq "3"
+      result.headers["Content-Range"].should eq "bookings 3-3/3"
+      result.headers["Link"]?.should be_nil
+
+      body = JSON.parse(result.body).as_a
       body.size.should eq(1)
     end
 

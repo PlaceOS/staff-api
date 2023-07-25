@@ -2,6 +2,8 @@
 
 ### Feat
 
+- **shard.lock**: bump opentelemetry-instrumentation.cr
+- PPT-621 Add pagination to bookings index route ([#284](https://github.com/PlaceOS/staff-api/pull/284))
 - **events**: add push event endpoint ([#283](https://github.com/PlaceOS/staff-api/pull/283))
 - **events**: allow moving room to one that exists in the meeting
 - **events**: provide method to keep old resources when moving room
@@ -59,6 +61,13 @@
 
 ### Fix
 
+- **events**: fixes O365 decline events
+- **events**: accepting an event must use a special route ([#286](https://github.com/PlaceOS/staff-api/pull/286))
+- **tenants**: allow updates to email_domain column
+- **tenants**: don't error if no tenant configured
+- **event**: mark metadata as cancelled on augment
+- **event**: mark metadata as cancelled on augment
+- **events**: use relative monthly bookings by default ([#285](https://github.com/PlaceOS/staff-api/pull/285)) (PPT-651)
 - **events**: only return matching ical_uid when requested
 - **events**: ensure metadata patching applied on room change
 - **bookings**: add default response status to attendees

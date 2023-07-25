@@ -179,6 +179,21 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: "10000"
+        required: false
+        schema:
+          type: integer
+          format: Int32
+      - name: offset
+        in: query
+        description: the starting offset of the result set. Used to implement pagination
+        required: false
+        schema:
+          type: integer
+          format: Int32
       responses:
         200:
           description: OK
@@ -2779,6 +2794,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/notify/{change}/{system_id}/{event_id}:
+    post:
+      tags:
+      - Events
+      operationId: Events#notify_change
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_PlaceCalendar__Event___Nil_'
+        required: true
+      parameters:
+      - name: change
+        in: path
+        description: the type of change that has occured
+        example: created
+        required: true
+        schema:
+          type: string
+          enum:
+          - created
+          - updated
+          - deleted
+      - name: system_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: true
+        schema:
+          type: string
+      - name: event_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: true
+        schema:
+          type: string
+      responses:
+        202:
+          description: Accepted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        501:
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/decline:
     post:
       summary: cancels the meeting without deleting it
@@ -2908,7 +3019,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlaceCalendar__Event'
+                $ref: '#/components/schemas/Bool'
         400:
           description: Bad Request
           content:
@@ -2992,7 +3103,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlaceCalendar__Event'
+                $ref: '#/components/schemas/Bool'
         400:
           description: Bad Request
           content:
@@ -7727,6 +7838,289 @@ components:
       - attachments
     JSON__Any:
       type: object
+    _PlaceCalendar__Event___Nil_:
+      type: object
+      properties:
+        event_start:
+          type: integer
+          format: Int64
+        event_end:
+          type: integer
+          format: Int64
+          nullable: true
+        id:
+          type: string
+          nullable: true
+        recurring_event_id:
+          type: string
+          nullable: true
+        host:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              email:
+                type: string
+              response_status:
+                type: string
+                nullable: true
+              resource:
+                type: boolean
+                nullable: true
+              organizer:
+                type: boolean
+                nullable: true
+              checked_in:
+                type: boolean
+                nullable: true
+              visit_expected:
+                type: boolean
+                nullable: true
+              extension_data:
+                type: object
+                nullable: true
+              preferred_name:
+                type: string
+                nullable: true
+              phone:
+                type: string
+                nullable: true
+              organisation:
+                type: string
+                nullable: true
+              photo:
+                type: string
+                nullable: true
+              notes:
+                type: string
+                nullable: true
+              banned:
+                type: boolean
+                nullable: true
+              dangerous:
+                type: boolean
+                nullable: true
+            required:
+            - name
+            - email
+        hide_attendees:
+          type: boolean
+        location:
+          type: string
+          nullable: true
+        private:
+          type: boolean
+        all_day:
+          type: boolean
+        timezone:
+          type: string
+          nullable: true
+        recurring:
+          type: boolean
+          nullable: true
+        created:
+          type: string
+          format: date-time
+          nullable: true
+        updated:
+          type: string
+          format: date-time
+          nullable: true
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                nullable: true
+              name:
+                type: string
+              content_type:
+                type: string
+                nullable: true
+              content_bytes:
+                type: string
+              size:
+                type: integer
+                format: Int32
+                nullable: true
+            required:
+            - name
+            - content_bytes
+        recurrence:
+          type: object
+          properties:
+            range_start:
+              type: integer
+              format: Int64
+            range_end:
+              type: integer
+              format: Int64
+            interval:
+              type: integer
+              format: Int32
+            pattern:
+              type: string
+            days_of_week:
+              type: array
+              items:
+                type: string
+              nullable: true
+          required:
+          - range_start
+          - range_end
+          - interval
+          - pattern
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        creator:
+          type: string
+          nullable: true
+        ical_uid:
+          type: string
+          nullable: true
+        online_meeting_provider:
+          type: string
+          nullable: true
+        online_meeting_phones:
+          type: array
+          items:
+            type: string
+          nullable: true
+        online_meeting_url:
+          type: string
+          nullable: true
+        online_meeting_sip:
+          type: string
+          nullable: true
+        online_meeting_pin:
+          type: string
+          nullable: true
+        online_meeting_id:
+          type: string
+          nullable: true
+        extended_properties:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+          nullable: true
+        mailbox:
+          type: string
+          nullable: true
+        calendar:
+          type: string
+          nullable: true
+        system_id:
+          type: string
+          nullable: true
+        system:
+          anyOf:
+          - type: object
+            properties:
+              id:
+                type: string
+            required:
+            - id
+          - type: object
+            properties:
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+              id:
+                type: string
+              name:
+                type: string
+              zones:
+                type: array
+                items:
+                  type: string
+              modules:
+                type: array
+                items:
+                  type: string
+              description:
+                type: string
+                nullable: true
+              email:
+                type: string
+                nullable: true
+              display_name:
+                type: string
+                nullable: true
+              code:
+                type: string
+                nullable: true
+              type:
+                type: string
+                nullable: true
+              map_id:
+                type: string
+                nullable: true
+              capacity:
+                type: integer
+                format: Int32
+              features:
+                type: array
+                items:
+                  type: string
+              bookable:
+                type: boolean
+              installed_ui_devices:
+                type: integer
+                format: Int32
+              support_url:
+                type: string
+                nullable: true
+              version:
+                type: integer
+                format: Int32
+            required:
+            - created_at
+            - updated_at
+            - id
+            - name
+            - zones
+            - modules
+            - capacity
+            - features
+            - bookable
+            - installed_ui_devices
+            - version
+          nullable: true
+        extension_data:
+          type: object
+          nullable: true
+        recurring_master_id:
+          type: string
+          nullable: true
+      required:
+      - event_start
+      - attendees
+      - hide_attendees
+      - private
+      - all_day
+      - attachments
+      nullable: true
+    Bool:
+      type: boolean
     PlaceOS__Model__ModelWithAutoKey:
       type: object
     PlaceOS__Model__EventMetadata:
@@ -8058,6 +8452,9 @@ components:
           type: string
           nullable: true
         domain:
+          type: string
+          nullable: true
+        email_domain:
           type: string
           nullable: true
         platform:

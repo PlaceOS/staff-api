@@ -9,8 +9,9 @@ class StaffApi::Event
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
-      if calendar && metadata && calendar.downcase.in?({metadata.resource_calendar.downcase, metadata.host_email.downcase})
-        metadata.delete
+      if calendar && metadata && !metadata.cancelled && calendar.downcase.in?({metadata.resource_calendar.downcase, metadata.host_email.downcase})
+        metadata.cancelled = true
+        metadata.save
       end
       metadata = nil
     elsif staff_api_attendees = metadata.try(&.attendees)

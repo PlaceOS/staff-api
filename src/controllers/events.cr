@@ -316,7 +316,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
@@ -336,7 +336,7 @@ class Events < Application
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
-    if client.client_id == :office365 && event.host != cal_id
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
       event = get_hosts_event(event)
       raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
       changes.id = event_id
@@ -657,7 +657,7 @@ class Events < Application
 
              # ensure we have the host event details
              # TODO:: instead of this we should store ical UID in the guest JWT
-             if client.client_id == :office365 && event.host != user_email
+             if client.client_id == :office365 && event.host.try(&.downcase) != user_email
                begin
                  event = get_hosts_event(event)
                  raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
@@ -811,7 +811,7 @@ class Events < Application
 
       # ensure we have the host event details
       # TODO:: instead of this we should store ical UID in the guest JWT
-      if client.client_id == :office365 && event.host != cal_id
+      if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
         begin
           event = get_hosts_event(event)
           raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
@@ -904,7 +904,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id != cal_id }.first?
+      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
@@ -971,8 +971,12 @@ class Events < Application
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String
-  ) : PlaceCalendar::Event
-    update_status(event_id, system_id, "accepted")
+  ) : Bool
+    # Check this system has an associated resource
+    system = get_placeos_client.systems.fetch(system_id)
+    cal_id = system.email
+    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
+    client.accept_event(user.email, id: event_id, calendar_id: cal_id)
   end
 
   # rejects / declines the meeting on behalf of the event space
@@ -982,45 +986,12 @@ class Events < Application
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String
-  ) : PlaceCalendar::Event
-    update_status(event_id, system_id, "declined")
-  end
-
-  private def update_status(event_id : String, system_id : String, status : String)
+  ) : Bool
     # Check this system has an associated resource
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-
-    # Check the event was in the calendar
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
-
-    # User details
-    user_email = user.email.downcase
-    host = event.host.try(&.downcase) || user_email
-
-    # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees)
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
-    end
-
-    # Existing attendees without system
-    attendees = event.attendees.uniq.reject { |attendee| attendee.email.downcase == cal_id.downcase }
-    # Adding back system with correct status
-    attendees << PlaceCalendar::Event::Attendee.new(name: cal_id, email: cal_id, response_status: status)
-
-    event.attendees = attendees
-
-    # Update the event (user must be a resource approver)
-    updated_event = client.update_event(user_id: user.email, event: event, calendar_id: cal_id)
-    raise Error::BadUpstreamResponse.new("failed to update event #{event_id} on system calendar #{cal_id}") unless updated_event
-
-    # Return the full event details
-    metadata = get_event_metadata(event, system_id)
-
-    StaffApi::Event.augment(updated_event, system.email, system, metadata)
+    client.decline_event(user.email, id: event_id, calendar_id: cal_id)
   end
 
   # Event Guest management
