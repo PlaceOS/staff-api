@@ -1047,10 +1047,17 @@ class Events < Application
     return [] of Guest | Attendee if visitors.empty?
 
     # Grab the guest profiles if they exist
-    guests = visitors.each_with_object({} of String => Guest) { |visitor, obj| obj[visitor.guest.not_nil!.email.not_nil!] = visitor.guest.not_nil! }
+    guests = visitors.each_with_object({} of String => Guest) do |visitor, obj|
+      raise Error::InconsistentState.new("guest must be present on visitor metadata") unless guest = visitor.guest
+      raise Error::InconsistentState.new("email must be present on guest") unless guest_email = guest.email
+      obj[guest_email] = guest
+    end
 
     # Merge the visitor data with guest profiles
-    visitors.map { |visitor| attending_guest(visitor, guests[visitor.guest.not_nil!.email]?, parent_meta) }
+    visitors.map do |visitor|
+      raise Error::InconsistentState.new("guest must be present on visitor metadata") unless guest = visitor.guest
+      attending_guest(visitor, guests[guest.email]?, parent_meta)
+    end
   end
 
   # This exists to obtain events that have some condition that requires action.
