@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **events**: check not required with delegated access PPT-758 ([#288](https://github.com/PlaceOS/staff-api/pull/288))
 - **events**: fixes O365 decline events
 - **events**: accepting an event must use a special route ([#286](https://github.com/PlaceOS/staff-api/pull/286))
 - **tenants**: allow updates to email_domain column
