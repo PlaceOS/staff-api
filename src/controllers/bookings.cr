@@ -190,7 +190,6 @@ class Bookings < Application
       response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
     end
 
-    response.headers["x-placeos-rawsql"] = query.to_sql
     result
   end
 
