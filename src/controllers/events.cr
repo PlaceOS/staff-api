@@ -152,6 +152,8 @@ class Events < Application
   protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
     # if the current user is not then host then they should be an attendee
     return true if user_email == host_email
+    return true if tenant.delegated
+
     service_account = tenant.service_account.try(&.downcase)
     if host_email == service_account
       return attendees.includes?(user_email)
@@ -302,7 +304,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
+      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
@@ -792,7 +794,7 @@ class Events < Application
       if user_cal == user.email
         found = true
       elsif user_cal
-        found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
+        found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != user_cal }.first?
       else
         user_cal = user.email
         found = true
@@ -863,7 +865,7 @@ class Events < Application
       cal_id = user_cal
     elsif user_cal
       cal_id = user_cal
-      found = get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
+      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
