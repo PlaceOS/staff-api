@@ -56,7 +56,9 @@ class Calendars < Application
 
     # perform availability request
     period_start = Time.unix(period_start)
-    period_end = Time.unix(period_end)
+    # removing 1 second from the end time to ensure the timeslot is showing up as available
+    # if there is a meeting starting imidiatly after the end of the period
+    period_end = Time.unix(period_end - 1)
     user_email = tenant.which_account(user.email)
     busy = client.get_availability(user_email, calendars, period_start, period_end)
 
