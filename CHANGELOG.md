@@ -117,6 +117,7 @@
 
 ### Refactor
 
+- **events**: [PPT 503] replace #not_nil! with more specific errors ([#287](https://github.com/PlaceOS/staff-api/pull/287))
 - migrated staff-api to pg-orm ([#277](https://github.com/PlaceOS/staff-api/pull/277))
 - set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
 - **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
