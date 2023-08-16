@@ -266,8 +266,15 @@ abstract class Application < ActionController::Base
 
     # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
     if client.client_id == :office365
-      if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: system_calendar)
-        original_meta = EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: original_event.ical_uid).to_a.first?
+      original_meta = nil
+      begin
+        host_cal = event.host.as(String).downcase
+        calendar = user.email.downcase == host_cal ? host_cal : system_calendar
+        if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: calendar)
+          original_meta = EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: original_event.ical_uid).to_a.first?
+        end
+      rescue error : PlaceCalendar::Exception
+        Log.warn(exception: error) { "failed to find recurring event master for #{user.email} with #{event.recurring_event_id}" }
       end
     else
       original_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)

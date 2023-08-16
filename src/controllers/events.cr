@@ -433,7 +433,7 @@ class Events < Application
       raise Error::BadRequest.new("system_id must be present") if system_id.nil?
       raise Error::BadUpstreamResponse.new("email must be present on system #{system_id}") unless system_email = system.email
 
-      meta = get_migrated_metadata(event, system_id, system_email) || EventMetadata.new
+      meta = get_migrated_metadata(updated_event, system_id, system_email) || EventMetadata.new
       if extension_data = changes.extension_data
         meta_ext_data = meta.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
