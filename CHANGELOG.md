@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **events**: [PPT-723] failed metadata lookup on recurring booking edit ([#290](https://github.com/PlaceOS/staff-api/pull/290))
 - **events**: check not required with delegated access PPT-758 ([#288](https://github.com/PlaceOS/staff-api/pull/288))
 - **events**: fixes O365 decline events
 - **events**: accepting an event must use a special route ([#286](https://github.com/PlaceOS/staff-api/pull/286))
