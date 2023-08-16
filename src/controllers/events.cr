@@ -411,7 +411,7 @@ class Events < Application
     updated_event = client.update_event(user_id: host, event: changes, calendar_id: host).not_nil!
 
     if system
-      meta = get_migrated_metadata(event, system_id.not_nil!, system.email.not_nil!) || EventMetadata.new
+      meta = get_migrated_metadata(updated_event, system_id.not_nil!, system.email.not_nil!) || EventMetadata.new
       if extension_data = changes.extension_data
         meta_ext_data = meta.not_nil!.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
