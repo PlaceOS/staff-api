@@ -641,7 +641,7 @@ class Events < Application
 
     # attempt to find the metadata
     query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
-    if client.client_id == :office365 && uuid.presence
+    if uuid.presence
       query = query.where("ical_uid in (?,?) OR event_id = ?", uuid, event_id, event_id)
     else
       query = query.where(event_id: event_id)
