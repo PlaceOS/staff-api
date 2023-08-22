@@ -996,7 +996,7 @@ class Events < Application
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-    client.accept_event(user.email, id: event_id, calendar_id: cal_id)
+    client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
   # rejects / declines the meeting on behalf of the event space
@@ -1011,7 +1011,7 @@ class Events < Application
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-    client.decline_event(user.email, id: event_id, calendar_id: cal_id)
+    client.decline_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
   # Event Guest management
