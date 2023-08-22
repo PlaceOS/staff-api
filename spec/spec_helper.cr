@@ -50,6 +50,8 @@ module Mock
   module Token
     extend self
 
+    CREATION_LOCK = Mutex.new(protection: :reentrant)
+
     # office_mock_token
     def office(sys_admin = false, support = false, groups = ["manage", "admin"])
       user = generate_auth_user(sys_admin, support, groups)
