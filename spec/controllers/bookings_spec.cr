@@ -126,8 +126,9 @@ describe Bookings do
 
     it "should return a list of bookings when filtered by user" do
       tenant = get_tenant
+      user = Mock::Token.generate_auth_user(false, false)
 
-      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, "toby@redant.com.au")
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, user.email.to_s)
       booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
@@ -148,7 +149,7 @@ describe Bookings do
       user = Mock::Token.generate_auth_user(false, false)
 
       tenant = get_tenant
-      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: user.email)
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: user.email.to_s)
       BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
