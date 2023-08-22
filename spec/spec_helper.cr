@@ -50,20 +50,23 @@ module Mock
   module Token
     extend self
 
+    CREATION_LOCK = Mutex.new(protection: :reentrant)
+
     # office_mock_token
-    def office
+    def office(sys_admin = false, support = false, groups = ["manage", "admin"])
+      user = generate_auth_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: "toby@redant.com.au",
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
-          email: "dev@acaprojects.com",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
-          roles: ["manage", "admin"]
+          roles: groups
         )
       ).encode
     end
@@ -75,7 +78,7 @@ module Mock
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: "toby@redant.com.au",
+        id: "amit@redant.com.au",
         scope: [PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Jon Jon",
@@ -87,21 +90,65 @@ module Mock
     end
 
     # google_mock_token
-    def google
+    def google(sys_admin = false, support = false, groups = ["manage", "admin"])
+      user = generate_auth_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "google.staff-api.dev",
-        id: "amit@redant.com.au",
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC, PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
-          email: "amit@redant.com.au",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
-          roles: ["manage", "admin"]
+          roles: groups
         )
       ).encode
+    end
+
+    def generate_auth_user(sys_admin, support, groups = [] of String)
+      CREATION_LOCK.synchronize do
+        org_zone
+        authority = PlaceOS::Model::Authority.find_by_domain("toby.staff-api.dev") || PlaceOS::Model::Generator.authority
+        authority.domain = "toby.staff-api.dev"
+        authority.config_will_change!
+        authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
+        authority.save!
+
+        if sys_admin || support
+          group_list = groups.join('-')
+          test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}grp-#{group_list}-rest-api@place.tech")
+        else
+          test_user_email = PlaceOS::Model::Email.new("dev@acaprojects.onmicrosoft.com")
+        end
+
+        PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: support, admin: sys_admin).tap do |user|
+          user.email = test_user_email
+          user.groups = groups
+          user.save!
+        end
+      end
+    end
+
+    def org_zone
+      zone = PlaceOS::Model::Zone.find?("zone-perm-org")
+      return zone if zone
+
+      zone = PlaceOS::Model::Generator.zone
+      zone.id = "zone-perm-org"
+      zone.tags = Set.new ["org"]
+      zone.save!
+
+      metadata = PlaceOS::Model::Generator.metadata("permissions", zone)
+      metadata.details = JSON.parse({
+        admin:  ["management"],
+        manage: ["concierge"],
+      }.to_json)
+
+      metadata.save!
+      zone
     end
   end
 

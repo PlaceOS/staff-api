@@ -106,19 +106,19 @@ describe Events do
 
       # Should have created attendees records
       # 2 guests + 1 host
-      evt_meta.attendees.count.should eq(3)
+      evt_meta.attendees.count.should eq(2)
 
       # Should have created guests records
       guests = evt_meta.attendees.map(&.guest.not_nil!)
-      guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
-      guests.compact_map(&.email).should eq(["amit@redant.com.au", "jon@example.com", "dev@acaprojects.onmicrosoft.com"])
+      guests.map(&.name).should eq(["John", "dev@acaprojects.onmicrosoft.com"])
+      guests.compact_map(&.email).should eq(["jon@example.com", "dev@acaprojects.onmicrosoft.com"])
       guests.compact_map(&.preferred_name).should eq(["Jon"])
       guests.compact_map(&.phone).should eq(["012334446"])
       guests.compact_map(&.organisation).should eq(["Google inc"])
       guests.compact_map(&.notes).should eq(["some notes"])
       guests.compact_map(&.photo).should eq(["http://example.com/first.jpg"])
-      guests.compact_map(&.searchable).should eq(["amit@redant.com.au amit   ", "jon@example.com john jon google inc 012334446", "dev@acaprojects.onmicrosoft.com dev@acaprojects.onmicrosoft.com   "])
-      guests.compact_map(&.extension_data).should eq([{} of String => String?, {"fizz" => "buzz"}, {} of String => String?])
+      guests.compact_map(&.searchable).should eq(["jon@example.com john jon google inc 012334446", "dev@acaprojects.onmicrosoft.com dev@acaprojects.onmicrosoft.com   "])
+      guests.compact_map(&.extension_data).should eq([{"fizz" => "buzz"}, {} of String => String?])
     end
   end
 
@@ -247,8 +247,9 @@ describe Events do
       req_body = EventsHelper.update_event_input
       system_id = "sys-rJQQlR4Cn7"
       EventsHelper.stub_permissions_check(system_id)
+      resp = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body)
 
-      updated_event = JSON.parse(client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body).body)
+      updated_event = JSON.parse(resp.body)
       updated_event["event_start"].should eq(1598504460)
       updated_event["event_end"].should eq(1598508120)
     end
@@ -550,7 +551,7 @@ describe Events do
 
       evt_meta = EventMetadata.find_by(event_id: created_event_id)
       guests = evt_meta.attendees.map(&.guest.not_nil!)
-      guests.map(&.name).should eq(["Amit", "John", "dev@acaprojects.onmicrosoft.com"])
+      guests.map(&.name).should eq(["John", "dev@acaprojects.onmicrosoft.com"])
 
       # guest_checkin via system
       resp = client.post("#{EVENTS_BASE}/#{created_event_id}/guests/jon@example.com/checkin?system_id=sys-rJQQlR4Cn7", headers: headers).body
@@ -652,7 +653,11 @@ describe Events do
         "count" => 2,
       }.to_json
 
-      request = client.patch("#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}", headers: headers, body: update_body)
+      request = client.patch(
+        "#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}",
+        headers: headers,
+        body: update_body
+      )
       request.status_code.should eq(200)
 
       request_body = JSON.parse(request.body)

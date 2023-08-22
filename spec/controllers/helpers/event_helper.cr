@@ -79,7 +79,7 @@ module EventsHelper
     }.to_json
   end
 
-  def create_event_input
+  def create_event_input(user = Mock::Token.generate_auth_user(false, false))
     %({
     "event_start": 1598503500,
     "event_end": 1598507160,
@@ -87,7 +87,7 @@ module EventsHelper
     "attendees": [
          {
             "name": "Amit",
-            "email": "amit@redant.com.au",
+            "email": "#{user.email}",
             "response_status": "accepted",
             "resource": false,
             "organizer": true,

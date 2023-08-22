@@ -9,6 +9,20 @@ class Events < Application
     raise Error::Forbidden.new unless is_support?
   end
 
+  @[AC::Route::Filter(:before_action, only: [:extension_metadata])]
+  private def confirm_access(
+    system_id : String? = nil
+  )
+    return if is_support?
+
+    if system_id
+      system = PlaceOS::Model::ControlSystem.find!(system_id)
+      return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+    end
+
+    raise Error::Forbidden.new("user not in appropriate user group")
+  end
+
   # update includes a bunch of moving parts so we want to roll back if something fails
   @[AC::Route::Filter(:around_action, only: [:update])]
   def wrap_in_transaction(&)
@@ -352,7 +366,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
     end
 
     # Check if attendees need updating
@@ -651,7 +665,11 @@ class Events < Application
     meta = if mdata = query.to_a.first?
              if user_token.guest_scope?
                raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({mdata.event_id, mdata.recurring_master_id, mdata.ical_uid})
+             elsif mdata.host_email.downcase != user.email.downcase
+               # ensure the user should be able to edit this metadata
+               confirm_access(system_id)
              end
+
              mdata
            else
              event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
@@ -933,7 +951,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
     unless user_email == host || user_email.in?(existing_attendees)
       # may be able to delete on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).none?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
     end
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
@@ -978,7 +996,7 @@ class Events < Application
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-    client.accept_event(user.email, id: event_id, calendar_id: cal_id)
+    client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
   # rejects / declines the meeting on behalf of the event space
@@ -993,7 +1011,7 @@ class Events < Application
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-    client.decline_event(user.email, id: event_id, calendar_id: cal_id)
+    client.decline_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
   # Event Guest management
