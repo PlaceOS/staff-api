@@ -64,7 +64,7 @@ module Mock
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
-          email: "dev@acaprojects.com",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
           roles: groups
         )
@@ -101,7 +101,7 @@ module Mock
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC, PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
-          email: "amit@redant.com.au",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
           roles: groups
         )
@@ -117,8 +117,12 @@ module Mock
         authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
         authority.save!
 
-        group_list = groups.join('-')
-        test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}grp-#{group_list}-rest-api@place.tech")
+        if sys_admin || support
+          group_list = groups.join('-')
+          test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}grp-#{group_list}-rest-api@place.tech")
+        else
+          test_user_email = PlaceOS::Model::Email.new("dev@acaprojects.onmicrosoft.com")
+        end
 
         PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: support, admin: sys_admin).tap do |user|
           user.email = test_user_email
