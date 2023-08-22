@@ -60,7 +60,7 @@ module Mock
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: user.id,
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
@@ -78,7 +78,7 @@ module Mock
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: user.id,
+        id: "amit@redant.com.au",
         scope: [PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Jon Jon",
@@ -97,7 +97,7 @@ module Mock
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "google.staff-api.dev",
-        id: "amit@redant.com.au",
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC, PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
@@ -117,9 +117,8 @@ module Mock
         authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
         authority.save!
 
-        scope_list = scopes.try &.join('-', &.to_s)
         group_list = groups.join('-')
-        test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}scope-#{scope_list}-#{group_list}-rest-api@place.tech")
+        test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}grp-#{group_list}-rest-api@place.tech")
 
         PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: support, admin: sys_admin).tap do |user|
           user.email = test_user_email
