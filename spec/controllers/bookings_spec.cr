@@ -145,8 +145,10 @@ describe Bookings do
     end
 
     it "should return a list of bookings filtered current user when no zones or user is specified" do
+      user = Mock::Token.generate_auth_user(false, false)
+
       tenant = get_tenant
-      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: user.email)
       BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
