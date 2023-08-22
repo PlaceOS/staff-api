@@ -61,6 +61,7 @@
 
 ### Fix
 
+- **calendar**: availability of timeslots imidiatly preceding another meeting ([#289](https://github.com/PlaceOS/staff-api/pull/289))
 - **events**: patch_metadata attempts to obtain client
 - **events**: [PPT-723] failed metadata lookup on recurring booking edit ([#290](https://github.com/PlaceOS/staff-api/pull/290))
 - **events**: check not required with delegated access PPT-758 ([#288](https://github.com/PlaceOS/staff-api/pull/288))
