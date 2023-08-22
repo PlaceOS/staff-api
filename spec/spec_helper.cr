@@ -133,12 +133,12 @@ module Mock
       zone = PlaceOS::Model::Zone.find?("zone-perm-org")
       return zone if zone
 
-      zone = Model::Generator.zone
+      zone = PlaceOS::Model::Generator.zone
       zone.id = "zone-perm-org"
       zone.tags = Set.new ["org"]
       zone.save!
 
-      metadata = Model::Generator.metadata("permissions", zone)
+      metadata = PlaceOS::Model::Generator.metadata("permissions", zone)
       metadata.details = JSON.parse({
         admin:  ["management"],
         manage: ["concierge"],
