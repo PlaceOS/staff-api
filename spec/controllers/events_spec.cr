@@ -652,7 +652,11 @@ describe Events do
         "count" => 2,
       }.to_json
 
-      request = client.patch("#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}", headers: headers, body: update_body)
+      request = client.patch(
+        "#{EVENTS_BASE}/#{event.event_id}/metadata/#{event.system_id}",
+        headers: headers,
+        body: update_body
+      )
       request.status_code.should eq(200)
 
       request_body = JSON.parse(request.body)

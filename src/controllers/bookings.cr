@@ -21,10 +21,10 @@ class Bookings < Application
 
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
   private def confirm_access
-    if (user = user_token) &&
-       (booking && !({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user_token.user.email.downcase))) &&
-       !(user.is_admin? || user.is_support?) &&
-       !check_access(user.user.roles, booking.zones || [] of String).none?
+    return if is_support?
+    if (user = current_user)
+      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
+      return if check_access(user.groups, booking.zones || [] of String).can_manage?
       head :forbidden
     end
   end

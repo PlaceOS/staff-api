@@ -51,6 +51,9 @@ module Utils::CurrentUser
     @user_token.as(UserJWT)
   end
 
+  # Obtains user referenced by user_token id
+  getter current_user : PlaceOS::Model::User { PlaceOS::Model::User.find!(user_token.id) }
+
   def user
     user_token.user
   end
