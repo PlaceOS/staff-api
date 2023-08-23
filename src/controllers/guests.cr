@@ -136,9 +136,12 @@ class Guests < Application
                     metadata_ids.to_a
                   end
 
-      Attendee.find_all_by_sql(sql, tenant.id.not_nil!, args: param_tmp).each do |attend|
-        attend.checked_in = false if attend.event_metadata.try &.event_id.try &.in?(metadata_recurring_ids)
-        attendees[attend.guest.not_nil!.email] = attend
+      # can't be any guests if there are no events
+      if !param_tmp.empty?
+        Attendee.find_all_by_sql(sql, tenant.id.not_nil!, args: param_tmp).each do |attend|
+          attend.checked_in = false if attend.event_metadata.try &.event_id.try &.in?(metadata_recurring_ids)
+          attendees[attend.guest.not_nil!.email] = attend
+        end
       end
 
       booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
