@@ -57,17 +57,17 @@ class Calendars < Application
     # perform availability request
     # adding 1 second to the start time to ensure the timeslot is showing up as available
     # if there is a meeting ending imidiatly before the start of the period
-    period_start = Time.unix(period_start + 1)
+    period_start = Time.unix(period_start)
     # removing 1 second from the end time to ensure the timeslot is showing up as available
     # if there is a meeting starting imidiatly after the end of the period
-    period_end = Time.unix(period_end - 1)
+    period_end = Time.unix(period_end)
     user_email = tenant.which_account(user.email)
     busy = client.get_availability(user_email, calendars, period_start, period_end)
 
     # Remove any rooms that have overlapping bookings
     busy.each do |status|
       status.availability.each do |avail|
-        if avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start <= avail.ends_at) && (period_end >= avail.starts_at)
+        if avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start < avail.ends_at) && (period_end > avail.starts_at)
           calendars.delete(status.calendar.downcase)
         end
       end
