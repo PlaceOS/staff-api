@@ -62,6 +62,7 @@
 
 ### Fix
 
+- **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
 - **guests**: invalid SQL generated when there were no meetings
 - **calendar**: availability of timeslots imidiatly preceding another meeting ([#289](https://github.com/PlaceOS/staff-api/pull/289))
 - **events**: patch_metadata attempts to obtain client
