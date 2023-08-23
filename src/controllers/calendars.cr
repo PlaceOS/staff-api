@@ -55,7 +55,9 @@ class Calendars < Application
     return [] of Availability if calendars.empty?
 
     # perform availability request
-    period_start = Time.unix(period_start)
+    # adding 1 second to the start time to ensure the timeslot is showing up as available
+    # if there is a meeting ending imidiatly before the start of the period
+    period_start = Time.unix(period_start + 1)
     # removing 1 second from the end time to ensure the timeslot is showing up as available
     # if there is a meeting starting imidiatly after the end of the period
     period_end = Time.unix(period_end - 1)
