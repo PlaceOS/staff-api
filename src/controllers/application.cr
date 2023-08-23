@@ -37,7 +37,16 @@ abstract class Application < ActionController::Base
   before_action :check_jwt_scope
 
   protected def check_jwt_scope
-    unless user_token.public_scope?
+    access = user_token.get_access("public")
+    block_access = true
+
+    if request.method.downcase == "get"
+      block_access = access.none?
+    else
+      block_access = !access.write?
+    end
+
+    if block_access
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
       raise Error::Unauthorized.new "valid scope required for access"
     end
