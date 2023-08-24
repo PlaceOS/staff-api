@@ -63,6 +63,7 @@
 
 ### Fix
 
+- **guests**: query where there are no bookings
 - **calendars**: availability status request
 - **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
 - **guests**: invalid SQL generated when there were no meetings
