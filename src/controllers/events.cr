@@ -20,7 +20,7 @@ class Events < Application
       return if check_access(current_user.groups, system.zones || [] of String).can_manage?
     end
 
-    raise Error::Forbidden.new("user not in appropriate user group")
+    raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
   end
 
   # update includes a bunch of moving parts so we want to roll back if something fails
@@ -364,7 +364,7 @@ class Events < Application
 
     # check permisions
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees)
+    if !tenant.delegated && user_email != host && !user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
     end
@@ -691,10 +691,11 @@ class Events < Application
                raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id})
              else
                attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-               raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
+               if user_email != event.host.try(&.downcase) && !user_email.in?(attendees)
+                 confirm_access(system_id)
+               end
              end
 
-             raise Error::BadRequest.new("system_id must be present") if system_id.nil?
              raise Error::BadUpstreamResponse.new("id must be present on system") unless upstream_system_id = system.id
              raise Error::BadUpstreamResponse.new("id must be present on event") unless upstream_event_id = event.id
              raise Error::BadUpstreamResponse.new("ical_uid must be present on event #{upstream_event_id}") unless event_ical_uid = event.ical_uid
@@ -948,10 +949,12 @@ class Events < Application
     host = event.host.try(&.downcase) || user_email
 
     # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees)
-      # may be able to delete on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+    if !tenant.delegated
+      existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+      unless user_email == host || user_email.in?(existing_attendees)
+        # may be able to delete on behalf of the user
+        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+      end
     end
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
