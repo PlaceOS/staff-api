@@ -959,7 +959,7 @@ class Events < Application
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
     # unless using a service account and then we can only use the host calendar
-    if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
+    if (srv_acct = tenant.service_account) && client.client_id == :office365 && event.host != cal_id
       original_event = event
       event = get_hosts_event(event, tenant.service_account)
       raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
