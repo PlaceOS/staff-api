@@ -1,3 +1,5 @@
+require "html"
+
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
@@ -187,7 +189,10 @@ class Bookings < Application
     if range_end < total
       params["offset"] = (range_end + 1).to_s
       params["limit"] = limit.to_s
-      response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+
+      link = %(<#{base_route}?#{params}>; rel="next")
+
+      response.headers["Link"] = HTML.escape(link)
     end
 
     result
