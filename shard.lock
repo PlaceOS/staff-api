@@ -171,7 +171,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.17.0
+    version: 9.17.2
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -187,7 +187,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.3+git.commit.2fa8a119cfa15d6fb98f0d8e3924d8175e974103
+    version: 1.9.3+git.commit.37ec01251561789304c032b14d8906e8c50eb6b3
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
@@ -195,7 +195,7 @@ shards:
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
-    version: 0.2.4
+    version: 0.2.5
 
   secrets-env:
     git: https://github.com/place-labs/secrets-env.git
