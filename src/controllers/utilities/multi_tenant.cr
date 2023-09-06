@@ -14,7 +14,7 @@ module Utils::MultiTenant
                        tenant.place_calendar_client token.token, token.expires
                      rescue error
                        Log.error(exception: error) { "error obtaining resource token" }
-                       raise Error::NotImplemented.new("no available delegated resource token for user #{user_token.user.email}")
+                       raise Error::Unauthorized.new("no available delegated resource token for user #{user_token.user.email}")
                      end
                    else
                      # Use the credentials in the database
