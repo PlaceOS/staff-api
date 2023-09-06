@@ -88,7 +88,7 @@ class Events < Application
         Log.warn(exception: error) { "error fetching events for #{calendar_id}" }
       end
     end
-    response.headers["X-Calendar-Errors"] = HTML.escape(errors.to_s) if errors > 0
+    response.headers["X-Calendar-Errors"] = errors.to_s if errors > 0
 
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
