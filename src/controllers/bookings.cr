@@ -1,5 +1,3 @@
-require "html"
-
 class Bookings < Application
   base "/api/staff/v1/bookings"
 

@@ -1,5 +1,3 @@
-require "html"
-
 class Events < Application
   base "/api/staff/v1/events"
 

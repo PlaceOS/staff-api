@@ -1,5 +1,4 @@
 require "csv"
-require "html"
 
 class Guests < Application
   base "/api/staff/v1/guests"
