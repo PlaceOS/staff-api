@@ -64,6 +64,7 @@
 
 ### Fix
 
+- unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
 - **guests**: query where there are no bookings
 - **calendars**: availability status request
 - **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
