@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **current-user**: match options in rest-api
 - **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
 - add support for public.read and public.write scopes
 - improve permissions checks ([#292](https://github.com/PlaceOS/staff-api/pull/292))
