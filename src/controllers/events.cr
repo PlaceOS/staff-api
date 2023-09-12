@@ -886,6 +886,10 @@ class Events < Application
   end
 
   # deletes the event from the calendar, it will not appear as cancelled, it will be gone
+  #
+  # by default it assumes the event id exists on the users calendar
+  # you can clarify the calendar that the event belongs to by using the calendar param
+  # and specify a system id if there is event metadata or linked booking associated with the event
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -901,6 +905,7 @@ class Events < Application
   end
 
   # cancels the meeting without deleting it
+  #
   # visually the event will remain on the calendar with a line through it
   # NOTE:: any body data you post will be used as the message body in the declined message
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
