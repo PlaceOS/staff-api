@@ -790,5 +790,7 @@ class Bookings < Application
       approved: approved,
       rejected: !approved,
     )
+    booking.save!
+    booking
   end
 end
