@@ -65,6 +65,7 @@
 
 ### Fix
 
+- **bookings**: missing save on approve and reject routes
 - unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
 - **guests**: query where there are no bookings
 - **calendars**: availability status request
