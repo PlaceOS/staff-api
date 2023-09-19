@@ -27,6 +27,35 @@ describe Guests do
       emails.includes?(guest2.email).should be_true
     end
 
+    it "exclude hosts filtered should return a list of all guests excluding hosts" do
+      EventMetadata.truncate
+      Guest.truncate
+      Attendee.truncate
+      EventsHelper.stub_event_tokens
+      EventsHelper.stub_create_endpoints
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      req_body = EventsHelper.create_event_input
+      _created_event = client.post(Events.base_route, headers: headers, body: req_body).body
+
+      body = JSON.parse(client.get("#{GUESTS_BASE}?exclude_hosts=true", headers: headers).body).as_a
+
+      # Guest names
+      names = body.map(&.["name"])
+      names.includes?("John").should be_true
+      names.includes?("dev@acaprojects.onmicrosoft.com").should be_false
+      # # Guest emails
+      emails = body.map(&.["email"])
+      emails.includes?("jon@example.com").should be_true
+      emails.includes?("dev@acaprojects.onmicrosoft.com").should be_false
+    end
+
     it "query filtered should return a list of only matched guests" do
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
@@ -276,3 +305,4 @@ end
 
 GUESTS_BASE = Guests.base_route
 require "./helpers/guest_helper"
+require "./helpers/event_helper"
