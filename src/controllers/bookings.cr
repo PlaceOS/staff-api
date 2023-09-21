@@ -554,7 +554,6 @@ class Bookings < Application
     utm_source : String? = nil
   ) : Booking
     set_approver(booking, true)
-    booking.approved_at = Time.utc.to_unix
 
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
@@ -570,7 +569,6 @@ class Bookings < Application
     utm_source : String? = nil
   ) : Booking
     set_approver(booking, false)
-    booking.rejected_at = Time.utc.to_unix
     booking.utm_source = utm_source
     update_booking(booking, "rejected")
   end
@@ -787,9 +785,20 @@ class Bookings < Application
       approver_id: user_token.id,
       approver_email: user.email.downcase,
       approver_name: user.name,
-      approved: approved,
-      rejected: !approved,
     )
+
+    if approved
+      booking.approved = true
+      booking.approved_at = Time.utc.to_unix
+      booking.rejected = false
+      booking.rejected_at = nil
+    else
+      booking.approved = false
+      booking.approved_at = nil
+      booking.rejected = true
+      booking.rejected_at = Time.utc.to_unix
+    end
+
     booking.save!
     booking
   end
