@@ -240,7 +240,9 @@ class Events < Application
           email = attendee.email.strip.downcase
 
           guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
-                    existing_guest.name = attendee.name if existing_guest.name != attendee.name
+                    existing_guest.name = attendee.name if attendee.name.presence && existing_guest.name != attendee.name
+                    existing_guest.phone = attendee.phone if attendee.phone.presence && existing_guest.phone != attendee.phone
+                    existing_guest.organisation = attendee.organisation if attendee.organisation.presence && existing_guest.organisation != attendee.organisation
                     existing_guest
                   else
                     Guest.new(
