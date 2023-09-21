@@ -65,6 +65,7 @@
 
 ### Fix
 
+- **events**: update guest details [PPT-910]
 - **bookings**: rejected / approved status [PPT-917]
 - **bookings**: missing save on approve and reject routes
 - unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
