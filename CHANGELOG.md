@@ -2,6 +2,8 @@
 
 ### Feat
 
+- **current-user**: match options in rest-api
+- **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
 - add support for public.read and public.write scopes
 - improve permissions checks ([#292](https://github.com/PlaceOS/staff-api/pull/292))
 - **shard.lock**: bump opentelemetry-instrumentation.cr
@@ -63,6 +65,11 @@
 
 ### Fix
 
+- **events**: update guest details [PPT-910]
+- **bookings**: rejected / approved status [PPT-917]
+- **bookings**: missing save on approve and reject routes
+- unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
+- **guests**: query where there are no bookings
 - **calendars**: availability status request
 - **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
 - **guests**: invalid SQL generated when there were no meetings
