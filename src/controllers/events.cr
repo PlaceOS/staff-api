@@ -1247,9 +1247,8 @@ class Events < Application
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
 
+    # create/update setup event
     if meta.setup_time > 0
-      # update setup event if it does exist
-      # create setup event if it doesn't exist
       if setup_event_id = meta.setup_event_id
         setup_event = client.get_event(meta.resource_calendar, id: setup_event_id, calendar_id: meta.resource_calendar)
         setup_event.start_time = event_start - meta.setup_time
@@ -1266,9 +1265,8 @@ class Events < Application
       end
     end
 
+    # create/update breakdown event
     if meta.breakdown_time > 0
-      # update breakdown event if it does exist
-      # create breakdown event if it doesn't exist
       if breakdown_event_id = meta.breakdown_event_id
         breakdown_event = client.get_event(meta.resource_calendar, id: breakdown_event_id, calendar_id: meta.resource_calendar)
         breakdown_event.start_time = event_end
@@ -1282,6 +1280,26 @@ class Events < Application
           end_time: event_end + meta.breakdown_time,
         )
         meta.breakdown_event_id = breakdown_event.id
+      end
+    end
+
+    # delete setup/breakdown events if event is cancelled
+    if cancelled
+      if setup_event_id = meta.setup_event_id
+        client.delete_event(
+            user_id: meta.resource_calendar,
+            id: setup_event_id,
+            calendar_id: meta.resource_calendar,
+          )
+          meta.setup_event_id = nil
+      end
+      if breakdown_event_id = meta.breakdown_event_id
+        client.delete_event(
+            user_id: meta.resource_calendar,
+            id: breakdown_event_id,
+            calendar_id: meta.resource_calendar,
+          )
+        meta.breakdown_event_id = nil
       end
     end
 
