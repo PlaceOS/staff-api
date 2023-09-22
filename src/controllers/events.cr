@@ -1287,18 +1287,18 @@ class Events < Application
     if cancelled
       if setup_event_id = meta.setup_event_id
         client.delete_event(
-            user_id: meta.resource_calendar,
-            id: setup_event_id,
-            calendar_id: meta.resource_calendar,
-          )
-          meta.setup_event_id = nil
+          user_id: meta.resource_calendar,
+          id: setup_event_id,
+          calendar_id: meta.resource_calendar,
+        )
+        meta.setup_event_id = nil
       end
       if breakdown_event_id = meta.breakdown_event_id
         client.delete_event(
-            user_id: meta.resource_calendar,
-            id: breakdown_event_id,
-            calendar_id: meta.resource_calendar,
-          )
+          user_id: meta.resource_calendar,
+          id: breakdown_event_id,
+          calendar_id: meta.resource_calendar,
+        )
         meta.breakdown_event_id = nil
       end
     end
@@ -1339,7 +1339,7 @@ class Events < Application
         )
       end
     end
-    
+
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
       system_id:      system.id,
