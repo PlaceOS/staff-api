@@ -1246,63 +1246,6 @@ class Events < Application
     meta.host_email = event.host.as(String).downcase
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
-
-    # create/update setup event
-    if meta.setup_time > 0
-      if setup_event_id = meta.setup_event_id
-        setup_event = client.get_event(meta.resource_calendar, id: setup_event_id, calendar_id: meta.resource_calendar)
-        setup_event.start_time = event_start - meta.setup_time
-        setup_event.end_time = event_start
-      else
-        setup_event = client.create_event(
-          user_id: meta.resource_calendar,
-          calendar_id: meta.resource_calendar,
-          subject: "Setup for #{event.subject}",
-          start_time: event_start - meta.setup_time,
-          end_time: event_start,
-        )
-        meta.setup_event_id = setup_event.id
-      end
-    end
-
-    # create/update breakdown event
-    if meta.breakdown_time > 0
-      if breakdown_event_id = meta.breakdown_event_id
-        breakdown_event = client.get_event(meta.resource_calendar, id: breakdown_event_id, calendar_id: meta.resource_calendar)
-        breakdown_event.start_time = event_end
-        breakdown_event.end_time = event_end + meta.breakdown_time
-      else
-        breakdown_event = client.create_event(
-          user_id: meta.resource_calendar,
-          calendar_id: meta.resource_calendar,
-          subject: "Breakdown for #{event.subject}",
-          start_time: event_end,
-          end_time: event_end + meta.breakdown_time,
-        )
-        meta.breakdown_event_id = breakdown_event.id
-      end
-    end
-
-    # delete setup/breakdown events if event is cancelled
-    if cancelled
-      if setup_event_id = meta.setup_event_id
-        client.delete_event(
-          user_id: meta.resource_calendar,
-          id: setup_event_id,
-          calendar_id: meta.resource_calendar,
-        )
-        meta.setup_event_id = nil
-      end
-      if breakdown_event_id = meta.breakdown_event_id
-        client.delete_event(
-          user_id: meta.resource_calendar,
-          id: breakdown_event_id,
-          calendar_id: meta.resource_calendar,
-        )
-        meta.breakdown_event_id = nil
-      end
-    end
-
     meta.save!
 
     return if skip_signal
@@ -1322,24 +1265,6 @@ class Events < Application
   end
 
   def notify_destroyed(system, event_id, event_ical_uid, event = nil)
-    # delete any setup/breakdown events associated with this event
-    if meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event_id, system_id: system.id)
-      if setup_event_id = meta.setup_event_id
-        client.delete_event(
-          user_id: meta.resource_calendar,
-          id: setup_event_id,
-          calendar_id: meta.resource_calendar,
-        )
-      end
-      if breakdown_event_id = meta.breakdown_event_id
-        client.delete_event(
-          user_id: meta.resource_calendar,
-          id: breakdown_event_id,
-          calendar_id: meta.resource_calendar,
-        )
-      end
-    end
-
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
       system_id:      system.id,
