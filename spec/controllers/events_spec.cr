@@ -140,7 +140,7 @@ describe Events do
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
       # Stub getting the host event
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27")
         .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
 
       req_body = EventsHelper.create_event_input
@@ -232,7 +232,7 @@ describe Events do
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
 
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27")
         .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
 
       req_body = EventsHelper.create_event_input
