@@ -65,6 +65,7 @@
 
 ### Fix
 
+- **calendars**: [PPT-945] remove busy times that are outside of the period in #free_busy ([#300](https://github.com/PlaceOS/staff-api/pull/300))
 - **events**: update guest details [PPT-910]
 - **bookings**: rejected / approved status [PPT-917]
 - **bookings**: missing save on approve and reject routes
