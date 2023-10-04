@@ -287,7 +287,7 @@ class Events < Application
               event_summary:  created_event.title,
               event_starting: created_event_start.to_unix,
               attendee_name:  attendee.name,
-              attendee_email: attendee.email,
+              attendee_email: email,
               zones:          sys.zones,
             })
           end
