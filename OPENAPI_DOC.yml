@@ -3424,6 +3424,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: state
         in: query
         description: the checkin state, defaults to `true`
@@ -3522,6 +3530,14 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
         required: false
         schema:
           type: string

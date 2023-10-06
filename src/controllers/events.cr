@@ -1105,6 +1105,8 @@ class Events < Application
     guest_email : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
     checkin : Bool = true
   ) : Guest
@@ -1116,9 +1118,9 @@ class Events < Application
       system_id ||= guest_system_id
       guest_token_email = user.email.downcase
       raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event they are not associated with") unless system_id == guest_system_id
-    else
-      raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
     end
+
+    raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
 
     guest_email = if guest_id.includes?('@')
                     guest_id.strip.downcase
@@ -1128,13 +1130,27 @@ class Events < Application
 
     raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event as #{guest_email}") if user_token.guest_scope? && guest_email != guest_token_email
 
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
-    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
+    user_cal = user_cal.try &.strip.downcase
+    if user_cal == user.email
+      cal_id = user_cal
+    elsif user_cal
+      cal_id = user_cal
+      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
+      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
+    end
 
+    system = get_placeos_client.systems.fetch(system_id)
+    sys_cal = system.email.presence.try(&.strip.downcase)
+    if cal_id.nil?
+      cal_id = sys_cal
+      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+    end
+
+    # defaults to the room email
+    cal_id ||= system.email.as(String)
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user_email}") unless event
 
     # Check the guest email is in the event
     attendee = event.attendees.find { |attending| attending.email.downcase == guest_email }
