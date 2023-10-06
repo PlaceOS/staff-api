@@ -793,8 +793,7 @@ class Events < Application
              else
                EventMetadata.find_by?(event_id: event_id, system_id: system_id)
              end
-      meta.try &.destroy
-      notify_destroyed(system, event_id, meta.try &.ical_uid)
+      notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
     end
   end
 
@@ -987,10 +986,10 @@ class Events < Application
     end
 
     if system && system_id
-      get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
-      get_event_metadata(event, system_id, search_recurring: false).try &.destroy
+      meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
+      meta ||= get_event_metadata(event, system_id, search_recurring: false)
 
-      spawn { notify_destroyed(system, event_id, event.ical_uid, event) }
+      spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta) }
     end
   end
 
@@ -1280,7 +1279,7 @@ class Events < Application
     end
   end
 
-  def notify_destroyed(system, event_id, event_ical_uid, event = nil)
+  def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil)
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
       system_id:      system.id,
@@ -1288,6 +1287,7 @@ class Events < Application
       event_ical_uid: event_ical_uid,
       resource:       system.email,
       event:          event,
+      ext_data:       meta.try &.ext_data,
     })
   end
 end
