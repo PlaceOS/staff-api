@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: don't delete metadata and notify meta on event cancel
 - **current-user**: match options in rest-api
 - **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
 - add support for public.read and public.write scopes
