@@ -66,6 +66,7 @@
 
 ### Fix
 
+- **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
 - **events**: user checkin with custom calendar [PPT-538]
 - **events**: render rejected linked bookings [PPT-915]
 - **calendars**: [PPT-945] remove busy times that are outside of the period in #free_busy ([#300](https://github.com/PlaceOS/staff-api/pull/300))
