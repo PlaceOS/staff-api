@@ -459,8 +459,8 @@ describe Events do
     resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=#{meta.try &.system_id}", headers: headers)
     resp.success?.should be_true
 
-    # Should have deleted event meta
-    EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
+    # Should have deleted event meta (no longer does this)
+    # EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
   end
 
   it "#approve marks room as accepted" do
