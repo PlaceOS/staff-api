@@ -173,7 +173,7 @@ class Bookings < Application
     range_start = offset > 0 ? offset - 1 : 0
 
     query = query
-      .order(booking_start: :desc)
+      .order(created: :asc)
       .offset(range_start)
       .limit(limit)
 
