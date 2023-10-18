@@ -27,7 +27,7 @@ describe Guests do
       emails.includes?(guest2.email).should be_true
     end
 
-    it "exclude hosts filtered should return a list of all guests excluding hosts" do
+    it "exclude_hosts filtered should return a list of all guests excluding hosts" do
       EventMetadata.truncate
       Guest.truncate
       Attendee.truncate

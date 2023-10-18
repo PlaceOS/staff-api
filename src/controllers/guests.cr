@@ -43,7 +43,9 @@ class Guests < Application
     @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
-    system_ids : String? = nil
+    system_ids : String? = nil,
+    @[AC::Param::Info(description: "exclude hosts", example: "true")]
+    exclude_hosts : Bool? = nil
   ) : Array(Guest | Attendee)
     search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
