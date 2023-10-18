@@ -2,6 +2,9 @@
 
 ### Feat
 
+- **events**: don't delete metadata and notify meta on event cancel
+- **current-user**: match options in rest-api
+- **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
 - add support for public.read and public.write scopes
 - improve permissions checks ([#292](https://github.com/PlaceOS/staff-api/pull/292))
 - **shard.lock**: bump opentelemetry-instrumentation.cr
@@ -63,6 +66,15 @@
 
 ### Fix
 
+- **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
+- **events**: user checkin with custom calendar [PPT-538]
+- **events**: render rejected linked bookings [PPT-915]
+- **calendars**: [PPT-945] remove busy times that are outside of the period in #free_busy ([#300](https://github.com/PlaceOS/staff-api/pull/300))
+- **events**: update guest details [PPT-910]
+- **bookings**: rejected / approved status [PPT-917]
+- **bookings**: missing save on approve and reject routes
+- unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
+- **guests**: query where there are no bookings
 - **calendars**: availability status request
 - **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
 - **guests**: invalid SQL generated when there were no meetings

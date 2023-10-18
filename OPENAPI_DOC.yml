@@ -2353,6 +2353,17 @@ paths:
     delete:
       summary: deletes the event from the calendar, it will not appear as cancelled,
         it will be gone
+      description: 'deletes the event from the calendar, it will not appear as cancelled,
+        it will be gone
+
+
+        by default it assumes the event id exists on the users calendar
+
+        you can clarify the calendar that the event belongs to by using the calendar
+        param
+
+        and specify a system id if there is event metadata or linked booking associated
+        with the event'
       tags:
       - Events
       operationId: Events#destroy
@@ -2895,6 +2906,7 @@ paths:
       summary: cancels the meeting without deleting it
       description: 'cancels the meeting without deleting it
 
+
         visually the event will remain on the calendar with a line through it
 
         NOTE:: any body data you post will be used as the message body in the declined
@@ -3412,6 +3424,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: state
         in: query
         description: the checkin state, defaults to `true`
@@ -3510,6 +3530,14 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
         required: false
         schema:
           type: string
@@ -8190,6 +8218,20 @@ components:
           nullable: true
         ext_data:
           type: object
+          nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
+          type: string
           nullable: true
         tenant_id:
           type: integer

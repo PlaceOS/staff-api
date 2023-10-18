@@ -20,7 +20,7 @@ class Events < Application
       return if check_access(current_user.groups, system.zones || [] of String).can_manage?
     end
 
-    raise Error::Forbidden.new("user not in appropriate user group")
+    raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
   end
 
   # update includes a bunch of moving parts so we want to roll back if something fails
@@ -240,7 +240,9 @@ class Events < Application
           email = attendee.email.strip.downcase
 
           guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
-                    existing_guest.name = attendee.name if existing_guest.name != attendee.name
+                    existing_guest.name = attendee.name if attendee.name.presence && existing_guest.name != attendee.name
+                    existing_guest.phone = attendee.phone if attendee.phone.presence && existing_guest.phone != attendee.phone
+                    existing_guest.organisation = attendee.organisation if attendee.organisation.presence && existing_guest.organisation != attendee.organisation
                     existing_guest
                   else
                     Guest.new(
@@ -285,7 +287,7 @@ class Events < Application
               event_summary:  created_event.title,
               event_starting: created_event_start.to_unix,
               attendee_name:  attendee.name,
-              attendee_email: attendee.email,
+              attendee_email: email,
               zones:          sys.zones,
             })
           end
@@ -364,7 +366,7 @@ class Events < Application
 
     # check permisions
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees)
+    if !tenant.delegated && user_email != host && !user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
       raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
     end
@@ -691,10 +693,11 @@ class Events < Application
                raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({original_id, event_id, event.recurring_event_id})
              else
                attendees = event.attendees.try(&.map { |a| a.email }) || [] of String
-               raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") unless is_support? || user_email == event.host || user_email.in?(attendees)
+               if user_email != event.host.try(&.downcase) && !user_email.in?(attendees)
+                 confirm_access(system_id)
+               end
              end
 
-             raise Error::BadRequest.new("system_id must be present") if system_id.nil?
              raise Error::BadUpstreamResponse.new("id must be present on system") unless upstream_system_id = system.id
              raise Error::BadUpstreamResponse.new("id must be present on event") unless upstream_event_id = event.id
              raise Error::BadUpstreamResponse.new("ical_uid must be present on event #{upstream_event_id}") unless event_ical_uid = event.ical_uid
@@ -790,8 +793,7 @@ class Events < Application
              else
                EventMetadata.find_by?(event_id: event_id, system_id: system_id)
              end
-      meta.try &.destroy
-      notify_destroyed(system, event_id, meta.try &.ical_uid)
+      notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
     end
   end
 
@@ -885,6 +887,10 @@ class Events < Application
   end
 
   # deletes the event from the calendar, it will not appear as cancelled, it will be gone
+  #
+  # by default it assumes the event id exists on the users calendar
+  # you can clarify the calendar that the event belongs to by using the calendar param
+  # and specify a system id if there is event metadata or linked booking associated with the event
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -900,6 +906,7 @@ class Events < Application
   end
 
   # cancels the meeting without deleting it
+  #
   # visually the event will remain on the calendar with a line through it
   # NOTE:: any body data you post will be used as the message body in the declined message
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
@@ -948,15 +955,17 @@ class Events < Application
     host = event.host.try(&.downcase) || user_email
 
     # check permisions
-    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    unless user_email == host || user_email.in?(existing_attendees)
-      # may be able to delete on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+    if !tenant.delegated
+      existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+      unless user_email == host || user_email.in?(existing_attendees)
+        # may be able to delete on behalf of the user
+        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+      end
     end
 
     # we don't need host details for delete / decline as we want it to occur on the calendar specified
     # unless using a service account and then we can only use the host calendar
-    if client.client_id == :office365 && event.host != cal_id && (srv_acct = tenant.service_account)
+    if (srv_acct = tenant.service_account) && client.client_id == :office365 && event.host != cal_id
       original_event = event
       event = get_hosts_event(event, tenant.service_account)
       raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
@@ -977,10 +986,10 @@ class Events < Application
     end
 
     if system && system_id
-      get_event_metadata(original_event, system_id, search_recurring: false).try(&.destroy) if original_event
-      get_event_metadata(event, system_id, search_recurring: false).try &.destroy
+      meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
+      meta ||= get_event_metadata(event, system_id, search_recurring: false)
 
-      spawn { notify_destroyed(system, event_id, event.ical_uid, event) }
+      spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta) }
     end
   end
 
@@ -1095,6 +1104,8 @@ class Events < Application
     guest_email : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    user_cal : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
     checkin : Bool = true
   ) : Guest
@@ -1106,9 +1117,9 @@ class Events < Application
       system_id ||= guest_system_id
       guest_token_email = user.email.downcase
       raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event they are not associated with") unless system_id == guest_system_id
-    else
-      raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
     end
+
+    raise AC::Route::Param::ValueError.new("system_id param is required except for guest scope", "system_id") unless system_id
 
     guest_email = if guest_id.includes?('@')
                     guest_id.strip.downcase
@@ -1118,13 +1129,27 @@ class Events < Application
 
     raise Error::Forbidden.new("guest #{user_token.id} attempting to check into an event as #{guest_email}") if user_token.guest_scope? && guest_email != guest_token_email
 
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
-    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
+    user_cal = user_cal.try &.strip.downcase
+    if user_cal == user.email
+      cal_id = user_cal
+    elsif user_cal
+      cal_id = user_cal
+      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
+      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
+    end
 
+    system = get_placeos_client.systems.fetch(system_id)
+    sys_cal = system.email.presence.try(&.strip.downcase)
+    if cal_id.nil?
+      cal_id = sys_cal
+      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+    end
+
+    # defaults to the room email
+    cal_id ||= system.email.as(String)
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user_email}") unless event
 
     # Check the guest email is in the event
     attendee = event.attendees.find { |attending| attending.email.downcase == guest_email }
@@ -1254,7 +1279,7 @@ class Events < Application
     end
   end
 
-  def notify_destroyed(system, event_id, event_ical_uid, event = nil)
+  def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil)
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
       system_id:      system.id,
@@ -1262,6 +1287,7 @@ class Events < Application
       event_ical_uid: event_ical_uid,
       resource:       system.email,
       event:          event,
+      ext_data:       meta.try &.ext_data,
     })
   end
 end

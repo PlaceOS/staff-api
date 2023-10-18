@@ -111,6 +111,17 @@ class Calendars < Application
     availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
     busy = client.get_availability(user_email, calendars, period_start, period_end, view_interval: availability_view_interval)
 
+    # Remove busy times that are outside of the period
+    busy.each do |status|
+      new_availability = [] of PlaceCalendar::Availability
+      status.availability.each do |avail|
+        next if avail.status == PlaceCalendar::AvailabilityStatus::Busy &&
+                (period_start <= avail.ends_at) && (period_end >= avail.starts_at)
+        new_availability << avail
+      end
+      status.availability = new_availability
+    end
+
     busy.map { |details|
       if system = candidates[details.calendar]?
         Availability.new(id: details.calendar, system: system, availability: details.availability)

@@ -102,6 +102,48 @@ describe Calendars do
     bad_request = client.get(route, headers: headers).status_code
     bad_request.should eq(400)
   end
+
+  it "#free_busy should should not return events that ends at the start of the period" do
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
+      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
+      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+
+    now = 1552694400
+    later = 1552694400 + 3600
+    route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
+
+    response = client.get(route, headers: headers)
+    body = JSON.parse(response.body).as_a
+    body[1]["availability"].as_a.map(&.as_h["ends_at"]).should_not contain(now)
+  end
+
+  it "#free_busy should should not return events that start at the end of the period" do
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
+      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
+      .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
+    WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+
+    later = 1552663800
+    now = 1552663800 - 3600
+    route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
+
+    response = client.get(route, headers: headers)
+    body = JSON.parse(response.body).as_a
+    body[1]["availability"].as_a.map(&.as_h["ends_at"]).should_not contain(later)
+  end
 end
 
 CALENDARS_BASE = Calendars.base_route

@@ -146,9 +146,11 @@ class Guests < Application
         end
       end
 
-      booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
-      booking_attendees.each do |attend|
-        attendees[attend.guest.not_nil!.email] = attend
+      if !booking_ids.empty?
+        booking_attendees = Attendee.by_bookings(tenant.id, booking_ids.to_a)
+        booking_attendees.each do |attend|
+          attendees[attend.guest.not_nil!.email] = attend
+        end
       end
 
       return [] of Guest | Attendee if attendees.empty?
