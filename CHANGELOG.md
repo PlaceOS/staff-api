@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: add setup/breakdown fields to destroyed signal
 - **events**: add fields to patch event metadata
 - **events**: don't delete metadata and notify meta on event cancel
 - **current-user**: match options in rest-api
