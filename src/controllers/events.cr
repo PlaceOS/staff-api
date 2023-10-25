@@ -1329,6 +1329,21 @@ class Events < Application
   end
 
   def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil)
+    if meta
+      if event
+        event.setup_time = meta.setup_time
+        event.breakdown_time = meta.breakdown_time
+        event.setup_event_id = meta.setup_event_id
+        event.breakdown_event_id = meta.breakdown_event_id
+      elsif meta.setup_event_id.presence || meta.breakdown_event_id.presence
+        event = {
+          setup_time:         meta.setup_time,
+          breakdown_time:     meta.breakdown_time,
+          setup_event_id:     meta.setup_event_id,
+          breakdown_event_id: meta.breakdown_event_id,
+        }
+      end
+    end
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
       system_id:      system.id,
