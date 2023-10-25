@@ -2628,6 +2628,40 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: setup_time
+        in: query
+        description: update event setup time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: breakdown_time
+        in: query
+        description: update event breakdown time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: setup_event_id
+        in: query
+        description: update setup event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: breakdown_event_id
+        in: query
+        description: update breakdown event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -2738,6 +2772,40 @@ paths:
         in: query
         description: an alternative lookup for finding event-metadata
         example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: setup_time
+        in: query
+        description: update event setup time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: breakdown_time
+        in: query
+        description: update event breakdown time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: setup_event_id
+        in: query
+        description: update setup event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: breakdown_event_id
+        in: query
+        description: update breakdown event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
         required: false
         schema:
           type: string
@@ -7879,6 +7947,20 @@ components:
         recurring_master_id:
           type: string
           nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
+          type: string
+          nullable: true
       required:
       - event_start
       - attendees
@@ -8170,6 +8252,20 @@ components:
           type: object
           nullable: true
         recurring_master_id:
+          type: string
+          nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
           type: string
           nullable: true
       required:

@@ -232,6 +232,18 @@ class Events < Application
       # Save custom data
       meta = EventMetadata.new
       meta.ext_data = input_event.extension_data
+      if setup_time = input_event.setup_time
+        meta.setup_time = setup_time
+      end
+      if breakdown_time = input_event.breakdown_time
+        meta.breakdown_time = breakdown_time
+      end
+      if setup_event_id = input_event.setup_event_id
+        meta.setup_event_id = setup_event_id
+      end
+      if breakdown_event_id = input_event.breakdown_event_id
+        meta.breakdown_event_id = breakdown_event_id
+      end
       notify_created_or_updated(:create, sys, created_event, meta, can_skip: false)
 
       if attending && !attending.empty?
@@ -458,6 +470,18 @@ class Events < Application
         meta.ext_data = JSON::Any.new(data)
         meta.ext_data_will_change!
       end
+      if setup_time = changes.setup_time
+        meta.setup_time = setup_time
+      end
+      if breakdown_time = changes.breakdown_time
+        meta.breakdown_time = breakdown_time
+      end
+      if setup_event_id = changes.setup_event_id
+        meta.setup_event_id = setup_event_id
+      end
+      if breakdown_event_id = changes.breakdown_event_id
+        meta.breakdown_event_id = breakdown_event_id
+      end
       notify_created_or_updated(:update, system, updated_event, meta, can_skip: false)
 
       # Grab the list of externals that might be attending
@@ -614,9 +638,17 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
-    ical_uid : String? = nil
+    ical_uid : String? = nil,
+    @[AC::Param::Info(description: "update event setup time", example: "10")]
+    setup_time : Int64? = nil,
+    @[AC::Param::Info(description: "update event breakdown time", example: "10")]
+    breakdown_time : Int64? = nil,
+    @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    setup_event_id : String? = nil,
+    @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    breakdown_event_id : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: true)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
   # Replaces the metadata on a booking without touching the calendar event
@@ -632,12 +664,20 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
-    ical_uid : String? = nil
+    ical_uid : String? = nil,
+    @[AC::Param::Info(description: "update event setup time", example: "10")]
+    setup_time : Int64? = nil,
+    @[AC::Param::Info(description: "update event breakdown time", example: "10")]
+    breakdown_time : Int64? = nil,
+    @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    setup_event_id : String? = nil,
+    @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    breakdown_event_id : String? = nil
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: false)
+    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: false, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
-  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false)
+  protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false, setup_time : Int64? = nil, breakdown_time : Int64? = nil, setup_event_id : String? = nil, breakdown_event_id : String? = nil) : JSON::Any
     event_id = original_id
     placeos_client = get_placeos_client
 
@@ -729,6 +769,10 @@ class Events < Application
     end
 
     meta.set_ext_data(JSON::Any.new(data))
+    meta.setup_time = setup_time if setup_time
+    meta.breakdown_time = breakdown_time if breakdown_time
+    meta.setup_event_id = setup_event_id if setup_event_id
+    meta.breakdown_event_id = breakdown_event_id if breakdown_event_id
     meta.save!
 
     spawn do
@@ -1262,6 +1306,11 @@ class Events < Application
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
     meta.save!
+
+    event.setup_time = meta.setup_time
+    event.breakdown_time = meta.breakdown_time
+    event.setup_event_id = meta.setup_event_id
+    event.breakdown_event_id = meta.breakdown_event_id
 
     return if skip_signal
 

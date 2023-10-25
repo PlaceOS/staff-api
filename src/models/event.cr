@@ -79,6 +79,11 @@ class PlaceCalendar::Event
   @[JSON::Field(ignore_deserialize: true)]
   property linked_bookings : Array(PlaceOS::Model::Booking)? = nil
 
+  property setup_time : Int64? = nil
+  property breakdown_time : Int64? = nil
+  property setup_event_id : String? = nil
+  property breakdown_event_id : String? = nil
+
   struct Attendee
     property checked_in : Bool?
     property visit_expected : Bool?
