@@ -68,6 +68,7 @@
 
 ### Fix
 
+- **shard.lock**: bump office365 dep [PROJ-419]
 - **events**: add setup/breakdown time to StaffAPI::Event#aument ([#302](https://github.com/PlaceOS/staff-api/pull/302))
 - **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
 - **events**: user checkin with custom calendar [PPT-538]
