@@ -113,13 +113,10 @@ class Calendars < Application
 
     # Remove busy times that are outside of the period
     busy.each do |status|
-      new_availability = [] of PlaceCalendar::Availability
-      status.availability.each do |avail|
-        next if avail.status == PlaceCalendar::AvailabilityStatus::Busy &&
-                (period_start <= avail.ends_at) && (period_end >= avail.starts_at)
-        new_availability << avail
+      status.availability.reject! do |avail|
+        avail.status == PlaceCalendar::AvailabilityStatus::Busy &&
+          ((avail.ends_at <= period_start) || (avail.starts_at >= period_end))
       end
-      status.availability = new_availability
     end
 
     busy.map { |details|
