@@ -103,7 +103,7 @@ describe Calendars do
 
     tz = Time::Location.load("America/Los_Angeles")
     now = Time.parse("2019-03-15T12:00:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
-    later = Time.parse("2019-03-15T12:05:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
+    later = Time.parse("2019-03-15T12:04:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
     bad_request = client.get(route, headers: headers).status_code
     bad_request.should eq(400)
