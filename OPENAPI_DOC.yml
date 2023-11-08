@@ -1988,6 +1988,19 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: strict
+        in: query
+        description: how to respond when there are calendar errors. Notify sets X-Calendar-Errors,
+          limit returns a 429 error when rate limiting occured, any will 500 if there
+          are any calendar errors
+        example: notify
+        required: false
+        schema:
+          type: string
+          enum:
+          - notify
+          - limit
+          - all
       responses:
         200:
           description: OK

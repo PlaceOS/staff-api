@@ -31,6 +31,12 @@ class Events < Application
     end
   end
 
+  enum Strict
+    Notify # notify any calendar error
+    Limit  # error on rate limited failures
+    All    # error on any failure (invalid calendar ids etc)
+  end
+
   # lists events occuring in the period provided, by default on the current users calendar
   @[AC::Route::GET("/")]
   def index(
@@ -47,7 +53,9 @@ class Events < Application
     @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
     include_cancelled : Bool = false,
     @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
-    icaluid : String? = nil
+    icaluid : String? = nil,
+    @[AC::Param::Info(description: "how to respond when there are calendar errors. Notify sets X-Calendar-Errors, limit returns a 429 error when rate limiting occured, any will 500 if there are any calendar errors", example: "notify")]
+    strict : Strict = Strict::Notify
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -77,16 +85,25 @@ class Events < Application
 
     # Process the response (map requests back to responses)
     errors = 0
+    calendar_rate_limit = [] of String
+    calendar_other_error = [] of String
+
     results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
     mappings.each do |(request, calendar_id, system)|
       begin
         results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
       rescue error
+        (error.message =~ /MailboxConcurrency/i ? calendar_rate_limit : calendar_other_error) << calendar_id
         errors += 1
         Log.warn(exception: error) { "error fetching events for #{calendar_id}" }
       end
     end
-    response.headers["X-Calendar-Errors"] = errors.to_s if errors > 0
+
+    if errors > 0
+      response.headers["X-Calendar-Errors"] = errors.to_s
+      response.headers["X-Calendar-Limit"] = calendar_rate_limit.join(',') unless calendar_rate_limit.empty?
+      response.headers["X-Calendar-Issue"] = calendar_other_error.join(',') unless calendar_other_error.empty?
+    end
 
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
@@ -145,8 +162,20 @@ class Events < Application
       systems.each { |sys| system_emails[sys.email.as(String).downcase] = sys }
     end
 
+    response_code = if errors > 0
+                      if strict.all?
+                        HTTP::Status::INTERNAL_SERVER_ERROR
+                      elsif strict.limit? && !calendar_rate_limit.empty?
+                        HTTP::Status::TOO_MANY_REQUESTS
+                      else
+                        HTTP::Status::PARTIAL_CONTENT
+                      end
+                    else
+                      HTTP::Status::OK
+                    end
+
     # return array of standardised events
-    render json: results.compact_map { |(calendar_id, system, event)|
+    render response_code, json: results.compact_map { |(calendar_id, system, event)|
       next if icaluid && event.ical_uid != icaluid
 
       parent_meta = false
@@ -1017,11 +1046,11 @@ class Events < Application
     end
 
     if delete
-      client.delete_event(user_id: cal_id, id: event_id, calendar_id: cal_id, notify: notify_guests)
+      client.delete_event(user_id: user.email, id: event_id, calendar_id: cal_id, notify: notify_guests)
     else
       comment = request.body.try &.gets_to_end.presence
       client.decline_event(
-        user_id: cal_id,
+        user_id: user.email,
         id: event_id,
         calendar_id: cal_id,
         notify: notify_guests,
@@ -1330,6 +1359,9 @@ class Events < Application
 
   def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil)
     if meta
+      meta.cancelled = true
+      meta.save
+
       if event
         event.setup_time = meta.setup_time
         event.breakdown_time = meta.breakdown_time
