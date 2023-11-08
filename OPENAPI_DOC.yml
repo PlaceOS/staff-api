@@ -3902,6 +3902,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: exclude_hosts
+        in: query
+        description: exclude hosts
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+          nullable: true
       responses:
         200:
           description: OK
