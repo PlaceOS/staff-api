@@ -179,12 +179,7 @@ class Guests < Application
       end
     elsif search_query.empty?
       # Return the first 1500 guests
-      unless exclude_hosts
-        Guest
-          .by_tenant(tenant.id.not_nil!)
-          .order(:name)
-          .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
-      else
+      if exclude_hosts
         query = Guest
           .find_all_by_sql(<<-SQL, tenant.id.not_nil!)
             SELECT g.* FROM "guests" g
@@ -194,6 +189,11 @@ class Guests < Application
             ORDER BY g.name ASC LIMIT 1500
           SQL
         query.map { |g| attending_guest(nil, g).as(Guest | Attendee) }
+      else
+        Guest
+          .by_tenant(tenant.id.not_nil!)
+          .order(:name)
+          .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
       end
     else
       # Return guests based on the filter query
