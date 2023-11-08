@@ -2,6 +2,8 @@
 
 ### Feat
 
+- **events**: add setup/breakdown fields to destroyed signal
+- **events**: add fields to patch event metadata
 - **events**: don't delete metadata and notify meta on event cancel
 - **current-user**: match options in rest-api
 - **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
@@ -66,6 +68,9 @@
 
 ### Fix
 
+- **calendars**: availability removing busy items within period ([#303](https://github.com/PlaceOS/staff-api/pull/303))
+- **shard.lock**: bump office365 dep [PROJ-419]
+- **events**: add setup/breakdown time to StaffAPI::Event#aument ([#302](https://github.com/PlaceOS/staff-api/pull/302))
 - **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
 - **events**: user checkin with custom calendar [PPT-538]
 - **events**: render rejected linked bookings [PPT-915]
