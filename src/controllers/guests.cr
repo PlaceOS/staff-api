@@ -180,22 +180,20 @@ class Guests < Application
     elsif search_query.empty?
       # Return the first 1500 guests
       unless exclude_hosts
-      Guest
-        .by_tenant(tenant.id.not_nil!)
-        .order(:name)
-        .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
-      else
-        pp "================================================================="
-        pp! exclude_hosts
-        # TODO: use a join to exclude hosts
-        # - first join to attendees
-        # - then join to event_metadatas
-        # - then filter out where host_email matches guest/attendee email
         Guest
           .by_tenant(tenant.id.not_nil!)
-          .where("email NOT IN (SELECT host_email FROM event_metadatas WHERE tenant_id = #{tenant.id.not_nil!})")
           .order(:name)
           .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
+      else
+        query = Guest
+          .find_all_by_sql(<<-SQL, tenant.id.not_nil!)
+            SELECT g.* FROM "guests" g
+            LEFT JOIN "attendees" a ON a.guest_id = g.id
+            LEFT JOIN "event_metadatas" m ON m.id = a.event_id
+            WHERE g.tenant_id = $1 AND m.host_email != g.email
+            ORDER BY g.name ASC LIMIT 1500
+          SQL
+        query.map { |g| attending_guest(nil, g).as(Guest | Attendee) }
       end
     else
       # Return guests based on the filter query
