@@ -54,6 +54,8 @@ class Events < Application
     include_cancelled : Bool = false,
     @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
     icaluid : String? = nil,
+    @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax", example: "")]
+    filter : String? = nil,
     @[AC::Param::Info(description: "how to respond when there are calendar errors. Notify sets X-Calendar-Errors, limit returns a 429 error when rate limiting occured, any will 500 if there are any calendar errors", example: "notify")]
     strict : Strict = Strict::Notify
   ) : Array(PlaceCalendar::Event)
@@ -74,7 +76,8 @@ class Events < Application
         period_start: period_start,
         period_end: period_end,
         showDeleted: include_cancelled,
-        ical_uid: icaluid
+        ical_uid: icaluid,
+        filter: filter,
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
