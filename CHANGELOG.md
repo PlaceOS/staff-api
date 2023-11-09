@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: add filter to index ([#305](https://github.com/PlaceOS/staff-api/pull/305))
 - **events**: provide strict requirements for processing responses [PROJ-433] [PROJ-420] [PPT-975] ([#304](https://github.com/PlaceOS/staff-api/pull/304))
 - **events**: add setup/breakdown fields to destroyed signal
 - **events**: add fields to patch event metadata
