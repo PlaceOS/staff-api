@@ -47,7 +47,9 @@ class Events < Application
     @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
     include_cancelled : Bool = false,
     @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
-    icaluid : String? = nil
+    icaluid : String? = nil,
+    @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax", example: "")]
+    filter : String? = nil
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -66,7 +68,8 @@ class Events < Application
         period_start: period_start,
         period_end: period_end,
         showDeleted: include_cancelled,
-        ical_uid: icaluid
+        ical_uid: icaluid,
+        filter: filter,
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
