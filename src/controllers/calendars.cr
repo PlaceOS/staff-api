@@ -1,6 +1,14 @@
 class Calendars < Application
   base "/api/staff/v1/calendars"
 
+  # =====================
+  # Request Queue
+  # =====================
+
+  # queue requests on a per-user basis
+  @[AC::Route::Filter(:around_action)]
+  Application.add_request_queue
+
   @[AC::Route::Filter(:before_action, except: [:index])]
   private def find_matching_calendars(
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]

@@ -31,42 +31,17 @@ class Events < Application
     end
   end
 
-  # the number of requests to queue before responding with too many requests
-  QUEUE_LIMIT = ENV["STAFF_QUEUE_LIMIT"]?.try &.to_i
-  USER_LOCK = Hash(String, Mutex).new { |lock, user| lock[user] = Mutex.new }
-  USER_COUNT = Hash(String, Int32).new { |count, user| count[user] = 0 }
-  COUNT_LOCK = Mutex.new
+  # =====================
+  # Request Queue
+  # =====================
 
   # queue requests on a per-user basis
-  @[AC::Route::Filter(:around_action)]
-  def request_queue : Nil
-    limit = QUEUE_LIMIT
-    return yield unless limit
+  @[AC::Route::Filter(:around_action, except: [:extension_metadata])]
+  Application.add_request_queue
 
-    user_id = user_token.id
-
-    # ensure user 
-    lock = COUNT_LOCK.synchronize do
-      count = USER_COUNT[user_id]
-      raise Error::TooManyRequests.new("user #{user_id} has over #{limit} requests occuring concurrently") if count >= limit
-      USER_COUNT[user_id] = count + 1
-      USER_LOCK[user_id]
-    end
-
-    begin
-      lock.synchronize { yield }
-    ensure
-      COUNT_LOCK.synchronize do
-        count = USER_COUNT[user_id] - 1
-        if count.zero?
-          USER_COUNT.delete user_id
-          USER_LOCK.delete user_id
-        else
-          USER_COUNT[user_id] = count
-        end
-      end
-    end
-  end
+  # =====================
+  # Routes
+  # =====================
 
   enum Strict
     Notify # notify any calendar error
