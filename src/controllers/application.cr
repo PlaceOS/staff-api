@@ -93,6 +93,13 @@ abstract class Application < ActionController::Base
   # ERROR HANDLERS
   # =========================================
 
+  # 429 if too many requests
+  @[AC::Route::Exception(Error::TooManyRequests, status_code: HTTP::Status::TOO_MANY_REQUESTS)]
+  def too_many_requests(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
+
   # 400 if no bearer token
   @[AC::Route::Exception(Error::BadRequest, status_code: HTTP::Status::BAD_REQUEST)]
   def bad_request(error) : CommonError

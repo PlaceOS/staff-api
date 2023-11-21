@@ -5,6 +5,9 @@ class Error < Exception
     super(message)
   end
 
+  class TooManyRequests < Error
+  end
+
   class BadRequest < Error
   end
 
