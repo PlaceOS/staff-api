@@ -30,7 +30,7 @@ class Guests < Application
   # =====================
 
   # lists known guests (which can be queried) OR locates visitors via meeting start and end times (can be filtered by calendars, zone_ids and system_ids)
-  @[AC::Route::GET("/")]
+  @[AC::Route::GET("/", converters: {zones: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "space seperated search query for guests", example: "steve von")]
     search_query : String = "",
@@ -38,12 +38,14 @@ class Guests < Application
     starting : Int64? = nil,
     @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
     ending : Int64? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "[deprecated] a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "[deprecated] a comma seperated list of zone ids used for events or bookings", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
-    system_ids : String? = nil
+    @[AC::Param::Info(description: "[deprecated] a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids for bookings", example: "zone-123,zone-456")]
+    zones : Array(String)? = nil
   ) : Array(Guest | Attendee)
     search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
@@ -54,7 +56,17 @@ class Guests < Application
       # Grab the bookings
       booking_lookup = {} of Int64 => Booking
       booking_ids = Set(Int64).new
-      Booking.booked_between(tenant.id, starting, ending).each do |booking|
+
+      query = Booking.by_tenant(tenant.id)
+      query = query.where(
+        %("booking_start" < ? AND "booking_end" > ?),
+        ending, starting
+      )
+
+      zones = Set.new(zones || [] of String).concat((zone_ids || "").split(',').map(&.strip).reject(&.empty?)).to_a
+      query = query.by_zones(zones) unless zones.empty?
+
+      query.order(created: :asc).each do |booking|
         booking_ids << booking.id.not_nil!
         booking_lookup[booking.id.not_nil!] = booking
       end

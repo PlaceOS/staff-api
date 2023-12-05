@@ -203,6 +203,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -325,6 +331,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -413,6 +425,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -515,6 +533,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -606,6 +630,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -708,6 +738,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -804,6 +840,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -900,6 +942,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1003,6 +1051,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1106,6 +1160,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1210,6 +1270,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1300,6 +1366,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1403,6 +1475,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1506,6 +1584,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1590,6 +1674,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1728,6 +1818,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1868,6 +1964,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1988,6 +2090,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: filter
+        in: query
+        description: An optional advanced search filter using Azure AD filter syntax
+        example: ""
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: strict
         in: query
         description: how to respond when there are calendar errors. Notify sets X-Calendar-Errors,
@@ -2010,6 +2120,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2085,6 +2201,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2185,6 +2307,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2307,6 +2435,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2414,6 +2548,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2536,6 +2676,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2682,6 +2828,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2830,6 +2982,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2926,6 +3084,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3029,6 +3193,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3113,6 +3283,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bool'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3197,6 +3373,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bool'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3283,6 +3465,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3417,6 +3605,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__EventMetadata'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3527,6 +3721,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3637,6 +3837,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3717,6 +3923,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3792,6 +4004,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3869,6 +4087,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Member'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3960,8 +4184,8 @@ paths:
           nullable: true
       - name: calendars
         in: query
-        description: a comma seperated list of calendar ids, recommend using `system_id`
-          for resource calendars
+        description: '[deprecated] a comma seperated list of calendar ids, recommend
+          using `system_id` for resource calendars'
         example: user@org.com,room2@resource.org.com
         required: false
         schema:
@@ -3969,7 +4193,8 @@ paths:
           nullable: true
       - name: zone_ids
         in: query
-        description: a comma seperated list of zone ids
+        description: '[deprecated] a comma seperated list of zone ids used for events
+          or bookings'
         example: zone-123,zone-456
         required: false
         schema:
@@ -3977,11 +4202,21 @@ paths:
           nullable: true
       - name: system_ids
         in: query
-        description: a comma seperated list of event spaces
+        description: '[deprecated] a comma seperated list of event spaces'
         example: sys-1234,sys-5678
         required: false
         schema:
           type: string
+          nullable: true
+      - name: zones
+        in: query
+        description: a comma seperated list of zone ids for bookings
+        example: zone-123,zone-456
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
           nullable: true
       responses:
         200:
@@ -3992,6 +4227,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4067,6 +4308,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4148,6 +4395,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4233,6 +4486,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4308,6 +4567,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4393,6 +4658,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4491,6 +4762,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4589,6 +4866,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4701,6 +4984,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4778,6 +5067,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4855,6 +5150,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4930,6 +5231,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5007,6 +5314,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5095,6 +5408,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5170,6 +5489,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5248,6 +5573,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5329,6 +5660,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5400,6 +5737,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5481,6 +5824,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5580,6 +5929,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5657,6 +6012,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5746,6 +6107,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5821,6 +6188,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5898,6 +6271,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5978,6 +6357,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6050,6 +6435,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6130,6 +6521,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6219,6 +6616,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6294,6 +6697,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6372,6 +6781,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6457,6 +6872,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6532,6 +6953,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6617,6 +7044,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6689,6 +7122,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6764,6 +7203,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6846,6 +7291,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6917,6 +7368,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6998,6 +7455,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -7068,6 +7531,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -7144,6 +7613,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -7225,6 +7700,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
