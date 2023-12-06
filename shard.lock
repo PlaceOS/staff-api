@@ -171,7 +171,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.25.2
+    version: 9.30.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -187,7 +187,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.3+git.commit.78ab46f635208faf4a8f48e593de7c5e5490d543
+    version: 1.9.3+git.commit.30d884fbf8012478aba6bfa818640f7886879071
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
