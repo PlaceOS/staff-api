@@ -7957,6 +7957,11 @@ components:
             - name
             - email
           nullable: true
+        asset_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
         tenant_id:
           type: integer
           format: Int64
@@ -9430,6 +9435,11 @@ components:
                   required:
                   - name
                   - email
+                nullable: true
+              asset_ids:
+                type: array
+                items:
+                  type: string
                 nullable: true
               tenant_id:
                 type: integer
