@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: serialize requests from each user [PROJ-512] ([#306](https://github.com/PlaceOS/staff-api/pull/306))
 - **guests**: deprecate event based guest queries
 - **events**: add filter to index ([#305](https://github.com/PlaceOS/staff-api/pull/305))
 - **events**: provide strict requirements for processing responses [PROJ-433] [PROJ-420] [PPT-975] ([#304](https://github.com/PlaceOS/staff-api/pull/304))
