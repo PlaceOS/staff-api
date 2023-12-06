@@ -31,6 +31,18 @@ class Events < Application
     end
   end
 
+  # =====================
+  # Request Queue
+  # =====================
+
+  # queue requests on a per-user basis
+  @[AC::Route::Filter(:around_action, except: [:extension_metadata])]
+  Application.add_request_queue
+
+  # =====================
+  # Routes
+  # =====================
+
   enum Strict
     Notify # notify any calendar error
     Limit  # error on rate limited failures

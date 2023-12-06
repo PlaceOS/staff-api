@@ -13,6 +13,43 @@ abstract class Application < ActionController::Base
   include Utils::CurrentUser
   include Utils::MultiTenant
 
+  # the number of requests to queue before responding with too many requests
+  QUEUE_LIMIT = ENV["STAFF_QUEUE_LIMIT"]?.try &.to_i
+  USER_LOCK   = Hash(String, Mutex).new { |lock, user| lock[user] = Mutex.new }
+  USER_COUNT  = Hash(String, Int32).new { |count, user| count[user] = 0 }
+  COUNT_LOCK  = Mutex.new
+
+  macro add_request_queue
+    def request_queue : Nil
+      limit = QUEUE_LIMIT
+      return yield unless limit
+
+      user_id = user_token.id
+
+      # ensure user
+      lock = COUNT_LOCK.synchronize do
+        count = USER_COUNT[user_id]
+        raise Error::TooManyRequests.new("user #{user_id} has over #{limit} requests occuring concurrently") if count >= limit
+        USER_COUNT[user_id] = count + 1
+        USER_LOCK[user_id]
+      end
+
+      begin
+        lock.synchronize { yield }
+      ensure
+        COUNT_LOCK.synchronize do
+          count = USER_COUNT[user_id] - 1
+          if count.zero?
+            USER_COUNT.delete user_id
+            USER_LOCK.delete user_id
+          else
+            USER_COUNT[user_id] = count
+          end
+        end
+      end
+    end
+  end
+
   # =========================================
   # LOGGING
   # =========================================
@@ -92,6 +129,13 @@ abstract class Application < ActionController::Base
   # =========================================
   # ERROR HANDLERS
   # =========================================
+
+  # 429 if too many requests
+  @[AC::Route::Exception(Error::TooManyRequests, status_code: HTTP::Status::TOO_MANY_REQUESTS)]
+  def too_many_requests(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
 
   # 400 if no bearer token
   @[AC::Route::Exception(Error::BadRequest, status_code: HTTP::Status::BAD_REQUEST)]
