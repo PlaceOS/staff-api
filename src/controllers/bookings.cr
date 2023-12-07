@@ -700,6 +700,11 @@ class Bookings < Application
         ending, starting, booking_type
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
+
+    pp "================================================================================"
+    pp! query.to_sql
+    pp "================================================================================"
+
     query.to_a
   end
 
