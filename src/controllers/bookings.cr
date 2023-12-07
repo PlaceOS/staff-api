@@ -683,7 +683,7 @@ class Bookings < Application
 
   private def format_asset_ids_for_postgres(asset_ids)
     formatted_ids = asset_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
-    "{#{formatted_ids}}"
+    "ARRAY[{#{formatted_ids}}]::text[]"
   end
 
   private def check_clashing(new_booking)
@@ -696,8 +696,8 @@ class Bookings < Application
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && ARRAY[?]::text[] AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        ending, starting, booking_type, format_asset_ids_for_postgres(asset_ids)
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        ending, starting, booking_type
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
     query.to_a
@@ -709,8 +709,8 @@ class Bookings < Application
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && ARRAY[?]::text[] AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        booking.booking_start, time_now, booking_type, format_asset_ids_for_postgres(asset_ids)
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        booking.booking_start, time_now, booking_type
       )
     query.to_a
   end
