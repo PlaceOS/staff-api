@@ -1,6 +1,10 @@
 class Groups < Application
   base "/api/staff/v1/groups"
 
+  # queue requests on a per-user basis
+  @[AC::Route::Filter(:around_action)]
+  Application.add_request_queue
+
   # returns a list of user groups in the orgainisations directory
   @[AC::Route::GET("/")]
   def index(

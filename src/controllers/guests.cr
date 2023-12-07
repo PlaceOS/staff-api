@@ -26,6 +26,14 @@ class Guests < Application
   getter! guest : Guest
 
   # =====================
+  # Request Queue
+  # =====================
+
+  # queue requests on a per-user basis
+  @[AC::Route::Filter(:around_action, only: [:index, :meetings])]
+  Application.add_request_queue
+
+  # =====================
   # Routes
   # =====================
 
