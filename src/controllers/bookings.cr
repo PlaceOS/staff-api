@@ -681,6 +681,11 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
+  private def format_asset_ids_for_postgres(asset_ids)
+    formatted_ids = asset_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
+    "{#{formatted_ids}}"
+  end
+
   private def check_clashing(new_booking)
     starting = new_booking.booking_start
     ending = new_booking.booking_end
@@ -692,7 +697,7 @@ class Bookings < Application
       .by_tenant(tenant.id)
       .where(
         "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && ARRAY[?]::text[] AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        ending, starting, booking_type, asset_ids
+        ending, starting, booking_type, format_asset_ids_for_postgres(asset_ids)
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
     query.to_a
@@ -705,7 +710,7 @@ class Bookings < Application
       .by_tenant(tenant.id)
       .where(
         "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && ARRAY[?]::text[] AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        booking.booking_start, time_now, booking_type, asset_ids
+        booking.booking_start, time_now, booking_type, format_asset_ids_for_postgres(asset_ids)
       )
     query.to_a
   end
