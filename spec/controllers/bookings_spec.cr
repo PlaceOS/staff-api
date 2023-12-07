@@ -723,7 +723,7 @@ describe Bookings do
     guest.email.should eq(updated_user_email)
   end
 
-  it "#cannot double book the same asset" do
+  it "#cannot double book the same asset", focus: true do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
