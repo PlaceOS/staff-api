@@ -211,7 +211,7 @@ class Bookings < Application
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
            booking.booking_type_present? &&
-           booking.asset_ids_present?
+           (booking.asset_ids_present? || booking.asset_id_present?)
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_ids"}], "error validating booking data")
     end
 
@@ -681,8 +681,8 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
-  private def format_asset_ids_for_postgres(asset_ids)
-    formatted_ids = asset_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
+  private def format_asset_ids_for_postgres(asset_ids : Array(String)) : String
+    formatted_ids = asset_ids.compact_map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
     "ARRAY[#{formatted_ids}]::text[]"
   end
 
@@ -690,7 +690,7 @@ class Bookings < Application
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    asset_ids = new_booking.asset_ids
+    asset_ids = new_booking.asset_ids.unshift(new_booking.asset_id).uniq
 
     # gets all the clashing bookings
     query = Booking
@@ -700,17 +700,13 @@ class Bookings < Application
         ending, starting, booking_type
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
-
-    pp "================================================================================"
-    pp! query.to_sql
-    pp "================================================================================"
-
     query.to_a
   end
 
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
-    asset_ids = booking.asset_ids
+    asset_ids = booking.asset_ids.unshift(booking.asset_id).uniq
+
     query = Booking
       .by_tenant(tenant.id)
       .where(
