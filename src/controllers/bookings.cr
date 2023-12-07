@@ -683,7 +683,7 @@ class Bookings < Application
 
   private def format_asset_ids_for_postgres(asset_ids)
     formatted_ids = asset_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
-    "ARRAY[{#{formatted_ids}}]::text[]"
+    "ARRAY[#{formatted_ids}]::text[]"
   end
 
   private def check_clashing(new_booking)
