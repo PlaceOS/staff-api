@@ -690,7 +690,7 @@ class Bookings < Application
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    asset_ids = new_booking.asset_ids.unshift(new_booking.asset_id).uniq
+    asset_ids = new_booking.asset_id_present? ? new_booking.asset_ids.unshift(new_booking.asset_id).uniq : new_booking.asset_ids
 
     # gets all the clashing bookings
     query = Booking
@@ -706,6 +706,7 @@ class Bookings < Application
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
     asset_ids = booking.asset_ids.unshift(booking.asset_id).uniq
+    asset_ids = booking.asset_id_present? ? booking.asset_ids.unshift(booking.asset_id).uniq : booking.asset_ids
 
     query = Booking
       .by_tenant(tenant.id)
