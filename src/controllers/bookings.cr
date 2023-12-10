@@ -557,12 +557,12 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
+    booking.utm_source = utm_source
     set_approver(booking, true)
 
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
-    booking.utm_source = utm_source
     update_booking(booking, "approved")
   end
 
@@ -572,8 +572,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
-    set_approver(booking, false)
     booking.utm_source = utm_source
+    set_approver(booking, false)
     update_booking(booking, "rejected")
   end
 
