@@ -211,8 +211,8 @@ class Bookings < Application
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
            booking.booking_type_present? &&
-           booking.asset_id_present?
-      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_id"}], "error validating booking data")
+           (booking.asset_ids_present? || booking.asset_id_present?)
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_ids"}], "error validating booking data")
     end
 
     # check there isn't a clashing booking
@@ -304,6 +304,7 @@ class Bookings < Application
             id:             guest.id,
             booking_id:     booking.id,
             resource_id:    booking.asset_id,
+            recource_ids:   booking.asset_ids,
             event_summary:  booking.title,
             event_starting: booking.booking_start,
             attendee_name:  guest.name,
@@ -325,6 +326,7 @@ class Bookings < Application
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
           resource_id:     booking.asset_id,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
@@ -361,9 +363,9 @@ class Bookings < Application
 
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
-    original_asset = existing_booking.asset_id
+    original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
@@ -379,7 +381,7 @@ class Bookings < Application
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
-    reset_state = existing_booking.asset_id_changed? && original_asset != existing_booking.asset_id
+    reset_state = existing_booking.asset_ids_changed? && original_assets != existing_booking.asset_ids
     if existing_booking.booking_start_changed? || existing_booking.booking_end_changed?
       raise Error::NotAllowed.new("editing booking times is allowed on parent bookings only.") unless existing_booking.parent?
 
@@ -481,6 +483,7 @@ class Bookings < Application
                   id:             guest.id,
                   booking_id:     existing_booking.id,
                   resource_id:    existing_booking.asset_id,
+                  recource_ids:   existing_booking.asset_ids,
                   event_summary:  existing_booking.title,
                   event_starting: existing_booking.booking_start,
                   attendee_name:  attendee.name,
@@ -526,6 +529,7 @@ class Bookings < Application
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
           resource_id:     booking.asset_id,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
@@ -553,12 +557,12 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
+    booking.utm_source = utm_source
     set_approver(booking, true)
 
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
-    booking.utm_source = utm_source
     update_booking(booking, "approved")
   end
 
@@ -568,8 +572,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
-    set_approver(booking, false)
     booking.utm_source = utm_source
+    set_approver(booking, false)
     update_booking(booking, "rejected")
   end
 
@@ -660,6 +664,7 @@ class Bookings < Application
         checkin:        checkin,
         booking_id:     booking.id,
         resource_id:    booking.asset_id,
+        recource_ids:   booking.asset_ids,
         event_summary:  booking.title,
         event_starting: booking.booking_start,
         attendee_name:  guest.name,
@@ -676,18 +681,23 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
+  private def format_asset_ids_for_postgres(asset_ids : Array(String)) : String
+    formatted_ids = asset_ids.compact_map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
+    "ARRAY[#{formatted_ids}]::text[]"
+  end
+
   private def check_clashing(new_booking)
     starting = new_booking.booking_start
     ending = new_booking.booking_end
     booking_type = new_booking.booking_type
-    asset_id = new_booking.asset_id
+    asset_ids = new_booking.asset_id_present? ? new_booking.asset_ids.unshift(new_booking.asset_id).uniq : new_booking.asset_ids
 
     # gets all the clashing bookings
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_id = ? AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        ending, starting, booking_type, asset_id
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        ending, starting, booking_type
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
     query.to_a
@@ -695,12 +705,14 @@ class Bookings < Application
 
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
-    asset_id = booking.asset_id
+    asset_ids = booking.asset_ids.unshift(booking.asset_id).uniq
+    asset_ids = booking.asset_id_present? ? booking.asset_ids.unshift(booking.asset_id).uniq : booking.asset_ids
+
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_id = ? AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        booking.booking_start, time_now, booking_type, asset_id
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        booking.booking_start, time_now, booking_type
       )
     query.to_a
   end
@@ -755,7 +767,8 @@ class Bookings < Application
           booking_start:   booking.booking_start,
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
-          resource_id:     booking.asset_id,
+          resource_id:     booking.asset_ids,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,

@@ -759,6 +759,42 @@ describe Bookings do
     ).status.should eq HTTP::Status::CONFLICT
   end
 
+  it "#cannot double book the same assets (multiple asset ids)" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    user_name = Faker::Internet.user_name
+    user_email = Faker::Internet.email
+
+    starting = 5.minutes.from_now.to_unix
+    ending = 20.minutes.from_now.to_unix
+
+    created = client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_ids":["desk1","desk2"],"booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
+      {
+          "name": "#{user_name}",
+          "email": "#{user_email}",
+          "checked_in": true,
+          "visit_expected": true
+      }]})
+    ).status_code
+    created.should eq(201)
+
+    sleep 3
+
+    client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_ids":["desk2"],"booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
+      {
+          "name": "#{user_name}",
+          "email": "#{user_email}",
+          "checked_in": true,
+          "visit_expected": true
+      }]})
+    ).status.should eq HTTP::Status::CONFLICT
+  end
+
   describe "booking_limits" do
     before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")

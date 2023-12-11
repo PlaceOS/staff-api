@@ -7,12 +7,14 @@ module BookingsHelper
 
   def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones, event_id = nil)
     user_name = Faker::Internet.user_name
+    asset_id = "asset-#{Random.new.rand(500)}"
     Booking.create!(
       tenant_id: tenant_id,
       user_id: user_email,
       user_email: PlaceOS::Model::Email.new(user_email),
       user_name: user_name,
-      asset_id: "asset-#{Random.new.rand(500)}",
+      asset_id: asset_id,
+      asset_ids: [asset_id],
       zones: zones,
       booking_type: "desk",
       booking_start: Random.new.rand(5..19).minutes.from_now.to_unix,
@@ -55,6 +57,7 @@ module BookingsHelper
     booking.booking_start = booking_start
     booking.booking_end = booking_end
     booking.asset_id = asset_id
+    booking.asset_ids = [asset_id]
     booking.save!
   end
 
