@@ -16,6 +16,8 @@ class Bookings < Application
   private def find_booking(id : Int64)
     @booking = Booking
       .by_tenant(tenant.id)
+      .join(:left, Attendee, :booking_id)
+      .join(:left, Guest, "guests.id = attendees.guest_id")
       .find(id)
   end
 
@@ -172,7 +174,7 @@ class Bookings < Application
     total = query.count
     range_start = offset > 0 ? offset - 1 : 0
 
-    query = query
+    query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id")
       .order(created: :asc)
       .offset(range_start)
       .limit(limit)
