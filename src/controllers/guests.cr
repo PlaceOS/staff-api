@@ -200,7 +200,7 @@ class Guests < Application
       Guest
         .by_tenant(tenant.id.not_nil!)
         .order(:name)
-        .limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
+        .limit(1500).to_a.map(&.as(Guest | Attendee))
     else
       # Return guests based on the filter query
       csv = CSV.new(search_query, strip: true, separator: ' ')
@@ -213,7 +213,7 @@ class Guests < Application
         sql_query = sql_query.where("searchable LIKE ?", "%#{part}%")
       end
 
-      sql_query.order(:name).limit(1500).map { |g| attending_guest(nil, g).as(Guest | Attendee) }
+      sql_query.order(:name).limit(1500).to_a.map(&.as(Guest | Attendee))
     end
   end
 
