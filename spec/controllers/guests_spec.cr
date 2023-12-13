@@ -2,7 +2,7 @@ require "../spec_helper"
 require "./helpers/booking_helper"
 require "../../src/constants"
 
-describe Guests do
+describe Guests, focus: true do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
