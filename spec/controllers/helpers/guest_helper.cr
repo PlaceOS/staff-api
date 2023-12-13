@@ -10,13 +10,13 @@ module GuestsHelper
   end
 
   def create_guest(tenant_id, name, email)
-    Guest.new(
+    Guest.create(
       name: name,
       email: email,
       tenant_id: tenant_id,
       banned: false,
       dangerous: false,
-    ).save!
+    )
   end
 
   def guest_events_output
