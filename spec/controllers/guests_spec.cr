@@ -154,7 +154,7 @@ describe Guests do
   it "#destroy" do
     tenant = get_tenant
     guest = GuestsHelper.create_guest(tenant.id)
-    remaining = GuestsHelper.create_guest(tenant.id)
+    GuestsHelper.create_guest(tenant.id)
 
     client.delete("#{GUESTS_BASE}/#{guest.email}/", headers: headers)
 
