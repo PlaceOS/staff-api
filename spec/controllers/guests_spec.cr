@@ -9,6 +9,10 @@ describe Guests do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
+  Spec.before_each do
+    Guest.clear
+  end
+
   describe "#index" do
     it "unfiltered should return a list of all guests" do
       tenant = get_tenant
