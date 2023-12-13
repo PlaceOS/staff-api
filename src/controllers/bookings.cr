@@ -180,6 +180,8 @@ class Bookings < Application
       .offset(range_start)
       .limit(limit)
 
+    puts "\n\n\nSQL: #{query.to_sql}\n\n\n"
+
     result = query.to_a
     range_end = result.size + range_start
 
