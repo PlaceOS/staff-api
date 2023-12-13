@@ -16,7 +16,10 @@ class Bookings < Application
   private def find_booking(id : Int64)
     @booking = Booking
       .by_tenant(tenant.id)
-      .find(id)
+      .where(id: id)
+      .join(:left, Attendee, :booking_id)
+      .join(:left, Guest, "guests.id = attendees.guest_id")
+      .limit(1).to_a.first { raise Error::NotFound.new("could not find booking with id: #{id}") }
   end
 
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
@@ -172,7 +175,7 @@ class Bookings < Application
     total = query.count
     range_start = offset > 0 ? offset - 1 : 0
 
-    query = query
+    query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id")
       .order(created: :asc)
       .offset(range_start)
       .limit(limit)

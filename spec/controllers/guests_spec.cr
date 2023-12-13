@@ -9,6 +9,10 @@ describe Guests do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
+  Spec.before_each do
+    Guest.clear
+  end
+
   describe "#index" do
     it "unfiltered should return a list of all guests" do
       tenant = get_tenant
@@ -31,7 +35,7 @@ describe Guests do
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
-      body = JSON.parse(client.get("#{GUESTS_BASE}?q=#{guest.name.to_s.downcase}", headers: headers).body).as_a
+      body = JSON.parse(client.get("#{GUESTS_BASE}?q=#{guest.name.to_s.downcase.split(' ').first}", headers: headers).body).as_a
 
       # Guest names
       body.map(&.["name"]).should eq([guest.name])
