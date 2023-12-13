@@ -2,7 +2,7 @@ require "../spec_helper"
 require "./helpers/booking_helper"
 require "../../src/constants"
 
-describe Guests, focus: true do
+describe Guests do
   systems_json = File.read("./spec/fixtures/placeos/systems.json")
   systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
 
@@ -35,7 +35,7 @@ describe Guests, focus: true do
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id)
 
-      body = JSON.parse(client.get("#{GUESTS_BASE}?q=#{guest.name.to_s.downcase}", headers: headers).body).as_a
+      body = JSON.parse(client.get("#{GUESTS_BASE}?q=#{guest.name.to_s.downcase.split(' ').first}", headers: headers).body).as_a
 
       # Guest names
       body.map(&.["name"]).should eq([guest.name])
@@ -156,13 +156,10 @@ describe Guests, focus: true do
     guest = GuestsHelper.create_guest(tenant.id)
     remaining = GuestsHelper.create_guest(tenant.id)
 
-    puts "\n\n\nGUEST CREATED: #{guest.to_json} \n\nREMAINING: #{remaining.to_json}\n\n"
-
     client.delete("#{GUESTS_BASE}/#{guest.email}/", headers: headers)
 
     # Check only one is returned
     body = JSON.parse(client.get(GUESTS_BASE, headers: headers).body).as_a
-    puts "\n\n\nGUEST DATA: #{body}  \n\n"
     body.map(&.["name"]).includes?(guest.name).should be_false
     body.map(&.["email"]).includes?(guest.email).should be_false
   end
