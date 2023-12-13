@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: include any attending guests in responses ([#308](https://github.com/PlaceOS/staff-api/pull/308))
 - **bookings**: [PPT-1098] support multiple assets on a single booking ([#307](https://github.com/PlaceOS/staff-api/pull/307))
 - **events**: serialize requests from each user [PROJ-512] ([#306](https://github.com/PlaceOS/staff-api/pull/306))
 - **guests**: deprecate event based guest queries
