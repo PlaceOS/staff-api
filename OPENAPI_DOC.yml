@@ -3464,7 +3464,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+                  $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -4226,7 +4226,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+                  $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -4307,7 +4307,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -4394,7 +4394,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -4485,7 +4485,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -4657,7 +4657,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
         429:
           description: Too Many Requests
           content:
@@ -8777,8 +8777,6 @@ components:
       nullable: true
     Bool:
       type: boolean
-    PlaceOS__Model__ModelWithAutoKey:
-      type: object
     PlaceOS__Model__EventMetadata:
       type: object
       properties:
@@ -8876,8 +8874,6 @@ components:
       - id
       - email
       - username
-    _PlaceOS__Model__Attendee___PlaceOS__Model__Guest_:
-      type: object
     HealthCheck__BuildInfo:
       type: object
       properties:
