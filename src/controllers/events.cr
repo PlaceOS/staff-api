@@ -123,8 +123,9 @@ class Events < Application
     # Grab any existing event metadata
     metadatas = {} of String => EventMetadata
     # Set size hint to save reallocation of Array
-    metadata_ids = Array(String).new(initial_capacity: results.size)
+    event_ids = Array(String).new(initial_capacity: results.size)
     ical_uids = Array(String).new(initial_capacity: results.size)
+    event_master_ids = Array(String).new(initial_capacity: results.size)
 
     # find any missing system ids (event_id => calendar_id)
     event_resources = {} of String => String
@@ -138,13 +139,13 @@ class Events < Application
       raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless event_ical_uid = event.ical_uid
 
       # Attempt to return metadata regardless of system id availability
-      metadata_ids << event_id
+      event_ids << event_id
       ical_uids << event_ical_uid
 
       # TODO: Handle recurring O365 events with differing `ical_uid`
       # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
       if (recurring_event_id = event.recurring_event_id) && recurring_event_id != event.id
-        metadata_ids << recurring_event_id
+        event_master_ids << recurring_event_id
       end
 
       # check if there is possible system information available
@@ -153,21 +154,28 @@ class Events < Application
       end
     end
 
-    metadata_ids.uniq!
-
     # Don't perform the query if there are no calendar entries
-    if !metadata_ids.empty?
-      EventMetadata.by_tenant(tenant.id).where(event_id: metadata_ids).each { |meta|
-        metadatas[meta.event_id] = meta
-      }
-    end
-
-    # Metadata is stored against a resource calendar which in office365 can only
-    # be matched by the `ical_uid`
-    if (client.client_id == :office365) && ical_uids.uniq! && !ical_uids.empty?
-      EventMetadata.by_tenant(tenant.id).where(ical_uid: ical_uids).each { |meta|
-        metadatas[meta.ical_uid] = meta
-      }
+    if results.size > 0
+      if client.client_id == :office365
+        # Metadata is stored against a resource calendar which in office365 can only
+        # be matched by the `ical_uid`
+        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(ical_uids, event_master_ids).each { |meta|
+          metadatas[meta.ical_uid] = meta
+          if recurring_master_id = meta.recurring_master_id
+            metadatas[recurring_master_id] = meta
+            if resource_master_id = meta.resource_master_id
+              metadatas[resource_master_id] = meta
+            end
+          end
+        }
+      else
+        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(event_ids, event_master_ids).each { |meta|
+          metadatas[meta.event_id] = meta
+          if recurring_master_id = meta.recurring_master_id
+            metadatas[recurring_master_id] = meta
+          end
+        }
+      end
     end
 
     # grab the system details for resource calendars, if they exist
@@ -194,7 +202,9 @@ class Events < Application
       next if icaluid && event.ical_uid != icaluid
 
       parent_meta = false
-      metadata = metadatas[event.id]?
+      event_id = client.client_id == :office365 ? event.ical_uid : event.id
+      metadata = metadatas[event_id]?
+
       if metadata.nil? && event.recurring_event_id
         metadata = metadatas[event.recurring_event_id]?
         parent_meta = true if metadata
@@ -206,8 +216,6 @@ class Events < Application
         end
       end
 
-      # Workaround for Office365 where ical_uid is unique for each occurance and event_id is different in each calendar
-      metadata = metadata || metadatas[event.ical_uid]? if client.client_id == :office365
       StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
     }
   end
@@ -505,7 +513,7 @@ class Events < Application
       raise Error::BadRequest.new("system_id must be present") if system_id.nil?
       raise Error::BadUpstreamResponse.new("email must be present on system #{system_id}") unless system_email = system.email
 
-      meta = get_migrated_metadata(updated_event, system_id, system_email) || EventMetadata.new
+      meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
       if extension_data = changes.extension_data
         meta_ext_data = meta.ext_data
         data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
@@ -658,12 +666,37 @@ class Events < Application
           raise Error::BadUpstreamResponse.new("id must be present on system") unless sys_id = sys.id
           raise Error::BadUpstreamResponse.new("email must be present on system #{sys_id}") unless sys_email = sys.email
 
-          meta = get_migrated_metadata(updated_event, sys_id, sys_email)
+          meta = get_migrated_metadata(updated_event, sys_id)
           return StaffApi::Event.augment(updated_event, host, sys, meta)
         end
       end
 
       StaffApi::Event.augment(updated_event, host)
+    end
+  end
+
+  # used to link resource recurring master ids to metadata
+  @[AC::Route::POST("/:id/metadata/:system_id/link/:ical_uid", status_code: HTTP::Status::ACCEPTED)]
+  def link_master_metadata(
+    @[AC::Param::Info(name: "id", description: "the event id to link", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String,
+    @[AC::Param::Info(description: "the ical_uid of the event", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    ical_uid : String
+  ) : Nil
+    # ensure this function is valid
+    head :forbidden unless is_support?
+    return unless current_tenant.platform == "office365"
+
+    # attempt to find the metadata
+    meta = EventMetadata.by_tenant(tenant.id)
+      .where(system_id: system_id, ical_uid: ical_uid).first
+
+    # link the resource event id with any metadata
+    if meta.recurring_master_id && meta.resource_master_id != event_id
+      meta.resource_master_id = event_id
+      meta.save!
     end
   end
 
@@ -791,7 +824,7 @@ class Events < Application
              raise Error::BadUpstreamResponse.new("host must be present on event") unless event_host = event.host
 
              # attempt to find the metadata
-             mdata = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.new
+             mdata = get_migrated_metadata(event, system_id) || EventMetadata.new
              mdata.system_id = upstream_system_id
              mdata.event_id = upstream_event_id
              mdata.ical_uid = event_ical_uid
@@ -1108,7 +1141,15 @@ class Events < Application
     system = get_placeos_client.systems.fetch(system_id)
     cal_id = system.email
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-    client.decline_event(cal_id, id: event_id, calendar_id: cal_id)
+
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
+    result = client.decline_event(cal_id, id: event_id, calendar_id: cal_id)
+
+    meta = get_event_metadata(event, system_id, search_recurring: false)
+    spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta) }
+
+    result
   end
 
   # Event Guest management
@@ -1118,9 +1159,9 @@ class Events < Application
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String
-  ) : Array(Guest | Attendee)
+  ) : Array(Guest)
     cal_id = get_placeos_client.systems.fetch(system_id).email
-    return [] of Guest | Attendee unless cal_id
+    return [] of Guest unless cal_id
 
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
@@ -1128,23 +1169,17 @@ class Events < Application
     # Grab meeting metadata if it exists
     metadata = get_event_metadata(event, system_id)
     parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
-    return [] of Guest | Attendee unless metadata
+    return [] of Guest unless metadata
 
     # Find anyone who is attending
     visitors = metadata.attendees.to_a
-    return [] of Guest | Attendee if visitors.empty?
-
-    # Grab the guest profiles if they exist
-    guests = visitors.each_with_object({} of String => Guest) do |visitor, obj|
-      raise Error::InconsistentState.new("guest must be present on visitor metadata") unless guest = visitor.guest
-      raise Error::InconsistentState.new("email must be present on guest") unless guest_email = guest.email
-      obj[guest_email] = guest
-    end
+    return [] of Guest if visitors.empty?
 
     # Merge the visitor data with guest profiles
-    visitors.map do |visitor|
-      raise Error::InconsistentState.new("guest must be present on visitor metadata") unless guest = visitor.guest
-      attending_guest(visitor, guests[guest.email]?, parent_meta)
+    visitors.compact_map do |visitor|
+      guest = visitor.guest
+      next unless guest
+      attending_guest(visitor, guest, parent_meta).as(Guest)
     end
   end
 
@@ -1172,7 +1207,7 @@ class Events < Application
     query = EventMetadata.by_tenant(tenant.id).is_ending_after(starting).is_starting_before(ending)
 
     query = query.where(system_id: system_id) if system_id
-    query = query.by_event_ids(event_ref) if event_ref && !event_ref.empty?
+    query = query.by_events_or_master_ids(event_ref, event_ref) if event_ref && !event_ref.empty?
     if field_name && value.presence
       raise Error::BadRequest.new("must provide both field_name & value") unless value
       query = query.by_ext_data(field_name, value)
@@ -1269,7 +1304,7 @@ class Events < Application
     raise Error::BadUpstreamResponse.new("host must be present on event") unless meta_event_host = event.host
     raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless meta_event_ical_uid = event.ical_uid
 
-    eventmeta = get_migrated_metadata(event, system_id, cal_id) || EventMetadata.create!(
+    eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!(
       system_id: meta_system_id,
       event_id: meta_event_id,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring),

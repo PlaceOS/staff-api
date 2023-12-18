@@ -297,44 +297,27 @@ abstract class Application < ActionController::Base
   end
 
   protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String, search_recurring : Bool = true) : EventMetadata?
-    meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
+    tenant = current_tenant
+    meta = if tenant.platform == "office365"
+      EventMetadata.by_tenant(tenant.id).find_by?(ical_uid: event.ical_uid, system_id: system_id)
+    else
+      EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
+    end
     return meta if meta
+
     if search_recurring && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
-    elsif ev_ical_uid = event.ical_uid
-      EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: ev_ical_uid).to_a.first?
+      EventMetadata.by_tenant(tenant.id).where(system_id: system_id).by_master_ids([event.recurring_event_id]).to_a.first?
     end
   end
 
-  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String, system_calendar : String) : EventMetadata?
-    query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
-    if client.client_id == :office365
-      query = query.where(ical_uid: event.ical_uid)
-    else
-      query = query.where(event_id: event.id)
-    end
-    meta = query.to_a.first?
-    return meta if meta
-    return nil unless event.recurring_event_id.presence && event.recurring_event_id != event.id
+  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+    meta = get_event_metadata(event, system_id, search_recurring: true)
 
-    # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
-    if client.client_id == :office365
-      original_meta = nil
-      begin
-        host_cal = event.host.as(String).downcase
-        calendar = user.email.downcase == host_cal ? host_cal : system_calendar
-        if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: calendar)
-          original_meta = EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: original_event.ical_uid).to_a.first?
-        end
-      rescue error : PlaceCalendar::Exception
-        Log.warn(exception: error) { "failed to find recurring event master for #{user.email} with #{event.recurring_event_id}" }
-      end
-    else
-      original_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
+    # check if we need to migrate
+    office = client.client_id == :office365
+    if meta && ((office && meta.ical_uid != event.ical_uid) || (!office && meta.event_id != event.id))
+      meta = EventMetadata.migrate_recurring_metadata(system_id, event, meta)
     end
-
-    if original_meta
-      EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
-    end
+    meta
   end
 end
