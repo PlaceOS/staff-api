@@ -2738,6 +2738,99 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/{id}/metadata/{system_id}/link/{ical_uid}:
+    post:
+      summary: used to link resource recurring master ids to metadata
+      tags:
+      - Events
+      operationId: Events#link_master_metadata
+      parameters:
+      - name: id
+        in: path
+        description: the event id to link
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: true
+        schema:
+          type: string
+      - name: system_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: true
+        schema:
+          type: string
+      - name: ical_uid
+        in: path
+        description: the ical_uid of the event
+        example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
+        required: true
+        schema:
+          type: string
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        501:
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/metadata/{system_id}:
     put:
       summary: Replaces the metadata on a booking without touching the calendar event
@@ -8790,6 +8883,9 @@ components:
           type: string
           nullable: true
         ical_uid:
+          type: string
+          nullable: true
+        resource_master_id:
           type: string
           nullable: true
         host_email:
