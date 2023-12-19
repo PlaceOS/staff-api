@@ -4,7 +4,7 @@ class Events < Application
   # Skip scope check for relevant routes
   skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
 
-  @[AC::Route::Filter(:before_action, only: [:notify_change])]
+  @[AC::Route::Filter(:before_action, only: [:notify_change, :link_master_metadata])]
   private def protected_route
     raise Error::Forbidden.new unless is_support?
   end
@@ -684,15 +684,16 @@ class Events < Application
     ical_uid : String
   ) : Nil
     # ensure this function is valid
-    head :forbidden unless is_support?
     return unless current_tenant.platform == "office365"
 
     # attempt to find the metadata
     meta = EventMetadata.by_tenant(tenant.id)
-      .where(system_id: system_id, ical_uid: ical_uid).first
+      .where(system_id: system_id, ical_uid: ical_uid).first?
+
+    return unless meta
 
     # link the resource event id with any metadata
-    if meta.recurring_master_id && meta.resource_master_id != event_id
+    if meta.recurring_master_id == meta.event_id && meta.resource_master_id != event_id
       meta.resource_master_id = event_id
       meta.save!
     end
@@ -892,23 +893,21 @@ class Events < Application
       # sleep just in case we're creating the event with metadata
       sleep 0.5
       meta = get_event_metadata(event, system_id, search_recurring: false)
-      return if meta
-      notify_created_or_updated(:create, system, event, meta)
+
+      # if meta exists then we've already notified that this change occured
+      if meta
+        link_master_metadata(event_id, system_id, event.ical_uid.as(String))
+      else
+        notify_created_or_updated(:create, system, event, meta)
+      end
     in .updated?
       raise "no event provided" unless event
-      meta = get_event_metadata(event, system_id, search_recurring: false)
-
-      # we might be just changing the date or time of an individual event
-      if meta.nil? && event.recurring_event_id.presence && event.recurring_event_id != event.id
-        if rec_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
-          meta = EventMetadata.migrate_recurring_metadata(system_id, event, rec_meta)
-        end
-      end
-
+      meta = get_event_metadata(event, system_id, search_recurring: true)
+      link_master_metadata(event_id, system_id, event.ical_uid.as(String)) if meta
       notify_created_or_updated(:update, system, event, meta)
     in .deleted?
       meta = if event
-               get_event_metadata(event, system_id, search_recurring: false)
+               get_event_metadata(event, system_id, search_recurring: true)
              else
                EventMetadata.find_by?(event_id: event_id, system_id: system_id)
              end
