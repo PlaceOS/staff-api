@@ -74,6 +74,7 @@
 
 ### Fix
 
+- **events**: refactor change notifications
 - **events**: resource calendar signal
 - **calendars**: allow any specified if delegated
 - **events**: recurring metadata visibility [PPT-1072] [PPT-1073] ([#309](https://github.com/PlaceOS/staff-api/pull/309))
