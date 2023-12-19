@@ -358,7 +358,7 @@ describe Events do
       event["event_end"].should eq(1598507160)
     end
 
-    it "details for event that is an recurring event instance with normal access", focus: true do
+    it "details for event that is an recurring event instance with normal access" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
@@ -378,14 +378,15 @@ describe Events do
       EventMetadata.find_by?(event_id: event_instance_id).should be_nil
 
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+      ical_uid = "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
 
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, ical_uid))
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, ical_uid))
 
       # Show event details for calendar params that is an instance of master event created above
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", headers: headers)
@@ -395,10 +396,6 @@ describe Events do
       event["event_end"].should eq(1598507160)
 
       evt_meta = EventMetadata.find_by(event_id: created_event_id)
-      puts "\n\n\n\n"
-      puts evt_meta.to_pretty_json
-      puts "\n\n\n\n"
-
       evt_meta.recurring_master_id.should eq(master_event_id)
       event["extension_data"]?.should eq({"foo" => "bar"})
 
@@ -406,10 +403,6 @@ describe Events do
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?system_id=sys-rJQQlR4Cn7", headers: headers)
       response.status_code.should eq(200)
       event_h = JSON.parse(response.body)
-
-      puts "\n\nEVENT:"
-      puts event_h.to_pretty_json
-      puts "\n\n\n\n"
 
       event_h["event_start"].should eq(1598503500)
       event_h["event_end"].should eq(1598507160)

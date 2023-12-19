@@ -957,7 +957,7 @@ class Events < Application
       if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
         begin
           event = get_hosts_event(event)
-          raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
+          event_id = event.id.as(String)
         rescue PlaceCalendar::Exception
           # we might not have access
         end

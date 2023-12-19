@@ -306,11 +306,9 @@ abstract class Application < ActionController::Base
 
     query = query.where(system_id: system_id.as(String)) if system_id
     meta = query.first?
-    puts "\nSEARCHING METADATA: #{!!meta}\n"
     return meta if meta
 
     if search_recurring && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      puts "\nSEARCHING RECCURING: #{event.recurring_event_id}\n"
       query = EventMetadata.by_tenant(tenant.id).by_master_ids([event.recurring_event_id])
       query = query.where(system_id: system_id.as(String)) if system_id
       query.first?
