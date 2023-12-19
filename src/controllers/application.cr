@@ -296,19 +296,24 @@ abstract class Application < ActionController::Base
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
-  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String, search_recurring : Bool = true) : EventMetadata?
+  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String? = nil, search_recurring : Bool = true) : EventMetadata?
     tenant = current_tenant
-    meta = if tenant.platform == "office365"
-             EventMetadata.by_tenant(tenant.id).find_by?(ical_uid: event.ical_uid, system_id: system_id)
+    query = if tenant.platform == "office365"
+             EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
            else
-             EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
+             EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
            end
+
+    query = query.where(system_id: system_id.as(String)) if system_id
+    meta = query.first?
     puts "\nSEARCHING METADATA: #{!!meta}\n"
     return meta if meta
 
     if search_recurring && event.recurring_event_id.presence && event.recurring_event_id != event.id
       puts "\nSEARCHING RECCURING: #{event.recurring_event_id}\n"
-      EventMetadata.by_tenant(tenant.id).where(system_id: system_id).by_master_ids([event.recurring_event_id]).to_a.first?
+      query = EventMetadata.by_tenant(tenant.id).by_master_ids([event.recurring_event_id])
+      query = query.where(system_id: system_id.as(String)) if system_id
+      query.first?
     end
   end
 

@@ -988,8 +988,7 @@ class Events < Application
       raise Error::NotFound.new("event #{event_id} not found on calendar #{user_cal}") unless event
 
       # see if there are any relevent metadata details
-      ev_ical_uid = event.ical_uid
-      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ev_ical_uid).to_a.first?
+      metadata = get_event_metadata event
 
       # see if there are any relevent systems associated with the event
       resource_calendars = (event.attendees || StaffApi::Event::NOP_PLACE_CALENDAR_ATTENDEES).compact_map do |attend|

@@ -407,6 +407,10 @@ describe Events do
       response.status_code.should eq(200)
       event_h = JSON.parse(response.body)
 
+      puts "\n\nEVENT:"
+      puts event_h.to_pretty_json
+      puts "\n\n\n\n"
+
       event_h["event_start"].should eq(1598503500)
       event_h["event_end"].should eq(1598507160)
 
