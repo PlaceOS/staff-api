@@ -883,7 +883,7 @@ class Events < Application
     event_id : String,
     event : PlaceCalendar::Event? = nil
   ) : Nil
-    system = get_placeos_client.systems.fetch(system_id)
+    system = PlaceOS::Model::ControlSystem.find!(system_id)
 
     case change
     in .created?
