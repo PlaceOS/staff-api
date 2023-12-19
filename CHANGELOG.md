@@ -74,6 +74,7 @@
 
 ### Fix
 
+- **events**: resource calendar signal
 - **calendars**: allow any specified if delegated
 - **events**: recurring metadata visibility [PPT-1072] [PPT-1073] ([#309](https://github.com/PlaceOS/staff-api/pull/309))
 - **calendars**: availability removing busy items within period ([#303](https://github.com/PlaceOS/staff-api/pull/303))
