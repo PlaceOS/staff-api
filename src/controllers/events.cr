@@ -967,7 +967,7 @@ class Events < Application
         raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
       end
 
-      metadata = get_event_metadata(event, system_id)
+      metadata = get_event_metadata(event, system_id, search_recurring: true)
       parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
       StaffApi::Event.augment(event, cal_id, system, metadata, parent_meta)
     else
