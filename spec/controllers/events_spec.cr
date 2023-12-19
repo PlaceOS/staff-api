@@ -307,9 +307,10 @@ describe Events do
       req_body = EventsHelper.create_recurring_event_input
       created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body.to_s).body)
       created_event_id = created_event["id"].to_s
+      created_ical_uid = created_event["ical_uid"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, created_ical_uid))
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
@@ -678,6 +679,7 @@ describe Events do
       event = EventMetadatasHelper.create_event(
         tenant_id: tenant.id,
         id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
+        ical_uid: "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F",
         event_start: 20.minutes.from_now.to_unix,
         event_end: 40.minutes.from_now.to_unix,
         system_id: "sys-rJQQlR4Cn7",
