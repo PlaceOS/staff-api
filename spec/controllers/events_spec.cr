@@ -358,7 +358,7 @@ describe Events do
       event["event_end"].should eq(1598507160)
     end
 
-    it "details for event that is an recurring event instance with normal access" do
+    it "details for event that is an recurring event instance with normal access", focus: true do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
 
@@ -395,6 +395,10 @@ describe Events do
       event["event_end"].should eq(1598507160)
 
       evt_meta = EventMetadata.find_by(event_id: created_event_id)
+      puts "\n\n\n\n"
+      puts evt_meta.to_pretty_json
+      puts "\n\n\n\n"
+
       evt_meta.recurring_master_id.should eq(master_event_id)
       event["extension_data"]?.should eq({"foo" => "bar"})
 
