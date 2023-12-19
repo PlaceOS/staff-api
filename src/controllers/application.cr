@@ -299,10 +299,10 @@ abstract class Application < ActionController::Base
   protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String? = nil, search_recurring : Bool = true) : EventMetadata?
     tenant = current_tenant
     query = if tenant.platform == "office365"
-             EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
-           else
-             EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
-           end
+              EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
+            else
+              EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
+            end
 
     query = query.where(system_id: system_id.as(String)) if system_id
     meta = query.first?
