@@ -1377,7 +1377,7 @@ class Events < Application
     meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring
     meta.event_start = starting
     meta.event_end = ending
-    meta.resource_calendar = system.email.as(String).downcase
+    meta.resource_calendar = system.email.to_s.as(String).downcase
     meta.host_email = event.host.as(String).downcase
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
