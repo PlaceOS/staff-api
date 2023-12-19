@@ -511,7 +511,6 @@ class Events < Application
 
     if system
       raise Error::BadRequest.new("system_id must be present") if system_id.nil?
-      raise Error::BadUpstreamResponse.new("email must be present on system #{system_id}") unless system_email = system.email
 
       meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
       if extension_data = changes.extension_data
@@ -664,7 +663,6 @@ class Events < Application
         systems = placeos_client.systems.with_emails(resource_calendars)
         if sys = systems.first?
           raise Error::BadUpstreamResponse.new("id must be present on system") unless sys_id = sys.id
-          raise Error::BadUpstreamResponse.new("email must be present on system #{sys_id}") unless sys_email = sys.email
 
           meta = get_migrated_metadata(updated_event, sys_id)
           return StaffApi::Event.augment(updated_event, host, sys, meta)
