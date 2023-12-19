@@ -74,6 +74,7 @@
 
 ### Fix
 
+- **events**: recurring metadata visibility [PPT-1072] [PPT-1073] ([#309](https://github.com/PlaceOS/staff-api/pull/309))
 - **calendars**: availability removing busy items within period ([#303](https://github.com/PlaceOS/staff-api/pull/303))
 - **shard.lock**: bump office365 dep [PROJ-419]
 - **events**: add setup/breakdown time to StaffAPI::Event#aument ([#302](https://github.com/PlaceOS/staff-api/pull/302))
