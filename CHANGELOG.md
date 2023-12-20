@@ -74,6 +74,7 @@
 
 ### Fix
 
+- **events**: check for declined status on push update
 - **events**: refactor change notifications
 - **events**: resource calendar signal
 - **calendars**: allow any specified if delegated
