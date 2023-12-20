@@ -904,7 +904,13 @@ class Events < Application
       raise "no event provided" unless event
       meta = get_event_metadata(event, system_id, search_recurring: true)
       link_master_metadata(event_id, system_id, event.ical_uid.as(String)) if meta
-      notify_created_or_updated(:update, system, event, meta)
+
+      sys_email = system.email.to_s.downcase
+      if (attendee = event.attendees.find { |attend| attend.email.downcase == sys_email }) && attendee.response_status == "declined"
+        notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
+      else
+        notify_created_or_updated(:update, system, event, meta)
+      end
     in .deleted?
       meta = if event
                get_event_metadata(event, system_id, search_recurring: true)
