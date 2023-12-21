@@ -100,7 +100,7 @@ class WellKnown < ActionController::Base
                     "schema": {
                       "type":  "array",
                       "items": {
-                        "$ref": "#/components/schemas/Booking",
+                        "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                       },
                     },
                   },
@@ -115,7 +115,7 @@ class WellKnown < ActionController::Base
               "content":     {
                 "application/json": {
                   "schema": {
-                    "$ref": "#/components/schemas/Booking",
+                    "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                   },
                 },
               },
@@ -126,7 +126,7 @@ class WellKnown < ActionController::Base
                 "content":     {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Booking",
+                      "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                     },
                   },
                 },
@@ -154,7 +154,7 @@ class WellKnown < ActionController::Base
                 "content":     {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Booking",
+                      "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                     },
                   },
                 },
@@ -179,7 +179,7 @@ class WellKnown < ActionController::Base
               "content":     {
                 "application/json": {
                   "schema": {
-                    "$ref": "#/components/schemas/Booking",
+                    "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                   },
                 },
               },
@@ -190,7 +190,7 @@ class WellKnown < ActionController::Base
                 "content":     {
                   "application/json": {
                     "schema": {
-                      "$ref": "#/components/schemas/Booking",
+                      "$ref": "#/components/schemas/PlaceOS__Model__Booking",
                     },
                   },
                 },
@@ -217,10 +217,41 @@ class WellKnown < ActionController::Base
             },
           },
         },
+        "/api/staff/v1/bookings/{id}/guests": {
+          "get": {
+            "summary":    "List guests",
+            "parameters": [
+              {
+                "name":        "id",
+                "in":          "path",
+                "description": "Booking ID",
+                "required":    true,
+                "schema":      {
+                  "type": "string",
+                },
+              },
+            ],
+            "responses": {
+              "200": {
+                "description": "OK",
+                "content":     {
+                  "application/json": {
+                    "schema": {
+                      "type":  "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlaceOS__Model__Guest",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       "components": {
         "schemas": {
-          "Booking": {
+          "PlaceOS__Model__Booking": {
             "type":       "object",
             "properties": {
               "id": {
@@ -259,6 +290,34 @@ class WellKnown < ActionController::Base
                   "confirmed",
                   "cancelled",
                 ],
+              },
+              "created_at": {
+                "type":   "string",
+                "format": "date-time",
+              },
+              "updated_at": {
+                "type":   "string",
+                "format": "date-time",
+              },
+            },
+          },
+          "PlaceOS__Model__Guest": {
+            "type":       "object",
+            "properties": {
+              "id": {
+                "type": "string",
+              },
+              "name": {
+                "type": "string",
+              },
+              "email": {
+                "type": "string",
+              },
+              "phone": {
+                "type": "string",
+              },
+              "company": {
+                "type": "string",
               },
               "created_at": {
                 "type":   "string",
