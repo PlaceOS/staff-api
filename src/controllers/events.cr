@@ -1383,18 +1383,18 @@ class Events < Application
 
     meta = meta || EventMetadata.new
     if !meta.persisted?
-      meta.system_id = system.id.as(String)
       meta.event_id = event.id.as(String)
       meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring && is_host
       meta.resource_master_id = event.recurring_event_id || event.id if event.recurring && !is_host
-      meta.event_start = starting
-      meta.event_end = ending
-      meta.resource_calendar = system.email.to_s.as(String).downcase
       meta.host_email = event.host.as(String).downcase
-      meta.tenant_id = tenant.id
-      meta.cancelled = cancelled
       meta.ical_uid = event.ical_uid.as(String)
     end
+    meta.system_id = system.id.as(String)
+    meta.event_start = starting
+    meta.event_end = ending
+    meta.resource_calendar = system.email.to_s.as(String).downcase
+    meta.tenant_id = tenant.id
+    meta.cancelled = cancelled
     meta.save!
 
     event.setup_time = meta.setup_time
