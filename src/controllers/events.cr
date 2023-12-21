@@ -296,7 +296,7 @@ class Events < Application
       if breakdown_event_id = input_event.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
       end
-      notify_created_or_updated(:create, sys, created_event, meta, can_skip: false)
+      notify_created_or_updated(:create, sys, created_event, meta, can_skip: false, is_host: true)
 
       if attending && !attending.empty?
         # Create guests
@@ -533,7 +533,7 @@ class Events < Application
       if breakdown_event_id = changes.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
       end
-      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false)
+      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true)
 
       # Grab the list of externals that might be attending
       if update_attendees || changing_room
@@ -782,7 +782,7 @@ class Events < Application
     # if it doesn't exist then we need to fallback to getting the events
     meta = if mdata = query.to_a.first?
              if user_token.guest_scope?
-               raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({mdata.event_id, mdata.recurring_master_id, mdata.ical_uid})
+               raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({mdata.event_id, mdata.recurring_master_id, mdata.resource_master_id, mdata.ical_uid})
              elsif mdata.host_email.downcase != user.email.downcase
                # ensure the user should be able to edit this metadata
                confirm_access(system_id)
@@ -822,18 +822,21 @@ class Events < Application
              raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email
              raise Error::BadUpstreamResponse.new("host must be present on event") unless event_host = event.host
 
+             is_host = event_host.downcase == cal_id.downcase
+
              # attempt to find the metadata
-             mdata = get_migrated_metadata(event, system_id) || EventMetadata.new
-             mdata.system_id = upstream_system_id
-             mdata.event_id = upstream_event_id
-             mdata.ical_uid = event_ical_uid
-             mdata.recurring_master_id = event.recurring_event_id || event.id if event.recurring
-             mdata.event_start = event_start.to_unix
-             mdata.event_end = event_end.to_unix
-             mdata.resource_calendar = system_email
-             mdata.host_email = event_host
-             mdata.tenant_id = tenant.id
-             mdata
+             get_migrated_metadata(event, system_id) || EventMetadata.create!(
+               system_id: upstream_system_id,
+               event_id: upstream_event_id,
+               recurring_master_id: (event.recurring_event_id || event.id if event.recurring && is_host),
+               resource_master_id: (event.recurring_event_id || event.id if event.recurring && !is_host),
+               event_start: event_start.to_unix,
+               event_end: event_end.to_unix,
+               resource_calendar: system_email,
+               host_email: event_host,
+               tenant_id: tenant.id,
+               ical_uid: event_ical_uid,
+             )
            end
 
     # Updating extension data by merging into existing.
@@ -898,7 +901,7 @@ class Events < Application
       if meta
         link_master_metadata(event_id, system_id, event.ical_uid.as(String))
       else
-        notify_created_or_updated(:create, system, event, meta)
+        notify_created_or_updated(:create, system, event, meta, is_host: false)
       end
     in .updated?
       raise "no event provided" unless event
@@ -909,7 +912,7 @@ class Events < Application
       if (attendee = event.attendees.find { |attend| attend.email.downcase == sys_email }) && attendee.response_status == "declined"
         notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
       else
-        notify_created_or_updated(:update, system, event, meta)
+        notify_created_or_updated(:update, system, event, meta, is_host: false)
       end
     in .deleted?
       meta = if event
@@ -1306,10 +1309,13 @@ class Events < Application
     raise Error::BadUpstreamResponse.new("host must be present on event") unless meta_event_host = event.host
     raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless meta_event_ical_uid = event.ical_uid
 
+    is_host = meta_event_host.downcase == cal_id.downcase
+
     eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!(
       system_id: meta_system_id,
       event_id: meta_event_id,
-      recurring_master_id: (event.recurring_event_id || event.id if event.recurring),
+      recurring_master_id: (event.recurring_event_id || event.id if event.recurring && is_host),
+      resource_master_id: (event.recurring_event_id || event.id if event.recurring && !is_host),
       event_start: meta_event_start.to_unix,
       event_end: meta_event_end.to_unix,
       resource_calendar: cal_id,
@@ -1361,7 +1367,7 @@ class Events < Application
   # NOTIFICATIONS
   # ==========================
 
-  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true)
+  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true)
     raise Error::InconsistentState.new("event_start must be present on event") unless event_start = event.event_start
     raise Error::InconsistentState.new("event_end must be present on event") unless event_end = event.event_end
 
@@ -1376,16 +1382,19 @@ class Events < Application
                   meta.cancelled == cancelled
 
     meta = meta || EventMetadata.new
-    meta.system_id = system.id.as(String)
-    meta.event_id = event.id.as(String)
-    meta.ical_uid = event.ical_uid.as(String)
-    meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring
-    meta.event_start = starting
-    meta.event_end = ending
-    meta.resource_calendar = system.email.to_s.as(String).downcase
-    meta.host_email = event.host.as(String).downcase
-    meta.tenant_id = tenant.id
-    meta.cancelled = cancelled
+    if !meta.persisted?
+      meta.system_id = system.id.as(String)
+      meta.event_id = event.id.as(String)
+      meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring && is_host
+      meta.resource_master_id = event.recurring_event_id || event.id if event.recurring && !is_host
+      meta.event_start = starting
+      meta.event_end = ending
+      meta.resource_calendar = system.email.to_s.as(String).downcase
+      meta.host_email = event.host.as(String).downcase
+      meta.tenant_id = tenant.id
+      meta.cancelled = cancelled
+      meta.ical_uid = event.ical_uid.as(String)
+    end
     meta.save!
 
     event.setup_time = meta.setup_time
