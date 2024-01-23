@@ -15,7 +15,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.5.0
+    version: 1.6.1
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -59,7 +59,7 @@ shards:
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.3.1
+    version: 0.4.1
 
   faker:
     git: https://github.com/askn/faker.git
@@ -159,7 +159,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.19.1
+    version: 4.19.2
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -187,7 +187,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.3+git.commit.30d884fbf8012478aba6bfa818640f7886879071
+    version: 1.9.3+git.commit.990a7650fb027cbe65705fc6dad228cddc76c503
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
