@@ -172,6 +172,13 @@ abstract class Application < ActionController::Base
     render_error(error)
   end
 
+  # 511 if the user needs an access token via SSO
+  @[AC::Route::Exception(Error::NeedsAuthentication, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
+  def action_not_implemented(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
+
   # provides a list of acceptable content types if an unknown one is requested
   struct ContentError
     include JSON::Serializable

@@ -20,6 +20,9 @@ class Error < Exception
   class NotImplemented < Error
   end
 
+  class NeedsAuthentication < Error
+  end
+
   class NotAllowed < Error
   end
 
