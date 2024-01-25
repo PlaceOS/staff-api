@@ -10,13 +10,25 @@ class Staff < Application
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
     query : String? = nil,
     @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax. Provides more control over the search criteria and takes precedence over the 'q' parameter. Supports both Azure AD and Google providers.", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
-    filter : String? = nil
+    filter : String? = nil,
+    @[AC::Param::Info(description: "a google token or graph api URI representing the next page of results")]
+    next_page : String? = nil
   ) : Array(PlaceCalendar::User)
-    if filter
-      client.list_users(filter: filter)
-    else
-      client.list_users(query)
+    users = if filter
+              client.list_users(filter: filter, next_link: next_page)
+            else
+              client.list_users(query, next_link: next_page)
+            end
+
+    if next_link = users.first?.try(&.next_link)
+      params = URI::Params.build do |form|
+        form.add("q", query) if query
+        form.add("filter", filter) if filter
+        form.add("next_page", next_link)
+      end
+      response.headers["Link"] = %(</api/staff/v1/people?#{params}>; rel="next")
     end
+    users
   end
 
   # returns user details for the id provided
