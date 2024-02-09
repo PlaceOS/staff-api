@@ -5068,14 +5068,6 @@ paths:
         schema:
           type: string
           nullable: true
-      - name: next_page
-        in: query
-        description: a google token or graph api URI representing the next page of
-          results
-        required: false
-        schema:
-          type: string
-          nullable: true
       responses:
         200:
           description: OK
