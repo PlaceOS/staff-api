@@ -75,6 +75,7 @@
 
 ### Fix
 
+- **events**: [PPT-1190] update metadata on rapid destroy after create ([#313](https://github.com/PlaceOS/staff-api/pull/313))
 - **bookings**: changed signal
 - **events**: metadata updates to be resource_master_id aware
 - **events**: check for declined status on push update
