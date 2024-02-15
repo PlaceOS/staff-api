@@ -1111,7 +1111,7 @@ class Events < Application
       )
     end
 
-    if user_email == host
+    if !system_id && user_email == host
       # looking up by ical_uid is not nessesary as it's guaranteed to be the event owners calendar
       query = EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
       meta = query.first?
