@@ -770,7 +770,7 @@ class Bookings < Application
           booking_start:   booking.booking_start,
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
-          resource_id:     booking.asset_ids,
+          resource_id:     booking.asset_id,
           resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
