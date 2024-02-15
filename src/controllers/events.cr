@@ -1114,8 +1114,10 @@ class Events < Application
     if user_email == host
       meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
       meta ||= get_event_metadata(event, system_id, search_recurring: false)
-      meta.cancelled = true
-      meta.save
+      if meta
+        meta.cancelled = true
+        meta.save
+      end
     end
 
     if system && system_id
