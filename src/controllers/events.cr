@@ -1112,8 +1112,12 @@ class Events < Application
     end
 
     if user_email == host
-      meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
-      meta ||= get_event_metadata(event, system_id, search_recurring: false)
+      query = if tenant.platform == "office365"
+                EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
+              else
+                EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
+              end
+      meta = query.first?
       if meta
         meta.cancelled = true
         meta.save
