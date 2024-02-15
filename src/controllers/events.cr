@@ -1112,11 +1112,8 @@ class Events < Application
     end
 
     if user_email == host
-      query = if tenant.platform == "office365"
-                EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
-              else
-                EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
-              end
+      # looking up by ical_uid is not nessesary as it's guaranteed to be the event owners calendar
+      query = EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
       meta = query.first?
       if meta
         meta.cancelled = true
