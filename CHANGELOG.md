@@ -75,6 +75,7 @@
 
 ### Fix
 
+- **bookings**: changed signal
 - **events**: metadata updates to be resource_master_id aware
 - **events**: check for declined status on push update
 - **events**: refactor change notifications
