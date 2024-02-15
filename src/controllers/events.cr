@@ -1111,6 +1111,16 @@ class Events < Application
       )
     end
 
+    if !system_id && user_email == host
+      # looking up by ical_uid is not nessesary as it's guaranteed to be the event owners calendar
+      query = EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
+      meta = query.first?
+      if meta
+        meta.cancelled = true
+        meta.save
+      end
+    end
+
     if system && system_id
       meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
       meta ||= get_event_metadata(event, system_id, search_recurring: false)
