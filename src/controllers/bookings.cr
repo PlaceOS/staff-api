@@ -7,7 +7,8 @@ class Bookings < Application
 
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
   def wrap_in_transaction(&)
-    PgORM::Database.transaction do
+    PgORM::Database.transaction do |tx|
+      tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
       yield
     end
   end
