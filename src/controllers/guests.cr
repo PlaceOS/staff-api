@@ -226,7 +226,7 @@ class Guests < Application
 
     # find out if they are attending today
     attendee = guest.attending_today(tenant.id, get_timezone)
-    !attendee.nil? && attendee.for_booking? ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest).as(Guest)
+    (attendee && attendee.for_booking?) ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest).as(Guest)
   end
 
   # patches a guest record with the changes provided

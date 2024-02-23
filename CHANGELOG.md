@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **staff**: add pagination support getting staff [PPT-1170] ([#311](https://github.com/PlaceOS/staff-api/pull/311))
 - **bookings**: include any attending guests in responses ([#308](https://github.com/PlaceOS/staff-api/pull/308))
 - **bookings**: [PPT-1098] support multiple assets on a single booking ([#307](https://github.com/PlaceOS/staff-api/pull/307))
 - **events**: serialize requests from each user [PROJ-512] ([#306](https://github.com/PlaceOS/staff-api/pull/306))
@@ -74,6 +75,10 @@
 
 ### Fix
 
+- **bookings**: ensure serialisable transactions ([#314](https://github.com/PlaceOS/staff-api/pull/314))
+- **events**: [PPT-1190] update metadata on rapid destroy after create ([#313](https://github.com/PlaceOS/staff-api/pull/313))
+- **bookings**: changed signal
+- **events**: metadata updates to be resource_master_id aware
 - **events**: check for declined status on push update
 - **events**: refactor change notifications
 - **events**: resource calendar signal

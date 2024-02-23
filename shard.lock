@@ -15,7 +15,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.5.0
+    version: 1.6.1
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -27,7 +27,7 @@ shards:
 
   bindata:
     git: https://github.com/spider-gazelle/bindata.git
-    version: 1.11.1
+    version: 2.0.0
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
@@ -39,11 +39,11 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.12.0
+    version: 0.13.1
 
   debug:
     git: https://github.com/sija/debug.cr.git
-    version: 2.0.2
+    version: 2.0.3
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
@@ -59,7 +59,7 @@ shards:
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.3.1
+    version: 0.4.1
 
   faker:
     git: https://github.com/askn/faker.git
@@ -95,7 +95,7 @@ shards:
 
   jwt:
     git: https://github.com/crystal-community/jwt.git
-    version: 1.6.0
+    version: 1.6.1
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
@@ -111,7 +111,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.23.2
+    version: 1.23.3
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -151,7 +151,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.27.0
+    version: 0.28.0
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
@@ -159,11 +159,11 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.19.1
+    version: 4.20.1
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.9.0
+    version: 2.10.0
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -171,7 +171,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.35.1
+    version: 9.37.4
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -187,7 +187,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.3+git.commit.30d884fbf8012478aba6bfa818640f7886879071
+    version: 1.9.3+git.commit.990a7650fb027cbe65705fc6dad228cddc76c503
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
