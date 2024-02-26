@@ -20,27 +20,27 @@ class OpenAPI < ActionController::Base
         description: "A plugin that allows the user to create and manage bookings for rooms, desks and parking spots using ChatGPT."
       )
 
-      # Current openapi doc is about 7 times larger than the maximum allowed context size, so we need to filter it down a lot
       filter = {
-        Events.base_route => [PathFields::Summary, PathFields::GET],
+        Events.base_route => [PathFields::Summary, PathFields::GET, PathFields::POST],
+        Bookings.base_route => [PathFields::Summary, PathFields::GET, PathFields::POST],
       }
 
       # only include the paths that we want to expose
-      # openapi[:paths].to_h.each do |path, _details|
-      #   if filter[path]?
-      #     openapi[:paths][path].summary = nil unless filter[path].includes? PathFields::Summary
-      #     openapi[:paths][path].description = nil unless filter[path].includes? PathFields::Description
-      #     openapi[:paths][path].get = nil unless filter[path].includes? PathFields::GET
-      #     openapi[:paths][path].put = nil unless filter[path].includes? PathFields::PUT
-      #     openapi[:paths][path].post = nil unless filter[path].includes? PathFields::POST
-      #     openapi[:paths][path].delete = nil unless filter[path].includes? PathFields::DELETE
-      #     openapi[:paths][path].options = nil unless filter[path].includes? PathFields::OPTIONS
-      #     openapi[:paths][path].head = nil unless filter[path].includes? PathFields::HEAD
-      #     openapi[:paths][path].patch = nil unless filter[path].includes? PathFields::PATCH
-      #   else
-      #     openapi[:paths].delete(path)
-      #   end
-      # end
+      openapi[:paths].to_h.each do |path, _details|
+        if filter[path]?
+          openapi[:paths][path].summary = nil unless filter[path].includes? PathFields::Summary
+          openapi[:paths][path].description = nil unless filter[path].includes? PathFields::Description
+          openapi[:paths][path].get = nil unless filter[path].includes? PathFields::GET
+          openapi[:paths][path].put = nil unless filter[path].includes? PathFields::PUT
+          openapi[:paths][path].post = nil unless filter[path].includes? PathFields::POST
+          openapi[:paths][path].delete = nil unless filter[path].includes? PathFields::DELETE
+          openapi[:paths][path].options = nil unless filter[path].includes? PathFields::OPTIONS
+          openapi[:paths][path].head = nil unless filter[path].includes? PathFields::HEAD
+          openapi[:paths][path].patch = nil unless filter[path].includes? PathFields::PATCH
+        else
+          openapi[:paths].delete(path)
+        end
+      end
 
       # TODO: only include most likely responses for each path
 
