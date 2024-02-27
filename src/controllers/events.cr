@@ -388,7 +388,7 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil
   ) : PlaceCalendar::Event
-    event_id = original_id
+    changes.id = event_id = original_id
     system_id = (associated_system || changes.system_id).presence
 
     placeos_client = get_placeos_client
