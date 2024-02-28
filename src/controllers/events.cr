@@ -910,7 +910,7 @@ class Events < Application
 
       sys_email = system.email.to_s.downcase
       if (attendee = event.attendees.find { |attend| attend.email.downcase == sys_email }) && attendee.response_status == "declined"
-        notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
+        notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta, reason: :declined)
       else
         notify_created_or_updated(:update, system, event, meta, is_host: false)
       end
@@ -920,7 +920,7 @@ class Events < Application
              else
                EventMetadata.find_by?(event_id: event_id, system_id: system_id)
              end
-      notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta)
+      notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta, reason: :deleted)
     end
   end
 
@@ -1125,7 +1125,7 @@ class Events < Application
       meta = get_event_metadata(original_event, system_id, search_recurring: false) if original_event
       meta ||= get_event_metadata(event, system_id, search_recurring: false)
 
-      spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta) }
+      spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta, reason: (delete ? DestroyReason::Deleted : DestroyReason::Declined)) }
     end
   end
 
@@ -1162,7 +1162,7 @@ class Events < Application
     result = client.decline_event(cal_id, id: event_id, calendar_id: cal_id)
 
     meta = get_event_metadata(event, system_id, search_recurring: false)
-    spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta) }
+    spawn { notify_destroyed(system, event_id, event.ical_uid, event, meta, reason: :rejected) }
 
     result
   end
@@ -1428,7 +1428,13 @@ class Events < Application
     end
   end
 
-  def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil)
+  enum DestroyReason
+    Rejected
+    Declined
+    Deleted
+  end
+
+  def notify_destroyed(system, event_id, event_ical_uid, event = nil, meta = nil, reason : DestroyReason = DestroyReason::Deleted)
     if meta
       meta.cancelled = true
       meta.save
@@ -1447,8 +1453,10 @@ class Events < Application
         }
       end
     end
+
     get_placeos_client.root.signal("staff/event/changed", {
       action:         :cancelled,
+      reason:         reason,
       system_id:      system.id,
       event_id:       event_id,
       event_ical_uid: event_ical_uid,
