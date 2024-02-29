@@ -7,9 +7,21 @@ class Bookings < Application
 
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
   def wrap_in_transaction(&)
-    PgORM::Database.transaction do |tx|
-      tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-      yield
+    attempt = 0
+    loop do
+      PgORM::Database.transaction do |tx|
+        tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        yield
+      end
+      break
+    rescue error : PQ::PQError
+      attempt += 1
+      raise error if attempt == 3
+
+      # most likely couldn't serialise the transaction
+      Log.info { "error serialising transaction: #{error.message}" }
+      backoff = 100 + rand(400)
+      sleep backoff.milliseconds
     end
   end
 
