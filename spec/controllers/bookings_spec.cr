@@ -4,7 +4,7 @@ require "./helpers/guest_helper"
 
 describe Bookings do
   Spec.before_each {
-    Booking.truncate
+    Booking.clear
     Attendee.truncate
     Guest.truncate
   }
@@ -292,8 +292,67 @@ describe Bookings do
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 30.minutes.from_now.to_unix)
 
-      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
-      check_in_early.should eq(200)
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers)
+      check_in_early.status_code.should eq(200)
+    end
+
+    it "booking rejected if there are duplicate assets" do
+      status, _body = BookingsHelper.http_create_booking(
+        asset_id: "desk1",
+        asset_ids: ["desk1", "desk2", "desk1"],
+        booking_type: "desk",
+        booking_start: 2.minutes.from_now.to_unix,
+        booking_end: 10.minutes.from_now.to_unix,
+        utm_source: "desktop"
+      )
+
+      status.should eq 422
+    end
+
+    it "booking success when no clashes" do
+      status, body = BookingsHelper.http_create_booking(
+        asset_id: "desk11",
+        asset_ids: ["desk11", "desk12"],
+        booking_type: "desk",
+        booking_start: 4.minutes.from_now.to_unix,
+        booking_end: 12.minutes.from_now.to_unix,
+        utm_source: "desktop"
+      )
+      status.should eq 201
+    end
+
+    it "booking rejected if concurrent bookings" do
+      wait = Channel(Int32).new
+      spawn do
+        status_spawn, _body = BookingsHelper.http_create_booking(
+          asset_id: "desk1",
+          asset_ids: ["desk1", "desk2"],
+          booking_type: "desk",
+          booking_start: 2.minutes.from_now.to_unix,
+          booking_end: 10.minutes.from_now.to_unix,
+          utm_source: "desktop"
+        )
+        wait.send status_spawn
+      end
+
+      status_inline, _body = BookingsHelper.http_create_booking(
+        asset_id: "desk1",
+        asset_ids: ["desk1", "desk2"],
+        booking_type: "desk",
+        booking_start: 4.minutes.from_now.to_unix,
+        booking_end: 12.minutes.from_now.to_unix,
+        utm_source: "desktop"
+      )
+
+      status_concurrent = wait.receive
+
+      count_success = 0
+      count_success += 1 if status_inline == 201
+      count_success += 1 if status_concurrent == 201
+      if count_success != 1
+        raise "expected one booking to complete, codes: #{status_inline}, #{status_concurrent}"
+      end
+      count_success.should eq 1
     end
 
     it "cannot check in early more than an hour before booking start" do
@@ -320,14 +379,18 @@ describe Bookings do
         .to_return(body: "")
       tenant = get_tenant
 
-      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
+      booking = BookingsHelper.create_booking(
+        tenant.id.not_nil!,
         booking_start: 20.minutes.from_now.to_unix,
-        booking_end: 30.minutes.from_now.to_unix)
+        booking_end: 30.minutes.from_now.to_unix
+      )
 
-      BookingsHelper.create_booking(tenant.id.not_nil!,
+      BookingsHelper.create_booking(
+        tenant.id.not_nil!,
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 10.minutes.from_now.to_unix,
-        asset_id: booking.asset_id)
+        asset_id: booking.asset_id
+      )
 
       check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(409)
