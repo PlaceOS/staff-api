@@ -219,10 +219,6 @@ class Bookings < Application
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_ids"}], "error validating booking data")
     end
 
-    # check there isn't a clashing booking
-    clashing_bookings = check_clashing(booking)
-    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
-
     event_ids = [event_id.presence, ical_uid.presence].compact
     if !event_ids.empty?
       id_query = "ARRAY['#{event_ids.map(&.gsub(/['";]/, "")).join(%(','))}']"
@@ -240,6 +236,10 @@ class Bookings < Application
 
     # Add the tenant details
     booking.tenant_id = tenant.id.not_nil!
+
+    # check there isn't a clashing booking
+    clashing_bookings = check_clashing(booking)
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # clear history
     booking.history = [] of Booking::History
@@ -685,39 +685,20 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
-  private def format_asset_ids_for_postgres(asset_ids : Array(String)) : String
-    formatted_ids = asset_ids.compact_map { |id| "'#{id.gsub("'", "''")}'" }.join(',')
-    "ARRAY[#{formatted_ids}]::text[]"
-  end
-
   private def check_clashing(new_booking)
-    starting = new_booking.booking_start
-    ending = new_booking.booking_end
-    booking_type = new_booking.booking_type
-    asset_ids = new_booking.asset_id_present? ? new_booking.asset_ids.unshift(new_booking.asset_id).uniq : new_booking.asset_ids
-
-    # gets all the clashing bookings
-    query = Booking
-      .by_tenant(tenant.id)
-      .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        ending, starting, booking_type
-      )
-    query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
-    query.to_a
+    new_booking.clashing_bookings.to_a
   end
 
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
-    asset_ids = booking.asset_ids.unshift(booking.asset_id).uniq
-    asset_ids = booking.asset_id_present? ? booking.asset_ids.unshift(booking.asset_id).uniq : booking.asset_ids
+    asset_ids = (booking.asset_ids + [booking.asset_id]).uniq
 
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{format_asset_ids_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{booking.format_list_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
         booking.booking_start, time_now, booking_type
-      )
+      ).where("id != ?", booking.id)
     query.to_a
   end
 

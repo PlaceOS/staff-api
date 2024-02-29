@@ -86,13 +86,16 @@ module BookingsHelper
     history = nil,
     utm_source = nil,
     department = nil,
-    limit_override = nil
+    limit_override = nil,
+    asset_ids : Array(String) = [] of String
   )
+    asset_ids << asset_id if asset_ids.empty?
     body = {
       user_id:         user_id,
       user_email:      user_email ? PlaceOS::Model::Email.new(user_email) : nil,
       user_name:       user_name,
       asset_id:        asset_id,
+      asset_ids:       asset_ids,
       zones:           zones,
       booking_type:    booking_type,
       booking_start:   booking_start,
@@ -117,6 +120,7 @@ module BookingsHelper
     if response.success?
       {response.status_code, JSON.parse(response.body).as_h}
     else
+      puts "failed response body: #{response.body}"
       {response.status_code, {} of String => JSON::Any}
     end
   end
