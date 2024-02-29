@@ -76,6 +76,7 @@
 
 ### Fix
 
+- **bookings**: remove isolated transactions
 - **bookings**: add a serialisable backoff
 - **bookings**: specs passing
 - **events**: update event id requirement
