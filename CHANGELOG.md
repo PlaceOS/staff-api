@@ -76,6 +76,7 @@
 
 ### Fix
 
+- **bookings**: specs passing
 - **events**: update event id requirement
 - **bookings**: ensure serialisable transactions ([#314](https://github.com/PlaceOS/staff-api/pull/314))
 - **events**: [PPT-1190] update metadata on rapid destroy after create ([#313](https://github.com/PlaceOS/staff-api/pull/313))
