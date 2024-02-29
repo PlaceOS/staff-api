@@ -76,6 +76,7 @@
 
 ### Fix
 
+- **bookings**: add a serialisable backoff
 - **bookings**: specs passing
 - **events**: update event id requirement
 - **bookings**: ensure serialisable transactions ([#314](https://github.com/PlaceOS/staff-api/pull/314))
