@@ -17,7 +17,7 @@ class Bookings < Application
     #   attempt += 1
     #   raise error if attempt == 3
 
-      # most likely couldn't serialise the transaction
+    # most likely couldn't serialise the transaction
     #   Log.info { "error serialising transaction: #{error.message}" }
     #   backoff = 100 + rand(400)
     #   sleep backoff.milliseconds
