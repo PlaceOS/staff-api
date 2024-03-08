@@ -701,7 +701,7 @@ class Bookings < Application
 
     # Check if attendee already exists in the booking to avoid duplicates
     existing_attendee = booking.attendees.find { |a| a.email == email }
-    raise Error::Conflict.new("Attendee already exists in this booking") if existing_attendee
+    raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
 
     # Create or find the guest associated with the attendee
     guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
