@@ -695,8 +695,8 @@ class Bookings < Application
   # Adds a single attendee to an existing booking
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
-    attendee : Attendee
-  ) : Attendee
+    attendee : PlaceCalendar::Event::Attendee,
+  )
     email = attendee.email.strip.downcase
 
     # Check if attendee already exists in the booking to avoid duplicates
