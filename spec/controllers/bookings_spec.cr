@@ -11,6 +11,7 @@ describe Bookings do
 
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
+  headers_google = Mock::Headers.google
 
   describe "#index" do
     it "should return a list of bookings" do
@@ -611,11 +612,6 @@ describe Bookings do
   end
 
   describe "permission", focus: true do
-    before_each do
-      user_one_headers = Mock::Headers.office365_guest
-      user_two_headers = Mock::Headers.google
-    end
-
     it "#add_attendee should NOT allow adding self to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -630,7 +626,7 @@ describe Bookings do
         permission: Booking::Permission::PRIVATE,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -656,7 +652,7 @@ describe Bookings do
         permission: Booking::Permission::PUBLIC,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -690,7 +686,7 @@ describe Bookings do
       }.to_json)
       response.status_code.should eq(200)
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
