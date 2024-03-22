@@ -611,7 +611,7 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
-  describe "permission", focus: true do
+  describe "permission" do
     it "#add_attendee should NOT allow adding self to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
