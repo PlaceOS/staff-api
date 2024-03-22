@@ -621,24 +621,31 @@ describe Bookings do
         .to_return(body: "")
 
       booking = BookingsHelper.http_create_booking(
-        booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 15.minutes.from_now.to_unix,
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 120.minutes.from_now.to_unix,
         permission: Booking::Permission::PRIVATE,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
+      # public user
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
         visit_expected: true,
       }.to_json)
-      response.status_code.should eq(403)
+      response.status_code.should eq(401)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
     end
 
-    it "#add_attendee should allow adding self to PUBLIC bookings" do
+    it "#add_attendee should allow adding anyone to PUBLIC bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -647,12 +654,19 @@ describe Bookings do
         .to_return(body: "")
 
       booking = BookingsHelper.http_create_booking(
-        booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 15.minutes.from_now.to_unix,
-        permission: Booking::Permission::PUBLIC,
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 120.minutes.from_now.to_unix,
+        permission: Booking::Permission::PRIVATE,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
+      # public user
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -664,7 +678,7 @@ describe Bookings do
       body["attendees"].as_a.map(&.["email"]).should contain("user-two@example.com")
     end
 
-    it "#add_attendee should allow people in the same tenant to add themselves to OPEN bookings" do
+    it "#add_attendee should allow adding people in the same tenant to OPEN bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -673,30 +687,38 @@ describe Bookings do
         .to_return(body: "")
 
       booking = BookingsHelper.http_create_booking(
-        booking_start: 5.minutes.from_now.to_unix,
-        booking_end: 15.minutes.from_now.to_unix,
-        permission: Booking::Permission::OPEN,
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 120.minutes.from_now.to_unix,
+        permission: Booking::Permission::PRIVATE,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
-        name:           "User One",
-        email:          "user-one@example.com",
-        checked_in:     true,
-        visit_expected: true,
-      }.to_json)
-      response.status_code.should eq(200)
-
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers_google, body: {
+      # public user
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
         visit_expected: true,
       }.to_json)
-      response.status_code.should eq(403)
+      response.status_code.should eq(401)
+
+      # same tenant user
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+        name:           "User Three",
+        email:          "user-three@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should contain("user-one@example.com")
       body["attendees"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["attendees"].as_a.map(&.["email"]).should contain("user-three@example.com")
     end
   end
 
