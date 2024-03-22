@@ -678,7 +678,7 @@ describe Bookings do
         permission: Booking::Permission::OPEN,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_one_headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
         name:           "User One",
         email:          "user-one@example.com",
         checked_in:     true,
