@@ -662,7 +662,7 @@ describe Bookings do
         booked_by_name: "User One",
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 120.minutes.from_now.to_unix,
-        permission: Booking::Permission::PRIVATE,
+        permission: Booking::Permission::PUBLIC,
       )[1]
 
       # public user
@@ -695,7 +695,7 @@ describe Bookings do
         booked_by_name: "User One",
         booking_start: 20.minutes.from_now.to_unix,
         booking_end: 120.minutes.from_now.to_unix,
-        permission: Booking::Permission::PRIVATE,
+        permission: Booking::Permission::OPEN,
       )[1]
 
       # public user
