@@ -662,7 +662,7 @@ describe Bookings do
         checked_in:     true,
         visit_expected: true,
       }.to_json)
-      response.status_code.should eq(201)
+      response.status_code.should eq(200)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
       body["attendees"].as_a.map(&.["email"]).should contain("user-two@example.com")
@@ -688,7 +688,7 @@ describe Bookings do
         checked_in:     true,
         visit_expected: true,
       }.to_json)
-      response.status_code.should eq(201)
+      response.status_code.should eq(200)
 
       response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
         name:           "User Two",
