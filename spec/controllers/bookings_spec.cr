@@ -611,6 +611,11 @@ describe Bookings do
   end
 
   describe "permission", focus: true do
+    before_each do
+      user_one_headers = Mock::Headers.office365_guest
+      user_two_headers = Mock::Headers.google
+    end
+
     it "#add_attendee should NOT allow adding self to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -625,16 +630,16 @@ describe Bookings do
         permission: Booking::Permission::PRIVATE,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
-        name:           "User One",
-        email:          "user-one@example.com",
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
         checked_in:     true,
         visit_expected: true,
       }.to_json)
       response.status_code.should eq(403)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should_not contain("user-one@example.com")
+      body["attendees"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
     end
 
     it "#add_attendee should allow adding self to PUBLIC bookings" do
@@ -651,16 +656,16 @@ describe Bookings do
         permission: Booking::Permission::PUBLIC,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
-        name:           "User One",
-        email:          "user-one@example.com",
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
         checked_in:     true,
         visit_expected: true,
       }.to_json)
       response.status_code.should eq(201)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should contain("user-one@example.com")
+      body["attendees"].as_a.map(&.["email"]).should contain("user-two@example.com")
     end
 
     it "#add_attendee should allow people in the same tenant to add themselves to OPEN bookings" do
@@ -677,7 +682,7 @@ describe Bookings do
         permission: Booking::Permission::OPEN,
       )[1]
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_one_headers, body: {
         name:           "User One",
         email:          "user-one@example.com",
         checked_in:     true,
@@ -685,7 +690,7 @@ describe Bookings do
       }.to_json)
       response.status_code.should eq(201)
 
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: user_two_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
