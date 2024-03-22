@@ -87,7 +87,8 @@ module BookingsHelper
     utm_source = nil,
     department = nil,
     limit_override = nil,
-    asset_ids : Array(String) = [] of String
+    asset_ids : Array(String) = [] of String,
+    permission = nil
   )
     asset_ids << asset_id if asset_ids.empty?
     body = {
@@ -105,6 +106,7 @@ module BookingsHelper
       booked_by_name:  booked_by_name,
       history:         history,
       department:      department,
+      permission:      permission,
     }.to_h.compact!.to_json
 
     client = AC::SpecHelper.client

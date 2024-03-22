@@ -610,6 +610,95 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
+  describe "permission", focus: true do
+    it "#add_attendee should NOT allow adding self to PRIVATE bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      booking = BookingsHelper.http_create_booking(
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 15.minutes.from_now.to_unix,
+        permission: Booking::Permission::PRIVATE,
+      )[1]
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+        name:           "User One",
+        email:          "user-one@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(403)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["attendees"].as_a.map(&.["email"]).should_not contain("user-one@example.com")
+    end
+
+    it "#add_attendee should allow adding self to PUBLIC bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      booking = BookingsHelper.http_create_booking(
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 15.minutes.from_now.to_unix,
+        permission: Booking::Permission::PUBLIC,
+      )[1]
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+        name:           "User One",
+        email:          "user-one@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(201)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["attendees"].as_a.map(&.["email"]).should contain("user-one@example.com")
+    end
+
+    it "#add_attendee should allow people in the same tenant to add themselves to OPEN bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      booking = BookingsHelper.http_create_booking(
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 15.minutes.from_now.to_unix,
+        permission: Booking::Permission::OPEN,
+      )[1]
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+        name:           "User One",
+        email:          "user-one@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(201)
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(403)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["attendees"].as_a.map(&.["email"]).should contain("user-one@example.com")
+      body["attendees"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
+    end
+  end
+
   it "#ensures case insensitivity in user emails" do
     tenant = get_tenant
     booking_name = Faker::Name.first_name
