@@ -44,6 +44,17 @@ class Bookings < Application
     end
   end
 
+  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  private def confirm_access_for_add_attendee
+    return if is_support?
+    return if booking.permission.public? || booking.permission.open?
+    if user = current_user
+      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
+      return if check_access(user.groups, booking.zones || [] of String).can_manage?
+      head :forbidden
+    end
+  end
+
   @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin])]
   private def check_deleted
     head :method_not_allowed if booking.deleted
