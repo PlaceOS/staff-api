@@ -633,7 +633,10 @@ describe Bookings do
       )[1]
 
       # public user
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
+      no_auth_headers = HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -641,8 +644,23 @@ describe Bookings do
       }.to_json)
       response.status_code.should eq(401)
 
+      # same tenant user
+      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
+      same_tenant_headers = HTTP::Headers{
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth_token}",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
+        name:           "User Three",
+        email:          "user-three@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(401)
+
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
       body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-three@example.com")
     end
 
     it "#add_attendee should allow adding anyone to PUBLIC bookings" do
@@ -666,7 +684,10 @@ describe Bookings do
       )[1]
 
       # public user
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
+      no_auth_headers = HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -674,8 +695,23 @@ describe Bookings do
       }.to_json)
       response.status_code.should eq(200)
 
+      # same tenant user
+      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
+      same_tenant_headers = HTTP::Headers{
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth_token}",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
+        name:           "User Three",
+        email:          "user-three@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
     end
 
     it "#add_attendee should allow adding people in the same tenant to OPEN bookings" do
@@ -699,7 +735,10 @@ describe Bookings do
       )[1]
 
       # public user
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: nil, body: {
+      no_auth_headers = HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
         checked_in:     true,
@@ -708,7 +747,12 @@ describe Bookings do
       response.status_code.should eq(401)
 
       # same tenant user
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: headers, body: {
+      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
+      same_tenant_headers = HTTP::Headers{
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth_token}",
+      }
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
         name:           "User Three",
         email:          "user-three@example.com",
         checked_in:     true,
@@ -717,8 +761,8 @@ describe Bookings do
       response.status_code.should eq(200)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
-      body["attendees"].as_a.map(&.["email"]).should contain("user-three@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
     end
   end
 
