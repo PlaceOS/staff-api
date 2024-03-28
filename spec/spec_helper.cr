@@ -73,7 +73,7 @@ module Mock
 
     def normal_office_user(email : String, groups = [] of String)
       user = generate_normal_auth_user(email, groups)
-      auth_token = UserJWT.new(
+      UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,

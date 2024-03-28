@@ -11,7 +11,6 @@ describe Bookings do
 
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
-  headers_google = Mock::Headers.google
 
   describe "#index" do
     it "should return a list of bookings" do
@@ -311,7 +310,7 @@ describe Bookings do
     end
 
     it "booking success when no clashes" do
-      status, body = BookingsHelper.http_create_booking(
+      status, _body = BookingsHelper.http_create_booking(
         asset_id: "desk11",
         asset_ids: ["desk11", "desk12"],
         booking_type: "desk",
