@@ -611,7 +611,7 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
-  describe "permission", tags: ["auth"], focus: true do
+  describe "permission", tags: ["auth"] do
     before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
