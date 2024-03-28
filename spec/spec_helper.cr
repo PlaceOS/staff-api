@@ -71,6 +71,24 @@ module Mock
       ).encode
     end
 
+    def normal_office_user(email : String, groups = [] of String)
+      user = generate_normal_auth_user(email, groups)
+      auth_token = UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        domain: "toby.staff-api.dev",
+        id: user.id.as(String),
+        scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
+        user: UserJWT::Metadata.new(
+          name: Faker::Name.name,
+          email: user.email.to_s,
+          permissions: UserJWT::Permissions::User,
+          roles: groups
+        )
+      ).encode
+    end
+
     # office_guest_mock_token
     def office_guest(guest_event_id, system_id)
       UserJWT.new(
@@ -132,6 +150,25 @@ module Mock
       end
     end
 
+    def generate_normal_auth_user(email : String, groups = [] of String)
+      CREATION_LOCK.synchronize do
+        org_zone
+        authority = PlaceOS::Model::Authority.find_by_domain("toby.staff-api.dev") || PlaceOS::Model::Generator.authority
+        authority.domain = "toby.staff-api.dev"
+        authority.config_will_change!
+        authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
+        authority.save!
+
+        test_user_email = PlaceOS::Model::Email.new(email)
+
+        PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: false, admin: false).tap do |user|
+          user.email = test_user_email
+          user.groups = groups
+          user.save!
+        end
+      end
+    end
+
     def org_zone
       zone = PlaceOS::Model::Zone.find?("zone-perm-org")
       return zone if zone
@@ -161,6 +198,20 @@ module Mock
       HTTP::Headers{
         "Host"          => "toby.staff-api.dev",
         "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def office365_normal_user(email : String, groups = [] of String)
+      auth = Mock::Token.normal_office_user(email, groups)
+      HTTP::Headers{
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def office365_no_auth
+      HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
       }
     end
 

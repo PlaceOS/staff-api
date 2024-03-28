@@ -611,15 +611,17 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
-  describe "permission" do
-    it "#add_attendee should NOT allow adding self to PRIVATE bookings" do
+  describe "permission", tags: ["auth"], focus: true do
+    before_all do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
+    end
 
+    it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -633,9 +635,7 @@ describe Bookings do
       )[1]
 
       # public user
-      no_auth_headers = HTTP::Headers{
-        "Host" => "toby.staff-api.dev",
-      }
+      no_auth_headers = Mock::Headers.office365_no_auth
       response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
@@ -645,83 +645,21 @@ describe Bookings do
       response.status_code.should eq(401)
 
       # same tenant user
-      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
-      same_tenant_headers = HTTP::Headers{
-        "Host"          => "toby.staff-api.dev",
-        "Authorization" => "Bearer #{auth_token}",
-      }
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
       response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
         name:           "User Three",
         email:          "user-three@example.com",
         checked_in:     true,
         visit_expected: true,
       }.to_json)
-      response.status_code.should eq(401)
+      response.status_code.should eq(403)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
       body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
       body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-three@example.com")
     end
 
-    it "#add_attendee should allow adding anyone to PUBLIC bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
-      booking = BookingsHelper.http_create_booking(
-        user_id: "user-one@example.com",
-        user_email: "user-one@example.com",
-        user_name: "User One",
-        booked_by_email: "user-one@example.com",
-        booked_by_id: "user-one@example.com",
-        booked_by_name: "User One",
-        booking_start: 20.minutes.from_now.to_unix,
-        booking_end: 120.minutes.from_now.to_unix,
-        permission: Booking::Permission::PUBLIC,
-      )[1]
-
-      # public user
-      no_auth_headers = HTTP::Headers{
-        "Host" => "toby.staff-api.dev",
-      }
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
-        name:           "User Two",
-        email:          "user-two@example.com",
-        checked_in:     true,
-        visit_expected: true,
-      }.to_json)
-      response.status_code.should eq(200)
-
-      # same tenant user
-      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
-      same_tenant_headers = HTTP::Headers{
-        "Host"          => "toby.staff-api.dev",
-        "Authorization" => "Bearer #{auth_token}",
-      }
-      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
-        name:           "User Three",
-        email:          "user-three@example.com",
-        checked_in:     true,
-        visit_expected: true,
-      }.to_json)
-      response.status_code.should eq(200)
-
-      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-two@example.com")
-      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
-    end
-
-    it "#add_attendee should allow adding people in the same tenant to OPEN bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
+    it "#add_attendee should allow adding same tenant users to OPEN bookings" do
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -735,9 +673,7 @@ describe Bookings do
       )[1]
 
       # public user
-      no_auth_headers = HTTP::Headers{
-        "Host" => "toby.staff-api.dev",
-      }
+      no_auth_headers = Mock::Headers.office365_no_auth
       response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
         name:           "User Two",
         email:          "user-two@example.com",
@@ -747,11 +683,7 @@ describe Bookings do
       response.status_code.should eq(401)
 
       # same tenant user
-      auth_token = Mock::Token.office(sys_admin: false, support: false, groups: ["staff"])
-      same_tenant_headers = HTTP::Headers{
-        "Host"          => "toby.staff-api.dev",
-        "Authorization" => "Bearer #{auth_token}",
-      }
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
       response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
         name:           "User Three",
         email:          "user-three@example.com",
@@ -762,6 +694,44 @@ describe Bookings do
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
       body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
+    end
+
+    it "#add_attendee should allow adding anyone to PUBLIC bookings" do
+      booking = BookingsHelper.http_create_booking(
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 120.minutes.from_now.to_unix,
+        permission: Booking::Permission::PUBLIC,
+      )[1]
+
+      # public user
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
+      # same tenant user
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
+        name:           "User Three",
+        email:          "user-three@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-two@example.com")
       body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
     end
   end
