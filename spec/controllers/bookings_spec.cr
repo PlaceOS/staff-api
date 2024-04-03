@@ -611,16 +611,14 @@ describe Bookings do
   end
 
   describe "permission", tags: ["auth"] do
-    before_all do
+    it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
-    end
 
-    it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -659,6 +657,13 @@ describe Bookings do
     end
 
     it "#add_attendee should allow adding same tenant users to OPEN bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -697,6 +702,13 @@ describe Bookings do
     end
 
     it "#add_attendee should allow adding anyone to PUBLIC bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
