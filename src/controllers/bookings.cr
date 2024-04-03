@@ -24,6 +24,20 @@ class Bookings < Application
     # end
   end
 
+  # Skip actions that requres login for #add_attendee
+  # If a user is logged in then they will be run as part of
+  # #confirm_access_for_add_attendee, after checking if the booking is public
+  skip_action :determine_tenant_from_domain, only: :add_attendee
+  skip_action :check_jwt_scope, only: :add_attendee
+
+  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  private def determine_tenant_from_domain_for_add_attendee
+    domain = request.hostname.as(String)
+    raise Error::BadRequest.new("missing domain header") unless domain
+    @tenant = Tenant.find_by(domain: domain)
+    raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
+  end
+
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_booking(id : Int64)
     @booking = Booking
@@ -46,8 +60,13 @@ class Bookings < Application
 
   @[AC::Route::Filter(:before_action, only: [:add_attendee])]
   private def confirm_access_for_add_attendee
-    return if is_support?
     return if booking.permission.public?
+
+    # Run the normal login checks if the booking is not public
+    check_jwt_scope
+    determine_tenant_from_domain
+
+    return if is_support?
     if user = current_user
       return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
       return if check_access(user.groups, booking.zones || [] of String).can_manage?
@@ -56,7 +75,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin])]
+  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin, :add_attendee])]
   private def check_deleted
     head :method_not_allowed if booking.deleted
   end
