@@ -812,6 +812,73 @@ describe Bookings do
       bookings.map(&.["id"]).should_not contain(open_booking["id"])
       bookings.map(&.["id"]).should contain(public_booking["id"])
     end
+
+    it "#index should return a list of OPEN and PUBLIC bookings for same tenant users" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      # private booking
+      private_booking = BookingsHelper.http_create_booking(
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        asset_id: "asset-1",
+        booking_type: "group_event",
+        booking_start: 10.minutes.from_now.to_unix,
+        booking_end: 50.minutes.from_now.to_unix,
+        permission: Booking::Permission::PRIVATE,
+      )[1]
+
+      # open booking
+      open_booking = BookingsHelper.http_create_booking(
+        user_id: "user-two@example.com",
+        user_email: "user-two@example.com",
+        user_name: "User Two",
+        booked_by_email: "user-two@example.com",
+        booked_by_id: "user-two@example.com",
+        booked_by_name: "User Two",
+        asset_id: "asset-2",
+        booking_type: "group_event",
+        booking_start: 10.minutes.from_now.to_unix,
+        booking_end: 50.minutes.from_now.to_unix,
+        permission: Booking::Permission::OPEN,
+      )[1]
+
+      # public booking
+      public_booking = BookingsHelper.http_create_booking(
+        user_id: "user-three@example.com",
+        user_email: "user-three@example.com",
+        user_name: "User Three",
+        booked_by_email: "user-three@example.com",
+        booked_by_id: "user-three@example.com",
+        booked_by_name: "User Three",
+        asset_id: "asset-3",
+        booking_type: "group_event",
+        booking_start: 10.minutes.from_now.to_unix,
+        booking_end: 50.minutes.from_now.to_unix,
+        permission: Booking::Permission::PUBLIC,
+      )[1]
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      # same tenant user
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-four@example.com")
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group_event", headers: same_tenant_headers)
+      response.status_code.should eq(200)
+      bookings = JSON.parse(response.body).as_a
+      bookings.size.should eq(2)
+      bookings.map(&.["id"]).should_not contain(private_booking["id"])
+      bookings.map(&.["id"]).should contain(open_booking["id"])
+      bookings.map(&.["id"]).should contain(public_booking["id"])
+    end
   end
 
   it "#ensures case insensitivity in user emails" do
