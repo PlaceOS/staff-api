@@ -96,4 +96,13 @@ module Utils::CurrentUser
                       end
     end
   end
+
+  def auth_token_present?
+    request.headers["X-API-Key"]? ||
+      params["api-key"]? ||
+      cookies["api-key"]?.try(&.value) ||
+      request.headers["Authorization"]? ||
+      params["bearer_token"]? ||
+      cookies["bearer_token"]?.try(&.value)
+  end
 end

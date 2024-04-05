@@ -24,18 +24,26 @@ class Bookings < Application
     # end
   end
 
-  # Skip actions that requres login for #add_attendee
+  # Skip actions that requres login
   # If a user is logged in then they will be run as part of
-  # #confirm_access_for_add_attendee, after checking if the booking is public
-  skip_action :determine_tenant_from_domain, only: :add_attendee
-  skip_action :check_jwt_scope, only: :add_attendee
+  # #set_tenant_from_domain
+  skip_action :determine_tenant_from_domain, only: [:index, :add_attendee]
+  skip_action :check_jwt_scope, only: [:index, :add_attendee]
 
-  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
-  private def determine_tenant_from_domain_for_add_attendee
-    domain = request.hostname.as(String)
-    raise Error::BadRequest.new("missing domain header") unless domain
-    @tenant = Tenant.find_by(domain: domain)
-    raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
+  # Set the tenant based on the domain
+  # This allows unauthenticated requests through
+  # (for public bookings, further checks are done later)
+  @[AC::Route::Filter(:before_action, only: [:index, :add_attendee])]
+  private def set_tenant_from_domain
+    if auth_token_present?
+      check_jwt_scope
+      determine_tenant_from_domain
+    else
+      domain = request.hostname.as(String)
+      raise Error::BadRequest.new("missing domain header") unless domain
+      @tenant = Tenant.find_by(domain: domain)
+      raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
+    end
   end
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
@@ -61,11 +69,6 @@ class Bookings < Application
   @[AC::Route::Filter(:before_action, only: [:add_attendee])]
   private def confirm_access_for_add_attendee
     return if booking.permission.public?
-
-    # Run the normal login checks if the booking is not public
-    check_jwt_scope
-    determine_tenant_from_domain
-
     return if is_support?
     if user = current_user
       return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
@@ -172,6 +175,10 @@ class Bookings < Application
     offset : Int32 = 0
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
+
+    # restrict query to public bookings if the user is unauthenticated
+    query = query.where(permission: Booking::Permission::PUBLIC.to_s) unless auth_token_present?
+
     event_ids = [event_id.presence, ical_uid.presence].compact
 
     if event_ids.empty?
@@ -186,12 +193,19 @@ class Bookings < Application
       query = query.by_zones(zones) unless zones.empty?
 
       # We want to do a special current user query if no user details are provided
-      if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
-        user_id = user_token.id
-        user_email = user.email
-      end
+      # but only if we are not looking for public bookings
+      if auth_token_present?
+        if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
+          user_id = user_token.id
+          user_email = user.email
+        end
 
-      query = query.by_user_or_email(user_id, user_email, include_booked_by)
+        if booking_type != "group-event"
+          query = query.by_user_or_email(user_id, user_email, include_booked_by)
+        else
+          query = query.where(sql: "permission = 'PUBLIC' OR permission = 'OPEN'")
+        end
+      end
     else
       id_query = "ARRAY['#{event_ids.map(&.gsub(/['";]/, "")).join(%(','))}']"
       metadata_ids = EventMetadata.where(
