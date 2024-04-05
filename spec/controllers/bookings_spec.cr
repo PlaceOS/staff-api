@@ -763,7 +763,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::PRIVATE,
@@ -778,7 +778,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::OPEN,
@@ -793,7 +793,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::PUBLIC,
@@ -804,7 +804,7 @@ describe Bookings do
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group_event", headers: no_auth_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: no_auth_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(1)
@@ -830,7 +830,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::PRIVATE,
@@ -845,7 +845,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::OPEN,
@@ -860,7 +860,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
-        booking_type: "group_event",
+        booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
         permission: Booking::Permission::PUBLIC,
@@ -871,7 +871,7 @@ describe Bookings do
 
       # same tenant user
       same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-four@example.com")
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group_event", headers: same_tenant_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: same_tenant_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(2)
