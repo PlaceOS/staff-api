@@ -652,8 +652,7 @@ describe Bookings do
       response.status_code.should eq(403)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
-      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-three@example.com")
+      body["guests"]?.should be_nil
     end
 
     it "#add_attendee should allow adding same tenant users to OPEN bookings" do
@@ -697,8 +696,8 @@ describe Bookings do
       response.status_code.should eq(200)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"]?.try &.as_a.map(&.["email"]).should_not contain("user-two@example.com")
-      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
+      body["guests"].as_a.map(&.["email"]).should_not contain("user-two@example.com")
+      body["guests"].as_a.map(&.["email"]).should contain("user-three@example.com")
     end
 
     it "#add_attendee should allow adding anyone to PUBLIC bookings" do
@@ -742,8 +741,8 @@ describe Bookings do
       response.status_code.should eq(200)
 
       body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
-      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-two@example.com")
-      body["attendees"]?.try &.as_a.map(&.["email"]).should contain("user-three@example.com")
+      body["guests"].as_a.map(&.["email"]).should contain("user-two@example.com")
+      body["guests"].as_a.map(&.["email"]).should contain("user-three@example.com")
     end
 
     it "#index should return a list of PUBLIC bookings for unauthenticated users" do
