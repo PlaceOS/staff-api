@@ -878,6 +878,52 @@ describe Bookings do
       bookings.map(&.["id"]).should contain(open_booking["id"])
       bookings.map(&.["id"]).should contain(public_booking["id"])
     end
+
+    it "#destroy_attendee should allow same tenant users to remove attendees from OPEN bookings" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      booking = BookingsHelper.http_create_booking(
+        user_id: "user-one@example.com",
+        user_email: "user-one@example.com",
+        user_name: "User One",
+        booked_by_email: "user-one@example.com",
+        booked_by_id: "user-one@example.com",
+        booked_by_name: "User One",
+        booking_start: 20.minutes.from_now.to_unix,
+        booking_end: 120.minutes.from_now.to_unix,
+        permission: Booking::Permission::OPEN,
+      )[1]
+
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
+      
+      # add attendee
+      attendee = JSON.parse(client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json).body).as_h
+
+      # public user fails to remove attendee
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.delete(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee/#{attendee["email"]}), headers: no_auth_headers)
+      response.status_code.should eq(401)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["guests"].as_a.map(&.["email"]).should contain("user-two@example.com")
+
+      # same tenant user successfully removes attendee
+      response = client.delete(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee/#{attendee["email"]}), headers: same_tenant_headers)
+      response.status_code.should eq(202)
+
+      body = JSON.parse(client.get(%(#{BOOKINGS_BASE}/#{booking["id"]}), headers: headers).body).as_h
+      body["guests"]?.should be_nil
+    end
   end
 
   it "#ensures case insensitivity in user emails" do
