@@ -66,7 +66,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:add_attendee, :destroy_attendee])]
   private def confirm_access_for_add_attendee
     return if booking.permission.public?
     return if is_support?
@@ -78,7 +78,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin, :add_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin, :add_attendee, :destroy_attendee])]
   private def check_deleted
     head :method_not_allowed if booking.deleted
   end
@@ -809,6 +809,20 @@ class Bookings < Application
     end
 
     attend
+  end
+
+  @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
+  def destroy_attendee(
+    @[AC::Param::Info(name: "attendee_id", description: "the email of the attendee we want to remove", example: "person@example.com")]
+    attendee_email : String,
+  ) : Nil
+    email = attendee_email.strip.downcase
+
+    attendee = booking.attendees.find { |a| a.email.strip.downcase == email }
+    raise Error::BadRequest.new("Attendee not found in this booking") unless attendee
+
+    attendee.guest.try &.delete
+    attendee.delete
   end
 
   # ============================================
