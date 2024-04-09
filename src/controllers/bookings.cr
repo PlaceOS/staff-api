@@ -232,8 +232,9 @@ class Bookings < Application
     total = query.count
     range_start = offset > 0 ? offset - 1 : 0
 
-    query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id")
-      .order(created: :asc)
+    query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id") if auth_token_present?
+
+    query = query.order(created: :asc)
       .offset(range_start)
       .limit(limit)
 
