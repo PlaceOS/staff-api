@@ -821,6 +821,7 @@ class Bookings < Application
     attendee = booking.attendees.find { |a| a.email.strip.downcase == email }
     raise Error::BadRequest.new("Attendee not found in this booking") unless attendee
 
+    # Is this really the right way of doing this?
     attendee.guest.try &.delete
     attendee.delete
   end
