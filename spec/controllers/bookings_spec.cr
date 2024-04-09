@@ -879,6 +879,60 @@ describe Bookings do
       bookings.map(&.["id"]).should contain(public_booking["id"])
     end
 
+
+    it "#index should NOT include attendee details for unauthenticated users" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      # public booking
+      booking = BookingsHelper.http_create_booking(
+        user_id: "user-three@example.com",
+        user_email: "user-three@example.com",
+        user_name: "User Three",
+        booked_by_email: "user-three@example.com",
+        booked_by_id: "user-three@example.com",
+        booked_by_name: "User Three",
+        asset_id: "asset-3",
+        booking_type: "group-event",
+        booking_start: 10.minutes.from_now.to_unix,
+        booking_end: 50.minutes.from_now.to_unix,
+        permission: Booking::Permission::PUBLIC,
+      )[1]
+
+      # public user
+      no_auth_headers = Mock::Headers.office365_no_auth
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
+        name:           "User Four",
+        email:          "user-four@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
+      response = client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: no_auth_headers, body: {
+        name:           "User Five",
+        email:          "user-five@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: no_auth_headers)
+      response.status_code.should eq(200)
+      booking = JSON.parse(response.body).as_a.first
+
+      booking["guests"].as_a.size.should eq(2)
+      booking["guests"].as_a.map(&.["email"]).should eq(["", ""])
+    end
+
     it "#destroy_attendee should allow same tenant users to remove attendees from OPEN bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
