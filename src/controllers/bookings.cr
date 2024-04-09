@@ -814,7 +814,7 @@ class Bookings < Application
   @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
   def destroy_attendee(
     @[AC::Param::Info(name: "attendee_id", description: "the email of the attendee we want to remove", example: "person@example.com")]
-    attendee_email : String,
+    attendee_email : String
   ) : Nil
     email = attendee_email.strip.downcase
 

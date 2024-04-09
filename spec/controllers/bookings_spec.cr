@@ -900,7 +900,7 @@ describe Bookings do
       )[1]
 
       same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
-      
+
       # add attendee
       attendee = JSON.parse(client.post(%(#{BOOKINGS_BASE}/#{booking["id"]}/attendee), headers: same_tenant_headers, body: {
         name:           "User Two",
