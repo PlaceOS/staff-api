@@ -8,7 +8,7 @@ class Bookings < Application
   def wrap_in_transaction(&)
     # attempt = 0
     # loop do
-    PgORM::Database.transaction do |tx|
+    PgORM::Database.transaction do |_tx|
       # tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
       yield
     end
@@ -250,6 +250,32 @@ class Bookings < Application
       params["limit"] = limit.to_s
       response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
     end
+
+    # Hide guest details from unauthenticated users
+    # if !auth_token_present?
+    #   result = result.map do |booking|
+    #     # attendees_join_result
+    #     # guests_join_result
+
+    #     # b = booking.as_h(include_attendees: false)
+    #     # b[:extra_attributes] = nil
+    #     # b[:extra_attributes]["attendees_join_result"] = [] of String
+    #     # b[:extra_attributes]["guests_join_result"] = [] of String
+    #     # b
+
+    #     # booking.tap do |b|
+    #       # b.extra_attributes.attendees_join_result = [] of Attendee
+    #       # b.extra_attributes.guests_join_result = [] of Guest
+    #     #   b.extra_attributes = nil
+    #     # end
+
+    #     booking
+    #   end
+    # end
+
+    # pp "1>########################################"
+    # pp! result
+    # pp "1<########################################"
 
     result
   end
