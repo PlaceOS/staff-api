@@ -39,9 +39,9 @@ class Bookings < Application
       check_jwt_scope
       determine_tenant_from_domain
     else
-      domain = request.hostname.as(String)
+      domain = request.hostname.as?(String)
       raise Error::BadRequest.new("missing domain header") unless domain
-      @tenant = Tenant.find_by(domain: domain)
+      @tenant = Tenant.find_by?(domain: domain)
       raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
     end
   end
