@@ -39,6 +39,15 @@ OptionParser.parse(ARGV.dup) do |parser|
     end
   end
 
+  parser.on("-d", "--docs", "Outputs OpenAPI documentation for this service") do
+    puts ActionController::OpenAPI.generate_open_api_docs(
+      title: App::NAME,
+      version: App::VERSION,
+      description: "PlaceOS Staff-API description"
+    ).to_yaml
+    exit 0
+  end
+
   parser.on("-h", "--help", "Show this help") do
     puts parser
     exit 0
@@ -51,6 +60,15 @@ puts "Launching #{App::NAME} v#{App::VERSION}"
 # Requiring config here ensures that the option parser runs before
 # attempting to connect to databases etc.
 require "./config"
+
+# Configure the database connection. First check if PG_DATABASE_URL environment variable
+# is set. If not, assume database configuration are set via individual environment variables
+if pg_url = ENV["PG_DATABASE_URL"]?
+  PgORM::Database.parse(pg_url)
+else
+  PgORM::Database.configure { |_| }
+end
+
 server = ActionController::Server.new(port, host)
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate

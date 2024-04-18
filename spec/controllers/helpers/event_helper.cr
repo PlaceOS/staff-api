@@ -34,8 +34,8 @@ module EventsHelper
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
   end
 
-  def mock_event_id(id)
-    Office365::Event.new(**{
+  def mock_event_id(id, ical = nil)
+    event = Office365::Event.new(**{
       id:              id,
       starts_at:       Time.unix(1598503500),
       ends_at:         Time.unix(1598507160),
@@ -45,15 +45,43 @@ module EventsHelper
       response_status: Office365::ResponseStatus.new(response: Office365::ResponseStatus::Response::Organizer, time: "0001-01-01T00:00:00Z"),
       recurrence:      Office365::RecurrenceParam.new(pattern: "daily", range_end: Time.unix(1598508160)),
     })
+    event.icaluid = ical
+    event
   end
 
-  def event_query_response(id)
+  def stub_permissions_check(system_id)
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/#{system_id}?name=permissions")
+      .to_return(body: %({
+        "permissions": {
+          "name": "permissions",
+          "description": "",
+          "parent_id": "#{system_id}",
+          "details": {
+            "admin": ["#{system_id}", "admin"]
+          }
+        }
+      }))
+
+    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
+      .to_return(body: %({
+        "permissions": {
+          "name": "permissions",
+          "description": "",
+          "parent_id": "zone-rGhCRp_aUD",
+          "details": {
+            "admin": ["#{system_id}", "admin"]
+          }
+        }
+      }))
+  end
+
+  def event_query_response(id, ical = nil)
     {
-      "value" => [EventsHelper.mock_event_id(id)],
+      "value" => [EventsHelper.mock_event_id(id, ical)],
     }.to_json
   end
 
-  def create_event_input
+  def create_event_input(user = Mock::Token.generate_auth_user(false, false))
     %({
     "event_start": 1598503500,
     "event_end": 1598507160,
@@ -61,7 +89,7 @@ module EventsHelper
     "attendees": [
          {
             "name": "Amit",
-            "email": "amit@redant.com.au",
+            "email": "#{user.email}",
             "response_status": "accepted",
             "resource": false,
             "organizer": true,

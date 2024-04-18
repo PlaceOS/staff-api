@@ -2,7 +2,7 @@ name: staff-api
 version: 1.2.0
 
 targets:
-  app:
+  staff-api:
     main: src/staff-api.cr
 
 dependencies:
@@ -10,17 +10,8 @@ dependencies:
     github: spider-gazelle/action-controller
     version: ~> 5.1
 
-  clear:
-    github: place-labs/clear
-    branch: master
-
   placeos-models:
     github: placeos/models
-
-  # TODO:: remove in future
-  http-params-serializable:
-    github: place-labs/http-params-serializable
-    branch: chore/0.36.0
 
   placeos:
     github: placeos/crystal-client

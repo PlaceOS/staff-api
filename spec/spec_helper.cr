@@ -2,6 +2,7 @@ require "spec"
 
 # Helper methods for testing controllers (curl, with_server, context)
 require "action-controller/spec_helper"
+require "placeos-models/spec/generator"
 
 require "faker"
 require "timecop"
@@ -12,31 +13,33 @@ require "uuid"
 require "../src/config"
 require "webmock"
 
+PgORM::Database.parse(ENV["PG_DATABASE_URL"])
+
 Spec.before_suite do
   truncate_db
   # Since almost all specs need need tenant to work
-  TenantsHelper.create_tenant
+  PlaceOS::Model::Generator.tenant
 end
 
 Spec.before_suite do
   # -Dquiet
   {% if flag?(:quiet) %}
-    ::Log.setup(:warning)
+    ::Log.setup(:warn)
   {% else %}
     ::Log.setup(:debug)
   {% end %}
 end
 
 def get_tenant
-  Tenant.query.find! { domain == "toby.staff-api.dev" }
+  Tenant.find_by(domain: "toby.staff-api.dev")
 end
 
 def truncate_db
-  Clear::SQL.execute("TRUNCATE TABLE bookings CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE event_metadatas CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE guests CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE attendees CASCADE;")
-  Clear::SQL.execute("TRUNCATE TABLE tenants CASCADE;")
+  Booking.truncate
+  EventMetadata.truncate
+  Guest.truncate
+  Attendee.truncate
+  Tenant.truncate
 end
 
 Spec.before_each &->WebMock.reset
@@ -47,20 +50,41 @@ module Mock
   module Token
     extend self
 
+    CREATION_LOCK = Mutex.new(protection: :reentrant)
+
     # office_mock_token
-    def office
+    def office(sys_admin = false, support = false, groups = ["manage", "admin"])
+      user = generate_auth_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: "toby@redant.com.au",
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
         user: UserJWT::Metadata.new(
           name: "Toby Carvan",
-          email: "dev@acaprojects.com",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
-          roles: ["manage", "admin"]
+          roles: groups
+        )
+      ).encode
+    end
+
+    def normal_office_user(email : String, groups = [] of String)
+      user = generate_normal_auth_user(email, groups)
+      UserJWT.new(
+        iss: "staff-api",
+        iat: Time.local,
+        exp: Time.local + 1.week,
+        domain: "toby.staff-api.dev",
+        id: user.id.as(String),
+        scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC],
+        user: UserJWT::Metadata.new(
+          name: Faker::Name.name,
+          email: user.email.to_s,
+          permissions: UserJWT::Permissions::User,
+          roles: groups
         )
       ).encode
     end
@@ -72,7 +96,7 @@ module Mock
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "toby.staff-api.dev",
-        id: "toby@redant.com.au",
+        id: "amit@redant.com.au",
         scope: [PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Jon Jon",
@@ -84,21 +108,84 @@ module Mock
     end
 
     # google_mock_token
-    def google
+    def google(sys_admin = false, support = false, groups = ["manage", "admin"])
+      user = generate_auth_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
         exp: Time.local + 1.week,
         domain: "google.staff-api.dev",
-        id: "amit@redant.com.au",
+        id: user.id.as(String),
         scope: [PlaceOS::Model::UserJWT::Scope::PUBLIC, PlaceOS::Model::UserJWT::Scope::GUEST],
         user: UserJWT::Metadata.new(
           name: "Amit Gaur",
-          email: "amit@redant.com.au",
+          email: user.email.to_s,
           permissions: UserJWT::Permissions::Admin,
-          roles: ["manage", "admin"]
+          roles: groups
         )
       ).encode
+    end
+
+    def generate_auth_user(sys_admin, support, groups = [] of String)
+      CREATION_LOCK.synchronize do
+        org_zone
+        authority = PlaceOS::Model::Authority.find_by_domain("toby.staff-api.dev") || PlaceOS::Model::Generator.authority
+        authority.domain = "toby.staff-api.dev"
+        authority.config_will_change!
+        authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
+        authority.save!
+
+        if sys_admin || support
+          group_list = groups.join('-')
+          test_user_email = PlaceOS::Model::Email.new("test-#{"admin-" if sys_admin}#{"supp-" if support}grp-#{group_list}-rest-api@place.tech")
+        else
+          test_user_email = PlaceOS::Model::Email.new("dev@acaprojects.onmicrosoft.com")
+        end
+
+        PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: support, admin: sys_admin).tap do |user|
+          user.email = test_user_email
+          user.groups = groups
+          user.save!
+        end
+      end
+    end
+
+    def generate_normal_auth_user(email : String, groups = [] of String)
+      CREATION_LOCK.synchronize do
+        org_zone
+        authority = PlaceOS::Model::Authority.find_by_domain("toby.staff-api.dev") || PlaceOS::Model::Generator.authority
+        authority.domain = "toby.staff-api.dev"
+        authority.config_will_change!
+        authority.config["org_zone"] = JSON::Any.new("zone-perm-org")
+        authority.save!
+
+        test_user_email = PlaceOS::Model::Email.new(email)
+
+        PlaceOS::Model::User.where(email: test_user_email.to_s, authority_id: authority.id.as(String)).first? || PlaceOS::Model::Generator.user(authority, support: false, admin: false).tap do |user|
+          user.email = test_user_email
+          user.groups = groups
+          user.save!
+        end
+      end
+    end
+
+    def org_zone
+      zone = PlaceOS::Model::Zone.find?("zone-perm-org")
+      return zone if zone
+
+      zone = PlaceOS::Model::Generator.zone
+      zone.id = "zone-perm-org"
+      zone.tags = Set.new ["org"]
+      zone.save!
+
+      metadata = PlaceOS::Model::Generator.metadata("permissions", zone)
+      metadata.details = JSON.parse({
+        admin:  ["management"],
+        manage: ["concierge"],
+      }.to_json)
+
+      metadata.save!
+      zone
     end
   end
 
@@ -111,6 +198,20 @@ module Mock
       HTTP::Headers{
         "Host"          => "toby.staff-api.dev",
         "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def office365_normal_user(email : String, groups = [] of String)
+      auth = Mock::Token.normal_office_user(email, groups)
+      HTTP::Headers{
+        "Host"          => "toby.staff-api.dev",
+        "Authorization" => "Bearer #{auth}",
+      }
+    end
+
+    def office365_no_auth
+      HTTP::Headers{
+        "Host" => "toby.staff-api.dev",
       }
     end
 
@@ -135,16 +236,16 @@ module EventMetadatasHelper
                    host = Faker::Internet.email,
                    ext_data = JSON.parse({"foo": 123}.to_json),
                    ical_uid = "random_uid-#{Random.new.rand(500)}")
-    EventMetadata.create!({
-      tenant_id:         tenant_id,
-      system_id:         system_id,
-      event_id:          id,
-      host_email:        host,
+    EventMetadata.create!(
+      tenant_id: tenant_id,
+      system_id: system_id,
+      event_id: id,
+      host_email: host,
       resource_calendar: room_email,
-      event_start:       event_start,
-      event_end:         event_end,
-      ext_data:          ext_data,
-      ical_uid:          ical_uid,
-    })
+      event_start: event_start,
+      event_end: event_end,
+      ext_data: ext_data,
+      ical_uid: ical_uid,
+    )
   end
 end

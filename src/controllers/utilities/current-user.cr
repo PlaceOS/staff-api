@@ -16,7 +16,7 @@ module Utils::CurrentUser
     return if @user_token
 
     # check for X-API-Key use
-    if (token = request.headers["X-API-Key"]?)
+    if token = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
       begin
         @user_token = user_token = get_placeos_client.apikeys.inspect_jwt
         return user_token
@@ -51,6 +51,9 @@ module Utils::CurrentUser
     @user_token.as(UserJWT)
   end
 
+  # Obtains user referenced by user_token id
+  getter current_user : PlaceOS::Model::User { PlaceOS::Model::User.find!(user_token.id) }
+
   def user
     user_token.user
   end
@@ -83,12 +86,23 @@ module Utils::CurrentUser
     if token = @access_token
       token
     else
-      @access_token = if (token = request.headers["Authorization"]?)
-                        token = token.lchop("Bearer ").rstrip
+      @access_token = if token = request.headers["Authorization"]?
+                        token = token.lchop("Bearer ").lchop("Token ").rstrip
                         token unless token.empty?
-                      elsif (token = params["bearer_token"]?)
+                      elsif token = params["bearer_token"]?
+                        token.strip
+                      elsif token = cookies["bearer_token"]?.try(&.value)
                         token.strip
                       end
     end
+  end
+
+  def auth_token_present?
+    request.headers["X-API-Key"]? ||
+      params["api-key"]? ||
+      cookies["api-key"]?.try(&.value) ||
+      request.headers["Authorization"]? ||
+      params["bearer_token"]? ||
+      cookies["bearer_token"]?.try(&.value)
   end
 end

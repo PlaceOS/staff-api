@@ -2,6 +2,57 @@
 
 ### Feat
 
+- **bookings**: [PPT-1215] allow users to add themselves as attendees to public events ([#316](https://github.com/PlaceOS/staff-api/pull/316))
+- **events**: add a reason for cancellation ([#315](https://github.com/PlaceOS/staff-api/pull/315))
+- **staff**: add pagination support getting staff [PPT-1170] ([#311](https://github.com/PlaceOS/staff-api/pull/311))
+- **bookings**: include any attending guests in responses ([#308](https://github.com/PlaceOS/staff-api/pull/308))
+- **bookings**: [PPT-1098] support multiple assets on a single booking ([#307](https://github.com/PlaceOS/staff-api/pull/307))
+- **events**: serialize requests from each user [PROJ-512] ([#306](https://github.com/PlaceOS/staff-api/pull/306))
+- **guests**: deprecate event based guest queries
+- **events**: add filter to index ([#305](https://github.com/PlaceOS/staff-api/pull/305))
+- **events**: provide strict requirements for processing responses [PROJ-433] [PROJ-420] [PPT-975] ([#304](https://github.com/PlaceOS/staff-api/pull/304))
+- **events**: add setup/breakdown fields to destroyed signal
+- **events**: add fields to patch event metadata
+- **events**: don't delete metadata and notify meta on event cancel
+- **current-user**: match options in rest-api
+- **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
+- add support for public.read and public.write scopes
+- improve permissions checks ([#292](https://github.com/PlaceOS/staff-api/pull/292))
+- **shard.lock**: bump opentelemetry-instrumentation.cr
+- PPT-621 Add pagination to bookings index route ([#284](https://github.com/PlaceOS/staff-api/pull/284))
+- **events**: add push event endpoint ([#283](https://github.com/PlaceOS/staff-api/pull/283))
+- **events**: allow moving room to one that exists in the meeting
+- **events**: provide method to keep old resources when moving room
+- **events**: destroy metadata when event deleted
+- **bookings**: add support for linking bookings ([#280](https://github.com/PlaceOS/staff-api/pull/280))
+- **events**: include ical_uid in signals
+- **bookings**: [PPT-387] implement linked bookings child parent relationship ([#278](https://github.com/PlaceOS/staff-api/pull/278))
+- **survey**: [PPT-358] add visitor triggers ([#275](https://github.com/PlaceOS/staff-api/pull/275))
+- **events**: add events filter with ical uid ([#271](https://github.com/PlaceOS/staff-api/pull/271))
+- **staff**: [PPT-89] support Azure AD filter ([#269](https://github.com/PlaceOS/staff-api/pull/269))
+- **events**: decorate events with system data where possible ([#268](https://github.com/PlaceOS/staff-api/pull/268))
+- **events**: patch metadata lookup using ical uid ([#267](https://github.com/PlaceOS/staff-api/pull/267))
+- **db**: support additional connection details ([#266](https://github.com/PlaceOS/staff-api/pull/266))
+- **event_metadata**: provide additional options for metadata queries ([#265](https://github.com/PlaceOS/staff-api/pull/265))
+- **survey**: soft-delete questions if they are used in a survey ([#260](https://github.com/PlaceOS/staff-api/pull/260))
+- **survey**: include deleted questions by default and include delete… ([#259](https://github.com/PlaceOS/staff-api/pull/259))
+- **events**: improve event patching ([#258](https://github.com/PlaceOS/staff-api/pull/258))
+- **survey**: [PPT-67|PPT-101] update /surveys/questions endpoint ([#257](https://github.com/PlaceOS/staff-api/pull/257))
+- **survey**: [PPT-91] filter answers on date range ([#255](https://github.com/PlaceOS/staff-api/pull/255))
+- **survey**: use host_override if defined ([#254](https://github.com/PlaceOS/staff-api/pull/254))
+- **survey**: triggers ([#249](https://github.com/PlaceOS/staff-api/pull/249))
+- **survey**: add fields ([#246](https://github.com/PlaceOS/staff-api/pull/246))
+- **events**: allow meetings to be booked by service accounts ([#243](https://github.com/PlaceOS/staff-api/pull/243))
+- **surveys**: survey improvements ([#239](https://github.com/PlaceOS/staff-api/pull/239))
+- **migrations**: add additional indexes to bookings table ([#240](https://github.com/PlaceOS/staff-api/pull/240))
+- **survey**: add survey models and endpoints ([#236](https://github.com/PlaceOS/staff-api/pull/236))
+- **outlook**: generate plugin xml manifest ([#208](https://github.com/PlaceOS/staff-api/pull/208))
+- add support for running using a service account ([#223](https://github.com/PlaceOS/staff-api/pull/223))
+- **tenants**: flag if running in delegated mode ([#219](https://github.com/PlaceOS/staff-api/pull/219))
+- **Dockerfile**: add support for ARM64 images ([#213](https://github.com/PlaceOS/staff-api/pull/213))
+- refactor for self documenting code ([#211](https://github.com/PlaceOS/staff-api/pull/211))
+- **events**: relax when metadata is returned on events ([#210](https://github.com/PlaceOS/staff-api/pull/210))
+- **bookings**: add event_id column for associating bookings to events ([#207](https://github.com/PlaceOS/staff-api/pull/207))
 - **bookings**: checked_in to canclled state transition ([#196](https://github.com/PlaceOS/staff-api/pull/196))
 - **events**: add dedicated metadata update methods ([#195](https://github.com/PlaceOS/staff-api/pull/195))
 - **staff**: add query for a users calendars
@@ -26,6 +77,74 @@
 
 ### Fix
 
+- **application**: forbidden when no valid scope
+- **bookings**: remove isolated transactions
+- **bookings**: add a serialisable backoff
+- **bookings**: specs passing
+- **events**: update event id requirement
+- **bookings**: ensure serialisable transactions ([#314](https://github.com/PlaceOS/staff-api/pull/314))
+- **events**: [PPT-1190] update metadata on rapid destroy after create ([#313](https://github.com/PlaceOS/staff-api/pull/313))
+- **bookings**: changed signal
+- **events**: metadata updates to be resource_master_id aware
+- **events**: check for declined status on push update
+- **events**: refactor change notifications
+- **events**: resource calendar signal
+- **calendars**: allow any specified if delegated
+- **events**: recurring metadata visibility [PPT-1072] [PPT-1073] ([#309](https://github.com/PlaceOS/staff-api/pull/309))
+- **calendars**: availability removing busy items within period ([#303](https://github.com/PlaceOS/staff-api/pull/303))
+- **shard.lock**: bump office365 dep [PROJ-419]
+- **events**: add setup/breakdown time to StaffAPI::Event#aument ([#302](https://github.com/PlaceOS/staff-api/pull/302))
+- **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
+- **events**: user checkin with custom calendar [PPT-538]
+- **events**: render rejected linked bookings [PPT-915]
+- **calendars**: [PPT-945] remove busy times that are outside of the period in #free_busy ([#300](https://github.com/PlaceOS/staff-api/pull/300))
+- **events**: update guest details [PPT-910]
+- **bookings**: rejected / approved status [PPT-917]
+- **bookings**: missing save on approve and reject routes
+- unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
+- **guests**: query where there are no bookings
+- **calendars**: availability status request
+- **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
+- **guests**: invalid SQL generated when there were no meetings
+- **calendar**: availability of timeslots imidiatly preceding another meeting ([#289](https://github.com/PlaceOS/staff-api/pull/289))
+- **events**: patch_metadata attempts to obtain client
+- **events**: [PPT-723] failed metadata lookup on recurring booking edit ([#290](https://github.com/PlaceOS/staff-api/pull/290))
+- **events**: check not required with delegated access PPT-758 ([#288](https://github.com/PlaceOS/staff-api/pull/288))
+- **events**: fixes O365 decline events
+- **events**: accepting an event must use a special route ([#286](https://github.com/PlaceOS/staff-api/pull/286))
+- **tenants**: allow updates to email_domain column
+- **tenants**: don't error if no tenant configured
+- **event**: mark metadata as cancelled on augment
+- **event**: mark metadata as cancelled on augment
+- **events**: use relative monthly bookings by default ([#285](https://github.com/PlaceOS/staff-api/pull/285)) (PPT-651)
+- **events**: only return matching ical_uid when requested
+- **events**: ensure metadata patching applied on room change
+- **bookings**: add default response status to attendees
+- **shard.lock**: bump models for JWT email downcasing ([#276](https://github.com/PlaceOS/staff-api/pull/276))
+- bump forbidden log levels ([#274](https://github.com/PlaceOS/staff-api/pull/274))
+- **tenants**: enable patching delegated state ([#272](https://github.com/PlaceOS/staff-api/pull/272))
+- **migration**: alter attendees booking_id column type ([#273](https://github.com/PlaceOS/staff-api/pull/273))
+- **events**: skip calendar check if it matches user ([#270](https://github.com/PlaceOS/staff-api/pull/270))
+- **events**: regression caused by missing calendar id ([#264](https://github.com/PlaceOS/staff-api/pull/264))
+- **survey**: survey questions deleted json property ([#262](https://github.com/PlaceOS/staff-api/pull/262))
+- **staff_api**: check sent for not nil in Surveys::Invitations ([#253](https://github.com/PlaceOS/staff-api/pull/253))
+- **outlook**: xml manifest version ([#252](https://github.com/PlaceOS/staff-api/pull/252))
+- **events**: delete event with a service account user
+- **events**: delete event with a service account user ([#251](https://github.com/PlaceOS/staff-api/pull/251))
+- **events**: fix cancel with service account ([#250](https://github.com/PlaceOS/staff-api/pull/250))
+- **tenant**: don't set a default conference type ([#247](https://github.com/PlaceOS/staff-api/pull/247))
+- **bookings**: add transaction lock to prevent duplicate bookings ([#242](https://github.com/PlaceOS/staff-api/pull/242))
+- **outlook**: minor manifest fixes ([#235](https://github.com/PlaceOS/staff-api/pull/235))
+- **bookings**: improve consistency between requests and responses ([#234](https://github.com/PlaceOS/staff-api/pull/234))
+- **visitor_checkin**: when running in delegated permissions mode ([#233](https://github.com/PlaceOS/staff-api/pull/233))
+- **models/tenant**: allow credentials to be nil ([#231](https://github.com/PlaceOS/staff-api/pull/231))
+- **outlook**: adjust outlook config ([#230](https://github.com/PlaceOS/staff-api/pull/230))
+- **events**: patching extension metadata ([#227](https://github.com/PlaceOS/staff-api/pull/227))
+- **events**: update ext_data ([#224](https://github.com/PlaceOS/staff-api/pull/224))
+- **events**: get event succeed if the host event can't be fetched ([#218](https://github.com/PlaceOS/staff-api/pull/218))
+- **utilities/helpers**: ensure emails are downcased ([#202](https://github.com/PlaceOS/staff-api/pull/202))
+- **calendar**: downcase candidate keys ([#200](https://github.com/PlaceOS/staff-api/pull/200))
+- use correct routes for calendar view with delegated access ([#198](https://github.com/PlaceOS/staff-api/pull/198))
 - **events**: update on graph api where host event switch not made ([#194](https://github.com/PlaceOS/staff-api/pull/194))
 - **models/booking/history**: handle pull parser when setting history
 - update `placeos-log-backend`
@@ -40,13 +159,14 @@
 - **models booking**: render deleted and deleted_at ([#138](https://github.com/PlaceOS/staff-api/pull/138))
 - **controller bookings**: ignore deleted entries when checking for clashes
 - **bookings/events/guest**: query Guest by tenant ([#137](https://github.com/PlaceOS/staff-api/pull/137))
-- **event/guests**: Don't add host as guest, even when event.host is not specified
 - **event/guests**: filtering of host from attendees
 - **event/guests**: Don't add host as guest, even when event.host is not specified
 - **bookings**: emails saved in lower case ([#128](https://github.com/PlaceOS/staff-api/pull/128))
 
 ### Refactor
 
+- **events**: [PPT 503] replace #not_nil! with more specific errors ([#287](https://github.com/PlaceOS/staff-api/pull/287))
+- migrated staff-api to pg-orm ([#277](https://github.com/PlaceOS/staff-api/pull/277))
 - set app name to `staff-api` ([#185](https://github.com/PlaceOS/staff-api/pull/185))
 - **spec**: randomise data ([#159](https://github.com/PlaceOS/staff-api/pull/159))
 - **tenant**: improve uniqueness constraint ([#151](https://github.com/PlaceOS/staff-api/pull/151))
@@ -87,9 +207,7 @@
 - add health check command line option
 - **tenants**: add support for updating a tenant
 - **tenant**: return 404 if domain isn't configured
-- add logstash
 - add logstash logging
-- **bookings**: add timestamps for various events
 - **bookings**: add timestamps for various events
 - **bookings**: signal more information about who is performing actions
 - **bookings**: allow booked_by users to also manage bookings
@@ -107,12 +225,10 @@
 - **bookings**: test signal outside of spawn
 - **bookings**: add error logging to failed signals
 - **bookings**: add approved and rejected filters
-- **bookings**: add timestamps for tracking booking workflows
 - **bookings**: make created time queryable
 - **bookings**: add timestamps for tracking booking workflows
 - **bookings**: different signals if core booking data unchanged
 - **bookings**: pass process_state in booking events
-- **bookings**: add booked_by support and processing state
 - **bookings**: add booked_by support and processing state
 - **bookings**: add support for querying by user email
 - **bookings**: allow querying other users bookings
@@ -142,7 +258,6 @@
 - **tenant**: remove id assign + correct domain validation ([#91](https://github.com/PlaceOS/staff-api/pull/91))
 - **spec**: add various fixes to ensure CI is passing ([#92](https://github.com/PlaceOS/staff-api/pull/92))
 - **clashing bookings**: Do not include bookings on the time bound.
-- **clashing bookings**: Do not include bookings on the time bound.
 - **controller events**: resolve build issues
 - **tenant**: init id ([#74](https://github.com/PlaceOS/staff-api/pull/74))
 - **tenant_spec**: remove focus
@@ -153,7 +268,6 @@
 - **tenant**: allow editing of tenants
 - update visitor name on event creation
 - metadata not found
-- update visitor name on event creation
 - **events**: resources marked as resources in office365
 - **guest checkin**: where user might not have calendar read access
 - get_placeos_client now proxies host header
@@ -182,7 +296,6 @@
 - minor webmock stub fix
 - postgresql variable using aargs instead of namedtuple
 - migrations adding columns not working
-- update from Clear v.8 to v.9 with shard target to place-labs/clear
 - where queries with pg variables as args instead of namedtuples
 - order_by args format, updated connection pool format
 - **bookings**: modify zones filter
@@ -192,11 +305,6 @@
 - **matching_calendar_ids**: matches should be case-insensitive
 - **events**: office365 delegated access
 
-### Perf
-
-- **bookings**: only query given params ([#123](https://github.com/PlaceOS/staff-api/pull/123))
-- **logging**: set raven to be async
-
 ### Refactor
 
 - **api**: log calendar errors
@@ -204,14 +312,17 @@
 - minor model refactor
 - efficient and concise specs
 - use correct find over find! enumerable method
-- clarifying relations of tables in complex query
 - scope methods with where clause clarifying the relations of tables
-- clean up
 - ::PlaceOS::Client::API::Error in rescue_from block
 - optimise sql queries, use concise expressions in algo
 - improve Bookings#create algo
 - use find! over find where redundant, remove unnecessary before_action block
 - make controller helper methods private
 - use the correct fields default
+
+### Perf
+
+- **bookings**: only query given params ([#123](https://github.com/PlaceOS/staff-api/pull/123))
+- **logging**: set raven to be async
 
 ## v1.0 (2020-10-08)

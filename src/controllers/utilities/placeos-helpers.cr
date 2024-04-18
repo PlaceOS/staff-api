@@ -35,32 +35,32 @@ module Utils::PlaceOSHelpers
     client.list_calendars(user.email, only_writable: true)
   end
 
-  class CalendarSelection < Params
-    attribute calendars : String?
-    attribute zone_ids : String?
-    attribute system_ids : String?
-    attribute features : String?
-    attribute capacity : Int32?
-    attribute bookable : Bool?
-  end
-
-  # ameba:disable Metrics/CyclomaticComplexity
-  def matching_calendar_ids(allow_default = false)
-    args = CalendarSelection.new(params)
-
-    calendars = Set.new((args.calendars || "").split(',').compact_map(&.strip.downcase.presence))
+  def matching_calendar_ids(
+    calendars : String? = nil,
+    zone_ids : String? = nil,
+    system_ids : String? = nil,
+    features : String? = nil,
+    capacity : Int32? = nil,
+    bookable : Bool? = nil,
+    allow_default = false
+  )
+    calendars = Set.new((calendars || "").split(',').compact_map(&.strip.downcase.presence))
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
     system_calendars = if calendars.size > 0
-                         user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
-                         (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         if tenant.using_service_account? || tenant.delegated
+                           calendars.each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         else
+                           user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
+                           (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
+                         end
                        else
                          {} of String => PlaceOS::Client::API::Models::System?
                        end
 
     # Check if we want to grab systems from zones
-    zones = (args.zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    zones = (zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if zones.size > 0
       systems = get_placeos_client.systems
 
@@ -69,23 +69,22 @@ module Utils::PlaceOSHelpers
         Promise.defer {
           systems.search(
             zone_id: zone_id,
-            features: args.features,
-            capacity: args.capacity,
-            bookable: args.bookable
+            features: features,
+            capacity: capacity,
+            bookable: bookable
           )
         }
       }).get.each do |results|
         results.each do |system|
-          calendar = system.email
+          calendar = system.email.presence
           next unless calendar
-          next if calendar.empty?
-          system_calendars[calendar] = system
+          system_calendars[calendar.downcase] = system
         end
       end
     end
 
     # Check if we want to grab individual systems
-    system_ids = (args.system_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    system_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if system_ids.size > 0
       systems = get_placeos_client.systems
 
@@ -93,22 +92,31 @@ module Utils::PlaceOSHelpers
       Promise.all(system_ids.map { |system_id|
         Promise.defer { systems.fetch(system_id) }
       }).get.each do |system|
-        calendar = system.email
-        next if !calendar || calendar.empty?
-        system_calendars[calendar] = system
+        calendar = system.email.presence
+        next unless calendar
+        system_calendars[calendar.downcase] = system
       end
     end
 
     # default to the current user if no params were passed
-    system_calendars[user.email] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
+    system_calendars[user.email.downcase] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
 
     system_calendars
   end
 
-  enum Access
+  enum Permission
     None
     Manage
     Admin
+    Deny
+
+    def can_manage?
+      manage? || admin?
+    end
+
+    def forbidden?
+      deny? || none?
+    end
   end
 
   class PermissionsMeta
@@ -119,28 +127,35 @@ module Utils::PlaceOSHelpers
     getter admin : Array(String)?
 
     # Returns {permission_found, access_level}
-    def has_access?(groups : Array(String)) : Tuple(Bool, Access)
+    def has_access?(groups : Array(String)) : Tuple(Bool, Permission)
+      groups.map! &.downcase
+
       case
-      when (none = deny) && !(none & groups).empty?
-        {false, Access::None}
-      when (can_manage = manage) && !(can_manage & groups).empty?
-        {true, Access::Manage}
-      when (can_admin = admin) && !(can_admin & groups).empty?
-        {true, Access::Admin}
+      when (is_deny = deny.try(&.map!(&.downcase))) && !(is_deny & groups).empty?
+        {false, Permission::Deny}
+      when (can_manage = manage.try(&.map!(&.downcase))) && !(can_manage & groups).empty?
+        {true, Permission::Manage}
+      when (can_admin = admin.try(&.map!(&.downcase))) && !(can_admin & groups).empty?
+        {true, Permission::Admin}
       else
-        {false, Access::None}
+        {true, Permission::None}
       end
     end
   end
 
   # https://docs.google.com/document/d/1OaZljpjLVueFitmFWx8xy8BT8rA2lITyPsIvSYyNNW8/edit#
   # See the section on user-permissions
-  def check_access(groups : Array(String), check : Array(String))
-    client = get_placeos_client.metadata
-    access = Access::None
-    check.each do |area_id|
-      if metadata = client.fetch(area_id, "permissions")["permissions"]?.try(&.details)
-        continue, access = PermissionsMeta.from_json(metadata.to_json).has_access?(groups)
+  def check_access(groups : Array(String), zones : Array(String))
+    metadatas = PlaceOS::Model::Metadata.where(
+      parent_id: zones,
+      name: "permissions"
+    ).to_a.to_h { |meta| {meta.parent_id, meta} }
+
+    access = Permission::None
+    zones.each do |zone_id|
+      if metadata = metadatas[zone_id]?.try(&.details)
+        continue, permission = PermissionsMeta.from_json(metadata.to_json).has_access?(groups)
+        access = permission unless permission.none?
         break unless continue
       end
     end

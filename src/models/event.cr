@@ -5,14 +5,16 @@ class StaffApi::Event
   # So we don't have to allocate array objects
   NOP_PLACE_CALENDAR_ATTENDEES = [] of PlaceCalendar::Event::Attendee
 
-  # ameba:disable Metrics/CyclomaticComplexity
   def self.augment(event : PlaceCalendar::Event, calendar = nil, system = nil, metadata = nil, is_parent_metadata = false)
     visitors = {} of String => Attendee
 
     if event.status == "cancelled"
-      metadata.try &.delete
+      if calendar && metadata && !metadata.cancelled && calendar.downcase.in?({metadata.resource_calendar.downcase, metadata.host_email.downcase})
+        metadata.cancelled = true
+        metadata.save
+      end
       metadata = nil
-    elsif (staff_api_attendees = metadata.try(&.attendees))
+    elsif staff_api_attendees = metadata.try(&.attendees)
       staff_api_attendees.not_nil!.each { |vis| visitors[vis.email] = vis }
     end
 
@@ -34,16 +36,24 @@ class StaffApi::Event
 
     # Ensure metadata is in sync
     if metadata && (event_start != metadata.event_start || (event_end && event_end != metadata.event_end))
-      metadata.update({
+      metadata.update(
         event_start: (start_time = event_start),
-        event_end:   (event_end ? event_end : (start_time + 24.hours.to_i)),
-      })
+        event_end: (event_end ? event_end : (start_time + 24.hours.to_i)),
+      )
     end
 
     event.calendar = calendar
     event.attendees = attendees
     event.system = system
-    event.extension_data = metadata.try(&.ext_data)
+    if meta_id = metadata.try(&.id)
+      bookings = Booking.where(event_id: meta_id, deleted: false).join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id").to_a.tap &.each(&.render_event=(false)) unless is_parent_metadata
+      event.linked_bookings = bookings
+      event.extension_data = metadata.try(&.ext_data)
+      event.setup_time = metadata.try(&.setup_time)
+      event.breakdown_time = metadata.try(&.breakdown_time)
+      event.setup_event_id = metadata.try(&.setup_event_id)
+      event.breakdown_event_id = metadata.try(&.breakdown_event_id)
+    end
     event.recurring_master_id = event.recurring_event_id
 
     event
@@ -69,6 +79,14 @@ class PlaceCalendar::Event
 
   property extension_data : JSON::Any?
   property recurring_master_id : String?
+
+  @[JSON::Field(ignore_deserialize: true)]
+  property linked_bookings : Array(PlaceOS::Model::Booking)? = nil
+
+  property setup_time : Int64? = nil
+  property breakdown_time : Int64? = nil
+  property setup_event_id : String? = nil
+  property breakdown_event_id : String? = nil
 
   struct Attendee
     property checked_in : Bool?

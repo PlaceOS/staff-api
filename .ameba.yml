@@ -15,3 +15,25 @@ Style/VerboseBlock:
   MaxLength: 50
   Enabled: false
   Severity: Convention
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Lint/NotNil:
+  Excluded:
+    - spec/**/*
+    - src/models/event.cr
+    - src/controllers/application.cr
+    - src/controllers/bookings.cr
+    - src/controllers/guests.cr
+    - src/controllers/utilities/placeos-helpers.cr
+    - src/controllers/surveys/answers.cr
+
+Style/QueryBoolMethods:
+  Enabled: false
+
+Style/PredicateName:
+  Enabled: false
+
+Lint/LiteralsComparison:
+  Enabled: false

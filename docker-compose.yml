@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    hostname: staff_api_db
+    #hostname: staff_api_db
     image: postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -13,14 +13,22 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: staff_api_test
-    healthcheck:
-      test: /usr/bin/pg_isready
-      interval: 5s
     ports:
       - 5432:5432
 
+  migrator:
+    build:
+      context: ${PWD}/spec/migration
+    container_name: migrator
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GITHUB_ACTION: ${GITHUB_ACTION:-}
+      PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
+
   test:
-    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.4.1}
+    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-latest}
     hostname: staff_api
     volumes:
       - ${PWD}/spec:/app/spec
@@ -28,9 +36,10 @@ services:
       - ${PWD}/lib:/app/lib
       - ${PWD}/shard.lock:/app/shard.lock
       - ${PWD}/shard.override.yml:/app/shard.override.yml
-      - ${PWD}/shard.yml:/app/shard.yml
+      - ${PWD}/shard.yml:/app/shard.yml.input
       - ${PWD}/coverage:/app/coverage
     depends_on:
+      - migrator
       - db
     security_opt:
       - seccomp:unconfined

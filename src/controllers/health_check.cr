@@ -1,11 +1,13 @@
 class HealthCheck < ActionController::Base
   base "/api/staff/v1"
 
-  def index
-    Clear::Migration::Manager.instance.load_existing_migrations
-    render json: {
-      commit:     App::BUILD_COMMIT,
-      build_time: App::BUILD_TIME,
-    }
+  record BuildInfo, commit : String, build_time : String do
+    include JSON::Serializable
+  end
+
+  # returns the service build details
+  @[AC::Route::GET("/")]
+  def index : BuildInfo
+    BuildInfo.new(commit: App::BUILD_COMMIT, build_time: App::BUILD_TIME)
   end
 end

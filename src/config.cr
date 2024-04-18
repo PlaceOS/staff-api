@@ -2,22 +2,23 @@ require "./logging"
 
 # Application dependencies
 require "action-controller"
-require "active-model"
-require "clear"
 
 require "./constants"
 require "./error"
 require "./controllers/application"
-require "./controllers/*"
 require "./models/*"
-require "./migrations/*"
-
+require "./controllers/*"
+require "placeos-models"
 # Add telemetry after application code
 require "./telemetry"
 
-# Configure Clear ORM
-Clear::SQL.init(App::PG_DATABASE_URL)
-Clear::Migration::Manager.instance.apply_all
+alias Tenant = PlaceOS::Model::Tenant
+alias Attendee = PlaceOS::Model::Attendee
+alias Guest = PlaceOS::Model::Guest
+alias EventMetadata = PlaceOS::Model::EventMetadata
+alias Booking = PlaceOS::Model::Booking
+alias Survey = PlaceOS::Model::Survey
+alias OutlookManifest = PlaceOS::Model::OutlookManifest
 
 # Server required after application controllers
 require "action-controller/server"

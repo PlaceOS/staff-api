@@ -1,6 +1,10 @@
+require "uri"
+
 module App
-  NAME    = "staff-api"
-  VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
+  NAME = "staff-api"
+  {% begin %}
+    VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
+  {% end %}
 
   ENVIRONMENT = ENV["SG_ENV"]? || "development"
   TEST        = ENVIRONMENT == "test"
@@ -18,9 +22,6 @@ module App
 
   Log         = ::Log.for(NAME)
   LOG_BACKEND = ActionController.default_backend
-
-  PG_DATABASE_URL         = TEST ? ENV["PG_TEST_DATABASE_URL"] : ENV["PG_DATABASE_URL"]
-  PG_CONNECTION_POOL_SIZE = ENV["PG_CONNECTION_POOL_SIZE"]?.presence.try(&.to_i?) || 5
 
   PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
 

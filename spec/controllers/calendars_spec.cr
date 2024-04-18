@@ -7,7 +7,7 @@ describe Calendars do
   it "#index should return a list of calendars" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
     # instantiate the controller
@@ -45,57 +45,65 @@ describe Calendars do
   end
 
   it "#free_busy should return free busy data of calendars" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: "")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
-    now = Time.local.to_unix
-    later = (Time.local + 1.hour).to_unix
+    # looking at the mock data this should return all events but two that are outside the period
+    tz = Time::Location.load("America/Los_Angeles")
+    now = Time.parse("2019-03-15T12:00:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
+    later = Time.parse("2019-03-15T13:30:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = JSON.parse(client.get(route, headers: headers).body).as_a
+
+    response = client.get(route, headers: headers)
+    body = JSON.parse(response.body).as_a
     body.should eq(CalendarsHelper.free_busy_output)
   end
 
   it "#free_busy request with a duration < 30mins" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: "")
 
-    now = Time.local.to_unix
-    later = (Time.local + Time::Span.new(minutes: 15)).to_unix
+    # this should return only two events
+    tz = Time::Location.load("America/Los_Angeles")
+    now = Time.parse("2019-03-15T12:00:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
+    later = Time.parse("2019-03-15T12:15:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
+
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
     body = JSON.parse(client.get(route, headers: headers).body).as_a
-    body.should eq(CalendarsHelper.free_busy_output)
+    body.should eq(CalendarsHelper.free_busy_output_15min)
   end
 
   it "#free_busy should not allow an interval of less than 5 minutes" do
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: "")
 
-    now = Time.local.to_unix
-    later = (Time.local + Time::Span.new(minutes: 4)).to_unix
+    tz = Time::Location.load("America/Los_Angeles")
+    now = Time.parse("2019-03-15T12:00:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
+    later = Time.parse("2019-03-15T12:04:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
     bad_request = client.get(route, headers: headers).status_code
     bad_request.should eq(400)
@@ -115,19 +123,24 @@ module CalendarsHelper
 
   def free_busy_output
     [{"id" => "jon@example.com", "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]},
-     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "availability" => [{"status" => "busy", "starts_at" => 1552663800, "ends_at" => 1552667400, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552680000, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552690800, "ends_at" => 1552694400, "timezone" => "America/Los_Angeles"}]}]
+     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552680000, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]}]
+  end
+
+  def free_busy_output_15min
+    [{"id" => "jon@example.com", "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]},
+     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}]}]
   end
 
   def stub_cal_endpoints
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
       .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
-    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar/getSchedule")
+    WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule_avail.json"))
 
     WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rJQQlR4Cn7")

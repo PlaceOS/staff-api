@@ -1,5 +1,4 @@
 require "../spec_helper"
-require "./helpers/spec_clean_up"
 
 describe Tenants do
   client = AC::SpecHelper.client
