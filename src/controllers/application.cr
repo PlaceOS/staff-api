@@ -85,7 +85,7 @@ abstract class Application < ActionController::Base
 
     if block_access
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
-      raise Error::Unauthorized.new "valid scope required for access"
+      raise Error::Forbidden.new "valid scope required for access"
     end
   end
 
