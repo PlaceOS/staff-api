@@ -1658,6 +1658,202 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/attendee:
+    post:
+      summary: Adds a single attendee to an existing booking
+      tags:
+      - Bookings
+      operationId: Bookings#add_attendee
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceCalendar__Event__Attendee'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Attendee'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/attendee/{attendee_id}:
+    delete:
+      tags:
+      - Bookings
+      operationId: Bookings#destroy_attendee
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: attendee_id
+        in: path
+        description: the email of the attendee we want to remove
+        example: person@example.com
+        required: true
+        schema:
+          type: string
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/calendars:
     get:
       summary: lists the users default calendars
@@ -8063,6 +8259,25 @@ components:
           items:
             type: string
           nullable: true
+        images:
+          type: array
+          items:
+            type: string
+          nullable: true
+        induction:
+          type: boolean
+          nullable: true
+        permission:
+          type: string
+          enum:
+          - private
+          - open
+          - public
+          description: The permission level for the booking. Defaults to private.
+            If set to private, attendees must be invited.If set to open, users in
+            the same tenant can join. If set to public, the booking is open for everyone
+            to join.
+          nullable: true
         tenant_id:
           type: integer
           format: Int64
@@ -8119,6 +8334,419 @@ components:
         tenant_id:
           type: integer
           format: Int64
+          nullable: true
+        id:
+          type: integer
+          format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceCalendar__Event__Attendee:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        response_status:
+          type: string
+          nullable: true
+        resource:
+          type: boolean
+          nullable: true
+        organizer:
+          type: boolean
+          nullable: true
+        checked_in:
+          type: boolean
+          nullable: true
+        visit_expected:
+          type: boolean
+          nullable: true
+        extension_data:
+          type: object
+          nullable: true
+        preferred_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        organisation:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        banned:
+          type: boolean
+          nullable: true
+        dangerous:
+          type: boolean
+          nullable: true
+      required:
+      - name
+      - email
+    PlaceOS__Model__Attendee:
+      type: object
+      properties:
+        checked_in:
+          type: boolean
+          nullable: true
+        visit_expected:
+          type: boolean
+          nullable: true
+        guest_id:
+          type: integer
+          format: Int64
+          nullable: true
+        tenant_id:
+          type: integer
+          format: Int64
+          nullable: true
+        event_id:
+          type: integer
+          format: Int64
+          nullable: true
+        booking_id:
+          type: integer
+          format: Int64
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        preferred_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        organisation:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        event:
+          type: object
+          properties:
+            event_start:
+              type: integer
+              format: Int64
+            event_end:
+              type: integer
+              format: Int64
+              nullable: true
+            id:
+              type: string
+              nullable: true
+            recurring_event_id:
+              type: string
+              nullable: true
+            host:
+              type: string
+              nullable: true
+            title:
+              type: string
+              nullable: true
+            body:
+              type: string
+              nullable: true
+            attendees:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  response_status:
+                    type: string
+                    nullable: true
+                  resource:
+                    type: boolean
+                    nullable: true
+                  organizer:
+                    type: boolean
+                    nullable: true
+                  checked_in:
+                    type: boolean
+                    nullable: true
+                  visit_expected:
+                    type: boolean
+                    nullable: true
+                  extension_data:
+                    type: object
+                    nullable: true
+                  preferred_name:
+                    type: string
+                    nullable: true
+                  phone:
+                    type: string
+                    nullable: true
+                  organisation:
+                    type: string
+                    nullable: true
+                  photo:
+                    type: string
+                    nullable: true
+                  notes:
+                    type: string
+                    nullable: true
+                  banned:
+                    type: boolean
+                    nullable: true
+                  dangerous:
+                    type: boolean
+                    nullable: true
+                required:
+                - name
+                - email
+            hide_attendees:
+              type: boolean
+            location:
+              type: string
+              nullable: true
+            private:
+              type: boolean
+            all_day:
+              type: boolean
+            timezone:
+              type: string
+              nullable: true
+            recurring:
+              type: boolean
+              nullable: true
+            created:
+              type: string
+              format: date-time
+              nullable: true
+            updated:
+              type: string
+              format: date-time
+              nullable: true
+            attachments:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+                  name:
+                    type: string
+                  content_type:
+                    type: string
+                    nullable: true
+                  content_bytes:
+                    type: string
+                  size:
+                    type: integer
+                    format: Int32
+                    nullable: true
+                required:
+                - name
+                - content_bytes
+            recurrence:
+              type: object
+              properties:
+                range_start:
+                  type: integer
+                  format: Int64
+                range_end:
+                  type: integer
+                  format: Int64
+                interval:
+                  type: integer
+                  format: Int32
+                pattern:
+                  type: string
+                days_of_week:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+              required:
+              - range_start
+              - range_end
+              - interval
+              - pattern
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            creator:
+              type: string
+              nullable: true
+            ical_uid:
+              type: string
+              nullable: true
+            online_meeting_provider:
+              type: string
+              nullable: true
+            online_meeting_phones:
+              type: array
+              items:
+                type: string
+              nullable: true
+            online_meeting_url:
+              type: string
+              nullable: true
+            online_meeting_sip:
+              type: string
+              nullable: true
+            online_meeting_pin:
+              type: string
+              nullable: true
+            online_meeting_id:
+              type: string
+              nullable: true
+            extended_properties:
+              type: object
+              additionalProperties:
+                type: string
+                nullable: true
+              nullable: true
+            mailbox:
+              type: string
+              nullable: true
+            calendar:
+              type: string
+              nullable: true
+            system_id:
+              type: string
+              nullable: true
+            system:
+              anyOf:
+              - type: object
+                properties:
+                  id:
+                    type: string
+                required:
+                - id
+              - type: object
+                properties:
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  zones:
+                    type: array
+                    items:
+                      type: string
+                  modules:
+                    type: array
+                    items:
+                      type: string
+                  description:
+                    type: string
+                    nullable: true
+                  email:
+                    type: string
+                    nullable: true
+                  display_name:
+                    type: string
+                    nullable: true
+                  timezone:
+                    type: string
+                    nullable: true
+                  code:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    nullable: true
+                  map_id:
+                    type: string
+                    nullable: true
+                  images:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                  capacity:
+                    type: integer
+                    format: Int32
+                  features:
+                    type: array
+                    items:
+                      type: string
+                  bookable:
+                    type: boolean
+                  public:
+                    type: boolean
+                    nullable: true
+                  installed_ui_devices:
+                    type: integer
+                    format: Int32
+                  support_url:
+                    type: string
+                    nullable: true
+                  version:
+                    type: integer
+                    format: Int32
+                required:
+                - created_at
+                - updated_at
+                - id
+                - name
+                - zones
+                - modules
+                - capacity
+                - features
+                - bookable
+                - installed_ui_devices
+                - version
+              nullable: true
+            extension_data:
+              type: object
+              nullable: true
+            recurring_master_id:
+              type: string
+              nullable: true
+            setup_time:
+              type: integer
+              format: Int64
+              nullable: true
+            breakdown_time:
+              type: integer
+              format: Int64
+              nullable: true
+            setup_event_id:
+              type: string
+              nullable: true
+            breakdown_event_id:
+              type: string
+              nullable: true
+          required:
+          - event_start
+          - attendees
+          - hide_attendees
+          - private
+          - all_day
+          - attachments
           nullable: true
         id:
           type: integer
@@ -9543,6 +10171,25 @@ components:
                 type: array
                 items:
                   type: string
+                nullable: true
+              images:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              induction:
+                type: boolean
+                nullable: true
+              permission:
+                type: string
+                enum:
+                - private
+                - open
+                - public
+                description: The permission level for the booking. Defaults to private.
+                  If set to private, attendees must be invited.If set to open, users
+                  in the same tenant can join. If set to public, the booking is open
+                  for everyone to join.
                 nullable: true
               tenant_id:
                 type: integer
