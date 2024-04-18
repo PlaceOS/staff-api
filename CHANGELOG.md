@@ -77,6 +77,7 @@
 
 ### Fix
 
+- **application**: forbidden when no valid scope
 - **bookings**: remove isolated transactions
 - **bookings**: add a serialisable backoff
 - **bookings**: specs passing
