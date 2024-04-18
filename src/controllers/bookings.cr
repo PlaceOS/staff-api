@@ -4,11 +4,45 @@ class Bookings < Application
   # =====================
   # Filters
   # =====================
-
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
   def wrap_in_transaction(&)
-    PgORM::Database.transaction do
+    # attempt = 0
+    # loop do
+    PgORM::Database.transaction do |_tx|
+      # tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
       yield
+    end
+    #   break
+    # rescue error : PQ::PQError
+    #   attempt += 1
+    #   raise error if attempt == 3
+
+    # most likely couldn't serialise the transaction
+    #   Log.info { "error serialising transaction: #{error.message}" }
+    #   backoff = 100 + rand(400)
+    #   sleep backoff.milliseconds
+    # end
+  end
+
+  # Skip actions that requres login
+  # If a user is logged in then they will be run as part of
+  # #set_tenant_from_domain
+  skip_action :determine_tenant_from_domain, only: [:index, :add_attendee]
+  skip_action :check_jwt_scope, only: [:index, :add_attendee]
+
+  # Set the tenant based on the domain
+  # This allows unauthenticated requests through
+  # (for public bookings, further checks are done later)
+  @[AC::Route::Filter(:before_action, only: [:index, :add_attendee])]
+  private def set_tenant_from_domain
+    if auth_token_present?
+      check_jwt_scope
+      determine_tenant_from_domain
+    else
+      domain = request.hostname.as?(String)
+      raise Error::BadRequest.new("missing domain header") unless domain
+      @tenant = Tenant.find_by?(domain: domain)
+      raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
     end
   end
 
@@ -16,20 +50,35 @@ class Bookings < Application
   private def find_booking(id : Int64)
     @booking = Booking
       .by_tenant(tenant.id)
-      .find(id)
+      .where(id: id)
+      .join(:left, Attendee, :booking_id)
+      .join(:left, Guest, "guests.id = attendees.guest_id")
+      .limit(1).to_a.first { raise Error::NotFound.new("could not find booking with id: #{id}") }
   end
 
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
   private def confirm_access
     return if is_support?
-    if (user = current_user)
+    if user = current_user
       return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
       return if check_access(user.groups, booking.zones || [] of String).can_manage?
       head :forbidden
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin])]
+  @[AC::Route::Filter(:before_action, only: [:add_attendee, :destroy_attendee])]
+  private def confirm_access_for_add_attendee
+    return if booking.permission.public?
+    return if is_support?
+    if user = current_user
+      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
+      return if check_access(user.groups, booking.zones || [] of String).can_manage?
+      return if booking.permission.open? && (authority = user.authority) && (booking_tenant = booking.tenant) && (authority.domain == booking_tenant.domain)
+      head :forbidden
+    end
+  end
+
+  @[AC::Route::Filter(:before_action, only: [:approve, :reject, :check_in, :guest_checkin, :add_attendee, :destroy_attendee])]
   private def check_deleted
     head :method_not_allowed if booking.deleted
   end
@@ -126,6 +175,10 @@ class Bookings < Application
     offset : Int32 = 0
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
+
+    # restrict query to public bookings if the user is unauthenticated
+    query = query.where(permission: Booking::Permission::PUBLIC.to_s) unless auth_token_present?
+
     event_ids = [event_id.presence, ical_uid.presence].compact
 
     if event_ids.empty?
@@ -140,12 +193,19 @@ class Bookings < Application
       query = query.by_zones(zones) unless zones.empty?
 
       # We want to do a special current user query if no user details are provided
-      if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
-        user_id = user_token.id
-        user_email = user.email
-      end
+      # but only if we are not looking for public bookings
+      if auth_token_present?
+        if user_id == "current" || (user_id.nil? && zones.empty? && user_email.nil?)
+          user_id = user_token.id
+          user_email = user.email
+        end
 
-      query = query.by_user_or_email(user_id, user_email, include_booked_by)
+        if booking_type != "group-event"
+          query = query.by_user_or_email(user_id, user_email, include_booked_by)
+        else
+          query = query.where(sql: "permission = 'PUBLIC' OR permission = 'OPEN'")
+        end
+      end
     else
       id_query = "ARRAY['#{event_ids.map(&.gsub(/['";]/, "")).join(%(','))}']"
       metadata_ids = EventMetadata.where(
@@ -172,8 +232,9 @@ class Bookings < Application
     total = query.count
     range_start = offset > 0 ? offset - 1 : 0
 
-    query = query
-      .order(booking_start: :desc)
+    query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id") if auth_token_present?
+
+    query = query.order(created: :asc)
       .offset(range_start)
       .limit(limit)
 
@@ -211,13 +272,9 @@ class Bookings < Application
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
            booking.booking_type_present? &&
-           booking.asset_id_present?
-      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_id"}], "error validating booking data")
+           (booking.asset_ids_present? || booking.asset_id_present?)
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type or asset_ids"}], "error validating booking data")
     end
-
-    # check there isn't a clashing booking
-    clashing_bookings = check_clashing(booking)
-    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     event_ids = [event_id.presence, ical_uid.presence].compact
     if !event_ids.empty?
@@ -236,6 +293,10 @@ class Bookings < Application
 
     # Add the tenant details
     booking.tenant_id = tenant.id.not_nil!
+
+    # check there isn't a clashing booking
+    clashing_bookings = check_clashing(booking)
+    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
     # clear history
     booking.history = [] of Booking::History
@@ -304,6 +365,7 @@ class Bookings < Application
             id:             guest.id,
             booking_id:     booking.id,
             resource_id:    booking.asset_id,
+            recource_ids:   booking.asset_ids,
             event_summary:  booking.title,
             event_starting: booking.booking_start,
             attendee_name:  guest.name,
@@ -325,6 +387,7 @@ class Bookings < Application
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
           resource_id:     booking.asset_id,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
@@ -361,9 +424,9 @@ class Bookings < Application
 
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
-    original_asset = existing_booking.asset_id
+    original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :zones, :booking_start, :booking_end, :title, :description] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
@@ -379,7 +442,7 @@ class Bookings < Application
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
-    reset_state = existing_booking.asset_id_changed? && original_asset != existing_booking.asset_id
+    reset_state = existing_booking.asset_ids_changed? && original_assets != existing_booking.asset_ids
     if existing_booking.booking_start_changed? || existing_booking.booking_end_changed?
       raise Error::NotAllowed.new("editing booking times is allowed on parent bookings only.") unless existing_booking.parent?
 
@@ -481,6 +544,7 @@ class Bookings < Application
                   id:             guest.id,
                   booking_id:     existing_booking.id,
                   resource_id:    existing_booking.asset_id,
+                  recource_ids:   existing_booking.asset_ids,
                   event_summary:  existing_booking.title,
                   event_starting: existing_booking.booking_start,
                   attendee_name:  attendee.name,
@@ -526,6 +590,7 @@ class Bookings < Application
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
           resource_id:     booking.asset_id,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
@@ -553,13 +618,12 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
+    booking.utm_source = utm_source
     set_approver(booking, true)
-    booking.approved_at = Time.utc.to_unix
 
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
 
-    booking.utm_source = utm_source
     update_booking(booking, "approved")
   end
 
@@ -569,9 +633,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
-    set_approver(booking, false)
-    booking.rejected_at = Time.utc.to_unix
     booking.utm_source = utm_source
+    set_approver(booking, false)
     update_booking(booking, "rejected")
   end
 
@@ -662,6 +725,7 @@ class Bookings < Application
         checkin:        checkin,
         booking_id:     booking.id,
         resource_id:    booking.asset_id,
+        recource_ids:   booking.asset_ids,
         event_summary:  booking.title,
         event_starting: booking.booking_start,
         attendee_name:  guest.name,
@@ -674,36 +738,113 @@ class Bookings < Application
     guest.for_booking_to_h(attendee, booking.as_h(include_attendees: false))
   end
 
+  # Adds a single attendee to an existing booking
+  @[AC::Route::POST("/:id/attendee", body: :attendee)]
+  def add_attendee(
+    attendee : PlaceCalendar::Event::Attendee
+  ) : Attendee
+    email = attendee.email.strip.downcase
+
+    # Check if attendee already exists in the booking to avoid duplicates
+    existing_attendee = booking.attendees.find { |a| a.email == email }
+    raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
+
+    # Create or find the guest associated with the attendee
+    guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
+              existing_guest
+            else
+              Guest.new(
+                email: email,
+                name: attendee.name,
+                preferred_name: attendee.preferred_name,
+                phone: attendee.phone,
+                organisation: attendee.organisation,
+                photo: attendee.photo,
+                notes: attendee.notes,
+                banned: attendee.banned || false,
+                dangerous: attendee.dangerous || false,
+                tenant_id: tenant.id,
+              )
+            end
+
+    if attendee_ext_data = attendee.extension_data
+      guest.extension_data = attendee_ext_data
+    end
+
+    guest.save!
+
+    # Create attendee
+    attend = existing_attendee || Attendee.new
+
+    previously_visiting = if attend.persisted?
+                            attend.visit_expected
+                          else
+                            attend.assign_attributes(
+                              visit_expected: true,
+                              checked_in: false,
+                              tenant_id: tenant.id,
+                            )
+                            false
+                          end
+    attend.update!(
+      booking_id: booking.id,
+      guest_id: guest.id,
+    )
+
+    if !previously_visiting
+      spawn do
+        get_placeos_client.root.signal("staff/guest/attending", {
+          action:         :booking_updated,
+          id:             guest.id,
+          booking_id:     booking.id,
+          resource_id:    booking.asset_id,
+          recource_ids:   booking.asset_ids,
+          event_summary:  booking.title,
+          event_starting: booking.booking_start,
+          attendee_name:  attendee.name,
+          attendee_email: attendee.email,
+          host:           booking.user_email,
+          zones:          booking.zones,
+        })
+      end
+    end
+
+    attend
+  end
+
+  @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
+  def destroy_attendee(
+    @[AC::Param::Info(name: "attendee_id", description: "the email of the attendee we want to remove", example: "person@example.com")]
+    attendee_email : String
+  ) : Nil
+    email = attendee_email.strip.downcase
+
+    attendee = booking.attendees.find { |a| a.email.strip.downcase == email }
+    raise Error::BadRequest.new("Attendee not found in this booking") unless attendee
+
+    # Is this really the right way of doing this?
+    attendee.guest.try &.delete
+    attendee.delete
+  end
+
   # ============================================
   #              Helper Methods
   # ============================================
 
   private def check_clashing(new_booking)
-    starting = new_booking.booking_start
-    ending = new_booking.booking_end
-    booking_type = new_booking.booking_type
-    asset_id = new_booking.asset_id
-
-    # gets all the clashing bookings
-    query = Booking
-      .by_tenant(tenant.id)
-      .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_id = ? AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        ending, starting, booking_type, asset_id
-      )
-    query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
-    query.to_a
+    new_booking.clashing_bookings.to_a
   end
 
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
-    asset_id = booking.asset_id
+    asset_ids = (booking.asset_ids + [booking.asset_id]).uniq
+
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_id = ? AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
-        booking.booking_start, time_now, booking_type, asset_id
-      )
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND asset_ids && #{booking.format_list_for_postgres(asset_ids)} AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        booking.booking_start, time_now, booking_type
+      ).where("id != ?", booking.id)
     query.to_a
   end
 
@@ -758,6 +899,7 @@ class Bookings < Application
           booking_end:     booking.booking_end,
           timezone:        booking.timezone,
           resource_id:     booking.asset_id,
+          resource_ids:    booking.asset_ids,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
@@ -787,8 +929,21 @@ class Bookings < Application
       approver_id: user_token.id,
       approver_email: user.email.downcase,
       approver_name: user.name,
-      approved: approved,
-      rejected: !approved,
     )
+
+    if approved
+      booking.approved = true
+      booking.approved_at = Time.utc.to_unix
+      booking.rejected = false
+      booking.rejected_at = nil
+    else
+      booking.approved = false
+      booking.approved_at = nil
+      booking.rejected = true
+      booking.rejected_at = Time.utc.to_unix
+    end
+
+    booking.save!
+    booking
   end
 end

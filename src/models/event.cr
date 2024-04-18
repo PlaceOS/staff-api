@@ -46,9 +46,13 @@ class StaffApi::Event
     event.attendees = attendees
     event.system = system
     if meta_id = metadata.try(&.id)
-      bookings = Booking.where(event_id: meta_id, deleted: false, rejected: false).to_a.tap &.each(&.render_event=(false))
+      bookings = Booking.where(event_id: meta_id, deleted: false).join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id").to_a.tap &.each(&.render_event=(false)) unless is_parent_metadata
       event.linked_bookings = bookings
       event.extension_data = metadata.try(&.ext_data)
+      event.setup_time = metadata.try(&.setup_time)
+      event.breakdown_time = metadata.try(&.breakdown_time)
+      event.setup_event_id = metadata.try(&.setup_event_id)
+      event.breakdown_event_id = metadata.try(&.breakdown_event_id)
     end
     event.recurring_master_id = event.recurring_event_id
 
@@ -78,6 +82,11 @@ class PlaceCalendar::Event
 
   @[JSON::Field(ignore_deserialize: true)]
   property linked_bookings : Array(PlaceOS::Model::Booking)? = nil
+
+  property setup_time : Int64? = nil
+  property breakdown_time : Int64? = nil
+  property setup_event_id : String? = nil
+  property breakdown_event_id : String? = nil
 
   struct Attendee
     property checked_in : Bool?

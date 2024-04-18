@@ -1,6 +1,14 @@
 class Calendars < Application
   base "/api/staff/v1/calendars"
 
+  # =====================
+  # Request Queue
+  # =====================
+
+  # queue requests on a per-user basis
+  @[AC::Route::Filter(:around_action)]
+  Application.add_request_queue
+
   @[AC::Route::Filter(:before_action, except: [:index])]
   private def find_matching_calendars(
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
@@ -110,6 +118,14 @@ class Calendars < Application
     user_email = tenant.which_account(user.email)
     availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
     busy = client.get_availability(user_email, calendars, period_start, period_end, view_interval: availability_view_interval)
+
+    # Remove busy times that are outside of the period
+    busy.each do |status|
+      status.availability.reject! do |avail|
+        avail.status == PlaceCalendar::AvailabilityStatus::Busy &&
+          ((avail.ends_at <= period_start) || (avail.starts_at >= period_end))
+      end
+    end
 
     busy.map { |details|
       if system = candidates[details.calendar]?

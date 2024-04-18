@@ -203,6 +203,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -223,8 +229,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -325,6 +331,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -345,8 +357,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -413,6 +425,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -433,8 +451,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -515,6 +533,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -535,8 +559,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -606,6 +630,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -626,8 +656,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -708,6 +738,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -728,8 +764,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -804,6 +840,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -824,8 +866,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -900,6 +942,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -920,8 +968,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1003,6 +1051,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1023,8 +1077,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1106,6 +1160,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1126,8 +1186,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1210,6 +1270,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1230,8 +1296,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1300,6 +1366,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1320,8 +1392,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1403,6 +1475,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1423,8 +1501,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1506,6 +1584,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1526,8 +1610,204 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/attendee:
+    post:
+      summary: Adds a single attendee to an existing booking
+      tags:
+      - Bookings
+      operationId: Bookings#add_attendee
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceCalendar__Event__Attendee'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Attendee'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/attendee/{attendee_id}:
+    delete:
+      tags:
+      - Bookings
+      operationId: Bookings#destroy_attendee
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: attendee_id
+        in: path
+        description: the email of the attendee we want to remove
+        example: person@example.com
+        required: true
+        schema:
+          type: string
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1590,6 +1870,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1610,8 +1896,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1728,6 +2014,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1748,8 +2040,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1868,6 +2160,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Calendars__Availability'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -1888,8 +2186,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -1988,6 +2286,27 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: filter
+        in: query
+        description: An optional advanced search filter using Azure AD filter syntax
+        example: ""
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: strict
+        in: query
+        description: how to respond when there are calendar errors. Notify sets X-Calendar-Errors,
+          limit returns a 429 error when rate limiting occured, any will 500 if there
+          are any calendar errors
+        example: notify
+        required: false
+        schema:
+          type: string
+          enum:
+          - notify
+          - limit
+          - all
       responses:
         200:
           description: OK
@@ -1997,6 +2316,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2017,8 +2342,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2072,6 +2397,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2092,8 +2423,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2172,6 +2503,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2192,8 +2529,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2294,6 +2631,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2314,8 +2657,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2353,6 +2696,17 @@ paths:
     delete:
       summary: deletes the event from the calendar, it will not appear as cancelled,
         it will be gone
+      description: 'deletes the event from the calendar, it will not appear as cancelled,
+        it will be gone
+
+
+        by default it assumes the event id exists on the users calendar
+
+        you can clarify the calendar that the event belongs to by using the calendar
+        param
+
+        and specify a system id if there is event metadata or linked booking associated
+        with the event'
       tags:
       - Events
       operationId: Events#destroy
@@ -2390,6 +2744,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2410,8 +2770,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2512,6 +2872,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2532,8 +2898,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/{id}/metadata/{system_id}/link/{ical_uid}:
+    post:
+      summary: used to link resource recurring master ids to metadata
+      tags:
+      - Events
+      operationId: Events#link_master_metadata
+      parameters:
+      - name: id
+        in: path
+        description: the event id to link
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: true
+        schema:
+          type: string
+      - name: system_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: true
+        schema:
+          type: string
+      - name: ical_uid
+        in: path
+        description: the ical_uid of the event
+        example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
+        required: true
+        schema:
+          type: string
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2617,6 +3076,40 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: setup_time
+        in: query
+        description: update event setup time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: breakdown_time
+        in: query
+        description: update event breakdown time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: setup_event_id
+        in: query
+        description: update setup event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: breakdown_event_id
+        in: query
+        description: update breakdown event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -2624,6 +3117,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2644,8 +3143,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2731,6 +3230,40 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: setup_time
+        in: query
+        description: update event setup time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: breakdown_time
+        in: query
+        description: update event breakdown time
+        example: "10"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: setup_event_id
+        in: query
+        description: update setup event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: breakdown_event_id
+        in: query
+        description: update breakdown event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -2738,6 +3271,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JSON__Any'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2758,8 +3297,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2834,6 +3373,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2854,8 +3399,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -2894,6 +3439,7 @@ paths:
     post:
       summary: cancels the meeting without deleting it
       description: 'cancels the meeting without deleting it
+
 
         visually the event will remain on the calendar with a line through it
 
@@ -2936,6 +3482,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -2956,8 +3508,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3020,6 +3572,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bool'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3040,8 +3598,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3104,6 +3662,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bool'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3124,8 +3688,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3189,7 +3753,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+                  $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3210,8 +3780,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3324,6 +3894,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__EventMetadata'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3344,8 +3920,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3412,6 +3988,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: state
         in: query
         description: the checkin state, defaults to `true`
@@ -3426,6 +4010,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3446,8 +4036,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3514,6 +4104,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: calendar
+        in: query
+        description: the users calendar associated with this event
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
       - name: state
         in: query
         description: the checkin state, defaults to `true`
@@ -3528,6 +4126,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3548,8 +4152,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3608,6 +4212,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3628,8 +4238,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3683,6 +4293,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3703,8 +4319,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3760,6 +4376,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Member'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3780,8 +4402,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3851,8 +4473,8 @@ paths:
           nullable: true
       - name: calendars
         in: query
-        description: a comma seperated list of calendar ids, recommend using `system_id`
-          for resource calendars
+        description: '[deprecated] a comma seperated list of calendar ids, recommend
+          using `system_id` for resource calendars'
         example: user@org.com,room2@resource.org.com
         required: false
         schema:
@@ -3860,7 +4482,8 @@ paths:
           nullable: true
       - name: zone_ids
         in: query
-        description: a comma seperated list of zone ids
+        description: '[deprecated] a comma seperated list of zone ids used for events
+          or bookings'
         example: zone-123,zone-456
         required: false
         schema:
@@ -3868,11 +4491,21 @@ paths:
           nullable: true
       - name: system_ids
         in: query
-        description: a comma seperated list of event spaces
+        description: '[deprecated] a comma seperated list of event spaces'
         example: sys-1234,sys-5678
         required: false
         schema:
           type: string
+          nullable: true
+      - name: zones
+        in: query
+        description: a comma seperated list of zone ids for bookings
+        example: zone-123,zone-456
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
           nullable: true
       responses:
         200:
@@ -3882,7 +4515,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PlaceOS__Model__ModelWithAutoKey'
+                  $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3903,8 +4542,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -3957,7 +4596,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -3978,8 +4623,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4038,7 +4683,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4059,8 +4710,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4123,7 +4774,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4144,8 +4801,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4199,6 +4856,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4219,8 +4882,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4283,7 +4946,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_PlaceOS__Model__Attendee___PlaceOS__Model__Guest_'
+                $ref: '#/components/schemas/PlaceOS__Model__Guest'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4304,8 +4973,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4382,6 +5051,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Event'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4402,8 +5077,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4480,6 +5155,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4500,8 +5181,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4583,6 +5264,14 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: next_page
+        in: query
+        description: a google token or graph api URI representing the next page of
+          results
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -4592,6 +5281,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4612,8 +5307,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4669,6 +5364,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4689,8 +5390,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4746,6 +5447,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Group'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4766,8 +5473,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4821,6 +5528,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar__User'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4841,8 +5554,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4898,6 +5611,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceCalendar__Calendar'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -4918,8 +5637,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -4986,6 +5705,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5006,8 +5731,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5061,6 +5786,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5081,8 +5812,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5139,6 +5870,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5159,8 +5896,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5220,6 +5957,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5240,8 +5983,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5291,6 +6034,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5311,8 +6060,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5372,6 +6121,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5392,8 +6147,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5471,6 +6226,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5491,8 +6252,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5548,6 +6309,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Answer'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5568,8 +6335,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5637,6 +6404,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5657,8 +6430,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5712,6 +6485,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5732,8 +6511,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5789,6 +6568,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5809,8 +6594,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5869,6 +6654,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5889,8 +6680,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -5941,6 +6732,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -5961,8 +6758,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6021,6 +6818,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Invitation'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6041,8 +6844,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6110,6 +6913,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6130,8 +6939,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6185,6 +6994,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6205,8 +7020,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6263,6 +7078,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6283,8 +7104,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6348,6 +7169,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6368,8 +7195,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6423,6 +7250,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6443,8 +7276,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6508,6 +7341,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6528,8 +7367,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6580,6 +7419,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6600,8 +7445,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6655,6 +7500,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6675,8 +7526,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6737,6 +7588,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6757,8 +7614,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6808,6 +7665,12 @@ paths:
       responses:
         202:
           description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6828,8 +7691,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6889,6 +7752,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Tenant__Responder'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6909,8 +7778,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -6959,6 +7828,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -6979,8 +7854,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -7035,6 +7910,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -7055,8 +7936,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -7116,6 +7997,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
         400:
           description: Bad Request
           content:
@@ -7136,8 +8023,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
-        501:
-          description: Not Implemented
+        511:
+          description: Network Authentication Required
           content:
             application/json:
               schema:
@@ -7367,6 +8254,30 @@ components:
             - name
             - email
           nullable: true
+        asset_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+          nullable: true
+        induction:
+          type: boolean
+          nullable: true
+        permission:
+          type: string
+          enum:
+          - private
+          - open
+          - public
+          description: The permission level for the booking. Defaults to private.
+            If set to private, attendees must be invited.If set to open, users in
+            the same tenant can join. If set to public, the booking is open for everyone
+            to join.
+          nullable: true
         tenant_id:
           type: integer
           format: Int64
@@ -7423,6 +8334,419 @@ components:
         tenant_id:
           type: integer
           format: Int64
+          nullable: true
+        id:
+          type: integer
+          format: Int64
+          nullable: true
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+    PlaceCalendar__Event__Attendee:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        response_status:
+          type: string
+          nullable: true
+        resource:
+          type: boolean
+          nullable: true
+        organizer:
+          type: boolean
+          nullable: true
+        checked_in:
+          type: boolean
+          nullable: true
+        visit_expected:
+          type: boolean
+          nullable: true
+        extension_data:
+          type: object
+          nullable: true
+        preferred_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        organisation:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        banned:
+          type: boolean
+          nullable: true
+        dangerous:
+          type: boolean
+          nullable: true
+      required:
+      - name
+      - email
+    PlaceOS__Model__Attendee:
+      type: object
+      properties:
+        checked_in:
+          type: boolean
+          nullable: true
+        visit_expected:
+          type: boolean
+          nullable: true
+        guest_id:
+          type: integer
+          format: Int64
+          nullable: true
+        tenant_id:
+          type: integer
+          format: Int64
+          nullable: true
+        event_id:
+          type: integer
+          format: Int64
+          nullable: true
+        booking_id:
+          type: integer
+          format: Int64
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        preferred_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        organisation:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        event:
+          type: object
+          properties:
+            event_start:
+              type: integer
+              format: Int64
+            event_end:
+              type: integer
+              format: Int64
+              nullable: true
+            id:
+              type: string
+              nullable: true
+            recurring_event_id:
+              type: string
+              nullable: true
+            host:
+              type: string
+              nullable: true
+            title:
+              type: string
+              nullable: true
+            body:
+              type: string
+              nullable: true
+            attendees:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  response_status:
+                    type: string
+                    nullable: true
+                  resource:
+                    type: boolean
+                    nullable: true
+                  organizer:
+                    type: boolean
+                    nullable: true
+                  checked_in:
+                    type: boolean
+                    nullable: true
+                  visit_expected:
+                    type: boolean
+                    nullable: true
+                  extension_data:
+                    type: object
+                    nullable: true
+                  preferred_name:
+                    type: string
+                    nullable: true
+                  phone:
+                    type: string
+                    nullable: true
+                  organisation:
+                    type: string
+                    nullable: true
+                  photo:
+                    type: string
+                    nullable: true
+                  notes:
+                    type: string
+                    nullable: true
+                  banned:
+                    type: boolean
+                    nullable: true
+                  dangerous:
+                    type: boolean
+                    nullable: true
+                required:
+                - name
+                - email
+            hide_attendees:
+              type: boolean
+            location:
+              type: string
+              nullable: true
+            private:
+              type: boolean
+            all_day:
+              type: boolean
+            timezone:
+              type: string
+              nullable: true
+            recurring:
+              type: boolean
+              nullable: true
+            created:
+              type: string
+              format: date-time
+              nullable: true
+            updated:
+              type: string
+              format: date-time
+              nullable: true
+            attachments:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+                  name:
+                    type: string
+                  content_type:
+                    type: string
+                    nullable: true
+                  content_bytes:
+                    type: string
+                  size:
+                    type: integer
+                    format: Int32
+                    nullable: true
+                required:
+                - name
+                - content_bytes
+            recurrence:
+              type: object
+              properties:
+                range_start:
+                  type: integer
+                  format: Int64
+                range_end:
+                  type: integer
+                  format: Int64
+                interval:
+                  type: integer
+                  format: Int32
+                pattern:
+                  type: string
+                days_of_week:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+              required:
+              - range_start
+              - range_end
+              - interval
+              - pattern
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            creator:
+              type: string
+              nullable: true
+            ical_uid:
+              type: string
+              nullable: true
+            online_meeting_provider:
+              type: string
+              nullable: true
+            online_meeting_phones:
+              type: array
+              items:
+                type: string
+              nullable: true
+            online_meeting_url:
+              type: string
+              nullable: true
+            online_meeting_sip:
+              type: string
+              nullable: true
+            online_meeting_pin:
+              type: string
+              nullable: true
+            online_meeting_id:
+              type: string
+              nullable: true
+            extended_properties:
+              type: object
+              additionalProperties:
+                type: string
+                nullable: true
+              nullable: true
+            mailbox:
+              type: string
+              nullable: true
+            calendar:
+              type: string
+              nullable: true
+            system_id:
+              type: string
+              nullable: true
+            system:
+              anyOf:
+              - type: object
+                properties:
+                  id:
+                    type: string
+                required:
+                - id
+              - type: object
+                properties:
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  zones:
+                    type: array
+                    items:
+                      type: string
+                  modules:
+                    type: array
+                    items:
+                      type: string
+                  description:
+                    type: string
+                    nullable: true
+                  email:
+                    type: string
+                    nullable: true
+                  display_name:
+                    type: string
+                    nullable: true
+                  timezone:
+                    type: string
+                    nullable: true
+                  code:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    nullable: true
+                  map_id:
+                    type: string
+                    nullable: true
+                  images:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                  capacity:
+                    type: integer
+                    format: Int32
+                  features:
+                    type: array
+                    items:
+                      type: string
+                  bookable:
+                    type: boolean
+                  public:
+                    type: boolean
+                    nullable: true
+                  installed_ui_devices:
+                    type: integer
+                    format: Int32
+                  support_url:
+                    type: string
+                    nullable: true
+                  version:
+                    type: integer
+                    format: Int32
+                required:
+                - created_at
+                - updated_at
+                - id
+                - name
+                - zones
+                - modules
+                - capacity
+                - features
+                - bookable
+                - installed_ui_devices
+                - version
+              nullable: true
+            extension_data:
+              type: object
+              nullable: true
+            recurring_master_id:
+              type: string
+              nullable: true
+            setup_time:
+              type: integer
+              format: Int64
+              nullable: true
+            breakdown_time:
+              type: integer
+              format: Int64
+              nullable: true
+            setup_event_id:
+              type: string
+              nullable: true
+            breakdown_event_id:
+              type: string
+              nullable: true
+          required:
+          - event_start
+          - attendees
+          - hide_attendees
+          - private
+          - all_day
+          - attachments
           nullable: true
         id:
           type: integer
@@ -7851,6 +9175,20 @@ components:
         recurring_master_id:
           type: string
           nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
+          type: string
+          nullable: true
       required:
       - event_start
       - attendees
@@ -8144,6 +9482,20 @@ components:
         recurring_master_id:
           type: string
           nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
+          type: string
+          nullable: true
       required:
       - event_start
       - attendees
@@ -8154,8 +9506,6 @@ components:
       nullable: true
     Bool:
       type: boolean
-    PlaceOS__Model__ModelWithAutoKey:
-      type: object
     PlaceOS__Model__EventMetadata:
       type: object
       properties:
@@ -8169,6 +9519,9 @@ components:
           type: string
           nullable: true
         ical_uid:
+          type: string
+          nullable: true
+        resource_master_id:
           type: string
           nullable: true
         host_email:
@@ -8190,6 +9543,20 @@ components:
           nullable: true
         ext_data:
           type: object
+          nullable: true
+        setup_time:
+          type: integer
+          format: Int64
+          nullable: true
+        breakdown_time:
+          type: integer
+          format: Int64
+          nullable: true
+        setup_event_id:
+          type: string
+          nullable: true
+        breakdown_event_id:
+          type: string
           nullable: true
         tenant_id:
           type: integer
@@ -8239,8 +9606,6 @@ components:
       - id
       - email
       - username
-    _PlaceOS__Model__Attendee___PlaceOS__Model__Guest_:
-      type: object
     HealthCheck__BuildInfo:
       type: object
       properties:
@@ -8276,6 +9641,9 @@ components:
           type: string
           nullable: true
         username:
+          type: string
+          nullable: true
+        office_location:
           type: string
           nullable: true
     PlaceOS__Model__Survey:
@@ -8798,6 +10166,30 @@ components:
                   required:
                   - name
                   - email
+                nullable: true
+              asset_ids:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              images:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              induction:
+                type: boolean
+                nullable: true
+              permission:
+                type: string
+                enum:
+                - private
+                - open
+                - public
+                description: The permission level for the booking. Defaults to private.
+                  If set to private, attendees must be invited.If set to open, users
+                  in the same tenant can join. If set to public, the booking is open
+                  for everyone to join.
                 nullable: true
               tenant_id:
                 type: integer

@@ -11,11 +11,11 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 4.3.1
+    version: 4.3.2
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.5.0
+    version: 1.6.1
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -27,23 +27,27 @@ shards:
 
   bindata:
     git: https://github.com/spider-gazelle/bindata.git
-    version: 1.11.1
+    version: 2.0.0
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
     version: 2.0.0
 
+  cron_parser:
+    git: https://github.com/kostya/cron_parser.git
+    version: 0.4.0
+
   csuuid:
     git: https://github.com/wyhaines/csuuid.cr.git
-    version: 1.0.0+git.commit.41710010d5b8be818b1ca7b84ef412348e1912bd
+    version: 1.0.0+git.commit.a4cf9615c6518cf27c68a1755a8c2ac4ae4fe987
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.12.0
+    version: 0.13.1
 
   debug:
     git: https://github.com/sija/debug.cr.git
-    version: 2.0.2
+    version: 2.0.3
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
@@ -59,7 +63,7 @@ shards:
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.3.1
+    version: 0.4.1
 
   faker:
     git: https://github.com/askn/faker.git
@@ -75,7 +79,7 @@ shards:
 
   habitat:
     git: https://github.com/luckyframework/habitat.git
-    version: 0.4.7
+    version: 0.4.8
 
   hot_topic:
     git: https://github.com/jgaskins/hot_topic.git
@@ -95,7 +99,7 @@ shards:
 
   jwt:
     git: https://github.com/crystal-community/jwt.git
-    version: 1.6.0
+    version: 1.6.1
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
@@ -103,7 +107,7 @@ shards:
 
   nbchannel:
     git: https://github.com/wyhaines/nbchannel.cr.git
-    version: 0.1.0+git.commit.ea6517a837270361695244d14c4b03d84660f113
+    version: 0.1.0+git.commit.a8f5be6aa198abfa9f1893e1156640b8ea526094
 
   neuroplastic:
     git: https://github.com/spider-gazelle/neuroplastic.git
@@ -111,7 +115,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.22.0
+    version: 1.24.0
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -123,7 +127,7 @@ shards:
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
-    version: 2.3.0
+    version: 2.4.4
 
   opentelemetry-api:
     git: https://github.com/wyhaines/opentelemetry-api.cr.git
@@ -131,7 +135,7 @@ shards:
 
   opentelemetry-instrumentation:
     git: https://github.com/wyhaines/opentelemetry-instrumentation.cr.git
-    version: 0.5.3+git.commit.5c0323d0046719bae4a7a325ca5ce0e7405bf803
+    version: 0.5.3+git.commit.cd3994b22d9f7a0d68752698974d3873a1b2fce2
 
   opentelemetry-sdk:
     git: https://github.com/wyhaines/opentelemetry-sdk.cr.git
@@ -151,19 +155,19 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.27.0
+    version: 0.28.0
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 1.0.0+git.commit.e614b076c9f185d0891b505ea74c4b5e7e6307b7
+    version: 1.1.0+git.commit.e35e4c535be1ab47b6afb821723ceafb637fa4e8
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.19.1
+    version: 4.20.1
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.9.0
+    version: 2.10.0
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -171,7 +175,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.17.0
+    version: 9.45.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -179,7 +183,7 @@ shards:
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
-    version: 3.0.0
+    version: 3.1.0
 
   protobuf:
     git: https://github.com/jeromegn/protobuf.cr.git
@@ -187,7 +191,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.3+git.commit.2fa8a119cfa15d6fb98f0d8e3924d8175e974103
+    version: 1.9.3+git.commit.990a7650fb027cbe65705fc6dad228cddc76c503
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
@@ -195,7 +199,7 @@ shards:
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
-    version: 0.2.4
+    version: 0.2.5
 
   secrets-env:
     git: https://github.com/place-labs/secrets-env.git

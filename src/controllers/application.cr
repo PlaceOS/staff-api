@@ -13,6 +13,43 @@ abstract class Application < ActionController::Base
   include Utils::CurrentUser
   include Utils::MultiTenant
 
+  # the number of requests to queue before responding with too many requests
+  QUEUE_LIMIT = ENV["STAFF_QUEUE_LIMIT"]?.try &.to_i
+  USER_LOCK   = Hash(String, Mutex).new { |lock, user| lock[user] = Mutex.new }
+  USER_COUNT  = Hash(String, Int32).new { |count, user| count[user] = 0 }
+  COUNT_LOCK  = Mutex.new
+
+  macro add_request_queue
+    def request_queue : Nil
+      limit = QUEUE_LIMIT
+      return yield unless limit
+
+      user_id = user_token.id
+
+      # ensure user
+      lock = COUNT_LOCK.synchronize do
+        count = USER_COUNT[user_id]
+        raise Error::TooManyRequests.new("user #{user_id} has over #{limit} requests occuring concurrently") if count >= limit
+        USER_COUNT[user_id] = count + 1
+        USER_LOCK[user_id]
+      end
+
+      begin
+        lock.synchronize { yield }
+      ensure
+        COUNT_LOCK.synchronize do
+          count = USER_COUNT[user_id] - 1
+          if count.zero?
+            USER_COUNT.delete user_id
+            USER_LOCK.delete user_id
+          else
+            USER_COUNT[user_id] = count
+          end
+        end
+      end
+    end
+  end
+
   # =========================================
   # LOGGING
   # =========================================
@@ -48,7 +85,7 @@ abstract class Application < ActionController::Base
 
     if block_access
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
-      raise Error::Unauthorized.new "valid scope required for access"
+      raise Error::Forbidden.new "valid scope required for access"
     end
   end
 
@@ -93,6 +130,13 @@ abstract class Application < ActionController::Base
   # ERROR HANDLERS
   # =========================================
 
+  # 429 if too many requests
+  @[AC::Route::Exception(Error::TooManyRequests, status_code: HTTP::Status::TOO_MANY_REQUESTS)]
+  def too_many_requests(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
+
   # 400 if no bearer token
   @[AC::Route::Exception(Error::BadRequest, status_code: HTTP::Status::BAD_REQUEST)]
   def bad_request(error) : CommonError
@@ -123,6 +167,13 @@ abstract class Application < ActionController::Base
 
   # 501 if request isn't implemented for the current tenent
   @[AC::Route::Exception(Error::NotImplemented, status_code: HTTP::Status::NOT_IMPLEMENTED)]
+  def action_not_implemented(error) : CommonError
+    Log.debug { error.message }
+    render_error(error)
+  end
+
+  # 511 if the user needs an access token via SSO
+  @[AC::Route::Exception(Error::NeedsAuthentication, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
   def action_not_implemented(error) : CommonError
     Log.debug { error.message }
     render_error(error)
@@ -252,45 +303,33 @@ abstract class Application < ActionController::Base
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
-  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String, search_recurring : Bool = true) : EventMetadata?
-    meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.id, system_id: system_id)
+  protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String? = nil, search_recurring : Bool = true) : EventMetadata?
+    tenant = current_tenant
+    query = if tenant.platform == "office365"
+              EventMetadata.by_tenant(tenant.id).where(ical_uid: event.ical_uid)
+            else
+              EventMetadata.by_tenant(tenant.id).where(event_id: event.id)
+            end
+
+    query = query.where(system_id: system_id.as(String)) if system_id
+    meta = query.first?
     return meta if meta
+
     if search_recurring && event.recurring_event_id.presence && event.recurring_event_id != event.id
-      EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
-    elsif ev_ical_uid = event.ical_uid
-      EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: ev_ical_uid).to_a.first?
+      query = EventMetadata.by_tenant(tenant.id).by_master_ids([event.recurring_event_id])
+      query = query.where(system_id: system_id.as(String)) if system_id
+      query.first?
     end
   end
 
-  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String, system_calendar : String) : EventMetadata?
-    query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
-    if client.client_id == :office365
-      query = query.where(ical_uid: event.ical_uid)
-    else
-      query = query.where(event_id: event.id)
-    end
-    meta = query.to_a.first?
-    return meta if meta
-    return nil unless event.recurring_event_id.presence && event.recurring_event_id != event.id
+  protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
+    meta = get_event_metadata(event, system_id, search_recurring: true)
 
-    # we need to find the original event ical_uid without requiring the parent event (so it works with delegated access)
-    if client.client_id == :office365
-      original_meta = nil
-      begin
-        host_cal = event.host.as(String).downcase
-        calendar = user.email.downcase == host_cal ? host_cal : system_calendar
-        if original_event = client.get_event(user.email, id: event.recurring_event_id.not_nil!, calendar_id: calendar)
-          original_meta = EventMetadata.by_tenant(tenant.id).where(system_id: system_id).where(ical_uid: original_event.ical_uid).to_a.first?
-        end
-      rescue error : PlaceCalendar::Exception
-        Log.warn(exception: error) { "failed to find recurring event master for #{user.email} with #{event.recurring_event_id}" }
-      end
-    else
-      original_meta = EventMetadata.by_tenant(tenant.id).find_by?(event_id: event.recurring_event_id, system_id: system_id)
+    # check if we need to migrate
+    office = client.client_id == :office365
+    if meta && ((office && meta.ical_uid != event.ical_uid) || (!office && meta.event_id != event.id))
+      meta = EventMetadata.migrate_recurring_metadata(system_id, event, meta)
     end
-
-    if original_meta
-      EventMetadata.migrate_recurring_metadata(system_id, event, original_meta)
-    end
+    meta
   end
 end

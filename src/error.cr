@@ -5,6 +5,9 @@ class Error < Exception
     super(message)
   end
 
+  class TooManyRequests < Error
+  end
+
   class BadRequest < Error
   end
 
@@ -15,6 +18,9 @@ class Error < Exception
   end
 
   class NotImplemented < Error
+  end
+
+  class NeedsAuthentication < Error
   end
 
   class NotAllowed < Error

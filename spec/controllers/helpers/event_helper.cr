@@ -34,8 +34,8 @@ module EventsHelper
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
   end
 
-  def mock_event_id(id)
-    Office365::Event.new(**{
+  def mock_event_id(id, ical = nil)
+    event = Office365::Event.new(**{
       id:              id,
       starts_at:       Time.unix(1598503500),
       ends_at:         Time.unix(1598507160),
@@ -45,6 +45,8 @@ module EventsHelper
       response_status: Office365::ResponseStatus.new(response: Office365::ResponseStatus::Response::Organizer, time: "0001-01-01T00:00:00Z"),
       recurrence:      Office365::RecurrenceParam.new(pattern: "daily", range_end: Time.unix(1598508160)),
     })
+    event.icaluid = ical
+    event
   end
 
   def stub_permissions_check(system_id)
@@ -73,9 +75,9 @@ module EventsHelper
       }))
   end
 
-  def event_query_response(id)
+  def event_query_response(id, ical = nil)
     {
-      "value" => [EventsHelper.mock_event_id(id)],
+      "value" => [EventsHelper.mock_event_id(id, ical)],
     }.to_json
   end
 

@@ -2,6 +2,20 @@
 
 ### Feat
 
+- **bookings**: [PPT-1215] allow users to add themselves as attendees to public events ([#316](https://github.com/PlaceOS/staff-api/pull/316))
+- **events**: add a reason for cancellation ([#315](https://github.com/PlaceOS/staff-api/pull/315))
+- **staff**: add pagination support getting staff [PPT-1170] ([#311](https://github.com/PlaceOS/staff-api/pull/311))
+- **bookings**: include any attending guests in responses ([#308](https://github.com/PlaceOS/staff-api/pull/308))
+- **bookings**: [PPT-1098] support multiple assets on a single booking ([#307](https://github.com/PlaceOS/staff-api/pull/307))
+- **events**: serialize requests from each user [PROJ-512] ([#306](https://github.com/PlaceOS/staff-api/pull/306))
+- **guests**: deprecate event based guest queries
+- **events**: add filter to index ([#305](https://github.com/PlaceOS/staff-api/pull/305))
+- **events**: provide strict requirements for processing responses [PROJ-433] [PROJ-420] [PPT-975] ([#304](https://github.com/PlaceOS/staff-api/pull/304))
+- **events**: add setup/breakdown fields to destroyed signal
+- **events**: add fields to patch event metadata
+- **events**: don't delete metadata and notify meta on event cancel
+- **current-user**: match options in rest-api
+- **events**: skip some checks when in delegated mode ([#294](https://github.com/PlaceOS/staff-api/pull/294))
 - add support for public.read and public.write scopes
 - improve permissions checks ([#292](https://github.com/PlaceOS/staff-api/pull/292))
 - **shard.lock**: bump opentelemetry-instrumentation.cr
@@ -63,6 +77,32 @@
 
 ### Fix
 
+- **application**: forbidden when no valid scope
+- **bookings**: remove isolated transactions
+- **bookings**: add a serialisable backoff
+- **bookings**: specs passing
+- **events**: update event id requirement
+- **bookings**: ensure serialisable transactions ([#314](https://github.com/PlaceOS/staff-api/pull/314))
+- **events**: [PPT-1190] update metadata on rapid destroy after create ([#313](https://github.com/PlaceOS/staff-api/pull/313))
+- **bookings**: changed signal
+- **events**: metadata updates to be resource_master_id aware
+- **events**: check for declined status on push update
+- **events**: refactor change notifications
+- **events**: resource calendar signal
+- **calendars**: allow any specified if delegated
+- **events**: recurring metadata visibility [PPT-1072] [PPT-1073] ([#309](https://github.com/PlaceOS/staff-api/pull/309))
+- **calendars**: availability removing busy items within period ([#303](https://github.com/PlaceOS/staff-api/pull/303))
+- **shard.lock**: bump office365 dep [PROJ-419]
+- **events**: add setup/breakdown time to StaffAPI::Event#aument ([#302](https://github.com/PlaceOS/staff-api/pull/302))
+- **bookings**: pagination using created ascending order ([#301](https://github.com/PlaceOS/staff-api/pull/301))
+- **events**: user checkin with custom calendar [PPT-538]
+- **events**: render rejected linked bookings [PPT-915]
+- **calendars**: [PPT-945] remove busy times that are outside of the period in #free_busy ([#300](https://github.com/PlaceOS/staff-api/pull/300))
+- **events**: update guest details [PPT-910]
+- **bookings**: rejected / approved status [PPT-917]
+- **bookings**: missing save on approve and reject routes
+- unauthorized if delegated access has expired ([#296](https://github.com/PlaceOS/staff-api/pull/296)) [PPT-731]
+- **guests**: query where there are no bookings
 - **calendars**: availability status request
 - **calendar**: availability check ([#293](https://github.com/PlaceOS/staff-api/pull/293))
 - **guests**: invalid SQL generated when there were no meetings

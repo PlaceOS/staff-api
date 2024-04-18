@@ -307,9 +307,10 @@ describe Events do
       req_body = EventsHelper.create_recurring_event_input
       created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body.to_s).body)
       created_event_id = created_event["id"].to_s
+      created_ical_uid = created_event["ical_uid"].to_s
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, created_ical_uid))
 
       # Fetch guest event details that is an instance of master event created above
       event_instance_id = "event_instance_of_recurrence_id"
@@ -378,14 +379,15 @@ describe Events do
       EventMetadata.find_by?(event_id: event_instance_id).should be_nil
 
       master_event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+      ical_uid = "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
 
       created_event_id = created_event["id"].to_s
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-30T14:00:00-00:00&endDateTime=2020-08-31T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F%27&$top=10000")
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, ical_uid))
 
       WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
-        .to_return(EventsHelper.event_query_response(created_event_id))
+        .to_return(EventsHelper.event_query_response(created_event_id, ical_uid))
 
       # Show event details for calendar params that is an instance of master event created above
       response = client.get("#{EVENTS_BASE}/#{event_instance_id}?calendar=dev@acaprojects.onmicrosoft.com", headers: headers)
@@ -459,8 +461,8 @@ describe Events do
     resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=#{meta.try &.system_id}", headers: headers)
     resp.success?.should be_true
 
-    # Should have deleted event meta
-    EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
+    # Should have deleted event meta (no longer does this)
+    # EventMetadata.find_by?(event_id: created_event_id.to_s, system_id: system_id).should eq(nil)
   end
 
   it "#approve marks room as accepted" do
@@ -677,6 +679,7 @@ describe Events do
       event = EventMetadatasHelper.create_event(
         tenant_id: tenant.id,
         id: "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA=",
+        ical_uid: "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F",
         event_start: 20.minutes.from_now.to_unix,
         event_end: 40.minutes.from_now.to_unix,
         system_id: "sys-rJQQlR4Cn7",
