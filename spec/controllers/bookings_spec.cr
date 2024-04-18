@@ -163,16 +163,16 @@ describe Bookings do
 
     it "should include bookins made on behalf of other users when include_booked_by=true" do
       tenant = get_tenant
-      booking1 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
+      booking1 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
       
       booked_by_email = "josh@redant.com.au"
-      booking2 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: "toby@redant.com.au")
+      booking2 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
       booking2.booked_by_email = PlaceOS::Model::Email.new(booked_by_email)
       booking2.booked_by_id = booked_by_email
       booking2.booked_by_name = Faker::Internet.user_name
       booking2.save!
 
-      booking3 = BookingsHelper.create_booking(tenant_id: tenant.id, user_email: booked_by_email)
+      booking3 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: booked_by_email)
 
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
