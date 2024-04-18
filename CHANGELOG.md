@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: [PPT-1215] allow users to add themselves as attendees to public events ([#316](https://github.com/PlaceOS/staff-api/pull/316))
 - **events**: add a reason for cancellation ([#315](https://github.com/PlaceOS/staff-api/pull/315))
 - **staff**: add pagination support getting staff [PPT-1170] ([#311](https://github.com/PlaceOS/staff-api/pull/311))
 - **bookings**: include any attending guests in responses ([#308](https://github.com/PlaceOS/staff-api/pull/308))
