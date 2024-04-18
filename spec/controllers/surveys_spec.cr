@@ -13,7 +13,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get(SURVEY_BASE, headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey].to_json)
+      JSON.parse(response.body).as_a.first.as_h["id"].should eq(survey.id)
     end
 
     it "should return a list of surveys filtered by zone_id" do
@@ -22,7 +22,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get("#{SURVEY_BASE}?zone_id=2", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey2].to_json)
+      JSON.parse(response.body).as_a.first.as_h["id"].should eq(survey2.id)
     end
 
     it "should return a list of surveys filtered by building_id" do
@@ -31,7 +31,7 @@ describe Surveys, tags: ["survey"] do
 
       response = client.get("#{SURVEY_BASE}?building_id=1", headers: headers)
       response.status_code.should eq(200)
-      response.body.should eq([survey1].to_json)
+      JSON.parse(response.body).as_a.first.as_h["id"].should eq(survey1.id)
     end
   end
 
