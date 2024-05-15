@@ -879,7 +879,7 @@ describe Bookings do
       bookings.map(&.["id"]).should contain(public_booking["id"])
     end
 
-    pending "#index should return a list of PRIVATE, OPEN, and PUBLIC bookings for the booking creator" do
+    it "#index should return a list of PRIVATE, OPEN, and PUBLIC group-event bookings for the booking creator" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")

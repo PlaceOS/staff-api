@@ -203,7 +203,7 @@ class Bookings < Application
         if booking_type != "group-event"
           query = query.by_user_or_email(user_id, user_email, include_booked_by)
         else
-          query = query.where(sql: "permission = 'PUBLIC' OR permission = 'OPEN'")
+          query = query.by_user_or_email(user_id, user_email, include_booked_by, include_open_permission: true, include_public_permission: true)
         end
       end
     else
