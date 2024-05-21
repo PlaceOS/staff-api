@@ -284,7 +284,6 @@ describe Bookings do
         starting = 5.minutes.from_now.to_unix
         ending = 90.minutes.from_now.to_unix
 
-        # user_one_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
         admin_headers = Mock::Headers.office365_guest
 
         # zones=zone-1 (as admin)
@@ -431,7 +430,6 @@ describe Bookings do
           ending = 90.minutes.from_now.to_unix
 
           user_one_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
-          admin_headers = Mock::Headers.office365_guest
 
           # No user specified (as user one)
           response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: user_one_headers)
@@ -502,7 +500,6 @@ describe Bookings do
           ending = 90.minutes.from_now.to_unix
 
           user_two_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
-          # admin_headers = Mock::Headers.office365_guest
 
           # zones=zone-2 (as user one)
           response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event&zones=zone-2", headers: user_two_headers)
@@ -1301,7 +1298,6 @@ describe Bookings do
 
       # bookings creator user
       creator_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
-      # creator_headers = Mock::Headers.office365_guest
       response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: creator_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
