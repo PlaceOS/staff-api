@@ -200,10 +200,12 @@ class Bookings < Application
           user_email = user.email
         end
 
-        if booking_type != "group-event"
-          query = query.by_user_or_email(user_id, user_email, include_booked_by)
-        else
+        # we want to query group-event bookings that the user can join
+        # if zones are provided.
+        if booking_type == "group-event" && !zones.empty?
           query = query.by_user_or_email(user_id, user_email, include_booked_by, include_open_permission: true, include_public_permission: true)
+        else
+          query = query.by_user_or_email(user_id, user_email, include_booked_by)
         end
       end
     else
