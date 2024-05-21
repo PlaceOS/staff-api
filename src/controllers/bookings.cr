@@ -428,7 +428,7 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
