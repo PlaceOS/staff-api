@@ -965,7 +965,7 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
-  describe "permission", tags: ["auth"] do
+  describe "permission", tags: ["auth", "group-event"] do
     it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -1117,6 +1117,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1132,6 +1133,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1147,6 +1149,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1158,7 +1161,7 @@ describe Bookings do
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: no_auth_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: no_auth_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(1)
@@ -1184,6 +1187,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1199,6 +1203,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1214,6 +1219,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1225,7 +1231,7 @@ describe Bookings do
 
       # same tenant user
       same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-four@example.com")
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: same_tenant_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: same_tenant_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(2)
@@ -1251,6 +1257,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1266,6 +1273,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1281,6 +1289,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -1293,7 +1302,7 @@ describe Bookings do
       # bookings creator user
       creator_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
       # creator_headers = Mock::Headers.office365_guest
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: creator_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: creator_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(3)
