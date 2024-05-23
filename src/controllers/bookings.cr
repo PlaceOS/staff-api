@@ -200,10 +200,12 @@ class Bookings < Application
           user_email = user.email
         end
 
-        if booking_type != "group-event"
-          query = query.by_user_or_email(user_id, user_email, include_booked_by)
-        else
+        # we want to query group-event bookings that the user can join
+        # if zones are provided.
+        if booking_type == "group-event" && !zones.empty?
           query = query.by_user_or_email(user_id, user_email, include_booked_by, include_open_permission: true, include_public_permission: true)
+        else
+          query = query.by_user_or_email(user_id, user_email, include_booked_by)
         end
       end
     else
@@ -428,7 +430,7 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError

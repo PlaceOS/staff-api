@@ -160,6 +160,358 @@ describe Bookings do
       booking_user_ids = body.map { |r| r["user_id"] }
       booking_user_ids.should eq([booking.user_id])
     end
+
+    context "[zones/user]" do
+      it "should return a list of bookings filtered by current user" do
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+          .to_return(body: "")
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+          .to_return(body: "")
+
+        # user-1, zone-1
+        booking_one = BookingsHelper.http_create_booking(
+          user_id: "user-1",
+          user_email: "user-one@example.com",
+          user_name: "User One",
+          booked_by_email: "user-one@example.com",
+          booked_by_id: "user-1",
+          booked_by_name: "User One",
+          asset_id: "asset-1",
+          zones: ["zone-1"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        # user-2, zone-1
+        booking_two = BookingsHelper.http_create_booking(
+          user_id: "user-2",
+          user_email: "user-two@example.com",
+          user_name: "User Two",
+          booked_by_email: "user-two@example.com",
+          booked_by_id: "user-2",
+          booked_by_name: "User Two",
+          asset_id: "asset-2",
+          zones: ["zone-1"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+
+        user_one_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
+        admin_headers = Mock::Headers.office365_guest
+
+        # No user specified (as user one)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk", headers: user_one_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should contain(booking_one["id"])
+        bookings.map(&.["id"]).should_not contain(booking_two["id"])
+
+        # user=current (as user one)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=current", headers: user_one_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should contain(booking_one["id"])
+        bookings.map(&.["id"]).should_not contain(booking_two["id"])
+
+        # user=user-1 (as admin)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&user=user-1", headers: admin_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should contain(booking_one["id"])
+        bookings.map(&.["id"]).should_not contain(booking_two["id"])
+
+        # email=user-one@example.com (as admin)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&email=user-one@example.com", headers: admin_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should contain(booking_one["id"])
+        bookings.map(&.["id"]).should_not contain(booking_two["id"])
+      end
+
+      it "should return a list of bookings filtered by zones" do
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+          .to_return(body: "")
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+          .to_return(body: "")
+
+        # user-1, zone-1
+        booking_one = BookingsHelper.http_create_booking(
+          user_id: "user-1",
+          user_email: "user-one@example.com",
+          user_name: "User One",
+          booked_by_email: "user-one@example.com",
+          booked_by_id: "user-1",
+          booked_by_name: "User One",
+          asset_id: "asset-1",
+          zones: ["zone-1"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        # user-1, zone-2
+        booking_two = BookingsHelper.http_create_booking(
+          user_id: "user-1",
+          user_email: "user-one@example.com",
+          user_name: "User One",
+          booked_by_email: "user-one@example.com",
+          booked_by_id: "user-1",
+          booked_by_name: "User One",
+          asset_id: "asset-2",
+          zones: ["zone-2"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+
+        admin_headers = Mock::Headers.office365_guest
+
+        # zones=zone-1 (as admin)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-1", headers: admin_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should contain(booking_one["id"])
+        bookings.map(&.["id"]).should_not contain(booking_two["id"])
+      end
+
+      it "should return a list of bookings filtered by zones and user" do
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+          .to_return(body: "")
+        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+          .to_return(body: "")
+
+        # user-1, zone-1
+        booking_one = BookingsHelper.http_create_booking(
+          user_id: "user-1",
+          user_email: "user-one@example.com",
+          user_name: "User One",
+          booked_by_email: "user-one@example.com",
+          booked_by_id: "user-1",
+          booked_by_name: "User One",
+          asset_id: "asset-1",
+          zones: ["zone-1"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        # user-2, zone-1
+        booking_two = BookingsHelper.http_create_booking(
+          user_id: "user-2",
+          user_email: "user-two@example.com",
+          user_name: "User Two",
+          booked_by_email: "user-two@example.com",
+          booked_by_id: "user-2",
+          booked_by_name: "User Two",
+          asset_id: "asset-2",
+          zones: ["zone-1"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        # user-2, zone-2
+        booking_three = BookingsHelper.http_create_booking(
+          user_id: "user-2",
+          user_email: "user-two@example.com",
+          user_name: "User Two",
+          booked_by_email: "user-two@example.com",
+          booked_by_id: "user-2",
+          booked_by_name: "User Two",
+          asset_id: "asset-3",
+          zones: ["zone-2"],
+          booking_type: "desk",
+          booking_start: 10.minutes.from_now.to_unix,
+          booking_end: 50.minutes.from_now.to_unix,
+          permission: Booking::Permission::PRIVATE,
+        )[1]
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+
+        user_two_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
+        admin_headers = Mock::Headers.office365_guest
+
+        # zones=zone-1 user=current (as user two)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-1&user=current", headers: user_two_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should_not contain(booking_one["id"])
+        bookings.map(&.["id"]).should contain(booking_two["id"])
+        bookings.map(&.["id"]).should_not contain(booking_three["id"])
+
+        # zones=zone-1 user=user-2 (as admin)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-1&user=user-2", headers: admin_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should_not contain(booking_one["id"])
+        bookings.map(&.["id"]).should contain(booking_two["id"])
+        bookings.map(&.["id"]).should_not contain(booking_three["id"])
+
+        # zones=zone-1 email=user-two@example.com (as admin)
+        response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=zone-1&email=user-two@example.com", headers: admin_headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"]).should_not contain(booking_one["id"])
+        bookings.map(&.["id"]).should contain(booking_two["id"])
+        bookings.map(&.["id"]).should_not contain(booking_three["id"])
+      end
+
+      context "[group-event]", tags: ["group-event"] do
+        it "should return a list of bookings filtered by current user" do
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+            .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+            .to_return(body: "")
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+            .to_return(body: "")
+
+          # user-1, zone-1
+          booking_one = BookingsHelper.http_create_booking(
+            user_id: "user-1",
+            user_email: "user-one@example.com",
+            user_name: "User One",
+            booked_by_email: "user-one@example.com",
+            booked_by_id: "user-1",
+            booked_by_name: "User One",
+            asset_id: "asset-1",
+            zones: ["zone-1"],
+            booking_type: "group-event",
+            booking_start: 10.minutes.from_now.to_unix,
+            booking_end: 50.minutes.from_now.to_unix,
+            permission: Booking::Permission::OPEN,
+          )[1]
+
+          # user-2, zone-1
+          booking_two = BookingsHelper.http_create_booking(
+            user_id: "user-2",
+            user_email: "user-two@example.com",
+            user_name: "User Two",
+            booked_by_email: "user-two@example.com",
+            booked_by_id: "user-2",
+            booked_by_name: "User Two",
+            asset_id: "asset-2",
+            zones: ["zone-1"],
+            booking_type: "group-event",
+            booking_start: 10.minutes.from_now.to_unix,
+            booking_end: 50.minutes.from_now.to_unix,
+            permission: Booking::Permission::OPEN,
+          )[1]
+
+          starting = 5.minutes.from_now.to_unix
+          ending = 90.minutes.from_now.to_unix
+
+          user_one_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
+
+          # No user specified (as user one)
+          response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: user_one_headers)
+          response.status_code.should eq(200)
+          bookings = JSON.parse(response.body).as_a
+          bookings.size.should eq(1)
+          bookings.map(&.["id"]).should contain(booking_one["id"])
+          bookings.map(&.["id"]).should_not contain(booking_two["id"])
+        end
+
+        it "should return a list of bookings filtered by zones" do
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+            .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+            .to_return(body: "")
+          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+            .to_return(body: "")
+
+          # user-1, zone-1
+          booking_one = BookingsHelper.http_create_booking(
+            user_id: "user-1",
+            user_email: "user-one@example.com",
+            user_name: "User One",
+            booked_by_email: "user-one@example.com",
+            booked_by_id: "user-1",
+            booked_by_name: "User One",
+            asset_id: "asset-1",
+            zones: ["zone-1"],
+            booking_type: "group-event",
+            booking_start: 10.minutes.from_now.to_unix,
+            booking_end: 50.minutes.from_now.to_unix,
+            permission: Booking::Permission::OPEN,
+          )[1]
+
+          # user-2, zone-2
+          booking_two = BookingsHelper.http_create_booking(
+            user_id: "user-2",
+            user_email: "user-two@example.com",
+            user_name: "User One",
+            booked_by_email: "user-two@example.com",
+            booked_by_id: "user-2",
+            booked_by_name: "User Two",
+            asset_id: "asset-2",
+            zones: ["zone-2"],
+            booking_type: "group-event",
+            booking_start: 10.minutes.from_now.to_unix,
+            booking_end: 50.minutes.from_now.to_unix,
+            permission: Booking::Permission::OPEN,
+          )[1]
+
+          # user-2, zone-2
+          booking_three = BookingsHelper.http_create_booking(
+            user_id: "user-2",
+            user_email: "user-two@example.com",
+            user_name: "User One",
+            booked_by_email: "user-two@example.com",
+            booked_by_id: "user-2",
+            booked_by_name: "User Two",
+            asset_id: "asset-3",
+            zones: ["zone-2"],
+            booking_type: "group-event",
+            booking_start: 10.minutes.from_now.to_unix,
+            booking_end: 50.minutes.from_now.to_unix,
+            permission: Booking::Permission::OPEN,
+          )[1]
+
+          starting = 5.minutes.from_now.to_unix
+          ending = 90.minutes.from_now.to_unix
+
+          user_two_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
+
+          # zones=zone-2 (as user one)
+          response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event&zones=zone-2", headers: user_two_headers)
+          response.status_code.should eq(200)
+          bookings = JSON.parse(response.body).as_a
+          bookings.size.should eq(2)
+          bookings.map(&.["id"]).should_not contain(booking_one["id"])
+          bookings.map(&.["id"]).should contain(booking_two["id"])
+          bookings.map(&.["id"]).should contain(booking_three["id"])
+        end
+      end
+    end
   end
 
   it "should include bookins made on behalf of other users when include_booked_by=true" do
@@ -610,7 +962,7 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
-  describe "permission", tags: ["auth"] do
+  describe "permission", tags: ["auth", "group-event"] do
     it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
@@ -762,6 +1114,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -777,6 +1130,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -792,6 +1146,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -803,7 +1158,7 @@ describe Bookings do
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: no_auth_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: no_auth_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(1)
@@ -812,7 +1167,7 @@ describe Bookings do
       bookings.map(&.["id"]).should contain(public_booking["id"])
     end
 
-    it "#index should return a list of OPEN and PUBLIC bookings for same tenant users" do
+    pending "#index should return a list of OPEN and PUBLIC bookings for same tenant users" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -829,6 +1184,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -844,6 +1200,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -859,6 +1216,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -870,7 +1228,7 @@ describe Bookings do
 
       # same tenant user
       same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-four@example.com")
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: same_tenant_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: same_tenant_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(2)
@@ -896,6 +1254,7 @@ describe Bookings do
         booked_by_id: "user-one@example.com",
         booked_by_name: "User One",
         asset_id: "asset-1",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -911,6 +1270,7 @@ describe Bookings do
         booked_by_id: "user-two@example.com",
         booked_by_name: "User Two",
         asset_id: "asset-2",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -926,6 +1286,7 @@ describe Bookings do
         booked_by_id: "user-three@example.com",
         booked_by_name: "User Three",
         asset_id: "asset-3",
+        zones: ["zone-1"],
         booking_type: "group-event",
         booking_start: 10.minutes.from_now.to_unix,
         booking_end: 50.minutes.from_now.to_unix,
@@ -937,8 +1298,7 @@ describe Bookings do
 
       # bookings creator user
       creator_headers = Mock::Headers.office365_normal_user(email: "user-one@example.com")
-      # creator_headers = Mock::Headers.office365_guest
-      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=group-event", headers: creator_headers)
+      response = client.get("#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&zones=zone-1&type=group-event", headers: creator_headers)
       response.status_code.should eq(200)
       bookings = JSON.parse(response.body).as_a
       bookings.size.should eq(3)
