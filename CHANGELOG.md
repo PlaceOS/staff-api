@@ -78,6 +78,7 @@
 
 ### Fix
 
+- **bookings**: user/zones query with booking_type=group-event ([#319](https://github.com/PlaceOS/staff-api/pull/319))
 - **booking**: [PPT-1205] update phone of existing guest when inviting visitor ([#317](https://github.com/PlaceOS/staff-api/pull/317))
 - **application**: forbidden when no valid scope
 - **bookings**: remove isolated transactions
