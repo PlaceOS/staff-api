@@ -172,12 +172,15 @@ class Bookings < Application
     @[AC::Param::Info(description: "the maximum number of results to return", example: "10000")]
     limit : Int32 = 100,
     @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
-    offset : Int32 = 0
+    offset : Int32 = 0,
+    @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
+    permission : String? = nil
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
 
     # restrict query to public bookings if the user is unauthenticated
     query = query.where(permission: Booking::Permission::PUBLIC.to_s) unless auth_token_present?
+    query = query.where(permission: permission) if !permission.nil? && auth_token_present?
 
     event_ids = [event_id.presence, ical_uid.presence].compact
 
