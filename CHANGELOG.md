@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: #index filter on permission field ([#320](https://github.com/PlaceOS/staff-api/pull/320))
 - **bookings**: #index returns PRIVATE, OPEN, and PUBLIC group-event bookings for the booking creator ([#318](https://github.com/PlaceOS/staff-api/pull/318))
 - **bookings**: [PPT-1215] allow users to add themselves as attendees to public events ([#316](https://github.com/PlaceOS/staff-api/pull/316))
 - **events**: add a reason for cancellation ([#315](https://github.com/PlaceOS/staff-api/pull/315))
