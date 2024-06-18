@@ -1076,8 +1076,9 @@ class Events < Application
     begin
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     rescue PlaceCalendar::Exception
-      raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
+      event = nil
     end
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # User details
     user_email = tenant.service_account.try(&.downcase) || user.email.downcase
