@@ -1073,7 +1073,8 @@ class Events < Application
     # defaults to the current users email
     cal_id = user.email unless cal_id
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    # use try here or we'll get a 500 if the event doesn't exist
+    event = client.try &.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # User details
