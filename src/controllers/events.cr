@@ -1073,7 +1073,12 @@ class Events < Application
     # defaults to the current users email
     cal_id = user.email unless cal_id
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    begin
+      event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    rescue ex : PlaceCalendar::Exception
+      Log.debug { "upstream failed to find event #{event_id}, status: #{ex.http_status}, body: #{ex.http_body}" }
+      event = nil
+    end
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # User details
