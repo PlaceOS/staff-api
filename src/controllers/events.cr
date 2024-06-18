@@ -1075,7 +1075,8 @@ class Events < Application
 
     begin
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    rescue PlaceCalendar::Exception
+    rescue ex : PlaceCalendar::Exception
+      Log.debug { "upstream failed to find event #{event_id}, status: #{ex.http_status}, body: #{ex.http_body}" }
       event = nil
     end
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
