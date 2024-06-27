@@ -130,7 +130,7 @@ class Events < Application
     # find any missing system ids (event_id => calendar_id)
     event_resources = {} of String => String
 
-    results.each do |(_calendar_id, system, event)|
+    results.each do |(calendar_id, system, event)|
       # NOTE:: we should be able to swtch to using the ical uids only in the future
       # 01/06/2022 MS does not return unique ical uids for recurring bookings: https://devblogs.microsoft.com/microsoft365dev/microsoft-graph-calendar-events-icaluid-update/
       # However they have a new `uid` field on the beta API which we can use when it's moved to production
@@ -144,13 +144,21 @@ class Events < Application
 
       # TODO: Handle recurring O365 events with differing `ical_uid`
       # Determine how to deal with recurring events in Office365 where the `ical_uid` is  different for each recurrance
-      if (recurring_event_id = event.recurring_event_id) && recurring_event_id != event.id
+      if (recurring_event_id = event.recurring_event_id) && recurring_event_id != event_id
         event_master_ids << recurring_event_id
       end
 
       # check if there is possible system information available
-      if system.nil? && (attendee = event.attendees.find(&.resource))
-        event_resources[event.id.as(String)] = attendee.email.downcase
+      if system.nil?
+        resource_emails = event.attendees.compact_map do |attendee|
+          attendee.email.downcase if attendee.resource
+        end
+
+        if resource_emails.includes? calendar_id
+          event_resources[event_id] = calendar_id
+        elsif attend_email = resource_emails.first?
+          event_resources[event_id] = attend_email
+        end
       end
     end
 
@@ -160,18 +168,27 @@ class Events < Application
         # Metadata is stored against a resource calendar which in office365 can only
         # be matched by the `ical_uid`
         EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(ical_uids, event_master_ids).each { |meta|
+          # where there might be multiple resource calendars on the event we want to pick
+          # metadatas that most closely match the request
+          next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]?
+
           metadatas[meta.ical_uid] = meta
           if recurring_master_id = meta.recurring_master_id
+            next if (existing = metadatas[recurring_master_id]?) && calendars[existing.resource_calendar]?
             metadatas[recurring_master_id] = meta
             if resource_master_id = meta.resource_master_id
+              next if (existing = metadatas[resource_master_id]?) && calendars[existing.resource_calendar]?
               metadatas[resource_master_id] = meta
             end
           end
         }
       else
         EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(event_ids, event_master_ids).each { |meta|
+          next if (existing = metadatas[meta.event_id]?) && calendars[existing.resource_calendar]?
+
           metadatas[meta.event_id] = meta
           if recurring_master_id = meta.recurring_master_id
+            next if (existing = metadatas[recurring_master_id]?) && calendars[existing.resource_calendar]?
             metadatas[recurring_master_id] = meta
           end
         }
