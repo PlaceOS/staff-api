@@ -27,13 +27,13 @@ class Bookings < Application
   # Skip actions that requres login
   # If a user is logged in then they will be run as part of
   # #set_tenant_from_domain
-  skip_action :determine_tenant_from_domain, only: [:index, :add_attendee]
-  skip_action :check_jwt_scope, only: [:index, :add_attendee]
+  skip_action :determine_tenant_from_domain, only: [:index, :add_attendee, :booked]
+  skip_action :check_jwt_scope, only: [:index, :add_attendee, :booked]
 
   # Set the tenant based on the domain
   # This allows unauthenticated requests through
   # (for public bookings, further checks are done later)
-  @[AC::Route::Filter(:before_action, only: [:index, :add_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:index, :add_attendee, :booked])]
   private def set_tenant_from_domain
     if auth_token_present?
       check_jwt_scope
@@ -46,7 +46,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :booked])]
   private def find_booking(id : Int64)
     @booking = Booking
       .by_tenant(tenant.id)
@@ -257,6 +257,68 @@ class Bookings < Application
     end
 
     result
+  end
+
+  # lists bookings IDs based on the parameters provided
+  #
+  # booking_type is required unless event_id or ical_uid is present
+  @[AC::Route::GET("/booked")]
+  def booked(
+    @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
+    starting : Int64 = Time.utc.to_unix,
+    @[AC::Param::Info(name: "period_end", description: "booking period end as a unix epoch", example: "1661743123")]
+    ending : Int64 = 1.hours.from_now.to_unix,
+    @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
+    booking_type : String? = nil,
+    @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
+    deleted_flag : Bool = false,
+    @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
+    include_checked_out : Bool = false,
+    @[AC::Param::Info(name: "checked_out", description: "when true, only returns checked out bookings, unless `include_checked_out=true`", example: "true")]
+    checked_out_flag : Bool = false,
+    @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
+    zones : String? = nil,
+    @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
+    user_email : String? = nil,
+    @[AC::Param::Info(name: "user", description: "filters bookings owned by this user id", example: "user-1234")]
+    user_id : String? = nil,
+    @[AC::Param::Info(description: "if `email` or `user` parameters are set, this includes bookings that user booked on behalf of others", example: "true")]
+    include_booked_by : Bool? = nil,
+
+    @[AC::Param::Info(description: "filters bookings that have been checked in or not", example: "true")]
+    checked_in : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings that were created before the unix epoch specified", example: "1661743123")]
+    created_before : Int64? = nil,
+    @[AC::Param::Info(description: "filters bookings that were created after the unix epoch specified", example: "1661743123")]
+    created_after : Int64? = nil,
+    @[AC::Param::Info(description: "filters bookings that are approved or not", example: "true")]
+    approved : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings that are rejected or not", example: "true")]
+    rejected : Bool? = nil,
+    @[AC::Param::Info(description: "filters bookings with matching extension data entries", example: %({"entry1":"value to match","entry2":1234}))]
+    extension_data : String? = nil,
+    @[AC::Param::Info(description: "filters on the booking process state, a user defined value", example: "pending-approval")]
+    state : String? = nil,
+    @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
+    department : String? = nil,
+
+    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String? = nil,
+    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    ical_uid : String? = nil,
+    @[AC::Param::Info(description: "the maximum number of results to return", example: "10000")]
+    limit : Int32 = 100,
+    @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
+    offset : Int32 = 0,
+    @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
+    permission : String? = nil
+  ) : Array(Int64)
+    result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: deleted_flag, include_checked_out: include_checked_out,
+      checked_out_flag: checked_out_flag, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
+      created_before: created_before, created_after: created_after, approved: approved, rejected: rejected, extension_data: extension_data, state: state,
+      department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission)
+
+    result.map(&.id.as(Int64))
   end
 
   # creates a new booking

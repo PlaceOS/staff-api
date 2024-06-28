@@ -39,6 +39,33 @@ describe Bookings do
       body.size.should eq(1)
     end
 
+    it "should return a list of bookings ids" do
+      tenant = get_tenant
+
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+
+      body.first.should eq(booking1.id)
+
+      # filter by zones
+      zones1 = booking1.zones.not_nil!
+      zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.map(&.as_i).sort!.should eq [booking1.id, booking2.id]
+
+      # More filters by zones
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.first.in?([booking1.id, booking2.id]).should be_true
+    end
+
     it "should supports pagination on list of bookings request" do
       tenant = get_tenant
 
