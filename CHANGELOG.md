@@ -2,6 +2,7 @@
 
 ### Feat
 
+- PPT-1326 Add endpoint to provide a list of booking ids ([#323](https://github.com/PlaceOS/staff-api/pull/323))
 - **events**: preference metadata and system selection ([#322](https://github.com/PlaceOS/staff-api/pull/322))
 - **bookings**: #index filter on permission field ([#320](https://github.com/PlaceOS/staff-api/pull/320))
 - **bookings**: #index returns PRIVATE, OPEN, and PUBLIC group-event bookings for the booking creator ([#318](https://github.com/PlaceOS/staff-api/pull/318))
