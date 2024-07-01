@@ -39,7 +39,7 @@ describe Bookings do
       body.size.should eq(1)
     end
 
-    it "should return a list of bookings ids" do
+    it "should return a list of asset ids" do
       tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
