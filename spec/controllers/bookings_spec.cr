@@ -50,7 +50,7 @@ describe Bookings do
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
       body = JSON.parse(client.get(route, headers: headers).body).as_a
 
-      body.first.should eq(booking1.id)
+      body.first.should eq(booking1.asset_ids.first)
 
       # filter by zones
       zones1 = booking1.zones.not_nil!
@@ -58,12 +58,12 @@ describe Bookings do
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
 
       body = JSON.parse(client.get(route, headers: headers).body).as_a
-      body.map(&.as_i).sort!.should eq [booking1.id, booking2.id]
+      body.map(&.as_s).sort!.should eq booking1.asset_ids.concat(booking2.asset_ids).uniq!
 
       # More filters by zones
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
       body = JSON.parse(client.get(route, headers: headers).body).as_a
-      body.first.in?([booking1.id, booking2.id]).should be_true
+      body.first.in?(booking1.asset_ids.concat(booking2.asset_ids).uniq!).should be_true
     end
 
     it "should supports pagination on list of bookings request" do

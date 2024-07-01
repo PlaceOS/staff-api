@@ -312,13 +312,14 @@ class Bookings < Application
     offset : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
     permission : String? = nil
-  ) : Array(Int64)
+  ) : Array(String)
     result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: deleted_flag, include_checked_out: include_checked_out,
       checked_out_flag: checked_out_flag, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
       created_before: created_before, created_after: created_after, approved: approved, rejected: rejected, extension_data: extension_data, state: state,
       department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission)
-
-    result.map(&.id.as(Int64))
+    asset_ids = [] of String
+    result.each { |b| asset_ids.concat(b.asset_ids) }
+    asset_ids.uniq!
   end
 
   # creates a new booking
