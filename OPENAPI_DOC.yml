@@ -416,8 +416,8 @@ paths:
                 $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/bookings/booked:
     get:
-      summary: lists bookings IDs based on the parameters provided
-      description: 'lists bookings IDs based on the parameters provided
+      summary: lists asset IDs based on the parameters provided
+      description: 'lists asset IDs based on the parameters provided
 
 
         booking_type is required unless event_id or ical_uid is present'

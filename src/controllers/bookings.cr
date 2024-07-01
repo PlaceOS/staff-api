@@ -259,7 +259,7 @@ class Bookings < Application
     result
   end
 
-  # lists bookings IDs based on the parameters provided
+  # lists asset IDs based on the parameters provided
   #
   # booking_type is required unless event_id or ical_uid is present
   @[AC::Route::GET("/booked")]
