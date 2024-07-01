@@ -194,6 +194,15 @@ paths:
         schema:
           type: integer
           format: Int32
+      - name: permission
+        in: query
+        description: 'filters bookings based on the permission level. Options: PRIVATE,
+          OPEN, PUBLIC'
+        example: PUBLIC
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -331,6 +340,287 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/booked:
+    get:
+      summary: lists asset IDs based on the parameters provided
+      description: 'lists asset IDs based on the parameters provided
+
+
+        booking_type is required unless event_id or ical_uid is present'
+      tags:
+      - Bookings
+      operationId: Bookings#booked
+      parameters:
+      - name: period_start
+        in: query
+        description: booking period start as a unix epoch
+        example: "1661725146"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: booking period end as a unix epoch
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+      - name: type
+        in: query
+        description: the generic name of the asset whose bookings you wish to view
+        example: desk
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: deleted
+        in: query
+        description: when true, it returns deleted bookings
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+      - name: include_checked_out
+        in: query
+        description: when true, returns all bookings including checked out ones
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+      - name: checked_out
+        in: query
+        description: when true, only returns checked out bookings, unless `include_checked_out=true`
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+      - name: zones
+        in: query
+        description: this filters only bookings in the zones provided, multiple zones
+          can be provided comma seperated
+        example: zone-123,zone-456
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: email
+        in: query
+        description: filters bookings owned by this user email
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: user
+        in: query
+        description: filters bookings owned by this user id
+        example: user-1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: include_booked_by
+        in: query
+        description: if `email` or `user` parameters are set, this includes bookings
+          that user booked on behalf of others
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+          nullable: true
+      - name: checked_in
+        in: query
+        description: filters bookings that have been checked in or not
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+          nullable: true
+      - name: created_before
+        in: query
+        description: filters bookings that were created before the unix epoch specified
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: created_after
+        in: query
+        description: filters bookings that were created after the unix epoch specified
+        example: "1661743123"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: approved
+        in: query
+        description: filters bookings that are approved or not
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+          nullable: true
+      - name: rejected
+        in: query
+        description: filters bookings that are rejected or not
+        example: "true"
+        required: false
+        schema:
+          type: boolean
+          nullable: true
+      - name: extension_data
+        in: query
+        description: filters bookings with matching extension data entries
+        example: '{"entry1":"value to match","entry2":1234}'
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: state
+        in: query
+        description: filters on the booking process state, a user defined value
+        example: pending-approval
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: department
+        in: query
+        description: filters bookings owned by a department, a user defined value
+        example: accounting
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: event_id
+        in: query
+        description: filters bookings associated with an event, such as an Office365
+          Calendar event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: ical_uid
+        in: query
+        description: filters bookings associated with an event, such as an Office365
+          Calendar event ical_uid
+        example: 19rh93h5t893h5v@calendar.iCloud.com
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: "10000"
+        required: false
+        schema:
+          type: integer
+          format: Int32
+      - name: offset
+        in: query
+        description: the starting offset of the result set. Used to implement pagination
+        required: false
+        schema:
+          type: integer
+          format: Int32
+      - name: permission
+        in: query
+        description: 'filters bookings based on the permission level. Options: PRIVATE,
+          OPEN, PUBLIC'
+        example: PUBLIC
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/String'
         429:
           description: Too Many Requests
           content:
@@ -8294,6 +8584,8 @@ components:
           type: integer
           format: Int64
           nullable: true
+    String:
+      type: string
     PlaceOS__Model__Guest:
       type: object
       properties:
@@ -9600,8 +9892,14 @@ components:
           nullable: true
         email:
           type: string
+        phone:
+          type: string
+          nullable: true
         username:
           type: string
+        suspended:
+          type: boolean
+          nullable: true
       required:
       - id
       - email
@@ -9645,6 +9943,9 @@ components:
           nullable: true
         office_location:
           type: string
+          nullable: true
+        suspended:
+          type: boolean
           nullable: true
     PlaceOS__Model__Survey:
       type: object
