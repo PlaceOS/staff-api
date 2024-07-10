@@ -690,6 +690,86 @@ class Events < Application
     end
   end
 
+
+
+
+# Adds a single attendee to an existing booking
+@[AC::Route::POST("/:id/attendee", body: :attendee)]
+def add_attendee(
+  attendee : PlaceCalendar::Event::Attendee
+) : Attendee
+  email = attendee.email.strip.downcase
+
+  # Check if attendee already exists in the booking to avoid duplicates
+  existing_attendee = booking.attendees.find { |a| a.email == email }
+  raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
+
+  # Create or find the guest associated with the attendee
+  guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
+            existing_guest
+          else
+            Guest.new(
+              email: email,
+              name: attendee.name,
+              preferred_name: attendee.preferred_name,
+              phone: attendee.phone,
+              organisation: attendee.organisation,
+              photo: attendee.photo,
+              notes: attendee.notes,
+              banned: attendee.banned || false,
+              dangerous: attendee.dangerous || false,
+              tenant_id: tenant.id,
+            )
+          end
+
+  if attendee_ext_data = attendee.extension_data
+    guest.extension_data = attendee_ext_data
+  end
+
+  guest.save!
+
+  # Create attendee
+  attend = existing_attendee || Attendee.new
+
+  previously_visiting = if attend.persisted?
+                          attend.visit_expected
+                        else
+                          attend.assign_attributes(
+                            visit_expected: true,
+                            checked_in: false,
+                            tenant_id: tenant.id,
+                          )
+                          false
+                        end
+  attend.update!(
+    booking_id: booking.id,
+    guest_id: guest.id,
+  )
+
+  if !previously_visiting
+    spawn do
+      get_placeos_client.root.signal("staff/guest/attending", {
+        action:         :booking_updated,
+        id:             guest.id,
+        booking_id:     booking.id,
+        resource_id:    booking.asset_id,
+        recource_ids:   booking.asset_ids,
+        event_summary:  booking.title,
+        event_starting: booking.booking_start,
+        attendee_name:  attendee.name,
+        attendee_email: attendee.email,
+        host:           booking.user_email,
+        zones:          booking.zones,
+      })
+    end
+  end
+
+  attend
+end
+
+
+
+
   # used to link resource recurring master ids to metadata
   @[AC::Route::POST("/:id/metadata/:system_id/link/:ical_uid", status_code: HTTP::Status::ACCEPTED)]
   def link_master_metadata(
