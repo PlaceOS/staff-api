@@ -194,6 +194,14 @@ paths:
         schema:
           type: integer
           format: Int32
+      - name: recurrence
+        in: query
+        description: the recurring bookings index of the result set. Used to implement
+          pagination with recurring bookings
+        required: false
+        schema:
+          type: integer
+          format: Int32
       - name: permission
         in: query
         description: 'filters bookings based on the permission level. Options: PRIVATE,
@@ -708,6 +716,15 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -816,6 +833,15 @@ paths:
           type: integer
           format: Int32
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -917,6 +943,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         202:
           description: Accepted
@@ -998,6 +1033,226 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Bookings
+      operationId: Bookings#update{3}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: limit_override
+        in: query
+        description: allows a client to override any limits imposed on bookings
+        example: "3"
+        required: false
+        schema:
+          type: integer
+          format: Int32
+          nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/instance/{instance}:
+    get:
+      summary: returns the booking requested
+      tags:
+      - Bookings
+      operationId: Bookings#show{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+    put:
+      summary: patches an existing booking with the changes provided
+      tags:
+      - Bookings
       operationId: Bookings#update{2}
       requestBody:
         content:
@@ -1012,6 +1267,238 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: limit_override
+        in: query
+        description: allows a client to override any limits imposed on bookings
+        example: "3"
+        required: false
+        schema:
+          type: integer
+          format: Int32
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+    delete:
+      summary: marks the provided booking as deleted
+      tags:
+      - Bookings
+      operationId: Bookings#destroy{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+    patch:
+      summary: patches an existing booking with the changes provided
+      tags:
+      - Bookings
+      operationId: Bookings#update{4}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       - name: limit_override
         in: query
         description: allows a client to override any limits imposed on bookings
@@ -1334,6 +1821,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -1428,6 +1924,251 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: state
+        in: query
+        description: the desired value of the booking checked-in flag
+        example: "false"
+        required: false
+        schema:
+          type: boolean
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/check_in/{instance}:
+    post:
+      summary: indicates that a booking has commenced
+      tags:
+      - Bookings
+      operationId: Bookings#check_in{3}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: state
+        in: query
+        description: the desired value of the booking checked-in flag
+        example: "false"
+        required: false
+        schema:
+          type: boolean
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/checkin/{instance}:
+    post:
+      summary: indicates that a booking has commenced
+      tags:
+      - Bookings
+      operationId: Bookings#check_in{4}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       - name: state
         in: query
         description: the desired value of the booking checked-in flag
@@ -8492,6 +9233,11 @@ components:
           format: Int64
           description: provided if this booking is associated with a calendar event
           nullable: true
+        instance:
+          type: integer
+          format: Int64
+          description: provided when this booking is an instance of recurring booking
+          nullable: true
         attendees:
           type: array
           items:
@@ -8567,6 +9313,39 @@ components:
             If set to private, attendees must be invited.If set to open, users in
             the same tenant can join. If set to public, the booking is open for everyone
             to join.
+          nullable: true
+        recurrence_type:
+          type: string
+          enum:
+          - none
+          - daily
+          - weekly
+          - monthly
+          description: Is this a recurring booking. This field defines the type of
+            recurrence
+          nullable: true
+        recurrence_days:
+          type: integer
+          format: Int32
+          description: a bitmap of valid days of the week for booking recurrences
+            to land on, defaults to weekdays
+          nullable: true
+        recurrence_nth_of_month:
+          type: integer
+          format: Int32
+          description: which day index should a monthly recurrence land on. 1st Monday,
+            2nd Monday (used in conjunction with the days bitmap). -1 == last Monday,
+            -2 Second last Monday etc
+          nullable: true
+        recurrence_interval:
+          type: integer
+          format: Int32
+          description: 1 == every occurrence, 2 == every second occurrence, etc
+          nullable: true
+        recurrence_end:
+          type: integer
+          format: Int64
+          description: an optional end date for booking recurrances
           nullable: true
         tenant_id:
           type: integer
@@ -10416,6 +11195,12 @@ components:
                 description: provided if this booking is associated with a calendar
                   event
                 nullable: true
+              instance:
+                type: integer
+                format: Int64
+                description: provided when this booking is an instance of recurring
+                  booking
+                nullable: true
               attendees:
                 type: array
                 items:
@@ -10491,6 +11276,40 @@ components:
                   If set to private, attendees must be invited.If set to open, users
                   in the same tenant can join. If set to public, the booking is open
                   for everyone to join.
+                nullable: true
+              recurrence_type:
+                type: string
+                enum:
+                - none
+                - daily
+                - weekly
+                - monthly
+                description: Is this a recurring booking. This field defines the type
+                  of recurrence
+                nullable: true
+              recurrence_days:
+                type: integer
+                format: Int32
+                description: a bitmap of valid days of the week for booking recurrences
+                  to land on, defaults to weekdays
+                nullable: true
+              recurrence_nth_of_month:
+                type: integer
+                format: Int32
+                description: which day index should a monthly recurrence land on.
+                  1st Monday, 2nd Monday (used in conjunction with the days bitmap).
+                  -1 == last Monday, -2 Second last Monday etc
+                nullable: true
+              recurrence_interval:
+                type: integer
+                format: Int32
+                description: 1 == every occurrence, 2 == every second occurrence,
+                  etc
+                nullable: true
+              recurrence_end:
+                type: integer
+                format: Int64
+                description: an optional end date for booking recurrances
                 nullable: true
               tenant_id:
                 type: integer
