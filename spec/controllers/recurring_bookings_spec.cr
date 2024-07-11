@@ -25,9 +25,11 @@ describe Bookings do
       booking1.recurrence_type = :daily
       booking1.recurrence_days = 0b1111111
       booking1.timezone = "Europe/Berlin"
+      booking1.booking_start = (Time.local.at_beginning_of_day + 8.hours).to_unix
+      booking1.booking_end = (Time.local.at_beginning_of_day + 10.hours).to_unix
       booking1.save!
 
-      starting = 5.minutes.from_now.to_unix
+      starting = Time.local.at_beginning_of_day.to_unix
       ending = 4.days.from_now.to_unix
 
       # make initial request
@@ -56,16 +58,29 @@ describe Bookings do
       result.headers["X-Total-Count"]?.should be_nil
       result.headers["Content-Range"]?.should be_nil
 
-      # make final request
+      # make third request
       link = URI.decode(result.headers["Link"])
       link.should eq(%(<#{route}&offset=2&recurrence=2>; rel="next"))
+      next_link = link.split(">;")[0][1..]
+
+      result = client.get(next_link, headers: headers)
+      result.success?.should be_true
+
+      body = JSON.parse(result.body).as_a
+      body.size.should eq(2)
+      result.headers["X-Total-Count"]?.should be_nil
+      result.headers["Content-Range"]?.should be_nil
+
+      # make final request
+      link = URI.decode(result.headers["Link"])
+      link.should eq(%(<#{route}&offset=2&recurrence=4>; rel="next"))
       next_link = link.split(">;")[0][1..]
 
       result = client.get(next_link, headers: headers)
 
       result.success?.should be_true
       body = JSON.parse(result.body).as_a
-      body.size.should eq(2)
+      body.size.should eq(1)
 
       result.headers["Link"]?.should be_nil
     end
