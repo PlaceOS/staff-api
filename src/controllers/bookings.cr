@@ -1008,6 +1008,7 @@ class Bookings < Application
         get_placeos_client.root.signal("staff/booking/changed", {
           action:          signal,
           id:              booking.id,
+          instance:        booking.instance,
           booking_type:    booking.booking_type,
           booking_start:   booking.booking_start,
           booking_end:     booking.booking_end,
