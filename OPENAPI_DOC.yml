@@ -10976,6 +10976,10 @@ components:
           required:
           - app_id
           nullable: true
+        early_checkin:
+          type: integer
+          format: Int64
+          nullable: true
     Hash_String__Int32_:
       type: object
       additionalProperties:
