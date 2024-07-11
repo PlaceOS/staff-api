@@ -260,7 +260,7 @@ class Bookings < Application
     else
       range_end = result.size + offset
       response.headers["X-Total-Count"] = total.to_s
-      response.headers["Content-Range"] = "bookings #{offset}-#{range_end}/#{total}"
+      response.headers["Content-Range"] = "bookings #{offset}-#{range_end - 1}/#{total}"
 
       # Set link
       if range_end < total
@@ -513,7 +513,7 @@ class Bookings < Application
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
-    existing_booking.instance = instance if instance
+    existing_booking.instance = instance
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images] %}
       begin
@@ -681,7 +681,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
     instance : Int64? = nil
   ) : Nil
-    booking.instance = instance if instance
+    booking.instance = instance
     booking.update!(
       deleted: true,
       deleted_at: Time.local.to_unix,
@@ -760,7 +760,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
     instance : Int64? = nil
   ) : Booking
-    booking.instance = instance if instance
+    booking.instance = instance
     booking.checked_in = state
 
     if booking.checked_in

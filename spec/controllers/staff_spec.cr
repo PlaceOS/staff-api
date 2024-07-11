@@ -8,7 +8,7 @@ describe Staff do
     it "should return a list of users" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24filter=accountEnabled+eq+true")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24select=id%2CuserPrincipalName%2Csurname%2CpreferredLanguage%2CofficeLocation%2CmobilePhone%2Cmail%2CjobTitle%2CgivenName%2CdisplayName%2CbusinessPhones%2CaccountEnabled%2CmailNickname&%24filter=accountEnabled+eq+true")
         .to_return(body: File.read("./spec/fixtures/staff/index.json"))
 
       body = JSON.parse(client.get(STAFF_BASE, headers: headers).body).as_a
@@ -18,7 +18,7 @@ describe Staff do
     it "should return a queryable list of users" do
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24filter=%28accountEnabled+eq+true%29+and+%28startswith%28displayName%2C%27john%27%29+or+startswith%28givenName%2C%27john%27%29+or+startswith%28surname%2C%27john%27%29+or+startswith%28mail%2C%27john%27%29%29")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24select=id%2CuserPrincipalName%2Csurname%2CpreferredLanguage%2CofficeLocation%2CmobilePhone%2Cmail%2CjobTitle%2CgivenName%2CdisplayName%2CbusinessPhones%2CaccountEnabled%2CmailNickname&%24filter=%28accountEnabled+eq+true%29+and+%28startswith%28displayName%2C%27john%27%29+or+startswith%28givenName%2C%27john%27%29+or+startswith%28surname%2C%27john%27%29+or+startswith%28mail%2C%27john%27%29%29")
         .to_return(body: File.read("./spec/fixtures/staff/index_filtered.json"))
 
       body = JSON.parse(client.get("#{STAFF_BASE}?q=john", headers: headers).body).as_a
