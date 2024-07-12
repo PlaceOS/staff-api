@@ -747,6 +747,13 @@ describe Bookings do
 
       check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(405)
+
+      # allow early checkin by 1.5 hours
+      tenant.early_checkin = (1.5 * 60 * 60).to_i64
+      tenant.save!
+
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
+      check_in_early.should eq(200)
     end
 
     it "cannot check in early when another booking is present" do
