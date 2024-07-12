@@ -255,6 +255,33 @@ describe Events do
     end
   end
 
+
+  describe "permission", tags: ["auth", "group-event"] do
+    pending "#add_attendee should NOT allow adding public or same tenant users to PRIVATE events" do
+    end
+
+    pending "#add_attendee should allow adding same tenant users to OPEN events" do
+    end
+
+    pending "#add_attendee should allow adding anyone to PUBLIC events" do
+    end
+
+    pending "#index should return a list of PUBLIC events for unauthenticated users" do
+    end
+
+    pending "#index should return a list of OPEN and PUBLIC events for same tenant users" do
+    end
+
+    pending "#index should return a list of PRIVATE, OPEN, and PUBLIC group-event events for the event creator" do
+    end
+
+    pending "#index should NOT include attendee details for unauthenticated users" do
+    end
+
+    pending "#destroy_attendee should allow same tenant users to remove attendees from OPEN events" do
+    end
+  end
+
   describe "#show" do
     before_each do
       EventsHelper.stub_show_endpoints
