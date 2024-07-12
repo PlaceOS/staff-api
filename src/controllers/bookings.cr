@@ -173,6 +173,8 @@ class Bookings < Application
     limit : Int32 = 100,
     @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
     offset : Int32 = 0,
+    @[AC::Param::Info(description: "the recurring bookings index of the result set. Used to implement pagination with recurring bookings")]
+    recurrence : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
     permission : String? = nil
   ) : Array(Booking)
@@ -188,8 +190,8 @@ class Bookings < Application
       raise AC::Route::Param::MissingError.new("missing required parameter", "booking_type", "String") unless booking_type.presence
 
       query = query.where(
-        %("booking_start" < ? AND "booking_end" > ?),
-        ending, starting
+        %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ?) OR ("booking_start" < ? AND "booking_end" > ?))},
+        starting, ending, ending, starting
       )
 
       zones = Set.new((zones || "").split(',').map(&.strip).reject(&.empty?)).to_a
@@ -235,25 +237,37 @@ class Bookings < Application
     end
 
     total = query.count
-    range_start = offset > 0 ? offset - 1 : 0
-
     query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id") if auth_token_present?
 
-    query = query.order(created: :asc)
-      .offset(range_start)
+    query = query.order(:recurrence_type, :created)
+      .offset(offset)
       .limit(limit)
 
     result = query.to_a
-    range_end = result.size + range_start
+    num_standard = result.count(&.recurrence_type.none?)
 
-    response.headers["X-Total-Count"] = total.to_s
-    response.headers["Content-Range"] = "bookings #{offset}-#{range_end}/#{total}"
+    if starting && ending && num_standard < result.size
+      details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence)
 
-    # Set link
-    if range_end < total
-      params["offset"] = (range_end + 1).to_s
-      params["limit"] = limit.to_s
-      response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+      # Set link
+      range_end = offset + num_standard + details.complete
+      if range_end < total
+        params["offset"] = range_end.to_s
+        params["limit"] = limit.to_s
+        params["recurrence"] = details.next_idx.to_s
+        response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+      end
+    else
+      range_end = result.size + offset
+      response.headers["X-Total-Count"] = total.to_s
+      response.headers["Content-Range"] = "bookings #{offset}-#{range_end - 1}/#{total}"
+
+      # Set link
+      if range_end < total
+        params["offset"] = range_end.to_s
+        params["limit"] = limit.to_s
+        response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+      end
     end
 
     result
@@ -483,11 +497,15 @@ class Bookings < Application
   # patches an existing booking with the changes provided
   @[AC::Route::PUT("/:id", body: :changes)]
   @[AC::Route::PATCH("/:id", body: :changes)]
+  @[AC::Route::PUT("/:id/instance/:instance", body: :changes)]
+  @[AC::Route::PATCH("/:id/instance/:instance", body: :changes)]
   def update(
     changes : Booking,
 
     @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
-    limit_override : Int32? = nil
+    limit_override : Int32? = nil,
+    @[AC::Param::Info(description: "a recurring instance", example: "1234567")]
+    instance : Int64? = nil
   ) : Booking
     changes.id = booking.id
     existing_booking = booking
@@ -495,6 +513,7 @@ class Bookings < Application
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
+    existing_booking.instance = instance
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images] %}
       begin
@@ -634,16 +653,35 @@ class Bookings < Application
 
   # returns the booking requested
   @[AC::Route::GET("/:id")]
-  def show : Booking
-    booking
+  @[AC::Route::GET("/:id/instance/:instance")]
+  def show(
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
+  ) : Booking
+    return booking unless instance
+
+    if inst = ::PlaceOS::Model::BookingInstance.find_one_by_sql?(<<-SQL, booking.id, instance)
+        SELECT i.* FROM "booking_instances" i
+        WHERE i.id = $1
+          AND i.instance_start = $2
+        LIMIT 1
+      SQL
+      inst.hydrate_booking booking
+    else
+      booking.hydrate_instance(instance)
+    end
   end
 
   # marks the provided booking as deleted
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
+  @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
   ) : Nil
+    booking.instance = instance
     booking.update!(
       deleted: true,
       deleted_at: Time.local.to_unix,
@@ -655,6 +693,7 @@ class Bookings < Application
         get_placeos_client.root.signal("staff/booking/changed", {
           action:          :cancelled,
           id:              booking.id,
+          instance:        booking.instance,
           booking_type:    booking.booking_type,
           booking_start:   booking.booking_start,
           booking_end:     booking.booking_end,
@@ -711,12 +750,17 @@ class Bookings < Application
   # indicates that a booking has commenced
   @[AC::Route::POST("/:id/check_in")]
   @[AC::Route::POST("/:id/checkin")]
+  @[AC::Route::POST("/:id/check_in/:instance")]
+  @[AC::Route::POST("/:id/checkin/:instance")]
   def check_in(
     @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
     state : Bool = true,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
   ) : Booking
+    booking.instance = instance
     booking.checked_in = state
 
     if booking.checked_in
@@ -964,6 +1008,7 @@ class Bookings < Application
         get_placeos_client.root.signal("staff/booking/changed", {
           action:          signal,
           id:              booking.id,
+          instance:        booking.instance,
           booking_type:    booking.booking_type,
           booking_start:   booking.booking_start,
           booking_end:     booking.booking_end,
