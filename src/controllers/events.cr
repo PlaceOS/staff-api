@@ -690,85 +690,101 @@ class Events < Application
     end
   end
 
+  # Adds a single attendee to an existing event
+  @[AC::Route::POST("/:id/attendee", body: :attendee)]
+  def add_attendee(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    attendee : PlaceCalendar::Event::Attendee,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil
+  ) : PlaceCalendar::Event::Attendee
+    raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") if system_id.nil? && user_cal.nil?
 
+    placeos_client = get_placeos_client
+    event_id = original_id
 
+    cal_id = nil
 
-# Adds a single attendee to an existing booking
-@[AC::Route::POST("/:id/attendee", body: :attendee)]
-def add_attendee(
-  attendee : PlaceCalendar::Event::Attendee
-) : Attendee
-  email = attendee.email.strip.downcase
-
-  # Check if attendee already exists in the booking to avoid duplicates
-  existing_attendee = booking.attendees.find { |a| a.email == email }
-  raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
-
-  # Create or find the guest associated with the attendee
-  guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
-            existing_guest
-          else
-            Guest.new(
-              email: email,
-              name: attendee.name,
-              preferred_name: attendee.preferred_name,
-              phone: attendee.phone,
-              organisation: attendee.organisation,
-              photo: attendee.photo,
-              notes: attendee.notes,
-              banned: attendee.banned || false,
-              dangerous: attendee.dangerous || false,
-              tenant_id: tenant.id,
-            )
-          end
-
-  if attendee_ext_data = attendee.extension_data
-    guest.extension_data = attendee_ext_data
-  end
-
-  guest.save!
-
-  # Create attendee
-  attend = existing_attendee || Attendee.new
-
-  previously_visiting = if attend.persisted?
-                          attend.visit_expected
-                        else
-                          attend.assign_attributes(
-                            visit_expected: true,
-                            checked_in: false,
-                            tenant_id: tenant.id,
-                          )
-                          false
-                        end
-  attend.update!(
-    booking_id: booking.id,
-    guest_id: guest.id,
-  )
-
-  if !previously_visiting
-    spawn do
-      get_placeos_client.root.signal("staff/guest/attending", {
-        action:         :booking_updated,
-        id:             guest.id,
-        booking_id:     booking.id,
-        resource_id:    booking.asset_id,
-        recource_ids:   booking.asset_ids,
-        event_summary:  booking.title,
-        event_starting: booking.booking_start,
-        attendee_name:  attendee.name,
-        attendee_email: attendee.email,
-        host:           booking.user_email,
-        zones:          booking.zones,
-      })
+    if system_id
+      system = placeos_client.systems.fetch(system_id)
+      cal_id = system.email.presence
+      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") if cal_id.nil?
     end
+
+    cal_id = user_cal.try(&.downcase) if cal_id.nil?
+    raise AC::Route::Param::ValueError.new("Unable to determine calendar ID") if cal_id.nil?
+
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id}") unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
+      event = get_hosts_event(event)
+      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
+    end
+
+    host = event.host.try(&.downcase) || cal_id
+
+    # Check if attendee already exists in the event to avoid duplicates
+    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
+    raise Error::BadRequest.new("Attendee already exists in this event") if existing_attendees.includes?(attendee.email.downcase)
+
+    # Add the new attendee to the event
+    event.attendees = (event.attendees || [] of PlaceCalendar::Event::Attendee) << attendee
+
+    # Update the event with the new attendee
+    updated_event = client.update_event(user_id: host, event: event, calendar_id: host)
+    raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
+
+    if system_id
+      meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
+
+      # Create or update the attendee in the metadata
+      guest = Guest.by_tenant(tenant.id).find_by(email: attendee.email.downcase)
+      if guest.nil?
+        guest = Guest.new(
+          email: attendee.email.downcase,
+          name: attendee.name,
+          tenant_id: tenant.id
+        )
+        guest.save!
+      end
+
+      attend = Attendee.new(
+        event_id: meta.id,
+        guest_id: guest.id,
+        visit_expected: attendee.visit_expected || false,
+        checked_in: false,
+        tenant_id: tenant.id
+      )
+      attend.save!
+
+      if system && attend.visit_expected
+        spawn do
+          raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
+
+          placeos_client.root.signal("staff/guest/attending", {
+            action:         :meeting_update,
+            system_id:      system.id,
+            event_id:       event_id,
+            event_ical_uid: updated_event.ical_uid,
+            host:           host,
+            resource:       system.email,
+            event_summary:  updated_event.title,
+            event_starting: updated_event_start.to_unix,
+            attendee_name:  attendee.name,
+            attendee_email: attendee.email,
+            zones:          system.zones,
+          })
+        end
+      end
+    end
+
+    attendee
   end
-
-  attend
-end
-
-
-
 
   # used to link resource recurring master ids to metadata
   @[AC::Route::POST("/:id/metadata/:system_id/link/:ical_uid", status_code: HTTP::Status::ACCEPTED)]
