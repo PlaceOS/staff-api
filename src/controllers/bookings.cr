@@ -771,9 +771,9 @@ class Bookings < Application
 
       # Can't checkin after the booking end time
       raise Error::NotAllowed.new("The booking has ended") if booking.booking_end <= time_now
-
+      early_checkin = booking.tenant!.early_checkin
       # Check if we can check into a booking early (on the same day)
-      raise Error::NotAllowed.new("Can only check in an hour before the booking start") if (booking.booking_start - time_now) > 3600
+      raise Error::NotAllowed.new("Can only check in an #{early_checkin.seconds.total_hours} hour before the booking start") if (booking.booking_start - time_now) > early_checkin
 
       # Check if there are any booking between now and booking start time
       if booking.booking_start > time_now
