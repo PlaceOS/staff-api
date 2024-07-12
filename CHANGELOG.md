@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: add recurring booking support [PPT-1382] ([#324](https://github.com/PlaceOS/staff-api/pull/324))
 - PPT-1437 Allow checkin by early_checkin value ([#325](https://github.com/PlaceOS/staff-api/pull/325))
 - PPT-1326 Add endpoint to provide a list of booking ids ([#323](https://github.com/PlaceOS/staff-api/pull/323))
 - **events**: preference metadata and system selection ([#322](https://github.com/PlaceOS/staff-api/pull/322))
