@@ -25,20 +25,20 @@ describe Bookings do
       booking1.recurrence_type = :daily
       booking1.recurrence_days = 0b1111111
       booking1.timezone = "Europe/Berlin"
-      booking1.booking_start = (Time.local.at_beginning_of_day + 8.hours).to_unix
-      booking1.booking_end = (Time.local.at_beginning_of_day + 10.hours).to_unix
+      booking1.booking_start = (Time.local.at_beginning_of_day + 4.hours).to_unix
+      booking1.booking_end = (Time.local.at_beginning_of_day + 6.hours).to_unix
       booking1.save!
 
-      booking2.booking_start = (Time.local.at_beginning_of_day + 8.hours).to_unix
-      booking2.booking_end = (Time.local.at_beginning_of_day + 10.hours).to_unix
+      booking2.booking_start = (Time.local.at_beginning_of_day + 4.hours).to_unix
+      booking2.booking_end = (Time.local.at_beginning_of_day + 6.hours).to_unix
       booking2.save!
 
-      booking3.booking_start = (Time.local.at_beginning_of_day + 8.hours).to_unix
-      booking3.booking_end = (Time.local.at_beginning_of_day + 10.hours).to_unix
+      booking3.booking_start = (Time.local.at_beginning_of_day + 4.hours).to_unix
+      booking3.booking_end = (Time.local.at_beginning_of_day + 6.hours).to_unix
       booking3.save!
 
       starting = Time.local.at_beginning_of_day.to_unix
-      ending = 4.days.from_now.to_unix
+      ending = 4.5.days.from_now.to_unix
 
       # make initial request
       zones1 = booking1.zones.not_nil!
