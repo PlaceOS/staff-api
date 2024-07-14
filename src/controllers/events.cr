@@ -2,7 +2,28 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
+  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin, :add_attendee]
+
+  # Skip actions that requres login
+  # If a user is logged in then they will be run as part of
+  # #set_tenant_from_domain
+  skip_action :determine_tenant_from_domain, only: [:add_attendee]
+
+  # Set the tenant based on the domain
+  # This allows unauthenticated requests through
+  # (for public bookings, further checks are done later)
+  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  private def set_tenant_from_domain
+    if auth_token_present?
+      check_jwt_scope
+      determine_tenant_from_domain
+    else
+      domain = request.hostname.as?(String)
+      raise Error::BadRequest.new("missing domain header") unless domain
+      @tenant = Tenant.find_by?(domain: domain)
+      raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
+    end
+  end
 
   @[AC::Route::Filter(:before_action, only: [:notify_change, :link_master_metadata])]
   private def protected_route
@@ -18,6 +39,25 @@ class Events < Application
     if system_id
       system = PlaceOS::Model::ControlSystem.find!(system_id)
       return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+    end
+
+    raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
+  end
+
+  private def confirm_access_for_add_attendee(
+    event : PlaceCalendar::Event,
+    system : System? | PlaceOS::Client::API::Models::System? = nil,
+    cal_id : String? = nil,
+  )
+    return if event.permission.try &.public?
+    return if is_support?
+
+    if user = current_user
+      return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
+      if system
+        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+      end
+      # return if event.permission.try &.open? && (authority = user.authority) && (event_tenant = event.tenant) && (authority.domain == event_tenant.domain)
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -706,25 +746,38 @@ class Events < Application
     placeos_client = get_placeos_client
     event_id = original_id
 
-    cal_id = nil
+    user_cal = user_cal.try &.downcase
+    if user_cal == user.email
+      cal_id = user_cal
+    elsif user_cal
+      cal_id = user_cal
+      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
+      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
+    end
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
-      cal_id = system.email.presence
-      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") if cal_id.nil?
+      sys_cal = system.email.presence
+      if cal_id.nil?
+        cal_id = system.email.presence
+        raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+      end
     end
 
-    cal_id = user_cal.try(&.downcase) if cal_id.nil?
-    raise AC::Route::Param::ValueError.new("Unable to determine calendar ID") if cal_id.nil?
+    # defaults to the current users email
+    cal_id = user.email unless cal_id
 
-    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id}") unless event
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
     if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
       event = get_hosts_event(event)
       raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
     end
+
+    # Check access
+    confirm_access_for_add_attendee(event, system, cal_id)
 
     host = event.host.try(&.downcase) || cal_id
 
