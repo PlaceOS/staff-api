@@ -43,6 +43,7 @@ describe Bookings do
       tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      sleep 1
       booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
@@ -58,7 +59,7 @@ describe Bookings do
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
 
       body = JSON.parse(client.get(route, headers: headers).body).as_a
-      body.map(&.as_s).sort!.should eq booking1.asset_ids.concat(booking2.asset_ids).uniq!
+      body.map(&.as_s).should eq booking1.asset_ids.concat(booking2.asset_ids).uniq!
 
       # More filters by zones
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
@@ -83,20 +84,20 @@ describe Bookings do
 
       result.success?.should be_true
       result.headers["X-Total-Count"].should eq "3"
-      result.headers["Content-Range"].should eq "bookings 0-2/3"
+      result.headers["Content-Range"].should eq "bookings 0-1/3"
 
       body = JSON.parse(result.body).as_a
       body.size.should eq(2)
 
       link = URI.decode(result.headers["Link"])
-      link.should eq(%(<#{route}&offset=3>; rel="next"))
+      link.should eq(%(<#{route}&offset=2>; rel="next"))
       next_link = link.split(">;")[0][1..]
 
       result = client.get(next_link, headers: headers)
 
       result.success?.should be_true
       result.headers["X-Total-Count"].should eq "3"
-      result.headers["Content-Range"].should eq "bookings 3-3/3"
+      result.headers["Content-Range"].should eq "bookings 2-2/3"
       result.headers["Link"]?.should be_nil
 
       body = JSON.parse(result.body).as_a
@@ -747,6 +748,13 @@ describe Bookings do
 
       check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
       check_in_early.should eq(405)
+
+      # allow early checkin by 1.5 hours
+      tenant.early_checkin = (1.5 * 60 * 60).to_i64
+      tenant.save!
+
+      check_in_early = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
+      check_in_early.should eq(200)
     end
 
     it "cannot check in early when another booking is present" do
