@@ -46,10 +46,10 @@ class Events < Application
 
   private def confirm_access_for_add_attendee(
     event : PlaceCalendar::Event,
-    system : System? | PlaceOS::Client::API::Models::System? = nil,
-    cal_id : String? = nil,
+    metadata : EventMetadata,
+    system : PlaceOS::Client::API::Models::System? = nil,
   )
-    return if event.permission.try &.public?
+    return if metadata.permission.public?
     return if is_support?
 
     if user = current_user
@@ -57,7 +57,7 @@ class Events < Application
       if system
         return if check_access(current_user.groups, system.zones || [] of String).can_manage?
       end
-      # return if event.permission.try &.open? && (authority = user.authority) && (event_tenant = event.tenant) && (authority.domain == event_tenant.domain)
+      return if metadata.permission.open? && (authority = user.authority) && (event_tenant = metadata.tenant) && (authority.domain == event_tenant.domain)
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -776,8 +776,11 @@ class Events < Application
       raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
     end
 
+    metadata = get_event_metadata(event, system_id)
+    raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
+
     # Check access
-    confirm_access_for_add_attendee(event, system, cal_id)
+    confirm_access_for_add_attendee(event, metadata, system)
 
     host = event.host.try(&.downcase) || cal_id
 
