@@ -746,7 +746,7 @@ class Events < Application
     system_id : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil
-  ) : PlaceCalendar::Event::Attendee
+  ) : Attendee | PlaceCalendar::Event::Attendee
     raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") if system_id.nil? && user_cal.nil?
 
     placeos_client = get_placeos_client
@@ -782,13 +782,15 @@ class Events < Application
       raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
     end
 
+    # User details
+    user_email = user.email.downcase
+    host = event.host.try(&.downcase) || user_email
+
     metadata = get_event_metadata(event, system_id)
     raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
 
-    # Check access
+    # check permisions
     confirm_access_for_add_attendee(event, metadata, system)
-
-    host = event.host.try(&.downcase) || cal_id
 
     # Check if attendee already exists in the event to avoid duplicates
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
@@ -804,48 +806,72 @@ class Events < Application
     if system_id
       meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
 
+      email = attendee.email.strip.downcase
+
       # Create or update the attendee in the metadata
-      guest = Guest.by_tenant(tenant.id).find_by(email: attendee.email.downcase)
-      if guest.nil?
-        guest = Guest.new(
-          email: attendee.email.downcase,
-          name: attendee.name,
-          tenant_id: tenant.id
-        )
-        guest.save!
+      guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
+                existing_guest
+              else
+                Guest.new(
+                  email: email,
+                  name: attendee.name,
+                  preferred_name: attendee.preferred_name,
+                  phone: attendee.phone,
+                  organisation: attendee.organisation,
+                  photo: attendee.photo,
+                  notes: attendee.notes,
+                  banned: attendee.banned || false,
+                  dangerous: attendee.dangerous || false,
+                  tenant_id: tenant.id,
+                )
+              end
+
+      if attendee_ext_data = attendee.extension_data
+        guest.extension_data = attendee_ext_data
       end
 
-      attend = Attendee.new(
-        event_id: meta.id,
-        guest_id: guest.id,
-        visit_expected: attendee.visit_expected || false,
+      guest.save!
+
+      # Create attendee
+      attend = Attendee.new
+
+      attend.assign_attributes(
         checked_in: false,
-        tenant_id: tenant.id
+        tenant_id: tenant.id,
       )
-      attend.save!
+
+      raise Error::InconsistentState.new("metadata id must be present") unless meta_id = meta.id
+      raise Error::InconsistentState.new("visit_expected must be present") unless attendee_visit_expected = attendee.visit_expected
+
+      attend.update!(
+        event_id: meta_id,
+        guest_id: guest.id,
+        visit_expected: attendee_visit_expected,
+      )
 
       if system && attend.visit_expected
         spawn do
+          sys = system
           raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
           placeos_client.root.signal("staff/guest/attending", {
             action:         :meeting_update,
-            system_id:      system.id,
+            system_id:      sys.id,
             event_id:       event_id,
             event_ical_uid: updated_event.ical_uid,
             host:           host,
-            resource:       system.email,
+            resource:       sys.email,
             event_summary:  updated_event.title,
             event_starting: updated_event_start.to_unix,
             attendee_name:  attendee.name,
             attendee_email: attendee.email,
-            zones:          system.zones,
+            zones:          sys.zones,
           })
         end
       end
     end
 
-    attendee
+    attend || attendee
   end
 
   # used to link resource recurring master ids to metadata
