@@ -353,6 +353,9 @@ class Events < Application
       if breakdown_event_id = input_event.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
       end
+      if permission = input_event.permission
+        meta.permission = permission
+      end
       notify_created_or_updated(:create, sys, created_event, meta, can_skip: false, is_host: true)
 
       if attending && !attending.empty?
@@ -589,6 +592,9 @@ class Events < Application
       end
       if breakdown_event_id = changes.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
+      end
+      if permission = changes.permission
+        meta.permission = permission
       end
       notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true)
 
