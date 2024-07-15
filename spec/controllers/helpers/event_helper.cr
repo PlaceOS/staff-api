@@ -81,7 +81,7 @@ module EventsHelper
     }.to_json
   end
 
-  def create_event_input(user = Mock::Token.generate_auth_user(false, false))
+  def create_event_input(user = Mock::Token.generate_auth_user(false, false), permission = PlaceOS::Model::EventMetadata::Permission::PRIVATE)
     %({
     "event_start": 1598503500,
     "event_end": 1598507160,
@@ -125,6 +125,7 @@ module EventsHelper
     "system": {
         "id": "sys-rJQQlR4Cn7"
     },
+    "permission": "#{permission}",
     "extension_data": {
       "foo": "bar"
     }

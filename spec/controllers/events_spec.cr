@@ -312,7 +312,63 @@ describe Events do
       (guests.map(&.email) - ["jon@example.com", "dev@acaprojects.onmicrosoft.com"]).size.should eq(0)
     end
 
-    pending "#add_attendee should allow adding same tenant users to OPEN events" do
+    it "#add_attendee should allow adding same tenant users to OPEN events" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      # Stub getting the host event
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+        .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+
+      req_body = EventsHelper.create_event_input(permission: PlaceOS::Model::EventMetadata::Permission::OPEN)
+
+      event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body).as_h
+      event_id = event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(event_id))
+
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+
+      # public user
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.post(%(#{EVENTS_BASE}/#{event_id}/attendee?system_id=#{system_id}), headers: no_auth_headers, body: {
+        name:           "User Two",
+        email:          "user-two@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(401)
+
+      # same tenant user
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
+      response = client.post(%(#{EVENTS_BASE}/#{event_id}/attendee?system_id=#{system_id}), headers: same_tenant_headers, body: {
+        name:           "User Three",
+        email:          "user-three@example.com",
+        checked_in:     true,
+        visit_expected: true,
+      }.to_json)
+      response.status_code.should eq(200)
+
+      event_metadata = EventMetadata.find_by(event_id: event_id)
+      event_metadata.attendees.count.should eq(3)
+
+      guests = event_metadata.attendees.map(&.guest.not_nil!)
+      (guests.map(&.email) - [
+        "jon@example.com",
+        "dev@acaprojects.onmicrosoft.com",
+        "user-three@example.com",
+      ]).size.should eq(0)
     end
 
     pending "#add_attendee should allow adding anyone to PUBLIC events" do
