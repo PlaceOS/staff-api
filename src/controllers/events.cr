@@ -747,19 +747,10 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil
   ) : Attendee | PlaceCalendar::Event::Attendee
-    raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") if system_id.nil? && user_cal.nil?
-
     placeos_client = get_placeos_client
     event_id = original_id
-
-    user_cal = user_cal.try &.downcase
-    if user_cal == user.email
-      cal_id = user_cal
-    elsif user_cal
-      cal_id = user_cal
-      found = tenant.delegated || get_user_calendars.reject { |cal| cal.id.try(&.downcase) != cal_id }.first?
-      raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
-    end
+    email = attendee.email.strip.downcase
+    cal_id = user_cal.try &.downcase
 
     if system_id
       system = placeos_client.systems.fetch(system_id)
@@ -771,9 +762,13 @@ class Events < Application
     end
 
     # defaults to the current users email
-    cal_id = user.email unless cal_id
+    if auth_token_present? && !cal_id
+      cal_id = user.email
+    end
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") unless cal_id
+
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
     # ensure we have the host event details
@@ -783,8 +778,13 @@ class Events < Application
     end
 
     # User details
-    user_email = user.email.downcase
-    host = event.host.try(&.downcase) || user_email
+    if auth_token_present?
+      user_email = user.email.downcase
+      host = event.host.try(&.downcase) || user_email
+    else
+      host = event.host.try(&.downcase)
+    end
+    raise Error::BadUpstreamResponse.new("event host is missing") unless host
 
     metadata = get_event_metadata(event, system_id)
     raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
@@ -793,8 +793,8 @@ class Events < Application
     confirm_access_for_add_attendee(event, metadata, system)
 
     # Check if attendee already exists in the event to avoid duplicates
-    existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
-    raise Error::BadRequest.new("Attendee already exists in this event") if existing_attendees.includes?(attendee.email.downcase)
+    existing_attendee = event.attendees.find { |a| a.email == email }
+    raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
 
     # Add the new attendee to the event
     event.attendees = (event.attendees || [] of PlaceCalendar::Event::Attendee) << attendee
@@ -833,12 +833,18 @@ class Events < Application
       guest.save!
 
       # Create attendee
-      attend = Attendee.new
+      attend = existing_attendee || Attendee.new
 
-      attend.assign_attributes(
-        checked_in: false,
-        tenant_id: tenant.id,
-      )
+      previously_visiting = if attend.persisted?
+                              attend.visit_expected
+                            else
+                              attend.assign_attributes(
+                                visit_expected: true,
+                                checked_in: false,
+                                tenant_id: tenant.id,
+                              )
+                              false
+                            end
 
       raise Error::InconsistentState.new("metadata id must be present") unless meta_id = meta.id
       raise Error::InconsistentState.new("visit_expected must be present") unless attendee_visit_expected = attendee.visit_expected
@@ -849,7 +855,7 @@ class Events < Application
         visit_expected: attendee_visit_expected,
       )
 
-      if system && attend.visit_expected
+      if system && !previously_visiting
         spawn do
           sys = system
           raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
