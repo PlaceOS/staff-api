@@ -235,7 +235,8 @@ module EventMetadatasHelper
                    room_email = Faker::Internet.email,
                    host = Faker::Internet.email,
                    ext_data = JSON.parse({"foo": 123}.to_json),
-                   ical_uid = "random_uid-#{Random.new.rand(500)}")
+                   ical_uid = "random_uid-#{Random.new.rand(500)}",
+                   permission = PlaceOS::Model::EventMetadata::Permission::PRIVATE)
     EventMetadata.create!(
       tenant_id: tenant_id,
       system_id: system_id,
@@ -246,6 +247,7 @@ module EventMetadatasHelper
       event_end: event_end,
       ext_data: ext_data,
       ical_uid: ical_uid,
+      permission: permission
     )
   end
 end

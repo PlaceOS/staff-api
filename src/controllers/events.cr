@@ -2,7 +2,28 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin]
+  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin, :add_attendee]
+
+  # Skip actions that requres login
+  # If a user is logged in then they will be run as part of
+  # #set_tenant_from_domain
+  skip_action :determine_tenant_from_domain, only: [:add_attendee]
+
+  # Set the tenant based on the domain
+  # This allows unauthenticated requests through
+  # (for public bookings, further checks are done later)
+  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  private def set_tenant_from_domain
+    if auth_token_present?
+      check_jwt_scope
+      determine_tenant_from_domain
+    else
+      domain = request.hostname.as?(String)
+      raise Error::BadRequest.new("missing domain header") unless domain
+      @tenant = Tenant.find_by?(domain: domain)
+      raise Error::NotFound.new("could not find tenant with domain: #{domain}") unless tenant
+    end
+  end
 
   @[AC::Route::Filter(:before_action, only: [:notify_change, :link_master_metadata])]
   private def protected_route
@@ -18,6 +39,25 @@ class Events < Application
     if system_id
       system = PlaceOS::Model::ControlSystem.find!(system_id)
       return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+    end
+
+    raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
+  end
+
+  private def confirm_access_for_add_attendee(
+    event : PlaceCalendar::Event,
+    metadata : EventMetadata,
+    system : PlaceOS::Client::API::Models::System? = nil,
+  )
+    return if metadata.permission.public?
+    return if is_support?
+
+    if user = current_user
+      return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
+      if system
+        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+      end
+      return if metadata.permission.open? && (authority = user.authority) && (event_tenant = metadata.tenant) && (authority.domain == event_tenant.domain)
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -313,6 +353,9 @@ class Events < Application
       if breakdown_event_id = input_event.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
       end
+      if permission = input_event.permission
+        meta.permission = permission
+      end
       notify_created_or_updated(:create, sys, created_event, meta, can_skip: false, is_host: true)
 
       if attending && !attending.empty?
@@ -550,6 +593,9 @@ class Events < Application
       if breakdown_event_id = changes.breakdown_event_id
         meta.breakdown_event_id = breakdown_event_id
       end
+      if permission = changes.permission
+        meta.permission = permission
+      end
       notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true)
 
       # Grab the list of externals that might be attending
@@ -688,6 +734,150 @@ class Events < Application
 
       StaffApi::Event.augment(updated_event, host)
     end
+  end
+
+  # Adds a single attendee to an existing event
+  @[AC::Route::POST("/:id/attendee", body: :attendee)]
+  def add_attendee(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    attendee : PlaceCalendar::Event::Attendee,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil
+  ) : Attendee | PlaceCalendar::Event::Attendee
+    placeos_client = get_placeos_client
+    event_id = original_id
+    email = attendee.email.strip.downcase
+    cal_id = user_cal.try &.downcase
+
+    if system_id
+      system = placeos_client.systems.fetch(system_id)
+      sys_cal = system.email.presence
+      if cal_id.nil?
+        cal_id = system.email.presence
+        raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+      end
+    end
+
+    # defaults to the current users email
+    if auth_token_present? && !cal_id
+      cal_id = user.email
+    end
+
+    raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") unless cal_id
+
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
+      event = get_hosts_event(event)
+      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
+    end
+
+    # User details
+    if auth_token_present?
+      user_email = user.email.downcase
+      host = event.host.try(&.downcase) || user_email
+    else
+      host = event.host.try(&.downcase)
+    end
+    raise Error::BadUpstreamResponse.new("event host is missing") unless host
+
+    metadata = get_event_metadata(event, system_id)
+    raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
+
+    # check permisions
+    confirm_access_for_add_attendee(event, metadata, system)
+
+    # Check if attendee already exists in the event to avoid duplicates
+    existing_attendee = event.attendees.find { |a| a.email == email }
+    raise Error::BadRequest.new("Attendee already exists in this booking") if existing_attendee
+
+    # Add the new attendee to the event
+    event.attendees = (event.attendees || [] of PlaceCalendar::Event::Attendee) << attendee
+
+    # Update the event with the new attendee
+    updated_event = client.update_event(user_id: host, event: event, calendar_id: host)
+    raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
+
+    if system_id
+      meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
+
+      email = attendee.email.strip.downcase
+
+      # Create or update the attendee in the metadata
+      guest = if existing_guest = Guest.by_tenant(tenant.id).find_by?(email: email)
+                existing_guest
+              else
+                Guest.new(
+                  email: email,
+                  name: attendee.name,
+                  preferred_name: attendee.preferred_name,
+                  phone: attendee.phone,
+                  organisation: attendee.organisation,
+                  photo: attendee.photo,
+                  notes: attendee.notes,
+                  banned: attendee.banned || false,
+                  dangerous: attendee.dangerous || false,
+                  tenant_id: tenant.id,
+                )
+              end
+
+      if attendee_ext_data = attendee.extension_data
+        guest.extension_data = attendee_ext_data
+      end
+
+      guest.save!
+
+      # Create attendee
+      attend = existing_attendee || Attendee.new
+
+      previously_visiting = if attend.persisted?
+                              attend.visit_expected
+                            else
+                              attend.assign_attributes(
+                                visit_expected: true,
+                                checked_in: false,
+                                tenant_id: tenant.id,
+                              )
+                              false
+                            end
+
+      raise Error::InconsistentState.new("metadata id must be present") unless meta_id = meta.id
+      raise Error::InconsistentState.new("visit_expected must be present") unless attendee_visit_expected = attendee.visit_expected
+
+      attend.update!(
+        event_id: meta_id,
+        guest_id: guest.id,
+        visit_expected: attendee_visit_expected,
+      )
+
+      if system && !previously_visiting
+        spawn do
+          sys = system
+          raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
+
+          placeos_client.root.signal("staff/guest/attending", {
+            action:         :meeting_update,
+            system_id:      sys.id,
+            event_id:       event_id,
+            event_ical_uid: updated_event.ical_uid,
+            host:           host,
+            resource:       sys.email,
+            event_summary:  updated_event.title,
+            event_starting: updated_event_start.to_unix,
+            attendee_name:  attendee.name,
+            attendee_email: attendee.email,
+            zones:          sys.zones,
+          })
+        end
+      end
+    end
+
+    attend || attendee
   end
 
   # used to link resource recurring master ids to metadata

@@ -53,6 +53,7 @@ class StaffApi::Event
       event.breakdown_time = metadata.try(&.breakdown_time)
       event.setup_event_id = metadata.try(&.setup_event_id)
       event.breakdown_event_id = metadata.try(&.breakdown_event_id)
+      event.permission = metadata.try(&.permission)
     end
     event.recurring_master_id = event.recurring_event_id
 
@@ -87,6 +88,8 @@ class PlaceCalendar::Event
   property breakdown_time : Int64? = nil
   property setup_event_id : String? = nil
   property breakdown_event_id : String? = nil
+
+  property permission : PlaceOS::Model::EventMetadata::Permission? = nil
 
   struct Attendee
     property checked_in : Bool?
