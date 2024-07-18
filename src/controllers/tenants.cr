@@ -5,12 +5,12 @@ class Tenants < Application
   # Filters
   # =====================
 
-  @[AC::Route::Filter(:before_action, except: [:current_limits, :show_limits])]
+  @[AC::Route::Filter(:before_action, except: [:current_limits, :show_limits, :current_early_checkin, :show_early_checkin])]
   private def admin_only
     raise Error::Forbidden.new unless is_admin?
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :current_limits])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :current_limits, :current_early_checkin])]
   private def find_tenant(id : Int64)
     @tenant = Tenant.find(id)
   end
@@ -80,5 +80,27 @@ class Tenants < Application
     raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking limits") if !tenant.valid?
     tenant.save!
     tenant.booking_limits.as_h.transform_values(&.as_i)
+  end
+
+  # returns the early checkin limit for the current domain (Host header)
+  @[AC::Route::GET("/current_early_checkin")]
+  def current_early_checkin : Int64
+    response.headers["X-Delegated"] = (!!current_tenant.delegated).to_s
+    current_tenant.early_checkin
+  end
+
+  # returns the early checkin limit for the selected tenant
+  @[AC::Route::GET("/:id/early_checkin")]
+  def show_early_checkin : Int64
+    tenant.early_checkin
+  end
+
+  # updates the early checkin limit for the tenant provided
+  @[AC::Route::POST("/:id/early_checkin", body: :early_checkin)]
+  def update_early_checkin(early_checkin : Int64) : Int64
+    tenant.early_checkin = early_checkin
+    raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating early checkin limit") if !tenant.valid?
+    tenant.save!
+    tenant.early_checkin
   end
 end
