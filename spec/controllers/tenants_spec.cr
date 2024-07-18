@@ -104,6 +104,7 @@ describe Tenants do
       tenant.early_checkin = 7200 # 2 hours
       tenant.save!
 
+      request_body = 3600_i64.to_json
       resp = client.post("#{TENANTS_BASE}/#{tenant.id}/early_checkin", headers: headers, body: request_body)
       resp.status_code.should eq(200)
       body = JSON.parse(resp.body)
