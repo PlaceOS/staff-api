@@ -14,7 +14,7 @@ paths:
         booking_type is required unless event_id or ical_uid is present'
       tags:
       - Bookings
-      operationId: Bookings#index
+      operationId: Bookings_index
       parameters:
       - name: period_start
         in: query
@@ -298,7 +298,7 @@ paths:
       summary: creates a new booking
       tags:
       - Bookings
-      operationId: Bookings#create
+      operationId: Bookings_create
       requestBody:
         content:
           application/json:
@@ -431,7 +431,7 @@ paths:
         booking_type is required unless event_id or ical_uid is present'
       tags:
       - Bookings
-      operationId: Bookings#booked
+      operationId: Bookings_booked
       parameters:
       - name: period_start
         in: query
@@ -708,7 +708,7 @@ paths:
       summary: returns the booking requested
       tags:
       - Bookings
-      operationId: Bookings#show
+      operationId: Bookings_show
       parameters:
       - name: id
         in: path
@@ -810,7 +810,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Bookings
-      operationId: Bookings#update
+      operationId: Bookings_update
       requestBody:
         content:
           application/json:
@@ -927,7 +927,7 @@ paths:
       summary: marks the provided booking as deleted
       tags:
       - Bookings
-      operationId: Bookings#destroy
+      operationId: Bookings_destroy
       parameters:
       - name: id
         in: path
@@ -1033,7 +1033,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Bookings
-      operationId: Bookings#update{3}
+      operationId: Bookings_update{3}
       requestBody:
         content:
           application/json:
@@ -1151,7 +1151,7 @@ paths:
       summary: returns the booking requested
       tags:
       - Bookings
-      operationId: Bookings#show{2}
+      operationId: Bookings_show{2}
       parameters:
       - name: id
         in: path
@@ -1253,7 +1253,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Bookings
-      operationId: Bookings#update{2}
+      operationId: Bookings_update{2}
       requestBody:
         content:
           application/json:
@@ -1370,7 +1370,7 @@ paths:
       summary: marks the provided booking as deleted
       tags:
       - Bookings
-      operationId: Bookings#destroy{2}
+      operationId: Bookings_destroy{2}
       parameters:
       - name: id
         in: path
@@ -1476,7 +1476,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Bookings
-      operationId: Bookings#update{4}
+      operationId: Bookings_update{4}
       requestBody:
         content:
           application/json:
@@ -1594,7 +1594,7 @@ paths:
       summary: approves a booking (if booking approval is required in an organisation)
       tags:
       - Bookings
-      operationId: Bookings#approve
+      operationId: Bookings_approve
       parameters:
       - name: id
         in: path
@@ -1696,7 +1696,7 @@ paths:
       summary: rejects a booking
       tags:
       - Bookings
-      operationId: Bookings#reject
+      operationId: Bookings_reject
       parameters:
       - name: id
         in: path
@@ -1798,7 +1798,7 @@ paths:
       summary: indicates that a booking has commenced
       tags:
       - Bookings
-      operationId: Bookings#check_in
+      operationId: Bookings_check_in
       parameters:
       - name: id
         in: path
@@ -1916,7 +1916,7 @@ paths:
       summary: indicates that a booking has commenced
       tags:
       - Bookings
-      operationId: Bookings#check_in{2}
+      operationId: Bookings_check_in{2}
       parameters:
       - name: id
         in: path
@@ -2034,7 +2034,7 @@ paths:
       summary: indicates that a booking has commenced
       tags:
       - Bookings
-      operationId: Bookings#check_in{3}
+      operationId: Bookings_check_in{3}
       parameters:
       - name: id
         in: path
@@ -2152,7 +2152,7 @@ paths:
       summary: indicates that a booking has commenced
       tags:
       - Bookings
-      operationId: Bookings#check_in{4}
+      operationId: Bookings_check_in{4}
       parameters:
       - name: id
         in: path
@@ -2271,7 +2271,7 @@ paths:
         used
       tags:
       - Bookings
-      operationId: Bookings#update_state
+      operationId: Bookings_update_state
       parameters:
       - name: id
         in: path
@@ -2380,7 +2380,7 @@ paths:
       summary: returns a list of guests associated with a booking
       tags:
       - Bookings
-      operationId: Bookings#guest_list
+      operationId: Bookings_guest_list
       parameters:
       - name: id
         in: path
@@ -2477,7 +2477,7 @@ paths:
         the state param
       tags:
       - Bookings
-      operationId: Bookings#guest_checkin
+      operationId: Bookings_guest_checkin
       parameters:
       - name: id
         in: path
@@ -2586,7 +2586,7 @@ paths:
         the state param
       tags:
       - Bookings
-      operationId: Bookings#guest_checkin{2}
+      operationId: Bookings_guest_checkin{2}
       parameters:
       - name: id
         in: path
@@ -2694,7 +2694,7 @@ paths:
       summary: Adds a single attendee to an existing booking
       tags:
       - Bookings
-      operationId: Bookings#add_attendee
+      operationId: Bookings_add_attendee
       requestBody:
         content:
           application/json:
@@ -2793,7 +2793,7 @@ paths:
     delete:
       tags:
       - Bookings
-      operationId: Bookings#destroy_attendee
+      operationId: Bookings_destroy_attendee
       parameters:
       - name: id
         in: path
@@ -2890,7 +2890,7 @@ paths:
       summary: lists the users default calendars
       tags:
       - Calendars
-      operationId: Calendars#index
+      operationId: Calendars_index
       parameters: []
       responses:
         200:
@@ -2969,7 +2969,7 @@ paths:
         with availability
       tags:
       - Calendars
-      operationId: Calendars#availability
+      operationId: Calendars_availability
       parameters:
       - name: period_start
         in: query
@@ -3115,7 +3115,7 @@ paths:
         Returns the calendars that have meetings overlapping provided period'
       tags:
       - Calendars
-      operationId: Calendars#free_busy
+      operationId: Calendars_free_busy
       parameters:
       - name: period_start
         in: query
@@ -3259,7 +3259,7 @@ paths:
         users calendar
       tags:
       - Events
-      operationId: Events#index
+      operationId: Events_index
       parameters:
       - name: period_start
         in: query
@@ -3413,7 +3413,7 @@ paths:
       summary: creates a new calendar event
       tags:
       - Events
-      operationId: Events#create
+      operationId: Events_create
       requestBody:
         content:
           application/json:
@@ -3502,7 +3502,7 @@ paths:
         or you can provide a system id if the event exists on a resource calendar'
       tags:
       - Events
-      operationId: Events#show
+      operationId: Events_show
       parameters:
       - name: id
         in: path
@@ -3624,7 +3624,7 @@ paths:
         Then in the event body, the `system_id` field should be the new system.'
       tags:
       - Events
-      operationId: Events#update
+      operationId: Events_update
       requestBody:
         content:
           application/json:
@@ -3740,7 +3740,7 @@ paths:
         with the event'
       tags:
       - Events
-      operationId: Events#destroy
+      operationId: Events_destroy
       parameters:
       - name: id
         in: path
@@ -3865,7 +3865,7 @@ paths:
         Then in the event body, the `system_id` field should be the new system.'
       tags:
       - Events
-      operationId: Events#update{2}
+      operationId: Events_update{2}
       requestBody:
         content:
           application/json:
@@ -3965,12 +3965,117 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/{id}/attendee:
+    post:
+      summary: Adds a single attendee to an existing event
+      tags:
+      - Events
+      operationId: Events_add_attendee
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceCalendar__Event__Attendee'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        description: the event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: true
+        schema:
+          type: string
+      - name: system_id
+        in: query
+        description: the event space associated with this event
+        example: sys-1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: calendar
+        in: query
+        description: the calendar associated with this event id
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_PlaceCalendar__Event__Attendee___PlaceOS__Model__Attendee_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/metadata/{system_id}/link/{ical_uid}:
     post:
       summary: used to link resource recurring master ids to metadata
       tags:
       - Events
-      operationId: Events#link_master_metadata
+      operationId: Events_link_master_metadata
       parameters:
       - name: id
         in: path
@@ -4069,7 +4174,7 @@ paths:
         you can provide a calendar param to override this default'
       tags:
       - Events
-      operationId: Events#replace_metadata
+      operationId: Events_replace_metadata
       requestBody:
         content:
           application/json:
@@ -4223,7 +4328,7 @@ paths:
         you can provide a calendar param to override this default'
       tags:
       - Events
-      operationId: Events#patch_metadata
+      operationId: Events_patch_metadata
       requestBody:
         content:
           application/json:
@@ -4368,7 +4473,7 @@ paths:
     post:
       tags:
       - Events
-      operationId: Events#notify_change
+      operationId: Events_notify_change
       requestBody:
         content:
           application/json:
@@ -4478,7 +4583,7 @@ paths:
         message'
       tags:
       - Events
-      operationId: Events#decline
+      operationId: Events_decline
       parameters:
       - name: id
         in: path
@@ -4580,7 +4685,7 @@ paths:
       summary: approves / accepts the meeting on behalf of the event space
       tags:
       - Events
-      operationId: Events#approve
+      operationId: Events_approve
       parameters:
       - name: id
         in: path
@@ -4670,7 +4775,7 @@ paths:
       summary: rejects / declines the meeting on behalf of the event space
       tags:
       - Events
-      operationId: Events#reject
+      operationId: Events_reject
       parameters:
       - name: id
         in: path
@@ -4760,7 +4865,7 @@ paths:
       summary: Event Guest management
       tags:
       - Events
-      operationId: Events#guest_list
+      operationId: Events_guest_list
       parameters:
       - name: id
         in: path
@@ -4862,7 +4967,7 @@ paths:
         example route: /extension_metadata?field_name=colour&value=blue'
       tags:
       - Events
-      operationId: Events#extension_metadata
+      operationId: Events_extension_metadata
       parameters:
       - name: system_id
         in: path
@@ -4995,7 +5100,7 @@ paths:
         This route can be used to notify hosts'
       tags:
       - Events
-      operationId: Events#guest_checkin
+      operationId: Events_guest_checkin
       parameters:
       - name: id
         in: path
@@ -5111,7 +5216,7 @@ paths:
         This route can be used to notify hosts'
       tags:
       - Events
-      operationId: Events#guest_checkin{2}
+      operationId: Events_guest_checkin{2}
       parameters:
       - name: id
         in: path
@@ -5224,7 +5329,7 @@ paths:
       summary: returns a list of user groups in the orgainisations directory
       tags:
       - Groups
-      operationId: Groups#index
+      operationId: Groups_index
       parameters:
       - name: q
         in: query
@@ -5310,7 +5415,7 @@ paths:
       summary: returns the details of the provided group id
       tags:
       - Groups
-      operationId: Groups#show
+      operationId: Groups_show
       parameters:
       - name: id
         in: path
@@ -5391,7 +5496,7 @@ paths:
       summary: returns the list of staff memebers in a particular user group
       tags:
       - Groups
-      operationId: Groups#members
+      operationId: Groups_members
       parameters:
       - name: id
         in: path
@@ -5475,7 +5580,7 @@ paths:
         start and end times (can be filtered by calendars, zone_ids and system_ids)
       tags:
       - Guests
-      operationId: Guests#index
+      operationId: Guests_index
       parameters:
       - name: q
         in: query
@@ -5613,7 +5718,7 @@ paths:
       summary: creates a new guest record
       tags:
       - Guests
-      operationId: Guests#create
+      operationId: Guests_create
       requestBody:
         content:
           application/json:
@@ -5696,7 +5801,7 @@ paths:
         to attend in person today
       tags:
       - Guests
-      operationId: Guests#show
+      operationId: Guests_show
       parameters:
       - name: id
         in: path
@@ -5781,7 +5886,7 @@ paths:
       summary: patches a guest record with the changes provided
       tags:
       - Guests
-      operationId: Guests#update
+      operationId: Guests_update
       requestBody:
         content:
           application/json:
@@ -5872,7 +5977,7 @@ paths:
       summary: removes the guest record from the database
       tags:
       - Guests
-      operationId: Guests#destroy
+      operationId: Guests_destroy
       parameters:
       - name: id
         in: path
@@ -5953,7 +6058,7 @@ paths:
       summary: patches a guest record with the changes provided
       tags:
       - Guests
-      operationId: Guests#update{2}
+      operationId: Guests_update{2}
       requestBody:
         content:
           application/json:
@@ -6046,7 +6151,7 @@ paths:
         based on internal records)
       tags:
       - Guests
-      operationId: Guests#meetings
+      operationId: Guests_meetings
       parameters:
       - name: id
         in: path
@@ -6150,7 +6255,7 @@ paths:
         in person
       tags:
       - Guests
-      operationId: Guests#bookings
+      operationId: Guests_bookings
       parameters:
       - name: id
         in: path
@@ -6253,7 +6358,7 @@ paths:
       summary: returns the service build details
       tags:
       - HealthCheck
-      operationId: HealthCheck#index
+      operationId: HealthCheck_index
       parameters: []
       responses:
         200:
@@ -6274,7 +6379,7 @@ paths:
         https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http'
       tags:
       - Staff
-      operationId: Staff#index
+      operationId: Staff_index
       parameters:
       - name: q
         in: query
@@ -6379,7 +6484,7 @@ paths:
       summary: returns user details for the id provided
       tags:
       - Staff
-      operationId: Staff#show
+      operationId: Staff_show
       parameters:
       - name: id
         in: path
@@ -6462,7 +6567,7 @@ paths:
       summary: returns the list of groups the user is a member
       tags:
       - Staff
-      operationId: Staff#groups
+      operationId: Staff_groups
       parameters:
       - name: id
         in: path
@@ -6545,7 +6650,7 @@ paths:
       summary: returns the users manager
       tags:
       - Staff
-      operationId: Staff#manager
+      operationId: Staff_manager
       parameters:
       - name: id
         in: path
@@ -6626,7 +6731,7 @@ paths:
       summary: returns the list of public calendars
       tags:
       - Staff
-      operationId: Staff#calendars
+      operationId: Staff_calendars
       parameters:
       - name: id
         in: path
@@ -6709,7 +6814,7 @@ paths:
       summary: returns a list of surveys
       tags:
       - Surveys
-      operationId: Surveys#index
+      operationId: Surveys_index
       parameters:
       - name: zone_id
         in: query
@@ -6802,7 +6907,7 @@ paths:
       summary: creates a new survey
       tags:
       - Surveys
-      operationId: Surveys#create
+      operationId: Surveys_create
       requestBody:
         content:
           application/json:
@@ -6884,7 +6989,7 @@ paths:
       summary: show a survey
       tags:
       - Surveys
-      operationId: Surveys#show
+      operationId: Surveys_show
       parameters:
       - name: id
         in: path
@@ -6967,7 +7072,7 @@ paths:
       summary: patches an existing survey
       tags:
       - Surveys
-      operationId: Surveys#update
+      operationId: Surveys_update
       requestBody:
         content:
           application/json:
@@ -7054,7 +7159,7 @@ paths:
       summary: deletes the survey
       tags:
       - Surveys
-      operationId: Surveys#destroy
+      operationId: Surveys_destroy
       parameters:
       - name: id
         in: path
@@ -7131,7 +7236,7 @@ paths:
       summary: patches an existing survey
       tags:
       - Surveys
-      operationId: Surveys#update{2}
+      operationId: Surveys_update{2}
       requestBody:
         content:
           application/json:
@@ -7219,7 +7324,7 @@ paths:
       summary: returns a list of answers
       tags:
       - Answers
-      operationId: Surveys::Answers#index
+      operationId: Surveys::Answers_index
       parameters:
       - name: survey_id
         in: query
@@ -7323,7 +7428,7 @@ paths:
       summary: creates a new survey answer
       tags:
       - Answers
-      operationId: Surveys::Answers#create
+      operationId: Surveys::Answers_create
       requestBody:
         content:
           application/json:
@@ -7407,7 +7512,7 @@ paths:
       summary: returns a list of invitations
       tags:
       - Invitations
-      operationId: Surveys::Invitations#index
+      operationId: Surveys::Invitations_index
       parameters:
       - name: survey_id
         in: query
@@ -7501,7 +7606,7 @@ paths:
       summary: creates a new invitation
       tags:
       - Invitations
-      operationId: Surveys::Invitations#create
+      operationId: Surveys::Invitations_create
       requestBody:
         content:
           application/json:
@@ -7583,7 +7688,7 @@ paths:
       summary: show an invitation
       tags:
       - Invitations
-      operationId: Surveys::Invitations#show
+      operationId: Surveys::Invitations_show
       parameters:
       - name: token
         in: path
@@ -7665,7 +7770,7 @@ paths:
       summary: patches an existing survey invitation
       tags:
       - Invitations
-      operationId: Surveys::Invitations#update
+      operationId: Surveys::Invitations_update
       requestBody:
         content:
           application/json:
@@ -7751,7 +7856,7 @@ paths:
       summary: deletes the invitation
       tags:
       - Invitations
-      operationId: Surveys::Invitations#destroy
+      operationId: Surveys::Invitations_destroy
       parameters:
       - name: token
         in: path
@@ -7829,7 +7934,7 @@ paths:
       summary: patches an existing survey invitation
       tags:
       - Invitations
-      operationId: Surveys::Invitations#update{2}
+      operationId: Surveys::Invitations_update{2}
       requestBody:
         content:
           application/json:
@@ -7916,7 +8021,7 @@ paths:
       summary: returns a list of questions
       tags:
       - Questions
-      operationId: Surveys::Questions#index
+      operationId: Surveys::Questions_index
       parameters:
       - name: survey_id
         in: query
@@ -8010,7 +8115,7 @@ paths:
       summary: creates a new question
       tags:
       - Questions
-      operationId: Surveys::Questions#create
+      operationId: Surveys::Questions_create
       requestBody:
         content:
           application/json:
@@ -8092,7 +8197,7 @@ paths:
       summary: show a question
       tags:
       - Questions
-      operationId: Surveys::Questions#show
+      operationId: Surveys::Questions_show
       parameters:
       - name: id
         in: path
@@ -8179,7 +8284,7 @@ paths:
         and then soft delete the old version.'
       tags:
       - Questions
-      operationId: Surveys::Questions#update
+      operationId: Surveys::Questions_update
       requestBody:
         content:
           application/json:
@@ -8270,7 +8375,7 @@ paths:
         question is in any surveys.'
       tags:
       - Questions
-      operationId: Surveys::Questions#destroy
+      operationId: Surveys::Questions_destroy
       parameters:
       - name: id
         in: path
@@ -8351,7 +8456,7 @@ paths:
         and then soft delete the old version.'
       tags:
       - Questions
-      operationId: Surveys::Questions#update{2}
+      operationId: Surveys::Questions_update{2}
       requestBody:
         content:
           application/json:
@@ -8439,7 +8544,7 @@ paths:
       summary: lists the configured tenants
       tags:
       - Tenants
-      operationId: Tenants#index
+      operationId: Tenants_index
       parameters: []
       responses:
         200:
@@ -8516,7 +8621,7 @@ paths:
       summary: creates a new tenant
       tags:
       - Tenants
-      operationId: Tenants#create
+      operationId: Tenants_create
       requestBody:
         content:
           application/json:
@@ -8598,7 +8703,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Tenants
-      operationId: Tenants#update
+      operationId: Tenants_update
       requestBody:
         content:
           application/json:
@@ -8685,7 +8790,7 @@ paths:
       summary: removes the selected tenant from the system
       tags:
       - Tenants
-      operationId: Tenants#destroy
+      operationId: Tenants_destroy
       parameters:
       - name: id
         in: path
@@ -8762,7 +8867,7 @@ paths:
       summary: patches an existing booking with the changes provided
       tags:
       - Tenants
-      operationId: Tenants#update{2}
+      operationId: Tenants_update{2}
       requestBody:
         content:
           application/json:
@@ -8850,7 +8955,7 @@ paths:
       summary: returns the limits for the current domain (Host header)
       tags:
       - Tenants
-      operationId: Tenants#current_limits
+      operationId: Tenants_current_limits
       parameters: []
       responses:
         200:
@@ -8926,7 +9031,7 @@ paths:
       summary: returns the limits for the selected tenant
       tags:
       - Tenants
-      operationId: Tenants#show_limits
+      operationId: Tenants_show_limits
       parameters:
       - name: id
         in: path
@@ -9007,7 +9112,7 @@ paths:
       summary: updates the limits for the tenant provided
       tags:
       - Tenants
-      operationId: Tenants#update_limits
+      operationId: Tenants_update_limits
       requestBody:
         content:
           application/json:
@@ -9028,6 +9133,251 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Hash_String__Int32_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/tenants/current_early_checkin:
+    get:
+      summary: returns the early checkin limit for the current domain (Host header)
+      tags:
+      - Tenants
+      operationId: Tenants_current_early_checkin
+      parameters: []
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Int64'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/tenants/{id}/early_checkin:
+    get:
+      summary: returns the early checkin limit for the selected tenant
+      tags:
+      - Tenants
+      operationId: Tenants_show_early_checkin
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Int64'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+    post:
+      summary: updates the early checkin limit for the tenant provided
+      tags:
+      - Tenants
+      operationId: Tenants_update_early_checkin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Int64'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Int64'
         429:
           description: Too Many Requests
           content:
@@ -9811,6 +10161,13 @@ components:
             breakdown_event_id:
               type: string
               nullable: true
+            permission:
+              type: string
+              enum:
+              - private
+              - open
+              - public
+              nullable: true
           required:
           - event_start
           - attendees
@@ -10260,6 +10617,13 @@ components:
         breakdown_event_id:
           type: string
           nullable: true
+        permission:
+          type: string
+          enum:
+          - private
+          - open
+          - public
+          nullable: true
       required:
       - event_start
       - attendees
@@ -10267,6 +10631,426 @@ components:
       - private
       - all_day
       - attachments
+    _PlaceCalendar__Event__Attendee___PlaceOS__Model__Attendee_:
+      anyOf:
+      - type: object
+        properties:
+          name:
+            type: string
+          email:
+            type: string
+          response_status:
+            type: string
+            nullable: true
+          resource:
+            type: boolean
+            nullable: true
+          organizer:
+            type: boolean
+            nullable: true
+          checked_in:
+            type: boolean
+            nullable: true
+          visit_expected:
+            type: boolean
+            nullable: true
+          extension_data:
+            type: object
+            nullable: true
+          preferred_name:
+            type: string
+            nullable: true
+          phone:
+            type: string
+            nullable: true
+          organisation:
+            type: string
+            nullable: true
+          photo:
+            type: string
+            nullable: true
+          notes:
+            type: string
+            nullable: true
+          banned:
+            type: boolean
+            nullable: true
+          dangerous:
+            type: boolean
+            nullable: true
+        required:
+        - name
+        - email
+      - type: object
+        properties:
+          checked_in:
+            type: boolean
+            nullable: true
+          visit_expected:
+            type: boolean
+            nullable: true
+          guest_id:
+            type: integer
+            format: Int64
+            nullable: true
+          tenant_id:
+            type: integer
+            format: Int64
+            nullable: true
+          event_id:
+            type: integer
+            format: Int64
+            nullable: true
+          booking_id:
+            type: integer
+            format: Int64
+            nullable: true
+          email:
+            type: string
+            nullable: true
+          name:
+            type: string
+            nullable: true
+          preferred_name:
+            type: string
+            nullable: true
+          phone:
+            type: string
+            nullable: true
+          organisation:
+            type: string
+            nullable: true
+          notes:
+            type: string
+            nullable: true
+          photo:
+            type: string
+            nullable: true
+          event:
+            type: object
+            properties:
+              event_start:
+                type: integer
+                format: Int64
+              event_end:
+                type: integer
+                format: Int64
+                nullable: true
+              id:
+                type: string
+                nullable: true
+              recurring_event_id:
+                type: string
+                nullable: true
+              host:
+                type: string
+                nullable: true
+              title:
+                type: string
+                nullable: true
+              body:
+                type: string
+                nullable: true
+              attendees:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    response_status:
+                      type: string
+                      nullable: true
+                    resource:
+                      type: boolean
+                      nullable: true
+                    organizer:
+                      type: boolean
+                      nullable: true
+                    checked_in:
+                      type: boolean
+                      nullable: true
+                    visit_expected:
+                      type: boolean
+                      nullable: true
+                    extension_data:
+                      type: object
+                      nullable: true
+                    preferred_name:
+                      type: string
+                      nullable: true
+                    phone:
+                      type: string
+                      nullable: true
+                    organisation:
+                      type: string
+                      nullable: true
+                    photo:
+                      type: string
+                      nullable: true
+                    notes:
+                      type: string
+                      nullable: true
+                    banned:
+                      type: boolean
+                      nullable: true
+                    dangerous:
+                      type: boolean
+                      nullable: true
+                  required:
+                  - name
+                  - email
+              hide_attendees:
+                type: boolean
+              location:
+                type: string
+                nullable: true
+              private:
+                type: boolean
+              all_day:
+                type: boolean
+              timezone:
+                type: string
+                nullable: true
+              recurring:
+                type: boolean
+                nullable: true
+              created:
+                type: string
+                format: date-time
+                nullable: true
+              updated:
+                type: string
+                format: date-time
+                nullable: true
+              attachments:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      nullable: true
+                    name:
+                      type: string
+                    content_type:
+                      type: string
+                      nullable: true
+                    content_bytes:
+                      type: string
+                    size:
+                      type: integer
+                      format: Int32
+                      nullable: true
+                  required:
+                  - name
+                  - content_bytes
+              recurrence:
+                type: object
+                properties:
+                  range_start:
+                    type: integer
+                    format: Int64
+                  range_end:
+                    type: integer
+                    format: Int64
+                  interval:
+                    type: integer
+                    format: Int32
+                  pattern:
+                    type: string
+                  days_of_week:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                required:
+                - range_start
+                - range_end
+                - interval
+                - pattern
+                nullable: true
+              status:
+                type: string
+                nullable: true
+              creator:
+                type: string
+                nullable: true
+              ical_uid:
+                type: string
+                nullable: true
+              online_meeting_provider:
+                type: string
+                nullable: true
+              online_meeting_phones:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              online_meeting_url:
+                type: string
+                nullable: true
+              online_meeting_sip:
+                type: string
+                nullable: true
+              online_meeting_pin:
+                type: string
+                nullable: true
+              online_meeting_id:
+                type: string
+                nullable: true
+              extended_properties:
+                type: object
+                additionalProperties:
+                  type: string
+                  nullable: true
+                nullable: true
+              mailbox:
+                type: string
+                nullable: true
+              calendar:
+                type: string
+                nullable: true
+              system_id:
+                type: string
+                nullable: true
+              system:
+                anyOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                  required:
+                  - id
+                - type: object
+                  properties:
+                    created_at:
+                      type: string
+                      format: date-time
+                    updated_at:
+                      type: string
+                      format: date-time
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    zones:
+                      type: array
+                      items:
+                        type: string
+                    modules:
+                      type: array
+                      items:
+                        type: string
+                    description:
+                      type: string
+                      nullable: true
+                    email:
+                      type: string
+                      nullable: true
+                    display_name:
+                      type: string
+                      nullable: true
+                    timezone:
+                      type: string
+                      nullable: true
+                    code:
+                      type: string
+                      nullable: true
+                    type:
+                      type: string
+                      nullable: true
+                    map_id:
+                      type: string
+                      nullable: true
+                    images:
+                      type: array
+                      items:
+                        type: string
+                      nullable: true
+                    capacity:
+                      type: integer
+                      format: Int32
+                    features:
+                      type: array
+                      items:
+                        type: string
+                    bookable:
+                      type: boolean
+                    public:
+                      type: boolean
+                      nullable: true
+                    installed_ui_devices:
+                      type: integer
+                      format: Int32
+                    support_url:
+                      type: string
+                      nullable: true
+                    version:
+                      type: integer
+                      format: Int32
+                  required:
+                  - created_at
+                  - updated_at
+                  - id
+                  - name
+                  - zones
+                  - modules
+                  - capacity
+                  - features
+                  - bookable
+                  - installed_ui_devices
+                  - version
+                nullable: true
+              extension_data:
+                type: object
+                nullable: true
+              recurring_master_id:
+                type: string
+                nullable: true
+              setup_time:
+                type: integer
+                format: Int64
+                nullable: true
+              breakdown_time:
+                type: integer
+                format: Int64
+                nullable: true
+              setup_event_id:
+                type: string
+                nullable: true
+              breakdown_event_id:
+                type: string
+                nullable: true
+              permission:
+                type: string
+                enum:
+                - private
+                - open
+                - public
+                nullable: true
+            required:
+            - event_start
+            - attendees
+            - hide_attendees
+            - private
+            - all_day
+            - attachments
+            nullable: true
+          id:
+            type: integer
+            format: Int64
+            nullable: true
+          created_at:
+            type: integer
+            format: Int64
+            nullable: true
+          updated_at:
+            type: integer
+            format: Int64
+            nullable: true
     JSON__Any:
       type: object
     _PlaceCalendar__Event___Nil_:
@@ -10567,6 +11351,13 @@ components:
         breakdown_event_id:
           type: string
           nullable: true
+        permission:
+          type: string
+          enum:
+          - private
+          - open
+          - public
+          nullable: true
       required:
       - event_start
       - attendees
@@ -10628,6 +11419,17 @@ components:
           nullable: true
         breakdown_event_id:
           type: string
+          nullable: true
+        permission:
+          type: string
+          enum:
+          - private
+          - open
+          - public
+          description: The permission level for the event. Defaults to private. If
+            set to private, attendees must be invited.If set to open, users in the
+            same tenant can join. If set to public, the event is open for everyone
+            to join.
           nullable: true
         tenant_id:
           type: integer
@@ -10985,6 +11787,9 @@ components:
       additionalProperties:
         type: integer
         format: Int32
+    Int64:
+      type: integer
+      format: Int64
     Application__CommonError:
       type: object
       properties:

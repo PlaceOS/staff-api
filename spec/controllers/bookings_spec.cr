@@ -741,6 +741,8 @@ describe Bookings do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return(body: "")
       tenant = get_tenant
+      tenant.early_checkin = 3600
+      tenant.save!
 
       booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 70.minutes.from_now.to_unix,
