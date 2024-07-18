@@ -47,6 +47,46 @@ describe Tenants do
       JSON.parse(response.body)["booking_limits"]["desk"]?.should eq(1)
     end
   end
+
+  describe "#current_early_checkin" do
+    it "should return the early checkin limit for the current domain (any user)" do
+      tenant = get_tenant
+      tenant.early_checkin = 7200 # 2 hours
+      tenant.save!
+
+      resp = client.get("#{TENANTS_BASE}/current_early_checkin", headers: headers)
+      resp.status_code.should eq(200)
+      body = JSON.parse(resp.body)
+      body.should eq(7200)
+    end
+  end
+
+  describe "#show_early_checkin" do
+    it "should return the early checkin limit for the requested tenant (any user)" do
+      tenant = get_tenant
+      tenant.early_checkin = 7200 # 2 hours
+      tenant.save!
+
+      resp = client.get("#{TENANTS_BASE}/#{tenant.id}/early_checkin", headers: headers)
+      resp.status_code.should eq(200)
+      body = JSON.parse(resp.body)
+      body.should eq(7200)
+    end
+  end
+
+  describe "#update_early_checkin" do
+    it "should set the early checkin limit (sys-admins only)" do
+      tenant = get_tenant
+      tenant.early_checkin = 7200 # 2 hours
+      tenant.save!
+
+      pp! request_body = 3600_i64.to_json
+      resp = client.post("#{TENANTS_BASE}/#{tenant.id}/early_checkin", headers: headers, body: request_body)
+      resp.status_code.should eq(200)
+      body = JSON.parse(resp.body)
+      body.should eq(3600)
+    end
+  end
 end
 
 TENANTS_BASE = Tenants.base_route
