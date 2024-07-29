@@ -474,6 +474,7 @@ class Events < Application
     # defaults to the current users email
     cal_id = user.email unless cal_id
 
+    log.debug { "attempting to find event #{event_id} searching on #{cal_id} as #{user.email}" }
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
