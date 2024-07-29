@@ -2,17 +2,17 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin, :add_attendee]
+  skip_action :check_jwt_scope, only: [:index, :show, :patch_metadata, :guest_checkin, :add_attendee]
 
   # Skip actions that requres login
   # If a user is logged in then they will be run as part of
   # #set_tenant_from_domain
-  skip_action :determine_tenant_from_domain, only: [:add_attendee]
+  skip_action :determine_tenant_from_domain, only: [:index, :add_attendee]
 
   # Set the tenant based on the domain
   # This allows unauthenticated requests through
   # (for public bookings, further checks are done later)
-  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:index, :add_attendee])]
   private def set_tenant_from_domain
     if auth_token_present?
       check_jwt_scope
@@ -262,6 +262,8 @@ class Events < Application
       event_id = client.client_id == :office365 ? event.ical_uid : event.id
       metadata = metadatas[event_id]?
 
+      next if !auth_token_present? && (metadata.nil? || !metadata.permission.public?)
+
       if metadata.nil? && event.recurring_event_id
         metadata = metadatas[event.recurring_event_id]?
         parent_meta = true if metadata
@@ -474,6 +476,7 @@ class Events < Application
     # defaults to the current users email
     cal_id = user.email unless cal_id
 
+    log.debug { "attempting to find event #{event_id} searching on #{cal_id} as #{user.email}" }
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
 
