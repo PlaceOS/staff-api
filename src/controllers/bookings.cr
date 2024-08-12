@@ -681,39 +681,39 @@ class Bookings < Application
     @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
     instance : Int64? = nil
   ) : Nil
-    booking.instance = instance
-    booking.update!(
-      deleted: true,
-      deleted_at: Time.local.to_unix,
-      utm_source: utm_source
-    )
+    booking_local = booking
+    booking_local.instance = instance
+    booking_local.deleted = true
+    booking_local.deleted_at = Time.local.to_unix
+    booking_local.utm_source = utm_source
+    booking_local.save!
 
     spawn do
       begin
         get_placeos_client.root.signal("staff/booking/changed", {
           action:          :cancelled,
-          id:              booking.id,
-          instance:        booking.instance,
-          booking_type:    booking.booking_type,
-          booking_start:   booking.booking_start,
-          booking_end:     booking.booking_end,
-          timezone:        booking.timezone,
-          resource_id:     booking.asset_id,
-          resource_ids:    booking.asset_ids,
-          user_id:         booking.user_id,
-          user_email:      booking.user_email,
-          user_name:       booking.user_name,
-          zones:           booking.zones,
-          process_state:   booking.process_state,
-          last_changed:    booking.last_changed,
+          id:              booking_local.id,
+          instance:        booking_local.instance,
+          booking_type:    booking_local.booking_type,
+          booking_start:   booking_local.booking_start,
+          booking_end:     booking_local.booking_end,
+          timezone:        booking_local.timezone,
+          resource_id:     booking_local.asset_id,
+          resource_ids:    booking_local.asset_ids,
+          user_id:         booking_local.user_id,
+          user_email:      booking_local.user_email,
+          user_name:       booking_local.user_name,
+          zones:           booking_local.zones,
+          process_state:   booking_local.process_state,
+          last_changed:    booking_local.last_changed,
           approver_name:   user.name,
           approver_email:  user.email.downcase,
-          title:           booking.title,
-          checked_in:      booking.checked_in,
-          description:     booking.description,
-          extension_data:  booking.extension_data,
-          booked_by_email: booking.booked_by_email,
-          booked_by_name:  booking.booked_by_name,
+          title:           booking_local.title,
+          checked_in:      booking_local.checked_in,
+          description:     booking_local.description,
+          extension_data:  booking_local.extension_data,
+          booked_by_email: booking_local.booked_by_email,
+          booked_by_name:  booking_local.booked_by_name,
         })
       rescue error
         Log.error(exception: error) { "while signaling booking cancelled" }

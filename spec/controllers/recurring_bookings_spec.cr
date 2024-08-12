@@ -93,7 +93,7 @@ describe Bookings do
       result.headers["Link"]?.should be_nil
     end
 
-    it "booking deleted before booking_start" do
+    it "should delete a booking instance" do
       tenant = get_tenant
 
       booking = BookingsHelper.create_booking(tenant.id.not_nil!,
