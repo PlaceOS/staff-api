@@ -86,6 +86,7 @@
 
 ### Fix
 
+- **bookings**: modify how delete is performed
 - **events**: [PPT-1390] return 404 instead of 500 and improve logging ([#321](https://github.com/PlaceOS/staff-api/pull/321))
 - **bookings**: user/zones query with booking_type=group-event ([#319](https://github.com/PlaceOS/staff-api/pull/319))
 - **booking**: [PPT-1205] update phone of existing guest when inviting visitor ([#317](https://github.com/PlaceOS/staff-api/pull/317))
