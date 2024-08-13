@@ -2234,4 +2234,44 @@ describe Bookings do
     booking.deleted.should be_true
     booking.children.not_nil!.all? { |b| b.deleted == true }.should be_true
   end
+
+  context "[visitor-kiosk]", tags: ["visitor-kiosk"] do
+    it "checks in a visitor" do
+      tenant = get_tenant
+
+      starting = Random.new.rand(5..19).minutes.from_now.to_unix
+      ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
+      visitor_email = Faker::Internet.email
+
+      # Create booking with attendee
+      create_booking_response = client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"room_one","booking_start":#{starting},"booking_end":#{ending},"booking_type":"room","attendees": [
+        {
+            "name": "#{Faker::Name.first_name}",
+            "email": "#{visitor_email}",
+            "checked_in": false,
+            "visit_expected": true
+        }]})
+      )
+      create_booking_response.status_code.should eq(201)
+      booking = Booking.from_json(create_booking_response.body)
+
+      # Find guest by email
+      guest_response = client.get("#{GUESTS_BASE}/#{visitor_email}", headers: headers)
+      guest_response.status_code.should eq(200)
+      guest_id = JSON.parse(guest_response.body)["id"]
+
+      # update induction state on booking
+      update_state_response = client.post("#{BOOKINGS_BASE}/#{booking.id}/update_state?state=inducted", headers: headers)
+      update_state_response.status_code.should eq(200)
+      booking = Booking.from_json(update_state_response.body)
+      booking.induction.should be_true
+
+      # change booking guests to attendees
+      booking.attendees = booking.guests
+      booking.guests = nil
+      update_response = client.patch("#{BOOKINGS_BASE}/#{booking.id}", headers: headers, body: booking.to_json)
+    end
+  end
 end
