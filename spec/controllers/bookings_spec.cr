@@ -2271,6 +2271,7 @@ describe Bookings do
       # change booking guests to attendees
       booking.attendees = booking.guests
       booking.guests = nil
+      booking.induction = true
       update_response = client.patch("#{BOOKINGS_BASE}/#{booking.id}", headers: headers, body: booking.to_json)
     end
   end
