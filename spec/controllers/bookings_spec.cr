@@ -2263,16 +2263,10 @@ describe Bookings do
       guest_id = JSON.parse(guest_response.body)["id"]
 
       # update induction state on booking
-      update_state_response = client.post("#{BOOKINGS_BASE}/#{booking.id}/update_state?state=inducted", headers: headers)
-      update_state_response.status_code.should eq(200)
-      booking = Booking.from_json(update_state_response.body)
-      booking.induction.should be_true
-
-      # change booking guests to attendees
-      booking.attendees = booking.guests
-      booking.guests = nil
-      booking.induction = true
-      update_response = client.patch("#{BOOKINGS_BASE}/#{booking.id}", headers: headers, body: booking.to_json)
+      update_induction_response = client.post("#{BOOKINGS_BASE}/#{booking.id}/update_induction?induction=ACCEPTED", headers: headers)
+      update_induction_response.status_code.should eq(200)
+      booking = Booking.from_json(update_induction_response.body)
+      booking.induction.should eq(PlaceOS::Model::Induction::ACCEPTED)
     end
   end
 end
