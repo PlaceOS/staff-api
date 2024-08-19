@@ -2266,7 +2266,7 @@ describe Bookings do
       update_induction_response = client.post("#{BOOKINGS_BASE}/#{booking.id}/update_induction?induction=ACCEPTED", headers: headers)
       update_induction_response.status_code.should eq(200)
       booking = Booking.from_json(update_induction_response.body)
-      booking.induction.should eq(PlaceOS::Model::Induction::ACCEPTED)
+      booking.induction.should eq(PlaceOS::Model::Booking::Induction::ACCEPTED)
     end
   end
 end
