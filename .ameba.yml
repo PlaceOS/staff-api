@@ -37,3 +37,24 @@ Style/PredicateName:
 
 Lint/LiteralsComparison:
   Enabled: false
+
+Naming/BlockParameterName:
+  Enabled: false
+
+Naming/AccessorMethodName:
+  Enabled: false
+
+Naming/PredicateName:
+  Enabled: false
+
+Documentation/DocumentationAdmonition:
+  Enabled: false
+
+Lint/SpecFilename:
+  Excluded:
+    - spec/controllers/helpers/*
+    - spec/migration/**/*
+
+Lint/UselessAssign:
+  Excluded:
+    - spec/**/*
