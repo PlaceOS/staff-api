@@ -2391,7 +2391,7 @@ paths:
       - name: induction
         in: query
         description: the induction status of the booking
-        example: TENTATIVE
+        example: accepted
         required: true
         schema:
           type: string

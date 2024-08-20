@@ -810,7 +810,7 @@ class Bookings < Application
   # update the induction status
   @[AC::Route::POST("/:id/update_induction")]
   def update_induction(
-    @[AC::Param::Info(description: "the induction status of the booking", example: "TENTATIVE")]
+    @[AC::Param::Info(description: "the induction status of the booking", example: "accepted")]
     induction : PlaceOS::Model::Booking::Induction,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
