@@ -2237,6 +2237,13 @@ describe Bookings do
 
   context "[visitor-kiosk]", tags: ["visitor-kiosk"] do
     it "checks in a visitor" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
       tenant = get_tenant
 
       starting = Random.new.rand(5..19).minutes.from_now.to_unix
@@ -2255,7 +2262,7 @@ describe Bookings do
         }]})
       )
       create_booking_response.status_code.should eq(201)
-      booking = Booking.from_json(create_booking_response.body)
+      booking_id = JSON.parse(create_booking_response.body)["id"]
 
       # Find guest by email
       guest_response = client.get("#{GUESTS_BASE}/#{visitor_email}", headers: headers)
@@ -2263,7 +2270,7 @@ describe Bookings do
       guest_id = JSON.parse(guest_response.body)["id"]
 
       # update induction state on booking
-      update_induction_response = client.post("#{BOOKINGS_BASE}/#{booking.id}/update_induction?induction=ACCEPTED", headers: headers)
+      update_induction_response = client.post("#{BOOKINGS_BASE}/#{booking_id}/update_induction?induction=accepted", headers: headers)
       update_induction_response.status_code.should eq(200)
       booking = Booking.from_json(update_induction_response.body)
       booking.induction.should eq(PlaceOS::Model::Booking::Induction::ACCEPTED)
