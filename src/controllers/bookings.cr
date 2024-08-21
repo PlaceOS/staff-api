@@ -56,7 +56,7 @@ class Bookings < Application
       .limit(1).to_a.first { raise Error::NotFound.new("could not find booking with id: #{id}") }
   end
 
-  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state])]
+  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction])]
   private def confirm_access
     return if is_support?
     if user = current_user
@@ -515,7 +515,7 @@ class Bookings < Application
     original_assets = existing_booking.asset_ids
     existing_booking.instance = instance
 
-    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images, :induction] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
@@ -805,6 +805,19 @@ class Bookings < Application
     booking.process_state = state
     booking.utm_source = utm_source
     update_booking(booking, "process_state")
+  end
+
+  # update the induction status
+  @[AC::Route::POST("/:id/update_induction")]
+  def update_induction(
+    @[AC::Param::Info(description: "the induction status of the booking", example: "accepted")]
+    induction : PlaceOS::Model::Booking::Induction,
+    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    utm_source : String? = nil
+  ) : Booking
+    booking.induction = induction
+    booking.utm_source = utm_source
+    update_booking(booking, "induction")
   end
 
   # returns a list of guests associated with a booking
