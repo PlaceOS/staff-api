@@ -1610,6 +1610,126 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/approve/{instance}:
+    post:
+      summary: approves a booking (if booking approval is required in an organisation)
+      tags:
+      - Bookings
+      operationId: Bookings_approve{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -1704,6 +1824,126 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/reject/{instance}:
+    post:
+      summary: rejects a booking
+      tags:
+      - Bookings
+      operationId: Bookings_reject{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       - name: utm_source
         in: query
         description: provided for use with analytics

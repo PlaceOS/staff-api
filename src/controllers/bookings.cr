@@ -723,10 +723,14 @@ class Bookings < Application
 
   # approves a booking (if booking approval is required in an organisation)
   @[AC::Route::POST("/:id/approve")]
+  @[AC::Route::POST("/:id/approve/:instance")]
   def approve(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
   ) : Booking
+    booking.instance = instance
     booking.utm_source = utm_source
     set_approver(booking, true)
 
@@ -738,10 +742,14 @@ class Bookings < Application
 
   # rejects a booking
   @[AC::Route::POST("/:id/reject")]
+  @[AC::Route::POST("/:id/reject/:instance")]
   def reject(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
   ) : Booking
+    booking.instance = instance
     booking.utm_source = utm_source
     set_approver(booking, false)
     update_booking(booking, "rejected")
