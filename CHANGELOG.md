@@ -87,6 +87,7 @@
 
 ### Fix
 
+- **bookings**: add approve and reject routes for recurring instances
 - **bookings**: modify how delete is performed
 - **events**: [PPT-1390] return 404 instead of 500 and improve logging ([#321](https://github.com/PlaceOS/staff-api/pull/321))
 - **bookings**: user/zones query with booking_type=group-event ([#319](https://github.com/PlaceOS/staff-api/pull/319))
