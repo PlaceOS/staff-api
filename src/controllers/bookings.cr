@@ -233,7 +233,8 @@ class Bookings < Application
     query = query.where(deleted: deleted_flag)
 
     unless include_checked_out
-      query = checked_out_flag ? query.where("checked_out_at != ?", nil) : query.where(checked_out_at: nil)
+      # query = checked_out_flag ? query.where("checked_out_at != ?", nil) : query.where(checked_out_at: nil)
+      query = checked_out_flag ? query.where("(checked_out_at IS NOT NULL OR checked_out_at != ?)", nil) : query.where("(checked_out_at IS NULL OR checked_out_at = ?)", nil)
     end
 
     total = query.count
@@ -247,7 +248,7 @@ class Bookings < Application
     num_standard = result.count(&.recurrence_type.none?)
 
     if starting && ending && num_standard < result.size
-      details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence)
+      details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence, include_checked_out ? nil : checked_out_flag)
 
       # Set link
       range_end = offset + num_standard + details.complete
@@ -284,12 +285,6 @@ class Bookings < Application
     ending : Int64 = 1.hours.from_now.to_unix,
     @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
     booking_type : String? = nil,
-    @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
-    deleted_flag : Bool = false,
-    @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
-    include_checked_out : Bool = false,
-    @[AC::Param::Info(name: "checked_out", description: "when true, only returns checked out bookings, unless `include_checked_out=true`", example: "true")]
-    checked_out_flag : Bool = false,
     @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
     zones : String? = nil,
     @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
@@ -307,8 +302,6 @@ class Bookings < Application
     created_after : Int64? = nil,
     @[AC::Param::Info(description: "filters bookings that are approved or not", example: "true")]
     approved : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings that are rejected or not", example: "true")]
-    rejected : Bool? = nil,
     @[AC::Param::Info(description: "filters bookings with matching extension data entries", example: %({"entry1":"value to match","entry2":1234}))]
     extension_data : String? = nil,
     @[AC::Param::Info(description: "filters on the booking process state, a user defined value", example: "pending-approval")]
@@ -327,12 +320,12 @@ class Bookings < Application
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
     permission : String? = nil
   ) : Array(String)
-    result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: deleted_flag, include_checked_out: include_checked_out,
-      checked_out_flag: checked_out_flag, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
-      created_before: created_before, created_after: created_after, approved: approved, rejected: rejected, extension_data: extension_data, state: state,
+    result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: false, include_checked_out: false,
+      checked_out_flag: false, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
+      created_before: created_before, created_after: created_after, approved: approved, rejected: false, extension_data: extension_data, state: state,
       department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission)
     asset_ids = [] of String
-    result.each { |b| asset_ids.concat(b.asset_ids) }
+    result.each { |b| asset_ids.concat(b.asset_ids) unless b.checked_in_at || b.deleted }
     asset_ids.uniq!
   end
 

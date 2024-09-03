@@ -457,27 +457,6 @@ paths:
         schema:
           type: string
           nullable: true
-      - name: deleted
-        in: query
-        description: when true, it returns deleted bookings
-        example: "true"
-        required: false
-        schema:
-          type: boolean
-      - name: include_checked_out
-        in: query
-        description: when true, returns all bookings including checked out ones
-        example: "true"
-        required: false
-        schema:
-          type: boolean
-      - name: checked_out
-        in: query
-        description: when true, only returns checked out bookings, unless `include_checked_out=true`
-        example: "true"
-        required: false
-        schema:
-          type: boolean
       - name: zones
         in: query
         description: this filters only bookings in the zones provided, multiple zones
@@ -541,14 +520,6 @@ paths:
       - name: approved
         in: query
         description: filters bookings that are approved or not
-        example: "true"
-        required: false
-        schema:
-          type: boolean
-          nullable: true
-      - name: rejected
-        in: query
-        description: filters bookings that are rejected or not
         example: "true"
         required: false
         schema:
