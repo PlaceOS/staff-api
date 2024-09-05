@@ -115,7 +115,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.25.3
+    version: 1.25.4
 
   openssl_ext:
     git: https://github.com/spider-gazelle/openssl_ext.git
@@ -159,7 +159,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.11.0
+    version: 2.11.6
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
