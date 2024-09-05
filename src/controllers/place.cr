@@ -15,10 +15,10 @@ class Place < Application
     top : Int32? = nil,
     @[AC::Param::Info(description: "Optional: Use skip query parameter to set the number of items to skip at the start of a collection.", example: "21 to retrieve search results from 21st record")]
     skip : Int32? = nil
-  ) : Office365::PlaceList
+  ) : Array(Office365::Room)
     case client.client_id
     when :office365
-      client.calendar.as(PlaceCalendar::Office365).client.list_rooms(match: match, filter: filter, top: top, skip: skip)
+      client.calendar.as(PlaceCalendar::Office365).client.list_rooms(match: match, filter: filter, top: top, skip: skip).as(Office365::Rooms).value
     else
       raise Error::NotImplemented.new("place query is not available for #{client.client_id}")
     end

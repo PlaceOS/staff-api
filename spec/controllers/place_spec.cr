@@ -11,9 +11,8 @@ describe Place do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/places/microsoft.graph.room")
         .to_return(body: File.read("./spec/fixtures/place/index.json"))
 
-      rooms = Office365::PlaceList.from_json(client.get(PLACE_BASE, headers: headers).body)
-      rooms.value.size.should eq(2)
-      rooms.value.first.is_a?(Office365::Room).should be_true
+      rooms = Array(Office365::Room).from_json(client.get(PLACE_BASE, headers: headers).body)
+      rooms.size.should eq(2)
     end
   end
 end

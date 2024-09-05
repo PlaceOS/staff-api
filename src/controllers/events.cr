@@ -47,7 +47,7 @@ class Events < Application
   private def confirm_access_for_add_attendee(
     event : PlaceCalendar::Event,
     metadata : EventMetadata,
-    system : PlaceOS::Client::API::Models::System? = nil,
+    system : PlaceOS::Client::API::Models::System? = nil
   )
     return if metadata.permission.public?
     return if is_support?
