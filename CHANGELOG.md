@@ -2,6 +2,7 @@
 
 ### Feat
 
+- PPT-642 Added place controller ([#333](https://github.com/PlaceOS/staff-api/pull/333))
 - **bookings**: update_induction endpoint ([#331](https://github.com/PlaceOS/staff-api/pull/331))
 - **events**: debug log ([#329](https://github.com/PlaceOS/staff-api/pull/329))
 - **tenants**: early_checkin endpoints ([#327](https://github.com/PlaceOS/staff-api/pull/327))
