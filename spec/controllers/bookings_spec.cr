@@ -1553,9 +1553,6 @@ describe Bookings do
   end
 
   it "#create and #update" do
-    # TODO:: it's merging the visitors, however we currently delete and re-add so we can ignore this for now
-    pending!("Needs to be updated but not critical at the moment as not used like this")
-
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -1621,6 +1618,81 @@ describe Bookings do
     guest = attendee.guest.not_nil!
     guest.name.should eq(updated_user_name)
     guest.email.should eq(updated_user_email)
+  end
+
+  it "#create and change start and end times" do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    user_name = Faker::Internet.user_name
+    user_email = Faker::Internet.email
+    starting = Random.new.rand(5..19).minutes.from_now.to_unix
+    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+
+    created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+      body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
+      {
+        "name": "#{user_name}",
+        "email": "#{user_email}",
+        "checked_in": false,
+        "visit_expected": true
+      }]})
+    ).body)
+    created["asset_id"].should eq("some_desk")
+    created["booking_start"].should eq(starting)
+    created["booking_end"].should eq(ending)
+
+    # Testing attendees / guests data creation
+    attendees = Booking.find(created["id"].as_i64).attendees.to_a
+    attendees.size.should eq(1)
+    attendee = attendees.first
+    attendee.checked_in.should eq(false)
+    attendee.visit_expected.should eq(true)
+
+    guest = attendee.guest.not_nil!
+    guest.name.should eq(user_name)
+    guest.email.should eq(user_email)
+
+    updated_user_name = Faker::Internet.user_name
+    updated_user_email = Faker::Internet.email
+
+    starting = starting + 1.hour.total_seconds.to_i64
+    ending = ending + 1.hour.total_seconds.to_i64
+
+    # instantiate the controller
+    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers, body: %({
+      "title":"new title","extension_data":{"other":"stuff"},
+      "booking_start":#{starting},"booking_end":#{ending},
+      "attendees": [
+      {
+        "id": "user-DNNTtul6VdpNqW",
+        "name": "#{user_name}",
+        "email": "#{user_email}",
+        "checked_in": false,
+        "visit_expected": true
+      }]})
+    ).body).as_h
+    updated["extension_data"].as_h["other"].should eq("stuff")
+    booking = Booking.find(updated["id"].as_i64)
+    booking.extension_data.as_h.should eq({"other" => "stuff"})
+    updated["title"].should eq("new title")
+    booking = Booking.find(updated["id"].as_i64)
+    booking.title.not_nil!.should eq("new title")
+
+    # Testing attendees / guests data updates
+    attendees = Booking.find(updated["id"].as_i64).attendees.to_a
+    attendees.size.should eq(1)
+    attendee = attendees.first
+    attendee.checked_in.should eq(false)
+    attendee.visit_expected.should eq(true)
+
+    guest = attendee.guest.not_nil!
+    guest.name.should eq(user_name)
+    guest.email.should eq(user_email)
   end
 
   it "#cannot double book the same asset" do

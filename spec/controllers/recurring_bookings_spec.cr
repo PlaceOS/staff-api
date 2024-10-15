@@ -38,7 +38,7 @@ describe Bookings do
       booking3.save!
 
       starting = Time.local.at_beginning_of_day.to_unix
-      ending = 4.5.days.from_now.to_unix
+      ending = (Time.local.at_beginning_of_day + 4.5.days).to_unix
 
       # make initial request
       zones1 = booking1.zones.not_nil!
