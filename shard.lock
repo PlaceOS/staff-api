@@ -103,7 +103,7 @@ shards:
 
   lucky_router:
     git: https://github.com/luckyframework/lucky_router.git
-    version: 0.5.2
+    version: 0.6.0
 
   nbchannel:
     git: https://github.com/wyhaines/nbchannel.cr.git
@@ -167,7 +167,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.59.1
+    version: 9.60.0
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
