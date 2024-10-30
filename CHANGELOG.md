@@ -88,6 +88,7 @@
 
 ### Fix
 
+- **bookings**: don't return rejected or deleted recurring master bookings
 - **booking**: checked out filters to work with recurring bookings
 - **bookings**: add approve and reject routes for recurring instances
 - **bookings**: modify how delete is performed
@@ -341,5 +342,3 @@
 
 - **bookings**: only query given params ([#123](https://github.com/PlaceOS/staff-api/pull/123))
 - **logging**: set raven to be async
-
-## v1.0 (2020-10-08)
