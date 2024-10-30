@@ -183,7 +183,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.4+git.commit.4c3e13760f830a2cc5ab80b24eb02bd9342e5411
+    version: 1.9.4+git.commit.59020d2838c19e769d7fb5e0ee3a242cd9fdb055
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git

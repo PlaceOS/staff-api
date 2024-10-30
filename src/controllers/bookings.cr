@@ -190,7 +190,7 @@ class Bookings < Application
       raise AC::Route::Param::MissingError.new("missing required parameter", "booking_type", "String") unless booking_type.presence
 
       query = query.where(
-        %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ?) OR ("booking_start" < ? AND "booking_end" > ?))},
+        %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ? AND rejected_at IS NULL AND deleted_at IS NULL) OR ("booking_start" < ? AND "booking_end" > ?))},
         starting, ending, ending, starting
       )
 
