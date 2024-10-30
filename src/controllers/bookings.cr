@@ -47,13 +47,22 @@ class Bookings < Application
   end
 
   @[AC::Route::Filter(:before_action, except: [:index, :create, :booked])]
-  private def find_booking(id : Int64)
-    @booking = Booking
+  private def find_booking(
+    id : Int64,
+    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    instance : Int64? = nil
+  )
+    @booking = booking = Booking
       .by_tenant(tenant.id)
       .where(id: id)
       .join(:left, Attendee, :booking_id)
       .join(:left, Guest, "guests.id = attendees.guest_id")
       .limit(1).to_a.first { raise Error::NotFound.new("could not find booking with id: #{id}") }
+
+    if instance
+      booking.instance = instance
+      @booking = booking.as_instance.hydrate_booking(booking)
+    end
   end
 
   @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction])]
@@ -496,17 +505,15 @@ class Bookings < Application
     changes : Booking,
 
     @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
-    limit_override : Int32? = nil,
-    @[AC::Param::Info(description: "a recurring instance", example: "1234567")]
-    instance : Int64? = nil
+    limit_override : Int32? = nil
   ) : Booking
     changes.id = booking.id
+    changes.instance = booking.instance
     existing_booking = booking
 
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
-    existing_booking.instance = instance
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images, :induction] %}
       begin
@@ -647,22 +654,8 @@ class Bookings < Application
   # returns the booking requested
   @[AC::Route::GET("/:id")]
   @[AC::Route::GET("/:id/instance/:instance")]
-  def show(
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
-  ) : Booking
-    return booking unless instance
-
-    if inst = ::PlaceOS::Model::BookingInstance.find_one_by_sql?(<<-SQL, booking.id, instance)
-        SELECT i.* FROM "booking_instances" i
-        WHERE i.id = $1
-          AND i.instance_start = $2
-        LIMIT 1
-      SQL
-      inst.hydrate_booking booking
-    else
-      booking.hydrate_instance(instance)
-    end
+  def show : Booking
+    booking
   end
 
   # marks the provided booking as deleted
@@ -670,12 +663,9 @@ class Bookings < Application
   @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
+    utm_source : String? = nil
   ) : Nil
     booking_local = booking
-    booking_local.instance = instance
     booking_local.deleted = true
     booking_local.deleted_at = Time.local.to_unix
     booking_local.utm_source = utm_source
@@ -719,11 +709,8 @@ class Bookings < Application
   @[AC::Route::POST("/:id/approve/:instance")]
   def approve(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
+    utm_source : String? = nil
   ) : Booking
-    booking.instance = instance
     booking.utm_source = utm_source
     set_approver(booking, true)
 
@@ -738,11 +725,8 @@ class Bookings < Application
   @[AC::Route::POST("/:id/reject/:instance")]
   def reject(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
+    utm_source : String? = nil
   ) : Booking
-    booking.instance = instance
     booking.utm_source = utm_source
     set_approver(booking, false)
     update_booking(booking, "rejected")
@@ -757,11 +741,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
     state : Bool = true,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil,
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
+    utm_source : String? = nil
   ) : Booking
-    booking.instance = instance
     booking.checked_in = state
 
     if booking.checked_in
@@ -960,7 +941,7 @@ class Bookings < Application
   # ============================================
 
   private def check_clashing(new_booking)
-    new_booking.clashing_bookings.to_a
+    new_booking.clashing_bookings.reject! { |book| book.id == new_booking.id && book.instance == new_booking.instance }
   end
 
   private def check_in_clashing(time_now, booking)

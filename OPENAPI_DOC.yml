@@ -806,7 +806,7 @@ paths:
           nullable: true
       - name: instance
         in: query
-        description: a recurring instance
+        description: a recurring instance id
         example: "1234567"
         required: false
         schema:
@@ -1029,7 +1029,7 @@ paths:
           nullable: true
       - name: instance
         in: query
-        description: a recurring instance
+        description: a recurring instance id
         example: "1234567"
         required: false
         schema:
@@ -1240,7 +1240,7 @@ paths:
           format: Int64
       - name: instance
         in: path
-        description: a recurring instance
+        description: a recurring instance id
         example: "1234567"
         required: true
         schema:
@@ -1463,7 +1463,7 @@ paths:
           format: Int64
       - name: instance
         in: path
-        description: a recurring instance
+        description: a recurring instance id
         example: "1234567"
         required: true
         schema:
@@ -2505,6 +2505,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -2618,6 +2627,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -2712,6 +2730,15 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -2823,6 +2850,15 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -2932,6 +2968,15 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -3032,6 +3077,15 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         200:
           description: OK
@@ -3132,6 +3186,15 @@ paths:
         required: true
         schema:
           type: string
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        required: false
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
       responses:
         202:
           description: Accepted

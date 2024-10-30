@@ -1102,7 +1102,7 @@ class Events < Application
       raise "no event provided" unless event
 
       # sleep just in case we're creating the event with metadata
-      sleep 0.5
+      sleep 500.milliseconds
       meta = get_event_metadata(event, system_id, search_recurring: false)
 
       # if meta exists then we've already notified that this change occured
