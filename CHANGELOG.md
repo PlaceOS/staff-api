@@ -88,6 +88,7 @@
 
 ### Fix
 
+- **bookings**: refactor how booking instance is applied
 - **bookings**: don't return rejected or deleted recurring master bookings
 - **booking**: checked out filters to work with recurring bookings
 - **bookings**: add approve and reject routes for recurring instances
