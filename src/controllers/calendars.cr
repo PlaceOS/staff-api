@@ -50,7 +50,7 @@ class Calendars < Application
     period_end : Int64,
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil
-  ) : Array(Availability)
+  ) : Array(Availability) | String
     # Grab the system emails
     candidates = matching_calendars.transform_keys &.downcase
     candidate_calendars = candidates.keys
@@ -60,7 +60,8 @@ class Calendars < Application
     all_calendars = Set.new((calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
     all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
-    return [] of Availability if calendars.empty?
+
+    render :not_found, json: "no tenants exist" if calendars.empty?
 
     # perform availability request
     period_start = Time.unix(period_start)
