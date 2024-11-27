@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 7.4.3
+    version: 7.5.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -15,7 +15,7 @@ shards:
 
   ameba:
     git: https://github.com/veelenga/ameba.git
-    version: 1.6.3
+    version: 1.6.4
 
   any_hash:
     git: https://github.com/sija/any_hash.cr.git
@@ -159,7 +159,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.11.7
+    version: 2.11.8
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -167,7 +167,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.60.0
+    version: 9.60.1
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
@@ -179,7 +179,7 @@ shards:
 
   protobuf:
     git: https://github.com/jeromegn/protobuf.cr.git
-    version: 2.3.0
+    version: 2.3.1
 
   raven:
     git: https://github.com/sija/raven.cr.git
