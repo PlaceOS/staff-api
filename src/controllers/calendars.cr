@@ -61,7 +61,7 @@ class Calendars < Application
     all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
 
-    render :not_found, json: "no tenants exist" if calendars.empty?
+    raise Error::TenantNotFound.new("no tenants exist") if calendars.empty?
 
     # perform availability request
     period_start = Time.unix(period_start)
