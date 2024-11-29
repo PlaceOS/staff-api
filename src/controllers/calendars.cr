@@ -50,7 +50,7 @@ class Calendars < Application
     period_end : Int64,
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil
-  ) : Array(Availability) | String
+  ) : Array(Availability)
     # Grab the system emails
     candidates = matching_calendars.transform_keys &.downcase
     candidate_calendars = candidates.keys
