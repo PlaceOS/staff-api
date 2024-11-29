@@ -212,7 +212,7 @@ class Events < Application
           # metadatas that most closely match the request
           # and has the most information
           next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]? &&
-          !(calendars[meta.resource_calendar]? && meta.ext_data)
+                  !(calendars[meta.resource_calendar]? && meta.ext_data)
 
           metadatas[meta.ical_uid] = meta
           if recurring_master_id = meta.recurring_master_id
