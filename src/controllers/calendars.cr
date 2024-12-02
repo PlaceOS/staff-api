@@ -9,6 +9,11 @@ class Calendars < Application
   @[AC::Route::Filter(:around_action)]
   Application.add_request_queue
 
+  @[AC::Route::Filter(:before_action)]
+  private def ensure_tenant
+    raise Error::NotImplemented.new("domain does not have a tenant configured") unless current_tenant
+  end
+
   @[AC::Route::Filter(:before_action, except: [:index])]
   private def find_matching_calendars(
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
@@ -61,7 +66,9 @@ class Calendars < Application
     all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
 
-    raise Error::TenantNotFound.new("no tenants exist") if calendars.empty?
+    render :no_content, json: [] of Availability if calendars.empty?
+
+    # raise Error::TenantNotFound.new("no tenants exist") if calendars.empty?
 
     # perform availability request
     period_start = Time.unix(period_start)

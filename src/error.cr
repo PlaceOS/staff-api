@@ -29,9 +29,6 @@ class Error < Exception
   class NotFound < Error
   end
 
-  class TenantNotFound < Error
-  end
-
   class BadUpstreamResponse < Error
   end
 

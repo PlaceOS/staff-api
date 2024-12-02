@@ -160,7 +160,6 @@ abstract class Application < ActionController::Base
   # 404 if resource not present
   @[AC::Route::Exception(Error::NotFound, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(PgORM::Error::RecordNotFound, status_code: HTTP::Status::NOT_FOUND)]
-  @[AC::Route::Exception(Error::TenantNotFound, status_code: HTTP::Status::NOT_FOUND)]
   def sql_record_not_found(error) : CommonError
     Log.debug { error.message }
     render_error(error)
