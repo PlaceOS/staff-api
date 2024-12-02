@@ -11,7 +11,7 @@ class Calendars < Application
 
   @[AC::Route::Filter(:before_action)]
   private def ensure_tenant
-    raise Error::NotImplemented.new("domain does not have a tenant configured") unless current_tenant
+    current_tenant
   end
 
   @[AC::Route::Filter(:before_action, except: [:index])]
@@ -67,9 +67,6 @@ class Calendars < Application
     calendars = all_calendars.to_a
 
     render :no_content, json: [] of Availability if calendars.empty?
-
-    # raise Error::TenantNotFound.new("no tenants exist") if calendars.empty?
-
     # perform availability request
     period_start = Time.unix(period_start)
     period_end = Time.unix(period_end)
