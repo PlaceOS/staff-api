@@ -88,6 +88,7 @@
 
 ### Fix
 
+- **events**: [PPT-1473] prefer metadata with ext_data over metadata without ([#335](https://github.com/PlaceOS/staff-api/pull/335))
 - **bookings**: refactor how booking instance is applied
 - **bookings**: don't return rejected or deleted recurring master bookings
 - **booking**: checked out filters to work with recurring bookings
