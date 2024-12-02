@@ -210,7 +210,9 @@ class Events < Application
         EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(ical_uids, event_master_ids).each { |meta|
           # where there might be multiple resource calendars on the event we want to pick
           # metadatas that most closely match the request
-          next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]?
+          # and has the most information
+          next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]? &&
+                  !(calendars[meta.resource_calendar]? && meta.ext_data)
 
           metadatas[meta.ical_uid] = meta
           if recurring_master_id = meta.recurring_master_id
