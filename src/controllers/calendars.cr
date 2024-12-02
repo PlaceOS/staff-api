@@ -9,6 +9,11 @@ class Calendars < Application
   @[AC::Route::Filter(:around_action)]
   Application.add_request_queue
 
+  @[AC::Route::Filter(:before_action)]
+  private def ensure_tenant
+    current_tenant
+  end
+
   @[AC::Route::Filter(:before_action, except: [:index])]
   private def find_matching_calendars(
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
@@ -60,8 +65,8 @@ class Calendars < Application
     all_calendars = Set.new((calendars || "").split(',').map(&.strip.downcase).reject(&.empty?))
     all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
-    return [] of Availability if calendars.empty?
 
+    render :no_content, json: [] of Availability if calendars.empty?
     # perform availability request
     period_start = Time.unix(period_start)
     period_end = Time.unix(period_end)

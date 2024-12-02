@@ -47,7 +47,7 @@ shards:
 
   debug:
     git: https://github.com/sija/debug.cr.git
-    version: 2.0.3
+    version: 2.0.4
 
   defined:
     git: https://github.com/wyhaines/defined.cr.git
@@ -183,7 +183,7 @@ shards:
 
   raven:
     git: https://github.com/sija/raven.cr.git
-    version: 1.9.4+git.commit.59020d2838c19e769d7fb5e0ee3a242cd9fdb055
+    version: 1.9.4+git.commit.a43f45229d1ee8030f8f07b101cb159896273195
 
   redis:
     git: https://github.com/stefanwille/crystal-redis.git
