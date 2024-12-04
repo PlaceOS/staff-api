@@ -88,6 +88,7 @@
 
 ### Fix
 
+- **bookings**: /booked route to return more results
 - **availability**: PPT-1629 return 404 when tenant not found ([#334](https://github.com/PlaceOS/staff-api/pull/334))
 - **events**: [PPT-1473] prefer metadata with ext_data over metadata without ([#335](https://github.com/PlaceOS/staff-api/pull/335))
 - **bookings**: refactor how booking instance is applied
