@@ -185,7 +185,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "the recurring bookings index of the result set. Used to implement pagination with recurring bookings")]
     recurrence : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
-    permission : String? = nil
+    permission : String? = nil,
+    link_ext : String? = nil
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
 
@@ -265,7 +266,7 @@ class Bookings < Application
         params["offset"] = range_end.to_s
         params["limit"] = limit.to_s
         params["recurrence"] = details.next_idx.to_s
-        response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+        response.headers["Link"] = %(<#{base_route}/#{link_ext}?#{params}>; rel="next")
       end
     else
       range_end = result.size + offset
@@ -276,7 +277,7 @@ class Bookings < Application
       if range_end < total
         params["offset"] = range_end.to_s
         params["limit"] = limit.to_s
-        response.headers["Link"] = %(<#{base_route}?#{params}>; rel="next")
+        response.headers["Link"] = %(<#{base_route}/#{link_ext}?#{params}>; rel="next")
       end
     end
 
@@ -322,8 +323,8 @@ class Bookings < Application
     event_id : String? = nil,
     @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
     ical_uid : String? = nil,
-    @[AC::Param::Info(description: "the maximum number of results to return", example: "10000")]
-    limit : Int32 = 100,
+    @[AC::Param::Info(description: "the maximum number of results to return", example: "100000")]
+    limit : Int32 = 100000,
     @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
     offset : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
@@ -332,7 +333,7 @@ class Bookings < Application
     result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: false, include_checked_out: false,
       checked_out_flag: false, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
       created_before: created_before, created_after: created_after, approved: approved, rejected: false, extension_data: extension_data, state: state,
-      department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission)
+      department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission, link_ext: "booked")
     asset_ids = [] of String
     result.each { |b| asset_ids.concat(b.asset_ids) unless b.checked_in_at || b.deleted }
     asset_ids.uniq!
