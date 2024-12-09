@@ -474,7 +474,7 @@ class Events < Application
     end
 
     # defaults to the current users email
-    cal_id = user.email unless cal_id
+    cal_id = cal_id.presence || user.email
 
     Log.debug { "attempting to find event #{event_id} searching on #{cal_id} as #{user.email}" }
     event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
@@ -765,7 +765,7 @@ class Events < Application
     end
 
     # defaults to the current users email
-    if auth_token_present? && !cal_id
+    if auth_token_present? && !cal_id.presence
       cal_id = user.email
     end
 
@@ -1281,7 +1281,7 @@ class Events < Application
     end
 
     # defaults to the current users email
-    cal_id = user.email unless cal_id
+    cal_id = cal_id.presence || user.email
 
     begin
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
@@ -1499,7 +1499,7 @@ class Events < Application
     end
 
     # defaults to the room email
-    cal_id ||= system.email.as(String)
+    cal_id = cal_id.presence || system.email.as(String)
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user_email}") unless event
