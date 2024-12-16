@@ -74,6 +74,72 @@ describe Events do
       body = client.get("#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: headers).body
       body.includes?(%("recurring_master_id": "#{master_event_id}"))
     end
+
+    it "#index should return a list of events with the most detailed metadata" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      # from ./spec/fixtures/events/o365/batch_index.json
+      ical_uid = "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F"
+      event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA="
+
+      tenant = get_tenant
+      event_calendar = "room1@example.com"
+      event_start = Random.new.rand(5..19).minutes.from_now.to_unix
+      event_end = Random.new.rand(25..79).minutes.from_now.to_unix
+
+      # 3 metadata records are created for shared events.
+      # 1. with no extension data
+      # 2. with extension data
+      # 3. with no extension data but with a different room email
+
+      metadata = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: event_id,
+        event_start: event_start,
+        event_end: event_end,
+        room_email: event_calendar,
+        ext_data: nil,
+        ical_uid: ical_uid
+      )
+
+      metadata_with_ext_data = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: event_id,
+        event_start: event_start,
+        event_end: event_end,
+        system_id: metadata.system_id,
+        room_email: event_calendar,
+        host: metadata.host_email,
+        ext_data: JSON.parse(%({"shared_event": true, "attendance_type": "ONSITE"})),
+        ical_uid: ical_uid,
+        permission: metadata.permission
+      )
+
+      metadata_room_calendar = EventMetadatasHelper.create_event(
+        tenant_id: tenant.id,
+        id: event_id,
+        event_start: event_start,
+        event_end: event_end,
+        system_id: metadata.system_id,
+        room_email: "room2@example.com",
+        host: metadata.host_email,
+        ext_data: nil,
+        ical_uid: ical_uid,
+        permission: metadata.permission
+      )
+
+      body = JSON.parse(client.get("#{EVENTS_BASE}?zone_ids=z1&period_start=#{event_start}&period_end=#{event_end}", headers: headers).body).as_a
+
+      body.size.should eq(1)
+      body.first["ical_uid"].should eq(ical_uid)
+      body.first["extension_data"].should eq(JSON.parse(%({"shared_event": true, "attendance_type": "ONSITE"})))
+    end
   end
 
   describe "#create" do
