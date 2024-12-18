@@ -211,8 +211,20 @@ class Events < Application
           # where there might be multiple resource calendars on the event we want to pick
           # metadatas that most closely match the request
           # and has the most information
+          #
+          # meta.ext_data is a JSON::Any | Nil type which can contain either nil or a hash.
+          # This means that nil checks can be unreliable and we should use the `==` or `!=` operator
+          # instead of `meta.ext_data.nil?` or `meta.ext_data`.
+          #
+          # meta.ext_data.nil? # => false
+          # meta.ext_data == nil # => true
+          # typeof(meta.ext_data) # => (JSON::Any | Nil)
+          # meta.ext_data.class # => JSON::Any
+          # meta.ext_data # => nil
+          #
+          #
           next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]? &&
-                  !(calendars[meta.resource_calendar]? && meta.ext_data)
+                  !(calendars[meta.resource_calendar]? && meta.ext_data != nil)
 
           metadatas[meta.ical_uid] = meta
           if recurring_master_id = meta.recurring_master_id
