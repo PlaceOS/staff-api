@@ -88,6 +88,7 @@
 
 ### Fix
 
+- **events**: [PPT-1473] return most detailed metadata ([#336](https://github.com/PlaceOS/staff-api/pull/336))
 - **bookings**: preference booking.description when signalling
 - **controllers/events**: ensure default to user email
 - **bookings**: /booked route to return more results
