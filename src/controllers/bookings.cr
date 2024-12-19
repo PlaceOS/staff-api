@@ -798,6 +798,32 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil
   ) : Booking
+    if (induction.accepted? || induction.declined?) &&
+       (guest = booking.attendees.to_a[0]?.try &.guest)
+      action = if induction.accepted?
+                 :induction_accepted
+               else
+                 :induction_declined
+               end
+
+      spawn do
+        get_placeos_client.root.signal("staff/guest/#{action}", {
+          action:         action,
+          id:             guest.id,
+          induction:      induction,
+          booking_id:     booking.id,
+          resource_id:    booking.asset_id,
+          resource_ids:   booking.asset_ids,
+          event_summary:  booking.description.presence || booking.title,
+          event_starting: booking.booking_start,
+          attendee_name:  guest.name,
+          attendee_email: guest.email,
+          host:           booking.user_email,
+          zones:          booking.zones,
+        })
+      end
+    end
+
     booking.induction = induction
     booking.utm_source = utm_source
     update_booking(booking, "induction")
@@ -1025,6 +1051,7 @@ class Bookings < Application
           extension_data:  booking.extension_data,
           booked_by_email: booking.booked_by_email,
           booked_by_name:  booking.booked_by_name,
+          induction:       booking.induction,
         })
       rescue error
         Log.error(exception: error) { "while signaling booking #{signal}" }
