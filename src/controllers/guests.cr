@@ -1,5 +1,3 @@
-require "csv"
-
 class Guests < Application
   base "/api/staff/v1/guests"
 
@@ -203,17 +201,12 @@ class Guests < Application
         .limit(1500).to_a
     else
       # Return guests based on the filter query
-      csv = CSV.new(search_query, strip: true, separator: ' ')
-      csv.next
-      parts = csv.row.to_a
-
-      sql_query = Guest.by_tenant(tenant.id)
-      parts.each do |part|
-        next if part.empty?
-        sql_query = sql_query.where("searchable LIKE ?", "%#{part}%")
-      end
-
-      sql_query.order(:name).limit(1500).to_a
+      tsquery = search_query.split(/\s+/).map { |part| "#{part}:*" }.join(" & ")
+      Guest
+        .by_tenant(tenant.id.not_nil!)
+        .where("tsv_search @@ to_tsquery(?)", tsquery)
+        .order(:name)
+        .limit(1500).to_a
     end
   end
 

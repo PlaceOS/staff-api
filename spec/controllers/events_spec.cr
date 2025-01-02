@@ -183,7 +183,6 @@ describe Events do
       guests.compact_map(&.organisation).should eq(["Google inc"])
       guests.compact_map(&.notes).should eq(["some notes"])
       guests.compact_map(&.photo).should eq(["http://example.com/first.jpg"])
-      guests.compact_map(&.searchable).should eq(["jon@example.com john jon google inc 012334446", "dev@acaprojects.onmicrosoft.com dev@acaprojects.onmicrosoft.com   "])
       guests.compact_map(&.extension_data).should eq([{"fizz" => "buzz"}, {} of String => String?])
     end
   end
