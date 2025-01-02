@@ -43,7 +43,7 @@ describe Bookings do
       # make initial request
       zones1 = booking1.zones.not_nil!
       zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last},,#{booking3.zones.not_nil!.last}"
-      route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&limit=2"
+      route = "#{BOOKINGS_BASE}/?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&limit=2"
       result = client.get(route, headers: headers)
 
       result.success?.should be_true
