@@ -26,11 +26,6 @@ dependencies:
   promise:
     github: spider-gazelle/promise
 
-  # Sentry integration
-  raven:
-    github: Sija/raven.cr
-    branch: master
-
   secrets-env:
     github: place-labs/secrets-env
 

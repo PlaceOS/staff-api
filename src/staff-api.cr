@@ -86,19 +86,6 @@ end
 Signal::INT.trap &terminate
 Signal::TERM.trap &terminate
 
-# Allow signals to change the log level at run-time
-logging = Proc(Signal, Nil).new do |signal|
-  level = signal.usr1? ? Log::Severity::Debug : Log::Severity::Info
-  puts " > Log level changed to #{level}"
-  Log.builder.bind "#{App::NAME}.*", level, App::LOG_BACKEND
-  signal.ignore
-end
-
-# Turn on DEBUG level logging `kill -s USR1 %PID`
-# Default production log levels (INFO and above) `kill -s USR2 %PID`
-Signal::USR1.trap &logging
-Signal::USR2.trap &logging
-
 # Start the server
 server.run do
   puts "Listening on #{server.print_addresses}"

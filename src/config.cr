@@ -9,8 +9,6 @@ require "./controllers/application"
 require "./models/*"
 require "./controllers/*"
 require "placeos-models"
-# Add telemetry after application code
-require "./telemetry"
 
 alias Tenant = PlaceOS::Model::Tenant
 alias Attendee = PlaceOS::Model::Attendee
