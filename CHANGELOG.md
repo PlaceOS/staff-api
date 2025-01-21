@@ -90,6 +90,7 @@
 
 ### Fix
 
+- **config**: force ms event logging
 - **staff**: MS 500 errors if there is a space in the query
 - **bookings**: add bookings. to checked_out in sql ([#339](https://github.com/PlaceOS/staff-api/pull/339))
 - **events**: [PPT-1473] return most detailed metadata ([#336](https://github.com/PlaceOS/staff-api/pull/336))
