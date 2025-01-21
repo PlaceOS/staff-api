@@ -28,7 +28,7 @@ keeps_headers = ["X-Request-ID"]
 # Add handlers that should run before your application
 ActionController::Server.before(
   ActionController::ErrorHandler.new(App.running_in_production?, keeps_headers),
-  ActionController::LogHandler.new(filter_params)
+  ActionController::LogHandler.new(filter_params, ms: true)
 )
 
 # Configure session cookies
