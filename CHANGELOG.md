@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **utilities/multi_tenant**: add parent tenant support
 - **bookings**: [PPT-1430] signal on induction accepted/declined ([#337](https://github.com/PlaceOS/staff-api/pull/337))
 - PPT-54 updated guests endpoint to use  full text search capabilities ([#338](https://github.com/PlaceOS/staff-api/pull/338))
 - PPT-642 Added place controller ([#333](https://github.com/PlaceOS/staff-api/pull/333))
