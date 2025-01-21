@@ -54,7 +54,9 @@ module Utils::MultiTenant
     begin
       user_email_domain = token.user.email.split('@', 2)[1]
       tenants = Tenant.where("domain = ? AND (email_domain = ? OR email_domain IS NULL)", authority_domain_host, user_email_domain).to_a
-      @tenant = tenants.find(tenants.first) { |t| t.email_domain == user_email_domain } unless tenants.empty?
+      if !tenants.empty? && (found = tenants.find(tenants.first) { |t| t.email_domain == user_email_domain })
+        @tenant = found.parent || found
+      end
       Log.context.set(domain: authority_domain_host, tenant_id: @tenant.try &.id)
     rescue error
       respond_with(:not_found) do
