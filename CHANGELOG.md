@@ -90,6 +90,7 @@
 
 ### Fix
 
+- **staff**: compilation issue
 - **config**: force ms event logging
 - **staff**: MS 500 errors if there is a space in the query
 - **bookings**: add bookings. to checked_out in sql ([#339](https://github.com/PlaceOS/staff-api/pull/339))
