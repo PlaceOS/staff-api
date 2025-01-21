@@ -22,7 +22,7 @@ class Staff < Application
 
     if next_link = users.first?.try(&.next_link)
       params = URI::Params.build do |form|
-        form.add("q", query.strip) if query.presence
+        form.add("q", query.as(String).strip) if query.presence
         form.add("filter", filter) if filter
         form.add("next_page", next_link)
       end
