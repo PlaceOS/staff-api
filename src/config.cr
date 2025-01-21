@@ -1,5 +1,3 @@
-require "./logging"
-
 # Application dependencies
 require "action-controller"
 
@@ -8,6 +6,7 @@ require "./error"
 require "./controllers/application"
 require "./models/*"
 require "./controllers/*"
+require "./logging"
 require "placeos-models"
 
 alias Tenant = PlaceOS::Model::Tenant
