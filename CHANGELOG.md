@@ -91,6 +91,7 @@
 
 ### Fix
 
+- **bookings**: instance start and end time calculations
 - **staff**: compilation issue
 - **config**: force ms event logging
 - **staff**: MS 500 errors if there is a space in the query
