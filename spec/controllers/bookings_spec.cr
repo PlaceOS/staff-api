@@ -39,34 +39,6 @@ describe Bookings do
       body.size.should eq(1)
     end
 
-    it "should return a list of asset ids" do
-      tenant = get_tenant
-
-      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
-      sleep 1
-      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
-
-      starting = 5.minutes.from_now.to_unix
-      ending = 90.minutes.from_now.to_unix
-      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
-      body = JSON.parse(client.get(route, headers: headers).body).as_a
-
-      body.first.should eq(booking1.asset_ids.first)
-
-      # filter by zones
-      zones1 = booking1.zones.not_nil!
-      zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
-      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
-
-      body = JSON.parse(client.get(route, headers: headers).body).as_a
-      body.map(&.as_s).should eq booking1.asset_ids.concat(booking2.asset_ids).uniq!
-
-      # More filters by zones
-      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
-      body = JSON.parse(client.get(route, headers: headers).body).as_a
-      body.first.in?(booking1.asset_ids.concat(booking2.asset_ids).uniq!).should be_true
-    end
-
     it "should supports pagination on list of bookings request" do
       tenant = get_tenant
 
@@ -539,6 +511,92 @@ describe Bookings do
           bookings.map(&.["id"]).should contain(booking_three["id"])
         end
       end
+    end
+  end
+
+  describe "#booked" do
+    it "should return a list of asset ids" do
+      tenant = get_tenant
+
+      booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+      sleep 1
+      booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&user=#{booking1.user_email}&type=desk"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+
+      body.first.should eq(booking1.asset_ids.first)
+
+      # filter by zones
+      zones1 = booking1.zones.not_nil!
+      zones_string = "#{zones1.first},#{booking2.zones.not_nil!.last}"
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.map(&.as_s).should eq booking1.asset_ids.concat(booking2.asset_ids).uniq!
+
+      # More filters by zones
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones1.first}"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.first.in?(booking1.asset_ids.concat(booking2.asset_ids).uniq!).should be_true
+    end
+
+    it "should return a list of asset ids (including checked in)" do
+      tenant_id = get_tenant.id.not_nil!
+
+      starting = Time.utc.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 30.minutes.from_now.to_unix, asset_id: "desk-1")
+
+      client.post("#{BOOKINGS_BASE}/#{booking1.id}/check_in", headers: headers)
+
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 35.minutes.from_now.to_unix, asset_id: "desk-2")
+
+      sleep 1
+
+      zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+      asset_ids = Array(String).from_json client.get(route, headers: headers).body
+      asset_ids.should contain("desk-1")
+      asset_ids.should contain("desk-2")
+    end
+
+    it "should return a list of asset ids (excluding checked out and deleted)", focus: true do
+      tenant_id = get_tenant.id.not_nil!
+
+      starting = Time.utc.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 30.minutes.from_now.to_unix, asset_id: "desk-1")
+
+      client.post("#{BOOKINGS_BASE}/#{booking1.id}/check_in", headers: headers)
+      client.post("#{BOOKINGS_BASE}/#{booking1.id}/check_in?state=false", headers: headers)
+
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: 5.minutes.from_now.to_unix,
+        booking_end: 35.minutes.from_now.to_unix, asset_id: "desk-2")
+      client.delete("#{BOOKINGS_BASE}/#{booking2.id}", headers: headers)
+
+      sleep 1
+
+      zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+      route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+      asset_ids = Array(String).from_json client.get(route, headers: headers).body
+      asset_ids.should_not contain("desk-1")
+      asset_ids.should_not contain("desk-2")
     end
   end
 
