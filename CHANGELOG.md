@@ -91,6 +91,7 @@
 
 ### Fix
 
+- **bookings**: [PPT-1835] booked desks showing up as available ([#340](https://github.com/PlaceOS/staff-api/pull/340))
 - **bookings**: instance start and end time calculations
 - **staff**: compilation issue
 - **config**: force ms event logging
