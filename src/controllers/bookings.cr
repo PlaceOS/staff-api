@@ -335,7 +335,7 @@ class Bookings < Application
       created_before: created_before, created_after: created_after, approved: approved, rejected: false, extension_data: extension_data, state: state,
       department: department, event_id: event_id, ical_uid: ical_uid, limit: limit, offset: offset, permission: permission, link_ext: "booked")
     asset_ids = [] of String
-    result.each { |b| asset_ids.concat(b.asset_ids) unless b.checked_in_at || b.deleted }
+    result.each { |b| asset_ids.concat(b.asset_ids) unless b.checked_out_at || b.deleted }
     asset_ids.uniq!
   end
 
