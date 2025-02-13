@@ -779,6 +779,7 @@ class Bookings < Application
 
   # the current state of a booking, if a custom state machine is being used
   @[AC::Route::POST("/:id/update_state")]
+  @[AC::Route::POST("/:id/update_state/:instance")]
   def update_state(
     @[AC::Param::Info(description: "the user defined process state of the booking", example: "pending_approval")]
     state : String,
@@ -792,6 +793,7 @@ class Bookings < Application
 
   # update the induction status
   @[AC::Route::POST("/:id/update_induction")]
+  @[AC::Route::POST("/:id/update_induction/:instance")]
   def update_induction(
     @[AC::Param::Info(description: "the induction status of the booking", example: "accepted")]
     induction : PlaceOS::Model::Booking::Induction,

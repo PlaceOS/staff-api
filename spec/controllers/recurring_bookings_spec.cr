@@ -125,6 +125,8 @@ describe Bookings do
 
     it "check-in recurrence" do
       tenant = get_tenant
+      tenant.early_checkin = 99999999999_i64
+      tenant.save!
 
       booking = BookingsHelper.create_booking(tenant.id.not_nil!,
         booking_start: 1.minutes.from_now.to_unix,
