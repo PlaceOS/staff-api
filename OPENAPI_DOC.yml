@@ -211,6 +211,12 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: link_ext
+        in: query
+        required: false
+        schema:
+          type: string
+          nullable: true
       responses:
         200:
           description: OK
@@ -570,7 +576,7 @@ paths:
       - name: limit
         in: query
         description: the maximum number of results to return
-        example: "10000"
+        example: "100000"
         required: false
         schema:
           type: integer
@@ -4551,6 +4557,117 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/metadata/{system_id}:
+    get:
+      summary: '# returns the event metadata requested.'
+      description: '# returns the event metadata requested.
+
+
+        by default it assumes the event exists on the resource calendar.
+
+        you can provide a calendar param to override this default'
+      tags:
+      - Events
+      operationId: Events_get_metadata
+      parameters:
+      - name: id
+        in: path
+        description: the event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: true
+        schema:
+          type: string
+      - name: system_id
+        in: path
+        description: the event space associated with this event
+        example: sys-1234
+        required: true
+        schema:
+          type: string
+      - name: calendar
+        in: query
+        description: the calendar associated with this event id
+        example: user@org.com
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: ical_uid
+        in: query
+        description: an alternative lookup for finding event-metadata
+        example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JSON__Any'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
     put:
       summary: Replaces the metadata on a booking without touching the calendar event
       description: 'Replaces the metadata on a booking without touching the calendar
