@@ -2,7 +2,7 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :patch_metadata, :guest_checkin, :add_attendee]
+  skip_action :check_jwt_scope, only: [:show, :get_metadata, :patch_metadata, :guest_checkin, :add_attendee]
 
   # Skip actions that requres login
   # If a user is logged in then they will be run as part of
@@ -919,6 +919,56 @@ class Events < Application
       meta.resource_master_id = event_id
       meta.save!
     end
+  end
+
+  # # returns the event metadata requested.
+  #
+  # by default it assumes the event exists on the resource calendar.
+  # you can provide a calendar param to override this default
+  @[AC::Route::GET("/:id/metadata/:system_id")]
+  def get_metadata(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil,
+    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    ical_uid : String? = nil,
+  ) : JSON::Any
+    event_id = original_id
+    placeos_client = get_placeos_client
+
+    # Guest access
+    if user_token.guest_scope?
+      guest_event_id, guest_system_id = user.roles
+      system_id ||= guest_system_id
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
+    end
+
+    system = placeos_client.systems.fetch(system_id)
+    cal_id = system.email.presence.try &.downcase
+    raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
+
+    user_email = user_token.guest_scope? ? cal_id : user.email.downcase
+    cal_id = user_cal || cal_id
+
+    # attempt to find the metadata
+    query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
+    if ical_uid.presence
+      query = query.where("ical_uid in (?,?) OR event_id = ?", ical_uid, event_id, event_id)
+    else
+      query = query.where(event_id: event_id)
+    end
+    raise Error::NotFound.new("metadata not found for event #{event_id}") unless meta = query.to_a.first?
+
+    # Guest access
+    if user_token.guest_scope?
+      raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({meta.event_id, meta.recurring_master_id, meta.resource_master_id, meta.ical_uid})
+    end
+
+    raise Error::InconsistentState.new("ext_data must be present on metadata") unless meta_ext_data = meta.ext_data
+    meta_ext_data
   end
 
   # Patches the metadata on a booking without touching the calendar event
