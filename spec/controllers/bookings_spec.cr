@@ -570,7 +570,7 @@ describe Bookings do
       asset_ids.should contain("desk-2")
     end
 
-    it "should return a list of asset ids (excluding checked out and deleted)", focus: true do
+    it "should return a list of asset ids (excluding checked out and deleted)" do
       tenant_id = get_tenant.id.not_nil!
 
       starting = Time.utc.to_unix
