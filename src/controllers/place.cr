@@ -14,7 +14,7 @@ class Place < Application
     @[AC::Param::Info(description: "Optional: Use the top query parameter to specify the number of items to be included in the result. Default value is 100", example: "100")]
     top : Int32? = nil,
     @[AC::Param::Info(description: "Optional: Use skip query parameter to set the number of items to skip at the start of a collection.", example: "21 to retrieve search results from 21st record")]
-    skip : Int32? = nil
+    skip : Int32? = nil,
   ) : Array(Office365::Room)
     case client.client_id
     when :office365

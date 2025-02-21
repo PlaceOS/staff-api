@@ -11,7 +11,7 @@ class Guests < Application
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_guest(
     @[AC::Param::Info(name: "id", description: "looks up a guest using either their id or email", example: "external@org.com")]
-    guest_id : Int64 | String
+    guest_id : Int64 | String,
   )
     @guest = case guest_id
              in String
@@ -51,7 +51,7 @@ class Guests < Application
     @[AC::Param::Info(description: "[deprecated] a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
     @[AC::Param::Info(description: "a comma seperated list of zone ids for bookings", example: "zone-123,zone-456")]
-    zones : Array(String)? = nil
+    zones : Array(String)? = nil,
   ) : Array(Guest)
     search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
 
@@ -276,7 +276,7 @@ class Guests < Application
     @[AC::Param::Info(description: "shoule we include past events they have visited", example: "true")]
     include_past : Bool = false,
     @[AC::Param::Info(description: "how many results to return", example: "10")]
-    limit : Int32 = 10
+    limit : Int32 = 10,
   ) : Array(PlaceCalendar::Event)
     future_only = !include_past
     placeos_client = get_placeos_client.systems
@@ -313,7 +313,7 @@ class Guests < Application
     @[AC::Param::Info(description: "shoule we include past bookings", example: "true")]
     include_past : Bool = false,
     @[AC::Param::Info(description: "how many results to return", example: "10")]
-    limit : Int32 = 10
+    limit : Int32 = 10,
   ) : Array(Booking)
     if user_token.guest_scope? && (guest.email != user_token.id)
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view bookings for #{guest.email}")

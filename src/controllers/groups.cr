@@ -9,7 +9,7 @@ class Groups < Application
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "q", description: "optional search query", example: "accounting")]
-    query : String? = nil
+    query : String? = nil,
   ) : Array(PlaceCalendar::Group)
     if client.client_id == :office365
       client.calendar.as(PlaceCalendar::Office365).client.list_groups(query).value.map(&.to_place_group)

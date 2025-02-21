@@ -32,7 +32,7 @@ class Events < Application
 
   @[AC::Route::Filter(:before_action, only: [:extension_metadata])]
   private def confirm_access(
-    system_id : String? = nil
+    system_id : String? = nil,
   )
     return if is_support?
 
@@ -47,7 +47,7 @@ class Events < Application
   private def confirm_access_for_add_attendee(
     event : PlaceCalendar::Event,
     metadata : EventMetadata,
-    system : PlaceOS::Client::API::Models::System? = nil
+    system : PlaceOS::Client::API::Models::System? = nil,
   )
     return if metadata.permission.public?
     return if is_support?
@@ -109,7 +109,7 @@ class Events < Application
     @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax", example: "")]
     filter : String? = nil,
     @[AC::Param::Info(description: "how to respond when there are calendar errors. Notify sets X-Calendar-Errors, limit returns a 429 error when rate limiting occured, any will 500 if there are any calendar errors", example: "notify")]
-    strict : Strict = Strict::Notify
+    strict : Strict = Strict::Notify,
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -460,7 +460,7 @@ class Events < Application
     @[AC::Param::Info(name: "system_id", description: "the event space associated with this event", example: "sys-1234")]
     associated_system : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
-    user_cal : String? = nil
+    user_cal : String? = nil,
   ) : PlaceCalendar::Event
     changes.id = event_id = original_id
     system_id = (associated_system || changes.system_id).presence
@@ -760,7 +760,7 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
-    user_cal : String? = nil
+    user_cal : String? = nil,
   ) : Attendee | PlaceCalendar::Event::Attendee
     placeos_client = get_placeos_client
     event_id = original_id
@@ -903,7 +903,7 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String,
     @[AC::Param::Info(description: "the ical_uid of the event", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
-    ical_uid : String
+    ical_uid : String,
   ) : Nil
     # ensure this function is valid
     return unless current_tenant.platform == "office365"
@@ -931,8 +931,6 @@ class Events < Application
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
-    user_cal : String? = nil,
     @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
     ical_uid : String? = nil,
   ) : JSON::Any
@@ -949,9 +947,6 @@ class Events < Application
     system = placeos_client.systems.fetch(system_id)
     cal_id = system.email.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-
-    user_email = user_token.guest_scope? ? cal_id : user.email.downcase
-    cal_id = user_cal || cal_id
 
     # attempt to find the metadata
     query = EventMetadata.by_tenant(tenant.id).where(system_id: system_id)
@@ -994,7 +989,7 @@ class Events < Application
     @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     setup_event_id : String? = nil,
     @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    breakdown_event_id : String? = nil
+    breakdown_event_id : String? = nil,
   ) : JSON::Any
     update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
@@ -1020,7 +1015,7 @@ class Events < Application
     @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     setup_event_id : String? = nil,
     @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
-    breakdown_event_id : String? = nil
+    breakdown_event_id : String? = nil,
   ) : JSON::Any
     update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: false, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
@@ -1157,7 +1152,7 @@ class Events < Application
     system_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     event_id : String,
-    event : PlaceCalendar::Event? = nil
+    event : PlaceCalendar::Event? = nil,
   ) : Nil
     system = PlaceOS::Model::ControlSystem.find!(system_id)
 
@@ -1207,7 +1202,7 @@ class Events < Application
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
-    user_cal : String? = nil
+    user_cal : String? = nil,
   ) : PlaceCalendar::Event
     placeos_client = get_placeos_client
     event_id = original_id
@@ -1298,7 +1293,7 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
-    notify_guests : Bool = true
+    notify_guests : Bool = true,
   ) : Nil
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: true)
   end
@@ -1316,7 +1311,7 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
-    notify_guests : Bool = true
+    notify_guests : Bool = true,
   ) : Nil
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: false)
   end
@@ -1412,7 +1407,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String
+    system_id : String,
   ) : Bool
     # Check this system has an associated resource
     system = get_placeos_client.systems.fetch(system_id)
@@ -1427,7 +1422,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String
+    system_id : String,
   ) : Bool
     # Check this system has an associated resource
     system = get_placeos_client.systems.fetch(system_id)
@@ -1450,7 +1445,7 @@ class Events < Application
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
-    system_id : String
+    system_id : String,
   ) : Array(Guest)
     cal_id = get_placeos_client.systems.fetch(system_id).email
     return [] of Guest unless cal_id
@@ -1492,7 +1487,7 @@ class Events < Application
     @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
     ending : Int64? = nil,
     @[AC::Param::Info(description: "list of event ids that we're potentially", example: "event_id,recurring_event_id,ical_uid")]
-    event_ref : Array(String)? = nil
+    event_ref : Array(String)? = nil,
   ) : Array(EventMetadata)
     raise Error::BadRequest.new("must provide one of field_name & value, system_id, event_ref, period_start or period_end") unless system_id || (field_name && value) || starting || ending || (event_ref && event_ref.size > 0)
 
@@ -1522,7 +1517,7 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
-    checkin : Bool = true
+    checkin : Bool = true,
   ) : Guest
     guest_id = guest_email.downcase
     event_id = original_id

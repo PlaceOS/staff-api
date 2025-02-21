@@ -50,7 +50,7 @@ class Bookings < Application
   private def find_booking(
     id : Int64,
     @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
-    instance : Int64? = nil
+    instance : Int64? = nil,
   )
     @booking = booking = Booking
       .by_tenant(tenant.id)
@@ -186,7 +186,7 @@ class Bookings < Application
     recurrence : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
     permission : String? = nil,
-    link_ext : String? = nil
+    link_ext : String? = nil,
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
 
@@ -328,7 +328,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
     offset : Int32 = 0,
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
-    permission : String? = nil
+    permission : String? = nil,
   ) : Array(String)
     result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: false, include_checked_out: false,
       checked_out_flag: false, zones: zones, user_email: user_email, user_id: user_id, include_booked_by: include_booked_by, checked_in: checked_in,
@@ -352,7 +352,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String? = nil,
     @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
-    ical_uid : String? = nil
+    ical_uid : String? = nil,
   ) : Booking
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
@@ -506,7 +506,7 @@ class Bookings < Application
     changes : Booking,
 
     @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
-    limit_override : Int32? = nil
+    limit_override : Int32? = nil,
   ) : Booking
     changes.id = booking.id
     changes.instance = booking.instance
@@ -664,7 +664,7 @@ class Bookings < Application
   @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Nil
     booking_local = booking
     booking_local.deleted = true
@@ -710,7 +710,7 @@ class Bookings < Application
   @[AC::Route::POST("/:id/approve/:instance")]
   def approve(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Booking
     booking.utm_source = utm_source
     set_approver(booking, true)
@@ -726,7 +726,7 @@ class Bookings < Application
   @[AC::Route::POST("/:id/reject/:instance")]
   def reject(
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Booking
     booking.utm_source = utm_source
     set_approver(booking, false)
@@ -742,7 +742,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
     state : Bool = true,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Booking
     booking.checked_in = state
 
@@ -784,7 +784,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the user defined process state of the booking", example: "pending_approval")]
     state : String,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Booking
     booking.process_state = state
     booking.utm_source = utm_source
@@ -798,7 +798,7 @@ class Bookings < Application
     @[AC::Param::Info(description: "the induction status of the booking", example: "accepted")]
     induction : PlaceOS::Model::Booking::Induction,
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
-    utm_source : String? = nil
+    utm_source : String? = nil,
   ) : Booking
     if (induction.accepted? || induction.declined?) &&
        (guest = booking.attendees.to_a[0]?.try &.guest)
@@ -846,7 +846,7 @@ class Bookings < Application
     @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
     guest_email : String,
     @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
-    checkin : Bool = true
+    checkin : Bool = true,
   ) : Guest
     guest = Guest.by_tenant(tenant.id).find_by(email: guest_email.strip.downcase)
     attendee = Attendee.by_tenant(tenant.id).find_by(guest_id: guest.id, booking_id: booking.id)
@@ -879,7 +879,7 @@ class Bookings < Application
   # Adds a single attendee to an existing booking
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
-    attendee : PlaceCalendar::Event::Attendee
+    attendee : PlaceCalendar::Event::Attendee,
   ) : Attendee
     email = attendee.email.strip.downcase
 
@@ -953,7 +953,7 @@ class Bookings < Application
   @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
   def destroy_attendee(
     @[AC::Param::Info(name: "attendee_id", description: "the email of the attendee we want to remove", example: "person@example.com")]
-    attendee_email : String
+    attendee_email : String,
   ) : Nil
     email = attendee_email.strip.downcase
 
@@ -975,6 +975,7 @@ class Bookings < Application
 
   private def check_in_clashing(time_now, booking)
     booking_type = booking.booking_type
+    return [] of Booking if booking_type.downcase == "visitor"
     asset_ids = (booking.asset_ids + [booking.asset_id]).uniq
 
     query = Booking

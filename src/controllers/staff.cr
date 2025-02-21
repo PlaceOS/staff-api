@@ -12,7 +12,7 @@ class Staff < Application
     @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax. Provides more control over the search criteria and takes precedence over the 'q' parameter. Supports both Azure AD and Google providers.", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
     filter : String? = nil,
     @[AC::Param::Info(description: "a google token or graph api URI representing the next page of results")]
-    next_page : String? = nil
+    next_page : String? = nil,
   ) : Array(PlaceCalendar::User)
     users = if filter
               client.list_users(filter: filter, next_link: next_page)
@@ -35,7 +35,7 @@ class Staff < Application
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
-    id : String
+    id : String,
   ) : PlaceCalendar::User
     user = client.get_user_by_email(id)
     raise Error::NotFound.new("user #{id} not found") unless user

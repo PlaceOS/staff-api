@@ -22,7 +22,7 @@ class Surveys::Questions < Application
     @[AC::Param::Info(description: "the survey id to get questions for", example: "1234")]
     survey_id : Int64? = nil,
     @[AC::Param::Info(description: "filter by soft-deleted", example: "true")]
-    deleted : Bool? = nil
+    deleted : Bool? = nil,
   ) : Array(Survey::Question)
     Survey::Question.list(survey_id, deleted)
   end
@@ -57,7 +57,7 @@ class Surveys::Questions < Application
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the question id", example: "1234")]
-    question_id : Int64
+    question_id : Int64,
   ) : Survey::Question
     question
   end
