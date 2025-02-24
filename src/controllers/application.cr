@@ -20,7 +20,7 @@ abstract class Application < ActionController::Base
   COUNT_LOCK  = Mutex.new
 
   macro add_request_queue
-    def request_queue : Nil
+    def request_queue(&) : Nil
       limit = QUEUE_LIMIT
       return yield unless limit
 
@@ -107,7 +107,7 @@ abstract class Application < ActionController::Base
     visitor : Attendee?,
     guest : Guest?,
     is_parent_metadata = false,
-    meeting_details = nil
+    meeting_details = nil,
   ) : Guest | Attendee
     if guest
       guest.to_h(visitor, is_parent_metadata, meeting_details)

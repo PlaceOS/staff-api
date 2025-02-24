@@ -42,7 +42,7 @@ module Utils::PlaceOSHelpers
     features : String? = nil,
     capacity : Int32? = nil,
     bookable : Bool? = nil,
-    allow_default = false
+    allow_default = false,
   )
     calendars = Set.new((calendars || "").split(',').compact_map(&.strip.downcase.presence))
 

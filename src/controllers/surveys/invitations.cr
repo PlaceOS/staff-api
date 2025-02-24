@@ -22,7 +22,7 @@ class Surveys::Invitations < Application
     @[AC::Param::Info(description: "the survey id to get invitations for", example: "1234")]
     survey_id : Int64? = nil,
     @[AC::Param::Info(description: "filter by sent status", example: "false")]
-    sent : Bool? = nil
+    sent : Bool? = nil,
   ) : Array(Survey::Invitation)
     Survey::Invitation.list(survey_id, sent)
   end
@@ -56,7 +56,7 @@ class Surveys::Invitations < Application
   @[AC::Route::GET("/:token")]
   def show(
     @[AC::Param::Info(name: "token", description: "the invitation token", example: "ABCDEF")]
-    token : String
+    token : String,
   ) : Survey::Invitation
     invitation
   end
@@ -65,7 +65,7 @@ class Surveys::Invitations < Application
   @[AC::Route::DELETE("/:token", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(name: "token", description: "the invitation token", example: "ABCDEF")]
-    token : String
+    token : String,
   ) : Nil
     invitation.delete
   end

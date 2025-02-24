@@ -9,7 +9,7 @@ class Surveys::Answers < Application
     @[AC::Param::Info(description: "filters answers that were created after the unix epoch specified", example: "1661743123")]
     created_after : Int64? = nil,
     @[AC::Param::Info(description: "filters answers that were created before the unix epoch specified", example: "1661743123")]
-    created_before : Int64? = nil
+    created_before : Int64? = nil,
   ) : Array(Survey::Answer)
     Survey::Answer.list(survey_id, created_after, created_before)
   end

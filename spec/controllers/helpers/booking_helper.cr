@@ -88,7 +88,7 @@ module BookingsHelper
     department = nil,
     limit_override = nil,
     asset_ids : Array(String) = [] of String,
-    permission = nil
+    permission = nil,
   )
     asset_ids << asset_id if asset_ids.empty?
     body = {

@@ -22,7 +22,7 @@ class Surveys < Application
     @[AC::Param::Info(name: "zone_id", description: "filters surveys by zone_id", example: "zone1234")]
     zone_id : String? = nil,
     @[AC::Param::Info(name: "building_id", description: "filters surveys by building_id", example: "building1234")]
-    building_id : String? = nil
+    building_id : String? = nil,
   ) : Array(Survey)
     Survey.list(zone_id, building_id)
   end
@@ -56,7 +56,7 @@ class Surveys < Application
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the survey id", example: "1234")]
-    survey_id : Int64
+    survey_id : Int64,
   ) : Survey
     survey
   end
