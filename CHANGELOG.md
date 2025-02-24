@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: [PPT-1781] ignore clash check for visitor booking ([#342](https://github.com/PlaceOS/staff-api/pull/342))
 - **events**: #get_metadata ([#341](https://github.com/PlaceOS/staff-api/pull/341))
 - **utilities/multi_tenant**: add parent tenant support
 - **bookings**: [PPT-1430] signal on induction accepted/declined ([#337](https://github.com/PlaceOS/staff-api/pull/337))
