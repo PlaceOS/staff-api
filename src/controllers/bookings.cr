@@ -197,7 +197,7 @@ class Bookings < Application
     event_ids = [event_id.presence, ical_uid.presence].compact
 
     if event_ids.empty?
-      raise AC::Route::Param::MissingError.new("missing required parameter", "booking_type", "String") unless booking_type.presence
+      raise AC::Route::Param::MissingError.new("missing required parameter 'type'", "type", "String") unless booking_type.presence
 
       query = query.where(
         %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ? AND rejected_at IS NULL AND deleted_at IS NULL) OR ("booking_start" < ? AND "booking_end" > ?))},
