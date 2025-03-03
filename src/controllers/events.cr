@@ -215,34 +215,43 @@ class Events < Application
           # meta.ext_data is a JSON::Any | Nil type which can contain either nil or a hash.
           # This means that nil checks can be unreliable and we should use the `==` or `!=` operator
           # instead of `meta.ext_data.nil?` or `meta.ext_data`.
-          #
           # meta.ext_data.nil? # => false
           # meta.ext_data == nil # => true
           # typeof(meta.ext_data) # => (JSON::Any | Nil)
           # meta.ext_data.class # => JSON::Any
           # meta.ext_data # => nil
           #
-          #
-          next if (existing = metadatas[meta.ical_uid]?) && calendars[existing.resource_calendar]? &&
-                  !(calendars[meta.resource_calendar]? && meta.ext_data != nil)
+          # we can't use `#[]?` to check for keys as the value can be nil, so we have to use `#has_key?`
+          # calendars # => {"events@example.com" => nil}
+          # calendars[existing.resource_calendar]? # => nil
+          # calendars.has_key?(existing.resource_calendar) # => true
+          next if (existing = metadatas[meta.ical_uid]?) && calendars.has_key?(existing.resource_calendar) &&
+                  !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
 
           metadatas[meta.ical_uid] = meta
           if recurring_master_id = meta.recurring_master_id
-            next if (existing = metadatas[recurring_master_id]?) && calendars[existing.resource_calendar]?
+            next if (existing = metadatas[recurring_master_id]?) && calendars.has_key?(existing.resource_calendar) &&
+                    !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
+
             metadatas[recurring_master_id] = meta
             if resource_master_id = meta.resource_master_id
-              next if (existing = metadatas[resource_master_id]?) && calendars[existing.resource_calendar]?
+              next if (existing = metadatas[resource_master_id]?) && calendars.has_key?(existing.resource_calendar) &&
+                      !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
+
               metadatas[resource_master_id] = meta
             end
           end
         }
       else
         EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(event_ids, event_master_ids).each { |meta|
-          next if (existing = metadatas[meta.event_id]?) && calendars[existing.resource_calendar]?
+          next if (existing = metadatas[meta.event_id]?) && calendars.has_key?(existing.resource_calendar) &&
+                  !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
 
           metadatas[meta.event_id] = meta
           if recurring_master_id = meta.recurring_master_id
-            next if (existing = metadatas[recurring_master_id]?) && calendars[existing.resource_calendar]?
+            next if (existing = metadatas[recurring_master_id]?) && calendars.has_key?(existing.resource_calendar) &&
+                    !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
+
             metadatas[recurring_master_id] = meta
           end
         }
