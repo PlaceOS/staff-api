@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: add method for patching extension data ([#344](https://github.com/PlaceOS/staff-api/pull/344))
 - **bookings**: [PPT-1781] ignore clash check for visitor booking ([#342](https://github.com/PlaceOS/staff-api/pull/342))
 - **events**: #get_metadata ([#341](https://github.com/PlaceOS/staff-api/pull/341))
 - **utilities/multi_tenant**: add parent tenant support
@@ -361,3 +362,5 @@
 
 - **bookings**: only query given params ([#123](https://github.com/PlaceOS/staff-api/pull/123))
 - **logging**: set raven to be async
+
+## v1.0 (2020-10-08)
