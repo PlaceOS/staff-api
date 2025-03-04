@@ -94,6 +94,7 @@
 
 ### Fix
 
+- **events**: missing ext_data ([#343](https://github.com/PlaceOS/staff-api/pull/343))
 - **bookings**: error message when type param missing
 - **bookings**: [PPT-1835] booked desks showing up as available ([#340](https://github.com/PlaceOS/staff-api/pull/340))
 - **bookings**: instance start and end time calculations
