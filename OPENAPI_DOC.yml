@@ -1504,6 +1504,235 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/ext_data:
+    patch:
+      summary: patches an existing booking extension data with the changes provided
+      tags:
+      - Bookings
+      operationId: Bookings_patch_extdata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: signal_changes
+        in: query
+        description: signal changes to the booking
+        example: "true"
+        schema:
+          type: boolean
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/ext_data/{instance}:
+    patch:
+      summary: patches an existing booking extension data with the changes provided
+      tags:
+      - Bookings
+      operationId: Bookings_patch_extdata{2}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: signal_changes
+        in: query
+        description: signal changes to the booking
+        example: "true"
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/bookings/{id}/approve:
     post:
       summary: approves a booking (if booking approval is required in an organisation)
@@ -3647,9 +3876,8 @@ paths:
   /api/staff/v1/calendars/free_busy:
     get:
       summary: Finds the busy times in the period provided on the selected calendars.
-      description: 'Finds the busy times in the period provided on the selected calendars.
-
-        Returns the calendars that have meetings overlapping provided period'
+      description: "Finds the busy times in the period provided on the selected calendars.\r\nReturns
+        the calendars that have meetings overlapping provided period"
       tags:
       - Calendars
       operationId: Calendars_free_busy
@@ -4661,13 +4889,6 @@ paths:
         required: true
         schema:
           type: string
-      - name: calendar
-        in: query
-        description: the calendar associated with this event id
-        example: user@org.com
-        schema:
-          type: string
-          nullable: true
       - name: ical_uid
         in: query
         description: an alternative lookup for finding event-metadata
@@ -4756,7 +4977,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JSON__Any'
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
         required: true
       parameters:
       - name: id
@@ -4899,7 +5120,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JSON__Any'
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
         required: true
       parameters:
       - name: id
@@ -6892,13 +7113,9 @@ paths:
   /api/staff/v1/place:
     get:
       summary: Retrieves a list of rooms from the tenant place object
-      description: 'Retrieves a list of rooms from the tenant place object
-
-        This function supports advanced filtering using Azure AD filter syntax.
-
-        For more information on Azure AD filter syntax, visit:
-
-        https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http'
+      description: "Retrieves a list of rooms from the tenant place object\r\nThis
+        function supports advanced filtering using Azure AD filter syntax.\r\nFor
+        more information on Azure AD filter syntax, visit:\r\nhttps://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http"
       tags:
       - Place
       operationId: Place_index
@@ -7012,13 +7229,9 @@ paths:
   /api/staff/v1/people:
     get:
       summary: Retrieves a list of users from the organization directory
-      description: 'Retrieves a list of users from the organization directory
-
-        This function supports advanced filtering using Azure AD filter syntax.
-
-        For more information on Azure AD filter syntax, visit:
-
-        https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http'
+      description: "Retrieves a list of users from the organization directory\r\nThis
+        function supports advanced filtering using Azure AD filter syntax.\r\nFor
+        more information on Azure AD filter syntax, visit:\r\nhttps://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http"
       tags:
       - Staff
       operationId: Staff_index
@@ -8908,10 +9121,9 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
     put:
       summary: patches an existing question
-      description: 'patches an existing question
-
-        This will create a new version of the question if there are any linked answers,
-        and then soft delete the old version.'
+      description: "patches an existing question\r\nThis will create a new version
+        of the question if there are any linked answers, and then soft delete the
+        old version."
       tags:
       - Questions
       operationId: Surveys::Questions_update
@@ -8999,10 +9211,8 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
     delete:
       summary: deletes the question
-      description: 'deletes the question
-
-        This will soft delete the question if there are any linked answers or if the
-        question is in any surveys.'
+      description: "deletes the question\r\nThis will soft delete the question if
+        there are any linked answers or if the question is in any surveys."
       tags:
       - Questions
       operationId: Surveys::Questions_destroy
@@ -9080,10 +9290,9 @@ paths:
                 $ref: '#/components/schemas/Application__CommonError'
     patch:
       summary: patches an existing question
-      description: 'patches an existing question
-
-        This will create a new version of the question if there are any linked answers,
-        and then soft delete the old version.'
+      description: "patches an existing question\r\nThis will create a new version
+        of the question if there are any linked answers, and then soft delete the
+        old version."
       tags:
       - Questions
       operationId: Surveys::Questions_update{2}
@@ -10332,6 +10541,9 @@ components:
           format: Int64
           description: an optional end date for booking recurrences
           nullable: true
+        all_day:
+          type: boolean
+          nullable: true
         tenant_id:
           type: integer
           format: Int64
@@ -10350,6 +10562,10 @@ components:
           nullable: true
     String:
       type: string
+    Hash_String__JSON__Any_:
+      type: object
+      additionalProperties:
+        type: object
     PlaceOS__Model__Guest:
       type: object
       properties:
@@ -12575,7 +12791,7 @@ components:
           nullable: true
       required:
       - error
-      description: generic error feedback, backtraces only provided in development
+      description: "generic error feedback, backtraces only provided in development\r"
     Application__ContentError:
       type: object
       properties:
@@ -12588,8 +12804,8 @@ components:
           nullable: true
       required:
       - error
-      description: provides a list of acceptable content types if an unknown one is
-        requested
+      description: "provides a list of acceptable content types if an unknown one
+        is requested\r"
     Application__ParameterError:
       type: object
       properties:
@@ -12603,7 +12819,7 @@ components:
           nullable: true
       required:
       - error
-      description: Provides details on which parameter is missing or invalid
+      description: "Provides details on which parameter is missing or invalid\r"
     Application__ValidationError:
       type: object
       properties:
@@ -12897,6 +13113,9 @@ components:
                 type: integer
                 format: Int64
                 description: an optional end date for booking recurrences
+                nullable: true
+              all_day:
+                type: boolean
                 nullable: true
               tenant_id:
                 type: integer

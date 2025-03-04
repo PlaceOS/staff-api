@@ -91,6 +91,25 @@ describe Bookings do
       body.first["linked_event"]["event_id"].as_s.should eq event.event_id
     end
 
+    it "should update ext data in isolation" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+      guest_email = Faker::Internet.email
+
+      id = JSON.parse(client.post(BOOKINGS_BASE, headers: headers, body: %({"asset_id":"fsd_desk-ext","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","extension_data":{"my_state":"testing"}})).body)["id"].as_i64
+      client.patch("#{BOOKINGS_BASE}/#{id}/ext_data", headers: headers, body: %({"other_state":"12345"}))
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{id}", headers: headers).body)
+      body["extension_data"].as_h.transform_values(&.as_s).should eq({
+        "my_state"    => "testing",
+        "other_state" => "12345",
+      })
+    end
+
     it "should filter by ext data" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
