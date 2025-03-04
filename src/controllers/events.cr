@@ -973,7 +973,7 @@ class Events < Application
   # you can provide a calendar param to override this default
   @[AC::Route::PATCH("/:id/metadata/:system_id", body: :changes)]
   def patch_metadata(
-    changes : JSON::Any,
+    changes : Hash(String, JSON::Any),
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
@@ -991,7 +991,7 @@ class Events < Application
     @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     breakdown_event_id : String? = nil,
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
+    update_metadata(changes, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
   # Replaces the metadata on a booking without touching the calendar event
@@ -999,7 +999,7 @@ class Events < Application
   # you can provide a calendar param to override this default
   @[AC::Route::PUT("/:id/metadata/:system_id", body: :changes)]
   def replace_metadata(
-    changes : JSON::Any,
+    changes : Hash(String, JSON::Any),
     @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
@@ -1017,7 +1017,7 @@ class Events < Application
     @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     breakdown_event_id : String? = nil,
   ) : JSON::Any
-    update_metadata(changes.as_h, original_id, system_id, user_cal, ical_uid, merge: false, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
+    update_metadata(changes, original_id, system_id, user_cal, ical_uid, merge: false, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
   protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false, setup_time : Int64? = nil, breakdown_time : Int64? = nil, setup_event_id : String? = nil, breakdown_event_id : String? = nil) : JSON::Any

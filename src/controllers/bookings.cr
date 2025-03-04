@@ -65,7 +65,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction])]
+  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata])]
   private def confirm_access
     return if is_support?
     if user = current_user
@@ -650,6 +650,27 @@ class Bookings < Application
     end
 
     update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
+  end
+
+  # patches an existing booking extension data with the changes provided
+  @[AC::Route::PATCH("/:id/ext_data", body: :changes)]
+  @[AC::Route::PATCH("/:id/ext_data/:instance", body: :changes)]
+  def patch_extdata(
+    changes : Hash(String, JSON::Any),
+
+    @[AC::Param::Info(description: "signal changes to the booking", example: "true")]
+    signal_changes : Bool = false,
+  ) : Booking
+    book = booking
+    ext_data = book.extension_data.as_h
+    changes.each { |key, value| ext_data[key] = value }
+    book.change_extension_data(JSON::Any.new ext_data)
+    if signal_changes
+      update_booking(book, "extdata_changed")
+    else
+      book.save! rescue raise Error::ModelValidation.new(book.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking data")
+    end
+    book
   end
 
   # returns the booking requested
