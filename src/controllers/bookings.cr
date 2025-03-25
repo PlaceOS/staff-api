@@ -516,7 +516,7 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images, :induction] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
