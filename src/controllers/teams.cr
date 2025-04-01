@@ -42,7 +42,7 @@ class Teams < Application
   def send_channel_message(message : String,
                            @[AC::Param::Info(name: "type", description: "optional message content type, default to TEXT", example: "HTML")]
                            content_type : String = "TEXT") : Nil
-    if client.client_id == :office365
+    raise Error::NotImplemented.new("sending teams channel chat message is not available for #{client.client_id}") if client.client_id == :office365
       client.calendar.as(PlaceCalendar::Office365).client.send_channel_message(team, channel, message, content_type)
     else
       raise Error::NotImplemented.new("sending teams channel chat message is not available for #{client.client_id}")
