@@ -20,21 +20,15 @@ class Teams < Application
     @[AC::Param::Info(name: "top", description: "optional number of channel messages to returned, default page size is 20", example: "20")]
     top : Int32? = nil,
   ) : ::Office365::ChatMessageList
-    if client.client_id == :office365
-      client.calendar.as(PlaceCalendar::Office365).client.list_channel_messages(team, channel, top: top)
-    else
-      raise Error::NotImplemented.new("Teams channel messages listing is not available for #{client.client_id}")
-    end
+    raise Error::NotImplemented.new("Teams channel messages listing is not available for #{client.client_id}") unless client.client_id == :office365
+    client.calendar.as(PlaceCalendar::Office365).client.list_channel_messages(team, channel, top: top)
   end
 
   # returns a single message or a message reply in a channel or a chat.
   @[AC::Route::GET("/:teams_id/:channel_id/:message_id")]
   def show(message_id : String) : Office365::ChatMessage
-    if client.client_id == :office365
-      client.calendar.as(PlaceCalendar::Office365).client.get_channel_message(team, channel, message_id)
-    else
-      raise Error::NotImplemented.new("getting teams single is not available for #{client.client_id}")
-    end
+    raise Error::NotImplemented.new("getting teams single is not available for #{client.client_id}") unless client.client_id == :office365
+    client.calendar.as(PlaceCalendar::Office365).client.get_channel_message(team, channel, message_id)
   end
 
   # Send a new chatMessage in the specified channel or a chat.
@@ -42,10 +36,7 @@ class Teams < Application
   def send_channel_message(message : String,
                            @[AC::Param::Info(name: "type", description: "optional message content type, default to TEXT", example: "HTML")]
                            content_type : String = "TEXT") : Nil
-    raise Error::NotImplemented.new("sending teams channel chat message is not available for #{client.client_id}") if client.client_id == :office365
-      client.calendar.as(PlaceCalendar::Office365).client.send_channel_message(team, channel, message, content_type)
-    else
-      raise Error::NotImplemented.new("sending teams channel chat message is not available for #{client.client_id}")
-    end
+    raise Error::NotImplemented.new("sending teams channel chat message is not available for #{client.client_id}") unless client.client_id == :office365
+    client.calendar.as(PlaceCalendar::Office365).client.send_channel_message(team, channel, message, content_type)
   end
 end
