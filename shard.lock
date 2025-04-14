@@ -123,7 +123,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.11.9
+    version: 2.11.10
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
