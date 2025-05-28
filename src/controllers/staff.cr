@@ -28,6 +28,12 @@ class Staff < Application
       end
       response.headers["Link"] = %(</api/staff/v1/people?#{params}>; rel="next")
     end
+
+    if client.client_id == :office365
+      users.map! do |user|
+        user.photo = "/api/staff/v1/people/#{user.email}/photo"
+      end
+    end
     users
   end
 
@@ -37,9 +43,30 @@ class Staff < Application
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
     id : String,
   ) : PlaceCalendar::User
-    user = client.get_user_by_email(id)
+    if id.includes?('@')
+      user = client.get_user_by_email(id)
+    else
+      user = client.get_user(id)
+    end
     raise Error::NotFound.new("user #{id} not found") unless user
     user
+  end
+
+  # returns user photo
+  @[AC::Route::GET("/:id/photo")]
+  def photo(
+    @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
+    id : String,
+  ) : PlaceCalendar::User
+    if client.client_id == :office365
+      # get token
+      # make request to the photo endpoint
+      # proxy the response
+    else
+      user = client.get_user_by_email(id)
+      raise Error::NotFound.new("user #{id} not found") unless user
+      
+    end
   end
 
   # returns the list of groups the user is a member
