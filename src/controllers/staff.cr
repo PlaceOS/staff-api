@@ -32,6 +32,7 @@ class Staff < Application
     if client.client_id == :office365
       users.map! do |user|
         user.photo = "/api/staff/v1/people/#{user.email}/photo"
+        user
       end
     end
     users
@@ -49,6 +50,11 @@ class Staff < Application
       user = client.get_user(id)
     end
     raise Error::NotFound.new("user #{id} not found") unless user
+
+    if client.client_id == :office365
+      user.photo = "/api/staff/v1/people/#{user.email}/photo"
+    end
+
     user
   end
 
@@ -57,15 +63,47 @@ class Staff < Application
   def photo(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
     id : String,
-  ) : PlaceCalendar::User
+  ) : Nil
     if client.client_id == :office365
-      # get token
+      # get current users token
+      # NOTE: we should move this rest-api function into models
+      # so we can access it from staff-api. This will improve performance
+      token = get_placeos_client.users.resource_token
+
       # make request to the photo endpoint
-      # proxy the response
+      HTTP::Client.get("https://graph.microsoft.com/v1.0/users/#{id}/photo/$value", headers: HTTP::Headers{
+        "Authorization" => "Bearer #{token.token}",
+      }) do |upstream_response|
+        stream(upstream_response)
+      end
     else
+      # Google ids are always emails
       user = client.get_user_by_email(id)
       raise Error::NotFound.new("user #{id} not found") unless user
-      
+      photo = user.photo
+      raise Error::NotFound.new("user #{id} doesn't have a photo") unless photo
+
+      HTTP::Client.get(photo) do |upstream_response|
+        stream(upstream_response)
+      end
+    end
+  end
+
+  private def stream(upstream_response)
+    # Set the response status code
+    @__render_called__ = true
+    response.status_code = upstream_response.status_code
+
+    # Copy headers from the upstream response, excluding 'Transfer-Encoding'
+    upstream_response.headers.each do |key, value|
+      response.headers[key] = value unless key.downcase == "transfer-encoding"
+    end
+
+    # Stream the response body directly to the client
+    if body_io = upstream_response.body_io?
+      IO.copy(body_io, response)
+    else
+      response.print upstream_response.body
     end
   end
 
