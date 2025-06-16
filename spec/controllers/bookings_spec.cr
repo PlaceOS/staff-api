@@ -91,6 +91,27 @@ describe Bookings do
       body.first["linked_event"]["event_id"].as_s.should eq event.event_id
     end
 
+    it "should return parent bookings" do
+      tenant_id = get_tenant.id.not_nil!
+
+      starting = Random.new.rand(5..19).minutes.from_now.to_unix
+      ending = Random.new.rand(25..79).minutes.from_now.to_unix
+
+      parent_booking = BookingsHelper.create_booking(tenant_id, starting, ending)
+
+      child_booking = BookingsHelper.create_booking(tenant_id, starting, ending)
+      child_booking.parent_id = parent_booking.id
+      child_booking.booking_type = "asset"
+      child_booking.save!
+
+      route = "#{BOOKINGS_BASE}?period_start=#{starting - 120}&period_end=#{ending + 120}&user=#{child_booking.user_email}&type=asset&include_parent_bookings=true"
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.size.should eq(1)
+
+      body.includes?("linked_event")
+      body.first["linked_parent_booking"]["id"].should eq parent_booking.id
+    end
+
     it "should update ext data in isolation" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
