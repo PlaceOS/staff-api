@@ -187,6 +187,8 @@ class Bookings < Application
     @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
     permission : String? = nil,
     link_ext : String? = nil,
+    @[AC::Param::Info(description: "include parent bookings", example: "true")]
+    include_parents : Bool? = nil,
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
 
@@ -256,6 +258,8 @@ class Bookings < Application
 
     result = query.to_a
     num_standard = result.count(&.recurrence_type.none?)
+
+    result = Booking.hydrate_parents(result) if include_parents && !result.empty?
 
     if starting && ending && num_standard < result.size
       details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence, include_checked_out ? nil : checked_out_flag)
