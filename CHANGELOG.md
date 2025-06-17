@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **staff**: return cached photos for azure tenants ([#348](https://github.com/PlaceOS/staff-api/pull/348)) [PPT-2038]
 - PPT-1994 added MS teams controller ([#345](https://github.com/PlaceOS/staff-api/pull/345))
 - **bookings**: add method for patching extension data ([#344](https://github.com/PlaceOS/staff-api/pull/344))
 - **bookings**: [PPT-1781] ignore clash check for visitor booking ([#342](https://github.com/PlaceOS/staff-api/pull/342))

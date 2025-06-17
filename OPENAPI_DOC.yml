@@ -7190,6 +7190,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/people/{id}/photo:
+    get:
+      summary: returns user photo
+      tags:
+      - Staff
+      operationId: Staff_photo
+      parameters:
+      - name: id
+        in: path
+        description: a user id OR user email address
+        example: user@org.com
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/people/{id}/groups:
     get:
       summary: returns the list of groups the user is a member
@@ -10311,7 +10390,7 @@ components:
           type: integer
           format: Int32
           description: a bitmap of valid days of the week for booking recurrences
-            to land on, defaults to weekdays
+            to land on, defaults to all days of the week
           nullable: true
         recurrence_nth_of_month:
           type: integer
@@ -12840,7 +12919,7 @@ components:
                 type: integer
                 format: Int32
                 description: a bitmap of valid days of the week for booking recurrences
-                  to land on, defaults to weekdays
+                  to land on, defaults to all days of the week
                 nullable: true
               recurrence_nth_of_month:
                 type: integer
