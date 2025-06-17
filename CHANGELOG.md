@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: [PPT-1942] add include_parents quary param ([#347](https://github.com/PlaceOS/staff-api/pull/347))
 - **staff**: return cached photos for azure tenants ([#348](https://github.com/PlaceOS/staff-api/pull/348)) [PPT-2038]
 - PPT-1994 added MS teams controller ([#345](https://github.com/PlaceOS/staff-api/pull/345))
 - **bookings**: add method for patching extension data ([#344](https://github.com/PlaceOS/staff-api/pull/344))
