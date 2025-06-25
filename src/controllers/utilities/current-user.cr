@@ -13,7 +13,9 @@ module Utils::CurrentUser
   # Parses, and validates JWT if present.
   # Throws Error::MissingBearer and JWT::Error.
   def authorize!
-    return if @user_token
+    if token = @user_token
+      return token
+    end
 
     # check for X-API-Key use
     if token = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
@@ -26,17 +28,25 @@ module Utils::CurrentUser
       end
     end
 
-    token = acquire_token
-
     # Request must have a bearer token
+    token = acquire_token
     raise Error::Unauthorized.new unless token
 
     begin
-      @user_token = UserJWT.decode(token)
+      user_token = UserJWT.decode(token)
+      if !user_token.guest_scope? && (user_model = ::PlaceOS::Model::User.find(user_token.id))
+        logged_out_at = user_model.logged_out_at
+        if logged_out_at && (logged_out_at >= user_token.iat)
+          raise JWT::Error.new("logged out")
+        end
+        @current_user = user_model
+      end
+
+      @user_token = user_token
     rescue e : JWT::Error
-      Log.warn(exception: e) { "bearer malformed: #{e.message}" }
+      Log.warn(exception: e) { "bearer invalid: #{e.message}" }
       # Request bearer was malformed
-      raise Error::Unauthorized.new "bearer malformed"
+      raise Error::Unauthorized.new(e.message || "bearer invalid")
     end
   rescue e
     # ensure that the user token is nil if this function ever errors.
@@ -52,7 +62,17 @@ module Utils::CurrentUser
   end
 
   # Obtains user referenced by user_token id
-  getter current_user : PlaceOS::Model::User { PlaceOS::Model::User.find!(user_token.id) }
+  @current_user : ::PlaceOS::Model::User? = nil
+
+  # Obtains user referenced by user_token id
+  def current_user : ::PlaceOS::Model::User
+    user = @current_user
+    return user if user
+
+    # authorize sets current user
+    authorize! unless @user_token
+    @current_user.as(::PlaceOS::Model::User)
+  end
 
   def user
     user_token.user
