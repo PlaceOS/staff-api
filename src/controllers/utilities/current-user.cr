@@ -21,6 +21,7 @@ module Utils::CurrentUser
     if token = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
       begin
         @user_token = user_token = get_placeos_client.apikeys.inspect_jwt
+        @current_user = ::PlaceOS::Model::User.find(user_token.id)
         return user_token
       rescue e
         Log.warn(exception: e) { "bad or unknown X-API-Key" }
