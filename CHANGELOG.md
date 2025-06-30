@@ -98,6 +98,7 @@
 
 ### Fix
 
+- **utilities/current-user**: current user with api-keys
 - **bookings**: allow patching of more fields
 - **events**: missing ext_data ([#343](https://github.com/PlaceOS/staff-api/pull/343))
 - **bookings**: error message when type param missing
