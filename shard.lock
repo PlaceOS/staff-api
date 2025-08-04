@@ -143,7 +143,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.72.2
+    version: 9.72.3
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
