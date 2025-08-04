@@ -600,7 +600,11 @@ class Events < Application
       meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
       if extension_data = changes.extension_data
         meta_ext_data = meta.ext_data
-        data = meta_ext_data ? meta_ext_data.as_h : Hash(String, JSON::Any).new
+        data = if (val = meta_ext_data) && val.as_h?
+                 val.as_h
+               else
+                 Hash(String, JSON::Any).new
+               end
         # Updating extension data by merging into existing.
         extension_data.as_h.each { |key, value| data[key] = value }
         meta.ext_data = JSON::Any.new(data)
