@@ -2,17 +2,17 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :get_metadata, :patch_metadata, :guest_checkin, :add_attendee]
+  skip_action :check_jwt_scope, only: [:show, :get_metadata, :patch_metadata, :guest_checkin, :add_attendee, :delete_attendee]
 
   # Skip actions that requres login
   # If a user is logged in then they will be run as part of
   # #set_tenant_from_domain
-  skip_action :determine_tenant_from_domain, only: [:add_attendee]
+  skip_action :determine_tenant_from_domain, only: [:add_attendee, :delete_attendee]
 
   # Set the tenant based on the domain
   # This allows unauthenticated requests through
   # (for public bookings, further checks are done later)
-  @[AC::Route::Filter(:before_action, only: [:add_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:add_attendee, :delete_attendee])]
   private def set_tenant_from_domain
     if auth_token_present?
       check_jwt_scope
@@ -58,6 +58,24 @@ class Events < Application
         return if check_access(current_user.groups, system.zones || [] of String).can_manage?
       end
       return if metadata.permission.open? && (authority = user.authority) && (event_tenant = metadata.tenant) && (authority.domain == event_tenant.domain)
+    end
+
+    raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
+  end
+
+  private def confirm_access_for_delete_attendee(
+    email : String,
+    event : PlaceCalendar::Event,
+    system : PlaceOS::Client::API::Models::System? = nil,
+  )
+    return if is_support?
+
+    if user = current_user
+      return if user.email.downcase == email
+      return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
+      if system
+        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+      end
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -910,6 +928,82 @@ class Events < Application
     end
 
     attend || attendee
+  end
+
+  @[AC::Route::DELETE("/:id/attendee/:email")]
+  def delete_attendee(
+    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    original_id : String,
+    @[AC::Param::Info(name: "email", description: "the email of the attendee to delete", example: "user@example.com")]
+    attendee_email : String,
+    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    user_cal : String? = nil,
+  ) : Nil
+    placeos_client = get_placeos_client
+    event_id = original_id
+    email = attendee_email.strip.downcase
+    cal_id = user_cal.try &.downcase
+
+    if system_id
+      system = placeos_client.systems.fetch(system_id)
+      sys_cal = system.email.presence
+      if cal_id.nil?
+        cal_id = system.email.presence
+        raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
+      end
+    end
+
+    # defaults to the current users email
+    if auth_token_present? && !cal_id.presence
+      cal_id = user.email
+    end
+
+    raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") unless cal_id
+
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
+      event = get_hosts_event(event)
+      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
+    end
+
+    # check permisions
+    confirm_access_for_delete_attendee(email, event, system)
+
+    # User details
+    if auth_token_present?
+      user_email = user.email.downcase
+      host = event.host.try(&.downcase) || user_email
+    else
+      host = event.host.try(&.downcase)
+    end
+    raise Error::BadUpstreamResponse.new("event host is missing") unless host
+
+    metadata = get_event_metadata(event, system_id)
+    raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
+
+    # Check if attendee exists in the event
+    if existing_attendee = event.attendees.find { |a| a.email.downcase == email }
+      # Remove the attendee from the event
+      event.attendees = event.attendees.reject { |a| a.email.downcase == email }
+
+      # Update the event with the attendee removed
+      updated_event = client.update_event(user_id: host, event: event, calendar_id: host)
+      raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
+
+      if system_id && metadata
+        existing = metadata.attendees.to_a
+        existing.select { |attend| (guest = attend.guest) && (guest.email == email) }.each do |attend|
+          attend.delete
+        end
+      end
+    end
+
+    nil
   end
 
   # used to link resource recurring master ids to metadata
