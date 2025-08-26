@@ -6,6 +6,7 @@ require "./error"
 require "./controllers/application"
 require "./models/*"
 require "./controllers/*"
+require "./controllers/rooms"
 require "./logging"
 require "placeos-models"
 

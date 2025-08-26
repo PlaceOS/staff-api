@@ -7516,6 +7516,348 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/rooms:
+    get:
+      summary: returns a list of rooms with optional filtering
+      tags:
+      - Rooms
+      operationId: Rooms_index
+      parameters:
+      - name: zone_ids
+        in: query
+        description: comma-separated list of zone IDs to filter by
+        example: zone1,zone2
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: building_id
+        in: query
+        description: filter rooms by building ID
+        example: building1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: level_id
+        in: query
+        description: filter rooms by level ID
+        example: level1234
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: capacity
+        in: query
+        description: minimum capacity required
+        example: 10
+        required: false
+        schema:
+          type: integer
+          nullable: true
+      - name: capacity_max
+        in: query
+        description: maximum capacity required
+        example: 50
+        required: false
+        schema:
+          type: integer
+          nullable: true
+      - name: bookable
+        in: query
+        description: filter only bookable rooms
+        example: true
+        required: false
+        schema:
+          type: boolean
+          nullable: true
+      - name: features
+        in: query
+        description: comma-separated list of required features
+        example: projector,whiteboard
+        required: false
+        schema:
+          type: string
+          nullable: true
+      - name: available_from
+        in: query
+        description: check availability from this timestamp (epoch)
+        example: 1640995200
+        required: false
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+      - name: available_to
+        in: query
+        description: check availability until this timestamp (epoch)
+        example: 1641002400
+        required: false
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    display_name:
+                      type: string
+                      nullable: true
+                    description:
+                      type: string
+                    email:
+                      type: string
+                      nullable: true
+                    capacity:
+                      type: integer
+                    features:
+                      type: array
+                      items:
+                        type: string
+                    bookable:
+                      type: boolean
+                    zones:
+                      type: array
+                      items:
+                        type: string
+                    map_id:
+                      type: string
+                      nullable: true
+                    images:
+                      type: array
+                      items:
+                        type: string
+                    code:
+                      type: string
+                      nullable: true
+                    type:
+                      type: string
+                      nullable: true
+                    approval:
+                      type: boolean
+                    settings:
+                      type: object
+                      properties:
+                        available:
+                          type: boolean
+                        available_until:
+                          type: integer
+                          format: int64
+                        bookings:
+                          type: array
+                          items:
+                            type: object
+                        bookings_count:
+                          type: integer
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/rooms/{id}:
+    get:
+      summary: get a specific room by ID or email
+      tags:
+      - Rooms
+      operationId: Rooms_show
+      parameters:
+      - name: id
+        in: path
+        description: Room ID or email address
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  display_name:
+                    type: string
+                    nullable: true
+                  description:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                  capacity:
+                    type: integer
+                  features:
+                    type: array
+                    items:
+                      type: string
+                  bookable:
+                    type: boolean
+                  zones:
+                    type: array
+                    items:
+                      type: string
+                  map_id:
+                    type: string
+                    nullable: true
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  code:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    nullable: true
+                  approval:
+                    type: boolean
+                  settings:
+                    type: object
+                    properties:
+                      available:
+                        type: boolean
+                      available_until:
+                        type: integer
+                        format: int64
+                      bookings:
+                        type: array
+                        items:
+                          type: object
+                      bookings_count:
+                        type: integer
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/surveys:
     get:
       summary: returns a list of surveys
