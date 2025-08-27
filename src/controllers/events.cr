@@ -65,16 +65,18 @@ class Events < Application
 
   private def confirm_access_for_delete_attendee(
     email : String,
-    event : PlaceCalendar::Event,
+    cal_id : String,
+    event_id : String,
     system : PlaceOS::Client::API::Models::System? = nil,
-  )
+  ) : PlaceCalendar::Event?
     return if is_support?
 
     if user = current_user
       return if user.email.downcase == email
-      return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
+      event = get_hosts_event_or_event(cal_id, event_id)
+      return event if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
       if system
-        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+        return event if check_access(current_user.groups, system.zones || [] of String).can_manage?
       end
     end
 
@@ -962,17 +964,8 @@ class Events < Application
 
     raise AC::Route::Param::ValueError.new("Either system_id or calendar must be provided") unless cal_id
 
-    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
-
-    # ensure we have the host event details
-    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
-      event = get_hosts_event(event)
-      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
-    end
-
-    # check permisions
-    confirm_access_for_delete_attendee(email, event, system)
+    # check permisions and get event
+    event = confirm_access_for_delete_attendee(email, cal_id, event_id, system) || get_hosts_event_or_event(cal_id, event_id)
 
     # User details
     if auth_token_present?
