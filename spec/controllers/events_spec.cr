@@ -496,6 +496,108 @@ describe Events do
       ]).size.should eq(0)
     end
 
+    it "#delete_attendee should ONLY allow removing self from PRIVATE events" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      # Stub getting the host event
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+        .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+
+      req_body = EventsHelper.create_event_input(permission: PlaceOS::Model::EventMetadata::Permission::PRIVATE)
+
+      event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body).as_h
+      event_id = event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(event_id))
+
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+
+      # public user should NOT be able to delete attendees
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: no_auth_headers)
+      response.status_code.should eq(401)
+
+      # same tenant user should NOT be able to delete other attendees
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: same_tenant_headers)
+      response.status_code.should eq(403)
+
+      # same tenant user deleting themselves
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "jon@example.com")
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: same_tenant_headers)
+      response.status_code.should eq(200)
+
+      event_metadata = EventMetadata.find_by(event_id: event_id)
+      # Should only have the room
+      event_metadata.attendees.count.should eq(1)
+
+      guests = event_metadata.attendees.map(&.guest.not_nil!)
+      (guests.map(&.email) - ["dev@acaprojects.onmicrosoft.com"]).size.should eq(0)
+    end
+
+    it "#delete_attendee should ONLY allow removing self from OPEN events" do
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      # Stub getting the host event
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+        .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+
+      req_body = EventsHelper.create_event_input(permission: PlaceOS::Model::EventMetadata::Permission::OPEN)
+
+      event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body).as_h
+      event_id = event["id"].to_s
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+        .to_return(EventsHelper.event_query_response(event_id))
+
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+
+      # public user should NOT be able to delete attendees
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: no_auth_headers)
+      response.status_code.should eq(401)
+
+      # same tenant user should NOT be able to delete other attendees
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "user-three@example.com")
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: same_tenant_headers)
+      response.status_code.should eq(403)
+
+      # same tenant user deleting themselves
+      same_tenant_headers = Mock::Headers.office365_normal_user(email: "jon@example.com")
+      response = client.delete(%(#{EVENTS_BASE}/#{event_id}/attendee/jon@example.com?system_id=#{system_id}), headers: same_tenant_headers)
+      response.status_code.should eq(200)
+
+      event_metadata = EventMetadata.find_by(event_id: event_id)
+      # Should only have the room
+      event_metadata.attendees.count.should eq(1)
+
+      guests = event_metadata.attendees.map(&.guest.not_nil!)
+      (guests.map(&.email) - ["dev@acaprojects.onmicrosoft.com"]).size.should eq(0)
+    end
+
     pending "#index should return a list of PUBLIC events for unauthenticated users" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))

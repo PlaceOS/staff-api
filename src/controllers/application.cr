@@ -303,6 +303,19 @@ abstract class Application < ActionController::Base
     client.list_events(host_cal, host_cal, start_time, end_time, ical_uid: ical_uid).first
   end
 
+  private def get_hosts_event_or_event(cal_id : String, event_id : String) : PlaceCalendar::Event
+    event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user.email}") unless event
+
+    # ensure we have the host event details
+    if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
+      event = get_hosts_event(event)
+      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
+    end
+
+    event
+  end
+
   protected def get_event_metadata(event : PlaceCalendar::Event, system_id : String? = nil, search_recurring : Bool = true) : EventMetadata?
     tenant = current_tenant
     query = if tenant.platform == "office365"
