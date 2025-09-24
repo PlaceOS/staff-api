@@ -4,7 +4,7 @@ require "./helpers/guest_helper"
 
 EVENTS_BASE = Events.base_route
 
-describe Events do
+describe Events, tags: ["event"] do
   before_each do
     EventMetadata.truncate
     Guest.truncate
@@ -1141,6 +1141,48 @@ describe Events do
 
       request_body = JSON.parse(request.body)
       request_body[0]["extension_data"]["magic_number"].should eq(77)
+    end
+  end
+
+  describe "#approve_all" do
+    it "approves all events" do
+      EventsHelper.stub_create_endpoints
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      # Create event
+
+      req_body = EventsHelper.create_event_input
+
+      created_event = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: req_body).body)
+      created_event_id = created_event["id"].to_s
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
+        .to_return(EventsHelper.event_query_response(created_event_id))
+
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA%3D").to_return(body: File.read("./spec/fixtures/events/o365/update_with_accepted.json"))
+
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      # ensure the user has permissions to update the event
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+
+      # approve
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA%3D/accept")
+        .to_return({sucess: true}.to_json)
+
+      starting = (Time.unix(created_event["event_start"].as_i) - 20.minutes).to_unix
+      ending = (Time.unix(created_event["event_end"].as_i) + 20.minutes).to_unix
+
+      request = client.post("#{EVENTS_BASE}/approve_all?system_ids=#{system_id}&period_start=#{starting}&period_end=#{ending}", headers: headers)
+      request.status_code.should eq(200)
+      request_body = Array(String).from_json(request.body)
+      request_body[0].should eq(created_event_id)
     end
   end
 end
