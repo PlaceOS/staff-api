@@ -20,7 +20,6 @@ paths:
         in: query
         description: booking period start as a unix epoch
         example: "1661725146"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -28,7 +27,6 @@ paths:
         in: query
         description: booking period end as a unix epoch
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -36,7 +34,6 @@ paths:
         in: query
         description: the generic name of the asset whose bookings you wish to view
         example: desk
-        required: false
         schema:
           type: string
           nullable: true
@@ -44,21 +41,18 @@ paths:
         in: query
         description: when true, it returns deleted bookings
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: include_checked_out
         in: query
         description: when true, returns all bookings including checked out ones
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: checked_out
         in: query
         description: when true, only returns checked out bookings, unless `include_checked_out=true`
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: zones
@@ -66,7 +60,6 @@ paths:
         description: this filters only bookings in the zones provided, multiple zones
           can be provided comma seperated
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -74,7 +67,6 @@ paths:
         in: query
         description: filters bookings owned by this user email
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -82,7 +74,6 @@ paths:
         in: query
         description: filters bookings owned by this user id
         example: user-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -91,7 +82,6 @@ paths:
         description: if `email` or `user` parameters are set, this includes bookings
           that user booked on behalf of others
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -99,7 +89,6 @@ paths:
         in: query
         description: filters bookings that have been checked in or not
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -107,7 +96,6 @@ paths:
         in: query
         description: filters bookings that were created before the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -116,7 +104,6 @@ paths:
         in: query
         description: filters bookings that were created after the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -125,7 +112,6 @@ paths:
         in: query
         description: filters bookings that are approved or not
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -133,7 +119,6 @@ paths:
         in: query
         description: filters bookings that are rejected or not
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -141,7 +126,6 @@ paths:
         in: query
         description: filters bookings with matching extension data entries
         example: '{"entry1":"value to match","entry2":1234}'
-        required: false
         schema:
           type: string
           nullable: true
@@ -149,7 +133,6 @@ paths:
         in: query
         description: filters on the booking process state, a user defined value
         example: pending-approval
-        required: false
         schema:
           type: string
           nullable: true
@@ -157,7 +140,6 @@ paths:
         in: query
         description: filters bookings owned by a department, a user defined value
         example: accounting
-        required: false
         schema:
           type: string
           nullable: true
@@ -166,7 +148,6 @@ paths:
         description: filters bookings associated with an event, such as an Office365
           Calendar event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -175,7 +156,6 @@ paths:
         description: filters bookings associated with an event, such as an Office365
           Calendar event ical_uid
         example: 19rh93h5t893h5v@calendar.iCloud.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -183,14 +163,12 @@ paths:
         in: query
         description: the maximum number of results to return
         example: "10000"
-        required: false
         schema:
           type: integer
           format: Int32
       - name: offset
         in: query
         description: the starting offset of the result set. Used to implement pagination
-        required: false
         schema:
           type: integer
           format: Int32
@@ -198,7 +176,6 @@ paths:
         in: query
         description: the recurring bookings index of the result set. Used to implement
           pagination with recurring bookings
-        required: false
         schema:
           type: integer
           format: Int32
@@ -207,15 +184,20 @@ paths:
         description: 'filters bookings based on the permission level. Options: PRIVATE,
           OPEN, PUBLIC'
         example: PUBLIC
-        required: false
         schema:
           type: string
           nullable: true
       - name: link_ext
         in: query
-        required: false
         schema:
           type: string
+          nullable: true
+      - name: include_parent_bookings
+        in: query
+        description: include parent bookings
+        example: "true"
+        schema:
+          type: boolean
           nullable: true
       responses:
         200:
@@ -316,7 +298,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -324,7 +305,6 @@ paths:
         in: query
         description: allows a client to override any limits imposed on bookings
         example: "3"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -334,7 +314,6 @@ paths:
         description: links booking with an event, such as an Office365 Calendar event
           id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -343,7 +322,6 @@ paths:
         description: links booking with an event, such as an Office365 Calendar event
           ical_uid
         example: 19rh93h5t893h5v@calendar.iCloud.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -443,7 +421,6 @@ paths:
         in: query
         description: booking period start as a unix epoch
         example: "1661725146"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -451,7 +428,6 @@ paths:
         in: query
         description: booking period end as a unix epoch
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -459,7 +435,6 @@ paths:
         in: query
         description: the generic name of the asset whose bookings you wish to view
         example: desk
-        required: false
         schema:
           type: string
           nullable: true
@@ -468,7 +443,6 @@ paths:
         description: this filters only bookings in the zones provided, multiple zones
           can be provided comma seperated
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -476,7 +450,6 @@ paths:
         in: query
         description: filters bookings owned by this user email
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -484,7 +457,6 @@ paths:
         in: query
         description: filters bookings owned by this user id
         example: user-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -493,7 +465,6 @@ paths:
         description: if `email` or `user` parameters are set, this includes bookings
           that user booked on behalf of others
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -501,7 +472,6 @@ paths:
         in: query
         description: filters bookings that have been checked in or not
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -509,7 +479,6 @@ paths:
         in: query
         description: filters bookings that were created before the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -518,7 +487,6 @@ paths:
         in: query
         description: filters bookings that were created after the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -527,7 +495,6 @@ paths:
         in: query
         description: filters bookings that are approved or not
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -535,7 +502,6 @@ paths:
         in: query
         description: filters bookings with matching extension data entries
         example: '{"entry1":"value to match","entry2":1234}'
-        required: false
         schema:
           type: string
           nullable: true
@@ -543,7 +509,6 @@ paths:
         in: query
         description: filters on the booking process state, a user defined value
         example: pending-approval
-        required: false
         schema:
           type: string
           nullable: true
@@ -551,7 +516,6 @@ paths:
         in: query
         description: filters bookings owned by a department, a user defined value
         example: accounting
-        required: false
         schema:
           type: string
           nullable: true
@@ -560,7 +524,6 @@ paths:
         description: filters bookings associated with an event, such as an Office365
           Calendar event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -569,7 +532,6 @@ paths:
         description: filters bookings associated with an event, such as an Office365
           Calendar event ical_uid
         example: 19rh93h5t893h5v@calendar.iCloud.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -577,14 +539,12 @@ paths:
         in: query
         description: the maximum number of results to return
         example: "100000"
-        required: false
         schema:
           type: integer
           format: Int32
       - name: offset
         in: query
         description: the starting offset of the result set. Used to implement pagination
-        required: false
         schema:
           type: integer
           format: Int32
@@ -593,7 +553,6 @@ paths:
         description: 'filters bookings based on the permission level. Options: PRIVATE,
           OPEN, PUBLIC'
         example: PUBLIC
-        required: false
         schema:
           type: string
           nullable: true
@@ -697,7 +656,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -805,7 +763,6 @@ paths:
         in: query
         description: allows a client to override any limits imposed on bookings
         example: "3"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -814,7 +771,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -916,7 +872,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -924,7 +879,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -1028,7 +982,6 @@ paths:
         in: query
         description: allows a client to override any limits imposed on bookings
         example: "3"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -1037,7 +990,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -1257,7 +1209,6 @@ paths:
         in: query
         description: allows a client to override any limits imposed on bookings
         example: "3"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -1368,7 +1319,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -1480,11 +1430,239 @@ paths:
         in: query
         description: allows a client to override any limits imposed on bookings
         example: "3"
-        required: false
         schema:
           type: integer
           format: Int32
           nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/ext_data:
+    patch:
+      summary: patches an existing booking extension data with the changes provided
+      tags:
+      - Bookings
+      operationId: Bookings_patch_extdata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: signal_changes
+        in: query
+        description: signal changes to the booking
+        example: "true"
+        schema:
+          type: boolean
+      - name: instance
+        in: query
+        description: a recurring instance id
+        example: "1234567"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/ext_data/{instance}:
+    patch:
+      summary: patches an existing booking extension data with the changes provided
+      tags:
+      - Bookings
+      operationId: Bookings_patch_extdata{2}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: signal_changes
+        in: query
+        description: signal changes to the booking
+        example: "true"
+        schema:
+          type: boolean
       responses:
         200:
           description: OK
@@ -1583,7 +1761,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -1591,7 +1768,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -1703,7 +1879,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -1805,7 +1980,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -1813,7 +1987,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -1925,7 +2098,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2027,14 +2199,12 @@ paths:
         in: query
         description: the desired value of the booking checked-in flag
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: utm_source
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2042,7 +2212,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -2145,14 +2314,12 @@ paths:
         in: query
         description: the desired value of the booking checked-in flag
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: utm_source
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2160,7 +2327,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -2272,14 +2438,12 @@ paths:
         in: query
         description: the desired value of the booking checked-in flag
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: utm_source
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2390,14 +2554,12 @@ paths:
         in: query
         description: the desired value of the booking checked-in flag
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: utm_source
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2507,7 +2669,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2515,10 +2676,127 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/update_state/{instance}:
+    post:
+      summary: the current state of a booking, if a custom state machine is being
+        used
+      tags:
+      - Bookings
+      operationId: Bookings_update_state{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: state
+        in: query
+        description: the user defined process state of the booking
+        example: pending_approval
+        required: true
+        schema:
+          type: string
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        schema:
+          type: string
           nullable: true
       responses:
         200:
@@ -2629,7 +2907,6 @@ paths:
         in: query
         description: provided for use with analytics
         example: mobile
-        required: false
         schema:
           type: string
           nullable: true
@@ -2637,10 +2914,130 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/{id}/update_induction/{instance}:
+    post:
+      summary: update the induction status
+      tags:
+      - Bookings
+      operationId: Bookings_update_induction{2}
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: instance
+        in: path
+        description: a recurring instance id
+        example: "1234567"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      - name: induction
+        in: query
+        description: the induction status of the booking
+        example: accepted
+        required: true
+        schema:
+          type: string
+          enum:
+          - tentative
+          - accepted
+          - declined
+      - name: utm_source
+        in: query
+        description: provided for use with analytics
+        example: mobile
+        schema:
+          type: string
           nullable: true
       responses:
         200:
@@ -2740,7 +3137,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -2853,14 +3249,12 @@ paths:
         in: query
         description: the checkin state, defaults to `true`
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: instance
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -2971,14 +3365,12 @@ paths:
         in: query
         description: the checkin state, defaults to `true`
         example: "false"
-        required: false
         schema:
           type: boolean
       - name: instance
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -3087,7 +3479,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -3196,7 +3587,6 @@ paths:
         in: query
         description: a recurring instance id
         example: "1234567"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -3385,7 +3775,6 @@ paths:
         description: a comma seperated list of calendar ids, recommend using `system_id`
           for resource calendars
         example: user@org.com,room2@resource.org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -3393,7 +3782,6 @@ paths:
         in: query
         description: a comma seperated list of zone ids
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -3401,7 +3789,6 @@ paths:
         in: query
         description: a comma seperated list of event spaces
         example: sys-1234,sys-5678
-        required: false
         schema:
           type: string
           nullable: true
@@ -3409,14 +3796,12 @@ paths:
         in: query
         description: a comma seperated list of room features
         example: whiteboard,vidconf
-        required: false
         schema:
           type: string
           nullable: true
       - name: capacity
         in: query
         example: "8"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -3425,7 +3810,6 @@ paths:
         in: query
         description: only search for bookable or non-bookable rooms
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -3531,7 +3915,6 @@ paths:
         description: a comma seperated list of calendar ids, recommend using `system_id`
           for resource calendars
         example: user@org.com,room2@resource.org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -3539,7 +3922,6 @@ paths:
         in: query
         description: a comma seperated list of zone ids
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -3547,7 +3929,6 @@ paths:
         in: query
         description: a comma seperated list of event spaces
         example: sys-1234,sys-5678
-        required: false
         schema:
           type: string
           nullable: true
@@ -3555,14 +3936,12 @@ paths:
         in: query
         description: a comma seperated list of room features
         example: whiteboard,vidconf
-        required: false
         schema:
           type: string
           nullable: true
       - name: capacity
         in: query
         example: "8"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -3571,7 +3950,6 @@ paths:
         in: query
         description: only search for bookable or non-bookable rooms
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -3675,7 +4053,6 @@ paths:
         description: a comma seperated list of calendar ids, recommend using `system_id`
           for resource calendars
         example: user@org.com,room2@resource.org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -3683,7 +4060,6 @@ paths:
         in: query
         description: a comma seperated list of zone ids
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -3691,7 +4067,6 @@ paths:
         in: query
         description: a comma seperated list of event spaces
         example: sys-1234,sys-5678
-        required: false
         schema:
           type: string
           nullable: true
@@ -3699,14 +4074,12 @@ paths:
         in: query
         description: includes events that have been marked as cancelled
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: ical_uid
         in: query
         description: the ical uid of the event you are looking for
         example: sqvitruh3ho3mrq896tplad4v8
-        required: false
         schema:
           type: string
           nullable: true
@@ -3714,7 +4087,6 @@ paths:
         in: query
         description: An optional advanced search filter using Azure AD filter syntax
         example: ""
-        required: false
         schema:
           type: string
           nullable: true
@@ -3724,7 +4096,6 @@ paths:
           limit returns a 429 error when rate limiting occured, any will 500 if there
           are any calendar errors
         example: notify
-        required: false
         schema:
           type: string
           enum:
@@ -3908,7 +4279,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -3916,7 +4286,6 @@ paths:
         in: query
         description: the users calendar associated with this event
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4036,7 +4405,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -4044,7 +4412,6 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4146,7 +4513,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -4154,7 +4520,6 @@ paths:
         in: query
         description: the users calendar associated with this event
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4162,7 +4527,6 @@ paths:
         in: query
         description: set to `false` to prevent attendees being notified of the change
         example: "false"
-        required: false
         schema:
           type: boolean
       responses:
@@ -4277,7 +4641,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -4285,7 +4648,6 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4382,7 +4744,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -4390,7 +4751,6 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4401,6 +4761,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/_PlaceCalendar__Event__Attendee___PlaceOS__Model__Attendee_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/{id}/attendee/{email}:
+    delete:
+      tags:
+      - Events
+      operationId: Events_delete_attendee
+      parameters:
+      - name: id
+        in: path
+        description: the event id
+        example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
+        required: true
+        schema:
+          type: string
+      - name: email
+        in: path
+        description: the email of the attendee to delete
+        example: user@example.com
+        required: true
+        schema:
+          type: string
+      - name: system_id
+        in: query
+        description: the event space associated with this event
+        example: sys-1234
+        schema:
+          type: string
+          nullable: true
+      - name: calendar
+        in: query
+        description: the calendar associated with this event id
+        example: user@org.com
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
         429:
           description: Too Many Requests
           content:
@@ -4583,19 +5042,10 @@ paths:
         required: true
         schema:
           type: string
-      - name: calendar
-        in: query
-        description: the calendar associated with this event id
-        example: user@org.com
-        required: false
-        schema:
-          type: string
-          nullable: true
       - name: ical_uid
         in: query
         description: an alternative lookup for finding event-metadata
         example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
-        required: false
         schema:
           type: string
           nullable: true
@@ -4683,7 +5133,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JSON__Any'
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
         required: true
       parameters:
       - name: id
@@ -4704,7 +5154,6 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4712,7 +5161,6 @@ paths:
         in: query
         description: an alternative lookup for finding event-metadata
         example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
-        required: false
         schema:
           type: string
           nullable: true
@@ -4720,7 +5168,6 @@ paths:
         in: query
         description: update event setup time
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -4729,7 +5176,6 @@ paths:
         in: query
         description: update event breakdown time
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -4738,7 +5184,6 @@ paths:
         in: query
         description: update setup event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -4746,7 +5191,6 @@ paths:
         in: query
         description: update breakdown event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -4837,7 +5281,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JSON__Any'
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
         required: true
       parameters:
       - name: id
@@ -4858,7 +5302,6 @@ paths:
         in: query
         description: the calendar associated with this event id
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -4866,7 +5309,6 @@ paths:
         in: query
         description: an alternative lookup for finding event-metadata
         example: 5FC53010-1267-4F8E-BC28-1D7AE55A7C99
-        required: false
         schema:
           type: string
           nullable: true
@@ -4874,7 +5316,6 @@ paths:
         in: query
         description: update event setup time
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -4883,7 +5324,6 @@ paths:
         in: query
         description: update event breakdown time
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -4892,7 +5332,6 @@ paths:
         in: query
         description: update setup event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -4900,7 +5339,6 @@ paths:
         in: query
         description: update breakdown event id
         example: AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe
-        required: false
         schema:
           type: string
           nullable: true
@@ -5100,7 +5538,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -5108,7 +5545,6 @@ paths:
         in: query
         description: the users calendar associated with this event
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -5116,7 +5552,6 @@ paths:
         in: query
         description: set to `false` to prevent attendees being notified of the change
         example: "false"
-        required: false
         schema:
           type: boolean
       responses:
@@ -5212,6 +5647,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bool'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/approve_all:
+    post:
+      tags:
+      - Events
+      operationId: Events_approve_all
+      parameters:
+      - name: period_start
+        in: query
+        description: event period start as a unix epoch
+        example: "1661725146"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: event period end as a unix epoch
+        example: "1661743123"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: calendars
+        in: query
+        description: a comma seperated list of calendar ids, recommend using `system_id`
+          for resource calendars
+        example: user@org.com,room2@resource.org.com
+        schema:
+          type: string
+          nullable: true
+      - name: zone_ids
+        in: query
+        description: a comma seperated list of zone ids
+        example: zone-123,zone-456
+        schema:
+          type: string
+          nullable: true
+      - name: system_ids
+        in: query
+        description: a comma seperated list of event spaces
+        example: sys-1234,sys-5678
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/String'
         429:
           description: Too Many Requests
           content:
@@ -5477,7 +6027,6 @@ paths:
         in: path
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -5485,7 +6034,6 @@ paths:
         in: query
         description: the field we want to query
         example: status
-        required: false
         schema:
           type: string
           nullable: true
@@ -5493,7 +6041,6 @@ paths:
         in: query
         description: value we want to match
         example: approved
-        required: false
         schema:
           type: string
           nullable: true
@@ -5501,7 +6048,6 @@ paths:
         in: query
         description: event period start as a unix epoch
         example: "1661725146"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -5510,7 +6056,6 @@ paths:
         in: query
         description: event period end as a unix epoch
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -5519,7 +6064,6 @@ paths:
         in: query
         description: list of event ids that we're potentially
         example: event_id,recurring_event_id,ical_uid
-        required: false
         schema:
           type: array
           items:
@@ -5624,7 +6168,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -5632,7 +6175,6 @@ paths:
         in: query
         description: the users calendar associated with this event
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -5640,7 +6182,6 @@ paths:
         in: query
         description: the checkin state, defaults to `true`
         example: "false"
-        required: false
         schema:
           type: boolean
       responses:
@@ -5740,7 +6281,6 @@ paths:
         in: query
         description: the event space associated with this event
         example: sys-1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -5748,7 +6288,6 @@ paths:
         in: query
         description: the users calendar associated with this event
         example: user@org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -5756,7 +6295,6 @@ paths:
         in: query
         description: the checkin state, defaults to `true`
         example: "false"
-        required: false
         schema:
           type: boolean
       responses:
@@ -5839,7 +6377,6 @@ paths:
         in: query
         description: optional search query
         example: accounting
-        required: false
         schema:
           type: string
           nullable: true
@@ -6090,14 +6627,12 @@ paths:
         in: query
         description: space seperated search query for guests
         example: steve von
-        required: false
         schema:
           type: string
       - name: period_start
         in: query
         description: event period start as a unix epoch
         example: "1661725146"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -6106,7 +6641,6 @@ paths:
         in: query
         description: event period end as a unix epoch
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -6116,7 +6650,6 @@ paths:
         description: '[deprecated] a comma seperated list of calendar ids, recommend
           using `system_id` for resource calendars'
         example: user@org.com,room2@resource.org.com
-        required: false
         schema:
           type: string
           nullable: true
@@ -6125,7 +6658,6 @@ paths:
         description: '[deprecated] a comma seperated list of zone ids used for events
           or bookings'
         example: zone-123,zone-456
-        required: false
         schema:
           type: string
           nullable: true
@@ -6133,7 +6665,6 @@ paths:
         in: query
         description: '[deprecated] a comma seperated list of event spaces'
         example: sys-1234,sys-5678
-        required: false
         schema:
           type: string
           nullable: true
@@ -6141,7 +6672,6 @@ paths:
         in: query
         description: a comma seperated list of zone ids for bookings
         example: zone-123,zone-456
-        required: false
         schema:
           type: array
           items:
@@ -6671,14 +7201,12 @@ paths:
         in: query
         description: shoule we include past events they have visited
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: limit
         in: query
         description: how many results to return
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -6775,14 +7303,12 @@ paths:
         in: query
         description: shoule we include past bookings
         example: "true"
-        required: false
         schema:
           type: boolean
       - name: limit
         in: query
         description: how many results to return
         example: "10"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -6891,7 +7417,6 @@ paths:
           for a resource. With match, you can specify a subset or a superset of the
           default properties.
         example: id,displayName
-        required: false
         schema:
           type: string
           nullable: true
@@ -6900,7 +7425,6 @@ paths:
         description: An optional advanced search filter using Azure AD filter syntax
           to query parameter to retrieve a subset of a collection..
         example: startsWith(givenName,'ben') or startsWith(surname,'ben')
-        required: false
         schema:
           type: string
           nullable: true
@@ -6909,7 +7433,6 @@ paths:
         description: 'Optional: Use the top query parameter to specify the number
           of items to be included in the result. Default value is 100'
         example: "100"
-        required: false
         schema:
           type: integer
           format: Int32
@@ -6919,7 +7442,6 @@ paths:
         description: 'Optional: Use skip query parameter to set the number of items
           to skip at the start of a collection.'
         example: 21 to retrieve search results from 21st record
-        required: false
         schema:
           type: integer
           format: Int32
@@ -7014,7 +7536,6 @@ paths:
         description: An optional search query to filter users by name or email. If
           both 'q' and 'filter' parameters are provided, 'filter' takes precedence.
         example: steve
-        required: false
         schema:
           type: string
           nullable: true
@@ -7024,7 +7545,6 @@ paths:
           Provides more control over the search criteria and takes precedence over
           the 'q' parameter. Supports both Azure AD and Google providers.
         example: startsWith(givenName,'ben') or startsWith(surname,'ben')
-        required: false
         schema:
           type: string
           nullable: true
@@ -7032,7 +7552,6 @@ paths:
         in: query
         description: a google token or graph api URI representing the next page of
           results
-        required: false
         schema:
           type: string
           nullable: true
@@ -7527,7 +8046,6 @@ paths:
         in: query
         description: filters surveys by zone_id
         example: zone1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -7535,7 +8053,6 @@ paths:
         in: query
         description: filters surveys by building_id
         example: building1234
-        required: false
         schema:
           type: string
           nullable: true
@@ -8037,7 +8554,6 @@ paths:
         in: query
         description: the survey id to get answers for
         example: "1234"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -8046,7 +8562,6 @@ paths:
         in: query
         description: filters answers that were created after the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -8055,7 +8570,6 @@ paths:
         in: query
         description: filters answers that were created before the unix epoch specified
         example: "1661743123"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -8225,7 +8739,6 @@ paths:
         in: query
         description: the survey id to get invitations for
         example: "1234"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -8234,7 +8747,6 @@ paths:
         in: query
         description: filter by sent status
         example: "false"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -8734,7 +9246,6 @@ paths:
         in: query
         description: the survey id to get questions for
         example: "1234"
-        required: false
         schema:
           type: integer
           format: Int64
@@ -8743,7 +9254,6 @@ paths:
         in: query
         description: filter by soft-deleted
         example: "true"
-        required: false
         schema:
           type: boolean
           nullable: true
@@ -9184,6 +9694,286 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceOS__Model__Survey__Question'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/teams/{teams_id}/{channel_id}:
+    get:
+      summary: returns the list of messages (without the replies) in a channel of
+        a team.
+      tags:
+      - Teams
+      operationId: Teams_index
+      parameters:
+      - name: teams_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: top
+        in: query
+        description: optional number of channel messages to returned, default page
+          size is 20
+        example: "20"
+        schema:
+          type: integer
+          format: Int32
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Office365__ChatMessageList'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+    post:
+      summary: Send a new chatMessage in the specified channel or a chat.
+      tags:
+      - Teams
+      operationId: Teams_send_channel_message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/String'
+        required: true
+      parameters:
+      - name: teams_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: optional message content type, default to TEXT
+        example: HTML
+        schema:
+          type: string
+      responses:
+        201:
+          description: Created
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/teams/{teams_id}/{channel_id}/{message_id}:
+    get:
+      summary: returns a single message or a message reply in a channel or a chat.
+      tags:
+      - Teams
+      operationId: Teams_show
+      parameters:
+      - name: teams_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: channel_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Office365__ChatMessage'
         429:
           description: Too Many Requests
           content:
@@ -10407,7 +11197,10 @@ components:
         recurrence_end:
           type: integer
           format: Int64
-          description: an optional end date for booking recurrances
+          description: an optional end date for booking recurrences
+          nullable: true
+        all_day:
+          type: boolean
           nullable: true
         tenant_id:
           type: integer
@@ -10427,6 +11220,10 @@ components:
           nullable: true
     String:
       type: string
+    Hash_String__JSON__Any_:
+      type: object
+      additionalProperties:
+        type: object
     PlaceOS__Model__Guest:
       type: object
       properties:
@@ -10755,6 +11552,15 @@ components:
               additionalProperties:
                 type: string
                 nullable: true
+              nullable: true
+            visibility:
+              type: string
+              enum:
+              - normal
+              - personal
+              - public
+              - private
+              - confidential
               nullable: true
             mailbox:
               type: string
@@ -11212,6 +12018,15 @@ components:
             type: string
             nullable: true
           nullable: true
+        visibility:
+          type: string
+          enum:
+          - normal
+          - personal
+          - public
+          - private
+          - confidential
+          nullable: true
         mailbox:
           type: string
           nullable: true
@@ -11619,6 +12434,15 @@ components:
                   type: string
                   nullable: true
                 nullable: true
+              visibility:
+                type: string
+                enum:
+                - normal
+                - personal
+                - public
+                - private
+                - confidential
+                nullable: true
               mailbox:
                 type: string
                 nullable: true
@@ -11945,6 +12769,15 @@ components:
           additionalProperties:
             type: string
             nullable: true
+          nullable: true
+        visibility:
+          type: string
+          enum:
+          - normal
+          - personal
+          - public
+          - private
+          - confidential
           nullable: true
         mailbox:
           type: string
@@ -12538,6 +13371,2861 @@ components:
           type: integer
           format: Int64
           nullable: true
+    Office365__ChatMessageList:
+      type: object
+      properties:
+        '@odata.context':
+          type: string
+        '@odata.count':
+          type: integer
+          format: Int32
+        '@odata.nextLink':
+          type: string
+          nullable: true
+        value:
+          type: array
+          items:
+            type: object
+            properties:
+              attachments:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                      nullable: true
+                    content:
+                      type: string
+                      nullable: true
+                    contentType:
+                      type: string
+                      nullable: true
+                    contentUrl:
+                      type: string
+                      nullable: true
+                    teamsAppId:
+                      type: string
+                      nullable: true
+                    thumbnailUrl:
+                      type: string
+                      nullable: true
+                  required:
+                  - id
+                nullable: true
+              body:
+                type: object
+                properties:
+                  content:
+                    type: string
+                    nullable: true
+                  contentType:
+                    type: string
+                    nullable: true
+              chatId:
+                type: string
+                nullable: true
+              channelIdentity:
+                type: object
+                properties:
+                  channelId:
+                    type: string
+                  teamId:
+                    type: string
+                required:
+                - channelId
+                - teamId
+                nullable: true
+              createdDateTime:
+                type: string
+                format: date-time
+                nullable: true
+              deletedDateTime:
+                type: string
+                format: date-time
+                nullable: true
+              etag:
+                type: string
+                nullable: true
+              from:
+                type: object
+                properties:
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  device:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      userIdentityType:
+                        type: string
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                nullable: true
+              id:
+                type: string
+                nullable: true
+              importance:
+                type: string
+                nullable: true
+              lastModifiedDateTime:
+                type: string
+                format: date-time
+                nullable: true
+              lastEditedDateTime:
+                type: string
+                format: date-time
+                nullable: true
+              locale:
+                type: string
+                nullable: true
+              mentions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: Int32
+                      nullable: true
+                    mentioned:
+                      type: object
+                      properties:
+                        application:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                        conversation:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            conversationIdentityType:
+                              type: string
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                        device:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                      nullable: true
+                    mentionText:
+                      type: string
+                      nullable: true
+                nullable: true
+              messageHistory:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    actions:
+                      type: string
+                      enum:
+                      - reaction_added
+                      - reaction_removed
+                      - action_undefined
+                      - unknown_future_value
+                    modifiedDateTime:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    reaction:
+                      type: object
+                      properties:
+                        createdDateTime:
+                          type: string
+                          nullable: true
+                        displayName:
+                          type: string
+                          nullable: true
+                        reactionContentUrl:
+                          type: string
+                          nullable: true
+                        reactionType:
+                          type: string
+                          nullable: true
+                        user:
+                          type: object
+                          properties:
+                            application:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type: string
+                                  nullable: true
+                                tenantId:
+                                  type: string
+                                  nullable: true
+                                thumbnails:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                      nullable: true
+                                    large:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    medium:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    small:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    source:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                  nullable: true
+                              required:
+                              - id
+                              nullable: true
+                            device:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type: string
+                                  nullable: true
+                                tenantId:
+                                  type: string
+                                  nullable: true
+                                thumbnails:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                      nullable: true
+                                    large:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    medium:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    small:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    source:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                  nullable: true
+                              required:
+                              - id
+                              nullable: true
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                displayName:
+                                  type: string
+                                  nullable: true
+                                tenantId:
+                                  type: string
+                                  nullable: true
+                                thumbnails:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: string
+                                      nullable: true
+                                    large:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    medium:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    small:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                    source:
+                                      type: object
+                                      properties:
+                                        height:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        width:
+                                          type: integer
+                                          format: Int32
+                                          nullable: true
+                                        content:
+                                          type: string
+                                          nullable: true
+                                        url:
+                                          type: string
+                                          nullable: true
+                                        sourceItemId:
+                                          type: string
+                                          nullable: true
+                                      nullable: true
+                                  nullable: true
+                              required:
+                              - id
+                              nullable: true
+                          nullable: true
+                      nullable: true
+                  required:
+                  - actions
+                nullable: true
+              messageType:
+                type: string
+                enum:
+                - message
+                - chat_event
+                - typing
+                - unknown_future_value
+                - system_event_message
+                nullable: true
+              policyViolation:
+                type: object
+                properties:
+                  dlpAction:
+                    type: string
+                    enum:
+                    - none
+                    - notify_sender
+                    - block_access
+                    - block_access_external
+                    nullable: true
+                  justificationText:
+                    type: string
+                    nullable: true
+                  policyTip:
+                    type: object
+                    properties:
+                      complianceUrl:
+                        type: string
+                        nullable: true
+                      generalText:
+                        type: string
+                        nullable: true
+                      matchedConditionDescriptions:
+                        type: array
+                        items:
+                          type: string
+                        nullable: true
+                    nullable: true
+                  userAction:
+                    type: string
+                    enum:
+                    - none
+                    - notify_sender
+                    - block_access
+                    - block_access_external
+                    nullable: true
+                  verdictDetails:
+                    type: string
+                    enum:
+                    - none
+                    - notify_sender
+                    - block_access
+                    - block_access_external
+                    nullable: true
+                nullable: true
+              reactions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    createdDateTime:
+                      type: string
+                      nullable: true
+                    displayName:
+                      type: string
+                      nullable: true
+                    reactionContentUrl:
+                      type: string
+                      nullable: true
+                    reactionType:
+                      type: string
+                      nullable: true
+                    user:
+                      type: object
+                      properties:
+                        application:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                        device:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            displayName:
+                              type: string
+                              nullable: true
+                            tenantId:
+                              type: string
+                              nullable: true
+                            thumbnails:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  nullable: true
+                                large:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                medium:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                small:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                                source:
+                                  type: object
+                                  properties:
+                                    height:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    width:
+                                      type: integer
+                                      format: Int32
+                                      nullable: true
+                                    content:
+                                      type: string
+                                      nullable: true
+                                    url:
+                                      type: string
+                                      nullable: true
+                                    sourceItemId:
+                                      type: string
+                                      nullable: true
+                                  nullable: true
+                              nullable: true
+                          required:
+                          - id
+                          nullable: true
+                      nullable: true
+                nullable: true
+              replyToId:
+                type: string
+                nullable: true
+              subject:
+                type: string
+                nullable: true
+              summary:
+                type: string
+                nullable: true
+              webUrl:
+                type: string
+                nullable: true
+            required:
+            - body
+      required:
+      - '@odata.context'
+      - '@odata.count'
+      - value
+    Office365__ChatMessage:
+      type: object
+      properties:
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+                nullable: true
+              content:
+                type: string
+                nullable: true
+              contentType:
+                type: string
+                nullable: true
+              contentUrl:
+                type: string
+                nullable: true
+              teamsAppId:
+                type: string
+                nullable: true
+              thumbnailUrl:
+                type: string
+                nullable: true
+            required:
+            - id
+          nullable: true
+        body:
+          type: object
+          properties:
+            content:
+              type: string
+              nullable: true
+            contentType:
+              type: string
+              nullable: true
+        chatId:
+          type: string
+          nullable: true
+        channelIdentity:
+          type: object
+          properties:
+            channelId:
+              type: string
+            teamId:
+              type: string
+          required:
+          - channelId
+          - teamId
+          nullable: true
+        createdDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        deletedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        etag:
+          type: string
+          nullable: true
+        from:
+          type: object
+          properties:
+            application:
+              type: object
+              properties:
+                id:
+                  type: string
+                displayName:
+                  type: string
+                  nullable: true
+                tenantId:
+                  type: string
+                  nullable: true
+                thumbnails:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      nullable: true
+                    large:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    medium:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    small:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    source:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                  nullable: true
+              required:
+              - id
+              nullable: true
+            device:
+              type: object
+              properties:
+                id:
+                  type: string
+                displayName:
+                  type: string
+                  nullable: true
+                tenantId:
+                  type: string
+                  nullable: true
+                thumbnails:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      nullable: true
+                    large:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    medium:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    small:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                    source:
+                      type: object
+                      properties:
+                        height:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        width:
+                          type: integer
+                          format: Int32
+                          nullable: true
+                        content:
+                          type: string
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        sourceItemId:
+                          type: string
+                          nullable: true
+                      nullable: true
+                  nullable: true
+              required:
+              - id
+              nullable: true
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                displayName:
+                  type: string
+                  nullable: true
+                tenantId:
+                  type: string
+                  nullable: true
+                userIdentityType:
+                  type: string
+                  nullable: true
+              required:
+              - id
+              nullable: true
+          nullable: true
+        id:
+          type: string
+          nullable: true
+        importance:
+          type: string
+          nullable: true
+        lastModifiedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        lastEditedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        locale:
+          type: string
+          nullable: true
+        mentions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                format: Int32
+                nullable: true
+              mentioned:
+                type: object
+                properties:
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  conversation:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      conversationIdentityType:
+                        type: string
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  device:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                nullable: true
+              mentionText:
+                type: string
+                nullable: true
+          nullable: true
+        messageHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              actions:
+                type: string
+                enum:
+                - reaction_added
+                - reaction_removed
+                - action_undefined
+                - unknown_future_value
+              modifiedDateTime:
+                type: string
+                format: date-time
+                nullable: true
+              reaction:
+                type: object
+                properties:
+                  createdDateTime:
+                    type: string
+                    nullable: true
+                  displayName:
+                    type: string
+                    nullable: true
+                  reactionContentUrl:
+                    type: string
+                    nullable: true
+                  reactionType:
+                    type: string
+                    nullable: true
+                  user:
+                    type: object
+                    properties:
+                      application:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          displayName:
+                            type: string
+                            nullable: true
+                          tenantId:
+                            type: string
+                            nullable: true
+                          thumbnails:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                nullable: true
+                              large:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              medium:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              small:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              source:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                            nullable: true
+                        required:
+                        - id
+                        nullable: true
+                      device:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          displayName:
+                            type: string
+                            nullable: true
+                          tenantId:
+                            type: string
+                            nullable: true
+                          thumbnails:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                nullable: true
+                              large:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              medium:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              small:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              source:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                            nullable: true
+                        required:
+                        - id
+                        nullable: true
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          displayName:
+                            type: string
+                            nullable: true
+                          tenantId:
+                            type: string
+                            nullable: true
+                          thumbnails:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                nullable: true
+                              large:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              medium:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              small:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                              source:
+                                type: object
+                                properties:
+                                  height:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  width:
+                                    type: integer
+                                    format: Int32
+                                    nullable: true
+                                  content:
+                                    type: string
+                                    nullable: true
+                                  url:
+                                    type: string
+                                    nullable: true
+                                  sourceItemId:
+                                    type: string
+                                    nullable: true
+                                nullable: true
+                            nullable: true
+                        required:
+                        - id
+                        nullable: true
+                    nullable: true
+                nullable: true
+            required:
+            - actions
+          nullable: true
+        messageType:
+          type: string
+          enum:
+          - message
+          - chat_event
+          - typing
+          - unknown_future_value
+          - system_event_message
+          nullable: true
+        policyViolation:
+          type: object
+          properties:
+            dlpAction:
+              type: string
+              enum:
+              - none
+              - notify_sender
+              - block_access
+              - block_access_external
+              nullable: true
+            justificationText:
+              type: string
+              nullable: true
+            policyTip:
+              type: object
+              properties:
+                complianceUrl:
+                  type: string
+                  nullable: true
+                generalText:
+                  type: string
+                  nullable: true
+                matchedConditionDescriptions:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+              nullable: true
+            userAction:
+              type: string
+              enum:
+              - none
+              - notify_sender
+              - block_access
+              - block_access_external
+              nullable: true
+            verdictDetails:
+              type: string
+              enum:
+              - none
+              - notify_sender
+              - block_access
+              - block_access_external
+              nullable: true
+          nullable: true
+        reactions:
+          type: array
+          items:
+            type: object
+            properties:
+              createdDateTime:
+                type: string
+                nullable: true
+              displayName:
+                type: string
+                nullable: true
+              reactionContentUrl:
+                type: string
+                nullable: true
+              reactionType:
+                type: string
+                nullable: true
+              user:
+                type: object
+                properties:
+                  application:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  device:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      displayName:
+                        type: string
+                        nullable: true
+                      tenantId:
+                        type: string
+                        nullable: true
+                      thumbnails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            nullable: true
+                          large:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          medium:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          small:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                          source:
+                            type: object
+                            properties:
+                              height:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              width:
+                                type: integer
+                                format: Int32
+                                nullable: true
+                              content:
+                                type: string
+                                nullable: true
+                              url:
+                                type: string
+                                nullable: true
+                              sourceItemId:
+                                type: string
+                                nullable: true
+                            nullable: true
+                        nullable: true
+                    required:
+                    - id
+                    nullable: true
+                nullable: true
+          nullable: true
+        replyToId:
+          type: string
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        webUrl:
+          type: string
+          nullable: true
+      required:
+      - body
     PlaceOS__Model__Tenant__Responder:
       type: object
       properties:
@@ -12937,7 +16625,10 @@ components:
               recurrence_end:
                 type: integer
                 format: Int64
-                description: an optional end date for booking recurrances
+                description: an optional end date for booking recurrences
+                nullable: true
+              all_day:
+                type: boolean
                 nullable: true
               tenant_id:
                 type: integer
