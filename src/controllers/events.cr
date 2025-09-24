@@ -1533,20 +1533,51 @@ class Events < Application
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
   ) : Array(String)
-    events = index(starting, ending, calendars, zone_ids, system_ids)
+    period_start = Time.unix(starting)
+    period_end = Time.unix(ending)
+
+    # Get matching calendar IDs - only systems with emails, not user calendars
+    calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: false)
+
+    # Filter to only systems (calendars that have associated system objects)
+    system_calendars = calendars.select { |calendar_id, system| system }
+
+    return [] of String if system_calendars.empty?
+
+    Log.context.set(calendar_size: system_calendars.size.to_s)
+
+    # Grab events in batches
+    requests = [] of HTTP::Request
+    mappings = system_calendars.map { |calendar_id, system|
+      request = client.list_events_request(
+        user.email,
+        calendar_id,
+        period_start: period_start,
+        period_end: period_end,
+        showDeleted: false,
+      )
+      Log.debug { "requesting events from: #{request.path}" }
+      requests << request
+      {request, calendar_id, system.not_nil!}
+    }
+
+    responses = client.batch(user.email, requests)
 
     approved_event_ids = [] of String
 
-    events.each do |event|
-      next unless event_id = event.id
-      next unless system_id = event.system_id || event.system.try &.id
+    # Process the response (map requests back to responses)
+    mappings.each do |(request, calendar_id, system)|
+      begin
+        events = client.list_events(user.email, responses[request])
+        events.each do |event|
+          next unless event_id = event.id
 
-      system = get_placeos_client.systems.fetch(system_id)
-      cal_id = system.email
-      raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
-
-      client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
-      approved_event_ids << event_id
+          client.accept_event(calendar_id, id: event_id, calendar_id: calendar_id)
+          approved_event_ids << event_id
+        end
+      rescue error
+        Log.warn(exception: error) { "error fetching/approving events for #{calendar_id}" }
+      end
     end
 
     approved_event_ids

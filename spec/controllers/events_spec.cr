@@ -1173,7 +1173,7 @@ describe Events, tags: ["event"] do
       EventsHelper.stub_permissions_check(system_id)
 
       # approve
-      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAAB8_ORMAAA%3D/accept")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/#{URI.encode_path(created_event_id)}/accept")
         .to_return({sucess: true}.to_json)
 
       starting = (Time.unix(created_event["event_start"].as_i) - 20.minutes).to_unix
