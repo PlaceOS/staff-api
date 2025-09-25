@@ -1575,6 +1575,8 @@ class Events < Application
         events.each do |event|
           next unless event_id = event.id
 
+          # TODO: This should be a batch request.
+          # TODO: Find out if using the ical UID is better than the event ID for recurring events.
           client.accept_event(calendar_id, id: event_id, calendar_id: calendar_id)
           approved_event_ids << event_id
         end
