@@ -1532,6 +1532,8 @@ class Events < Application
     zone_ids : String? = nil,
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil,
   ) : Array(String)
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
@@ -1555,6 +1557,7 @@ class Events < Application
         period_start: period_start,
         period_end: period_end,
         showDeleted: false,
+        ical_uid: icaluid,
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
