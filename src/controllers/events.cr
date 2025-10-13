@@ -1520,6 +1520,74 @@ class Events < Application
     client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
+  @[AC::Route::POST("/approve_all")]
+  def approve_all(
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil,
+  ) : Array(String)
+    period_start = Time.unix(starting)
+    period_end = Time.unix(ending)
+
+    # Get matching calendar IDs - only systems with emails, not user calendars
+    calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: false)
+
+    # Filter to only systems (calendars that have associated system objects)
+    system_calendars = calendars.select { |calendar_id, system| system }
+
+    return [] of String if system_calendars.empty?
+
+    Log.context.set(calendar_size: system_calendars.size.to_s)
+
+    # Grab events in batches
+    requests = [] of HTTP::Request
+    mappings = system_calendars.map { |calendar_id, system|
+      request = client.list_events_request(
+        user.email,
+        calendar_id,
+        period_start: period_start,
+        period_end: period_end,
+        showDeleted: false,
+        ical_uid: icaluid,
+      )
+      Log.debug { "requesting events from: #{request.path}" }
+      requests << request
+      {request, calendar_id, system.not_nil!}
+    }
+
+    responses = client.batch(user.email, requests)
+
+    approved_event_ids = [] of String
+
+    # Process the response (map requests back to responses)
+    mappings.each do |(request, calendar_id, system)|
+      begin
+        events = client.list_events(user.email, responses[request])
+        events.each do |event|
+          next unless event_id = event.id
+
+          # TODO: This should be a batch request.
+          # TODO: Find out if using the ical UID is better than the event ID for recurring events.
+          client.accept_event(calendar_id, id: event_id, calendar_id: calendar_id)
+          approved_event_ids << event_id
+        end
+      rescue error
+        Log.warn(exception: error) { "error fetching/approving events for #{calendar_id}" }
+      end
+    end
+
+    approved_event_ids
+  end
+
   # rejects / declines the meeting on behalf of the event space
   @[AC::Route::POST("/:id/reject")]
   def reject(
