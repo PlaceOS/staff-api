@@ -639,6 +639,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bookings__BookingError'
+  /api/staff/v1/bookings/clashing-assets:
+    post:
+      summary: lists conflicting assets based on booking
+      description: 'lists conflicting assets based on booking
+
+        will return a list of asset_ids that are already booked during the specified
+        time range
+
+        if asset_ids or asset_id is set on the booking, then it will only return booked
+        assets from that list'
+      tags:
+      - Bookings
+      operationId: Bookings_clashing_assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        required: true
+      parameters:
+      - name: return_available
+        in: query
+        description: return available assets, this requires asset_ids be set to the
+          full list
+        example: "false"
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/String'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
+        410:
+          description: Gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bookings__BookingError'
   /api/staff/v1/bookings/{id}:
     get:
       summary: returns the booking requested
