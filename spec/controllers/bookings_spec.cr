@@ -3,11 +3,11 @@ require "./helpers/booking_helper"
 require "./helpers/guest_helper"
 
 describe Bookings do
-  Spec.before_each {
+  Spec.before_each do
     Booking.clear
     Attendee.truncate
     Guest.truncate
-  }
+  end
 
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
@@ -1893,8 +1893,8 @@ describe Bookings do
     attendees = Booking.find(created["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(true)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_true
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -1923,8 +1923,8 @@ describe Bookings do
     attendees = Booking.find(updated["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(updated_user_name)
@@ -1961,8 +1961,8 @@ describe Bookings do
     attendees = Booking.find(created["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -1998,8 +1998,8 @@ describe Bookings do
     attendees = Booking.find(updated["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -2269,13 +2269,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body)
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body)
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
     end
 
     it "booking limit is not checked on #destroy" do
@@ -2337,13 +2337,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
     end
 
     it "#update does not check limit if the new start and end time is inside the existing range" do
@@ -2406,13 +2406,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
 
       second_booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
@@ -2512,16 +2512,16 @@ describe Bookings do
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/approve", headers: headers).body).as_h
     booking = Booking.find_by(user_id: booking.user_id)
-    body["approved"].should eq(true)
+    body["approved"].should be_true
     body["approver_id"].should eq(booking.approver_id)
     body["approver_email"].should eq(booking.approver_email)
     body["approver_name"].should eq(booking.approver_name)
-    body["rejected"].should eq(false)
+    body["rejected"].should be_false
 
     # Test rejection
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/reject", headers: headers).body).as_h
-    body["rejected"].should eq(true)
-    body["approved"].should eq(false)
+    body["rejected"].should be_true
+    body["approved"].should be_false
     # Reset approver info
     body["approver_id"]?.should eq(booking.approver_id)
     body["approver_email"]?.should eq(booking.approver_email)
@@ -2537,10 +2537,10 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers).body).as_h
-    body["checked_in"].should eq(true)
+    body["checked_in"].should be_true
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers).body).as_h
-    body["checked_in"].should eq(false)
+    body["checked_in"].should be_false
   end
 
   it "#create and #update parent child" do
