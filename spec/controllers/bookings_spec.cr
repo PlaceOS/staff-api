@@ -779,6 +779,78 @@ describe Bookings do
       # Should have exactly 2 asset IDs
       available_asset_ids.size.should eq(1)
     end
+
+    it "should return asset ids with clash times when include_clash_time=true" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a booking (not saved) that clashes with booking1 and booking2
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+      }.to_json
+
+      # Call the clashing_assets endpoint with include_clash_time=true
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets?include_clash_time=true", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_data = JSON.parse(response.body).as_a
+
+      # Should have exactly 2 entries (desk-1 and desk-2)
+      clashing_data.size.should eq(2)
+
+      # Verify structure - each entry should have asset_id, booking_start, and booking_end
+      clashing_data.each do |entry|
+        entry["asset_id"].as_s.should_not be_nil
+        entry["booking_start"].as_i64.should_not be_nil
+        entry["booking_end"].as_i64.should_not be_nil
+      end
+
+      # Extract asset IDs
+      clashing_asset_ids = clashing_data.map { |entry| entry["asset_id"].as_s }
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Verify the clash times are correct
+      clashing_data.each do |entry|
+        entry["booking_start"].as_i64.should eq(clash_start)
+        entry["booking_end"].as_i64.should eq(clash_end)
+      end
+    end
   end
 
   it "should include bookins made on behalf of other users when include_booked_by=true" do
