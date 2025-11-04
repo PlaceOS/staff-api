@@ -351,7 +351,9 @@ class Bookings < Application
     booking : Booking,
     @[AC::Param::Info(description: "return available assets, this requires asset_ids be set to the full list", example: "false")]
     return_available : Bool = false,
-  ) : Array(String)
+    @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
+    include_clash_time : Bool = false,
+  ) : Array(String) | Array(NamedTuple(asset_id: String, booking_start: Int64, booking_end: Int64))
     unless booking.booking_start_present? &&
            booking.booking_end_present? &&
            booking.booking_type_present?
@@ -360,6 +362,10 @@ class Bookings < Application
 
     if return_available && !(booking.asset_ids_present? || booking.asset_id_present?)
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing asset_ids or asset_id"}], "error validating booking data")
+    end
+
+    if return_available && include_clash_time
+      raise AC::Route::Param::Error.new("include_clash_time and return_available cannot be used together")
     end
 
     # Add the tenant details
@@ -371,15 +377,29 @@ class Bookings < Application
       booking.asset_ids = [] of String
     end
 
-    asset_ids = [] of String
+    clashing_bookings = check_clashing(booking, ignore_assets: ignore_assets)
 
-    check_clashing(booking, ignore_assets: ignore_assets).each do |clashing_booking|
-      asset_ids.concat(clashing_booking.asset_ids)
+    if include_clash_time
+      asset_ids = [] of NamedTuple(asset_id: String, booking_start: Int64, booking_end: Int64)
+
+      clashing_bookings.each do |clashing_booking|
+        clashing_booking.asset_ids.each do |asset_id|
+          asset_ids << {asset_id: asset_id, booking_start: clashing_booking.booking_start, booking_end: clashing_booking.booking_end}
+        end
+      end
+
+      asset_ids
+    else
+      asset_ids = [] of String
+
+      clashing_bookings.each do |clashing_booking|
+        asset_ids.concat(clashing_booking.asset_ids)
+      end
+
+      asset_ids = booking.asset_ids - asset_ids if return_available
+
+      asset_ids.uniq!
     end
-
-    asset_ids = booking.asset_ids - asset_ids if return_available
-
-    asset_ids.uniq!
   end
 
   # creates a new booking
