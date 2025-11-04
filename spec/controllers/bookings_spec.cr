@@ -640,6 +640,147 @@ describe Bookings do
     end
   end
 
+  describe "#clashing_assets" do
+    it "should return asset ids that clash with the provided booking" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a 4th booking (not saved) that clashes with booking1 and booking2
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      clashing_asset_ids.size.should eq(2)
+
+      # Booking (not saved) with assets that clashes with booking1 and booking2
+      clashing_booking_with_assets_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+        asset_ids:     ["desk-1", "desk-2", "desk-3"],
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      clashing_asset_ids.size.should eq(2)
+    end
+
+    it "should return asset ids that does NOT clash with the provided booking" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a 4th booking (not saved) that clashes with booking1 and booking2
+      zones = booking1.zones.not_nil!
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+        asset_ids:     ["desk-1", "desk-2", "desk-3"],
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets?return_available=true", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      available_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should NOT contain asset IDs from booking1 and booking2 (which clash)
+      available_asset_ids.should_not contain("desk-1")
+      available_asset_ids.should_not contain("desk-2")
+
+      # Should contain asset ID from booking3 (which doesn't clash)
+      available_asset_ids.should contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      available_asset_ids.size.should eq(1)
+    end
+  end
+
   it "should include bookins made on behalf of other users when include_booked_by=true" do
     tenant = get_tenant
     booking1 = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: "toby@redant.com.au")
