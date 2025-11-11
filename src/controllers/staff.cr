@@ -38,7 +38,7 @@ class Staff < Application
 
       users.map! do |user|
         username = (user.username || user.email).as(String).strip.downcase
-        if upload = uploads.find { |upload| upload.tags.last == username }
+        if upload = uploads.find { |up| up.tags.last == username }
           user.photo = "/api/engine/v2/uploads/#{upload.id}/url"
         end
         user

@@ -46,7 +46,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :booked])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :booked, :clashing_assets])]
   private def find_booking(
     id : Int64,
     @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
@@ -341,6 +341,65 @@ class Bookings < Application
     asset_ids = [] of String
     result.each { |b| asset_ids.concat(b.asset_ids) unless b.checked_out_at || b.deleted }
     asset_ids.uniq!
+  end
+
+  # lists conflicting assets based on booking
+  # will return a list of asset_ids that are already booked during the specified time range
+  # if asset_ids or asset_id is set on the booking, then it will only return booked assets from that list
+  @[AC::Route::POST("/clashing-assets", body: :booking)]
+  def clashing_assets(
+    booking : Booking,
+    @[AC::Param::Info(description: "return available assets, this requires asset_ids be set to the full list", example: "false")]
+    return_available : Bool = false,
+    @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
+    include_clash_time : Bool = false,
+  ) : Array(String) | Array(NamedTuple(asset_id: String, booking_start: Int64, booking_end: Int64))
+    unless booking.booking_start_present? &&
+           booking.booking_end_present? &&
+           booking.booking_type_present?
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type"}], "error validating booking data")
+    end
+
+    if return_available && !(booking.asset_ids_present? || booking.asset_id_present?)
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing asset_ids or asset_id"}], "error validating booking data")
+    end
+
+    if return_available && include_clash_time
+      raise AC::Route::Param::Error.new("include_clash_time and return_available cannot be used together")
+    end
+
+    # Add the tenant details
+    booking.tenant_id = tenant.id.not_nil!
+
+    ignore_assets = (booking.asset_ids_present? || booking.asset_id_present?) ? false : true
+    if ignore_assets
+      booking.asset_id = ""
+      booking.asset_ids = [] of String
+    end
+
+    clashing_bookings = check_clashing(booking, ignore_assets: ignore_assets)
+
+    if include_clash_time
+      asset_ids = [] of NamedTuple(asset_id: String, booking_start: Int64, booking_end: Int64)
+
+      clashing_bookings.each do |clashing_booking|
+        clashing_booking.asset_ids.each do |asset_id|
+          asset_ids << {asset_id: asset_id, booking_start: clashing_booking.booking_start, booking_end: clashing_booking.booking_end}
+        end
+      end
+
+      asset_ids
+    else
+      asset_ids = [] of String
+
+      clashing_bookings.each do |clashing_booking|
+        asset_ids.concat(clashing_booking.asset_ids)
+      end
+
+      asset_ids = booking.asset_ids - asset_ids if return_available
+
+      asset_ids.uniq!
+    end
   end
 
   # creates a new booking
@@ -999,8 +1058,8 @@ class Bookings < Application
   #              Helper Methods
   # ============================================
 
-  private def check_clashing(new_booking)
-    new_booking.clashing_bookings.reject! { |book| book.id == new_booking.id && book.instance == new_booking.instance }
+  private def check_clashing(new_booking, ignore_assets : Bool = false)
+    new_booking.clashing_bookings(ignore_assets: ignore_assets).reject! { |book| book.id == new_booking.id && book.instance == new_booking.instance }
   end
 
   private def check_in_clashing(time_now, booking)

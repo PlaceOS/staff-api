@@ -980,7 +980,7 @@ class Events < Application
     raise Error::NotFound.new("metadata not found for event #{event_id}") unless metadata
 
     # Check if attendee exists in the event
-    if existing_attendee = event.attendees.find { |a| a.email.downcase == email }
+    if _existing_attendee = event.attendees.find { |a| a.email.downcase == email }
       # Remove the attendee from the event
       event.attendees = event.attendees.reject { |a| a.email.downcase == email }
 
@@ -1542,7 +1542,7 @@ class Events < Application
     calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: false)
 
     # Filter to only systems (calendars that have associated system objects)
-    system_calendars = calendars.select { |calendar_id, system| system }
+    system_calendars = calendars.select { |_calendar_id, system| system }
 
     return [] of String if system_calendars.empty?
 
@@ -1550,7 +1550,8 @@ class Events < Application
 
     # Grab events in batches
     requests = [] of HTTP::Request
-    mappings = system_calendars.map { |calendar_id, system|
+    mappings = system_calendars.compact_map { |calendar_id, system|
+      next unless system
       request = client.list_events_request(
         user.email,
         calendar_id,
@@ -1561,7 +1562,7 @@ class Events < Application
       )
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
-      {request, calendar_id, system.not_nil!}
+      {request, calendar_id, system}
     }
 
     responses = client.batch(user.email, requests)

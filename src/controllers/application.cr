@@ -310,7 +310,7 @@ abstract class Application < ActionController::Base
     # ensure we have the host event details
     if client.client_id == :office365 && event.host.try(&.downcase) != cal_id
       event = get_hosts_event(event)
-      raise Error::BadUpstreamResponse.new("event id is missing") unless event_id = event.id
+      raise Error::BadUpstreamResponse.new("event id is missing") unless _event_id = event.id
     end
 
     event

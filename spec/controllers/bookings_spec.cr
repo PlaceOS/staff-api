@@ -3,11 +3,11 @@ require "./helpers/booking_helper"
 require "./helpers/guest_helper"
 
 describe Bookings do
-  Spec.before_each {
+  Spec.before_each do
     Booking.clear
     Attendee.truncate
     Guest.truncate
-  }
+  end
 
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
@@ -637,6 +637,219 @@ describe Bookings do
       asset_ids = Array(String).from_json client.get(route, headers: headers).body
       asset_ids.should_not contain("desk-1")
       asset_ids.should_not contain("desk-2")
+    end
+  end
+
+  describe "#clashing_assets" do
+    it "should return asset ids that clash with the provided booking" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a 4th booking (not saved) that clashes with booking1 and booking2
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      clashing_asset_ids.size.should eq(2)
+
+      # Booking (not saved) with assets that clashes with booking1 and booking2
+      clashing_booking_with_assets_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+        asset_ids:     ["desk-1", "desk-2", "desk-3"],
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      clashing_asset_ids.size.should eq(2)
+    end
+
+    it "should return asset ids that does NOT clash with the provided booking" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a 4th booking (not saved) that clashes with booking1 and booking2
+      zones = booking1.zones.not_nil!
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+        asset_ids:     ["desk-1", "desk-2", "desk-3"],
+      }.to_json
+
+      # Call the clashing_assets endpoint
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets?return_available=true", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      available_asset_ids = JSON.parse(response.body).as_a.map(&.as_s)
+
+      # Should NOT contain asset IDs from booking1 and booking2 (which clash)
+      available_asset_ids.should_not contain("desk-1")
+      available_asset_ids.should_not contain("desk-2")
+
+      # Should contain asset ID from booking3 (which doesn't clash)
+      available_asset_ids.should contain("desk-3")
+
+      # Should have exactly 2 asset IDs
+      available_asset_ids.size.should eq(1)
+    end
+
+    it "should return asset ids with clash times when include_clash_time=true" do
+      tenant_id = get_tenant.id.not_nil!
+
+      # Create time slots
+      clash_start = 10.minutes.from_now.to_unix
+      clash_end = 40.minutes.from_now.to_unix
+      non_clash_start = 50.minutes.from_now.to_unix
+      non_clash_end = 80.minutes.from_now.to_unix
+
+      # Create two bookings at the same time (these should clash)
+      booking1 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-1"
+      )
+      booking2 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: clash_start,
+        booking_end: clash_end,
+        asset_id: "desk-2"
+      )
+
+      # Create a third booking at a different time (this should NOT clash)
+      booking3 = BookingsHelper.create_booking(
+        tenant_id: tenant_id,
+        booking_start: non_clash_start,
+        booking_end: non_clash_end,
+        asset_id: "desk-3"
+      )
+
+      # Create a booking (not saved) that clashes with booking1 and booking2
+      clashing_booking_body = {
+        booking_start: clash_start,
+        booking_end:   clash_end,
+        booking_type:  "desk",
+      }.to_json
+
+      # Call the clashing_assets endpoint with include_clash_time=true
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets?include_clash_time=true", headers: headers, body: clashing_booking_body)
+      response.status_code.should eq(200)
+
+      # Parse the response
+      clashing_data = JSON.parse(response.body).as_a
+
+      # Should have exactly 2 entries (desk-1 and desk-2)
+      clashing_data.size.should eq(2)
+
+      # Verify structure - each entry should have asset_id, booking_start, and booking_end
+      clashing_data.each do |entry|
+        entry["asset_id"].as_s.should_not be_nil
+        entry["booking_start"].as_i64.should_not be_nil
+        entry["booking_end"].as_i64.should_not be_nil
+      end
+
+      # Extract asset IDs
+      clashing_asset_ids = clashing_data.map { |entry| entry["asset_id"].as_s }
+
+      # Should contain asset IDs from booking1 and booking2 (which clash)
+      clashing_asset_ids.should contain("desk-1")
+      clashing_asset_ids.should contain("desk-2")
+
+      # Should NOT contain asset ID from booking3 (which doesn't clash)
+      clashing_asset_ids.should_not contain("desk-3")
+
+      # Verify the clash times are correct
+      clashing_data.each do |entry|
+        entry["booking_start"].as_i64.should eq(clash_start)
+        entry["booking_end"].as_i64.should eq(clash_end)
+      end
     end
   end
 
@@ -1680,8 +1893,8 @@ describe Bookings do
     attendees = Booking.find(created["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(true)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_true
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -1710,8 +1923,8 @@ describe Bookings do
     attendees = Booking.find(updated["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(updated_user_name)
@@ -1748,8 +1961,8 @@ describe Bookings do
     attendees = Booking.find(created["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -1785,8 +1998,8 @@ describe Bookings do
     attendees = Booking.find(updated["id"].as_i64).attendees.to_a
     attendees.size.should eq(1)
     attendee = attendees.first
-    attendee.checked_in.should eq(false)
-    attendee.visit_expected.should eq(true)
+    attendee.checked_in.should be_false
+    attendee.visit_expected.should be_true
 
     guest = attendee.guest.not_nil!
     guest.name.should eq(user_name)
@@ -2056,13 +2269,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body)
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body)
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
     end
 
     it "booking limit is not checked on #destroy" do
@@ -2124,13 +2337,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out (without limit_override)
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
     end
 
     it "#update does not check limit if the new start and end time is inside the existing range" do
@@ -2193,13 +2406,13 @@ describe Bookings do
 
       # check in
       checked_in = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=true", headers: headers).body).as_h
-      checked_in["checked_in"].should eq(true)
+      checked_in["checked_in"].should be_true
 
       sleep(500.milliseconds) # advance time 5 minutes
 
       # Check out
       checked_out = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking_id}/check_in?state=false", headers: headers).body).as_h
-      checked_out["checked_in"].should eq(false)
+      checked_out["checked_in"].should be_false
 
       second_booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
@@ -2299,16 +2512,16 @@ describe Bookings do
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/approve", headers: headers).body).as_h
     booking = Booking.find_by(user_id: booking.user_id)
-    body["approved"].should eq(true)
+    body["approved"].should be_true
     body["approver_id"].should eq(booking.approver_id)
     body["approver_email"].should eq(booking.approver_email)
     body["approver_name"].should eq(booking.approver_name)
-    body["rejected"].should eq(false)
+    body["rejected"].should be_false
 
     # Test rejection
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/reject", headers: headers).body).as_h
-    body["rejected"].should eq(true)
-    body["approved"].should eq(false)
+    body["rejected"].should be_true
+    body["approved"].should be_false
     # Reset approver info
     body["approver_id"]?.should eq(booking.approver_id)
     body["approver_email"]?.should eq(booking.approver_email)
@@ -2324,10 +2537,10 @@ describe Bookings do
     booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers).body).as_h
-    body["checked_in"].should eq(true)
+    body["checked_in"].should be_true
 
     body = JSON.parse(client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: headers).body).as_h
-    body["checked_in"].should eq(false)
+    body["checked_in"].should be_false
   end
 
   it "#create and #update parent child" do
