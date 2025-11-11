@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: [PPT-2241] add clashing-assets endpoint ([#354](https://github.com/PlaceOS/staff-api/pull/354))
 - **events**: [PPT-2216] add approve_all endpoint for bulk event approvals ([#353](https://github.com/PlaceOS/staff-api/pull/353))
 - **events**: [PPT-2188] add #delete_attendee endpoint ([#351](https://github.com/PlaceOS/staff-api/pull/351))
 - **utilities/current-user**: JWT invalidation
