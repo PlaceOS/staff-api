@@ -19,7 +19,12 @@ docker compose build -q
 
 exit_code="0"
 
-docker compose run --rm test $@ || exit_code="$?"
+tty_flag=""
+if [ ! -t 0 ]; then
+    tty_flag="-T"
+fi
+
+docker compose run --rm $tty_flag test "$@" || exit_code="$?"
 
 docker compose down &> /dev/null
 

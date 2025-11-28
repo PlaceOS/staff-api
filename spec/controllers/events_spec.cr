@@ -185,6 +185,34 @@ describe Events, tags: ["event"] do
       guests.compact_map(&.photo).should eq(["http://example.com/first.jpg"])
       guests.compact_map(&.extension_data).should eq([{"fizz" => "buzz"}, {} of String => String?])
     end
+
+    # PPT-2294: External attendee name should be preserved from input, not replaced with email from calendar API
+    it "returns external attendee name from guest record when calendar API returns email as name" do
+      # Use fixture where calendar API returns email as name for external attendees
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create_external_attendee_email_as_name.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
+        .to_return(body: File.read("./spec/fixtures/events/o365/create_external_attendee_email_as_name.json"))
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")
+        .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendars")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+
+      req_body = EventsHelper.create_event_input
+
+      tenant = get_tenant
+      EventMetadatasHelper.create_event(tenant.id)
+      response = client.post(EVENTS_BASE, headers: headers, body: req_body)
+      created_event = JSON.parse(response.body)
+
+      # Find the external attendee (jon@example.com) in the response
+      attendees = created_event["attendees"].as_a
+      external_attendee = attendees.find { |a| a["email"].as_s == "jon@example.com" }
+
+      # The name should be "John" (from input/guest record), not "jon@example.com" (from calendar API)
+      external_attendee.should_not be_nil
+      external_attendee.not_nil!["name"].as_s.should eq("John")
+    end
   end
 
   describe "#update" do
