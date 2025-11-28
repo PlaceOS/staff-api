@@ -101,6 +101,7 @@
 
 ### Fix
 
+- **event**: [PPT-2294] populate attendee name from guest data ([#356](https://github.com/PlaceOS/staff-api/pull/356))
 - **events**: [PPT-2114] Fix nil assertion check ([#350](https://github.com/PlaceOS/staff-api/pull/350))
 - **bookings**: [PPT-2118] add event_title to signals ([#349](https://github.com/PlaceOS/staff-api/pull/349))
 - **utilities/current-user**: current user with api-keys
