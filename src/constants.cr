@@ -25,6 +25,8 @@ module App
 
   PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
 
+  PLACE_HOST_HEADER = ENV["PLACE_HOST_HEADER"]?.presence
+
   SSL_VERIFY_NONE = !!ENV["SSL_VERIFY_NONE"]?.presence.try { |var| var.downcase.in?("1", "true") }
 
   PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
