@@ -29,7 +29,11 @@ PLACE_URI=https://example.place.technology
 # Default Timezone
 STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
-SSL_VERIFY_NONE=true # Whether staff-api should verify the SSL cert that PlaceOS rest-api presents
+# Host header to use when connecting to PlaceOS endpoints
+PLACE_HOST_HEADER=example.place.technology
+
+# Skip SSL verification when connecting to PlaceOS endpoints
+SSL_VERIFY_NONE=true
 
 # Sentry monitoring
 SENTRY_DSN=<sentry dsn>
