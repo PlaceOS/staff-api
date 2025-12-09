@@ -1293,6 +1293,20 @@ class Events < Application
              end
       notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta, reason: :deleted)
     end
+
+    # Record history for calendar event change
+    record_event_history(event_id, change.to_s.downcase)
+  end
+
+  private def record_event_history(event_id : String, action : String, changed_fields : Array(String) = [] of String)
+    History.create!(
+      type: "event",
+      resource_id: event_id,
+      action: action,
+      changed_fields: changed_fields
+    )
+  rescue ex
+    Log.error(exception: ex) { "failed to record event history for #{event_id}" }
   end
 
   # returns the event requested.
