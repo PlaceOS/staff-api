@@ -320,6 +320,38 @@ class Events < Application
     }
   end
 
+  # returns history records for events in the specified period
+  @[AC::Route::GET("/history")]
+  def history(
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+  ) : Array(History)
+    # Query EventMetadata for events in the time period
+    query = EventMetadata
+      .by_tenant(tenant.id)
+      .is_ending_after(starting)
+      .is_starting_before(ending)
+
+    # Filter by system_ids if provided
+    sys_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    if sys_ids.size > 0
+      query = query.where({:system_id => sys_ids})
+    end
+
+    metadatas = query.to_a
+    return [] of History if metadatas.empty?
+
+    # Collect event IDs from metadata
+    event_ids = metadatas.flat_map { |meta| [meta.event_id, meta.ical_uid] }.uniq!
+
+    # Query history for these event IDs
+    History.where({:type => "event", :resource_id => event_ids}).to_a
+  end
+
   protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
     # if the current user is not then host then they should be an attendee
     return true if user_email == host_email

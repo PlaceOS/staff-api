@@ -1213,4 +1213,127 @@ describe Events, tags: ["event"] do
       request_body[0].should eq(created_event_id)
     end
   end
+
+  describe "#history" do
+    before_each do
+      History.clear
+    end
+
+    it "returns history for events in the specified period" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      # Create event metadata
+      event = EventMetadatasHelper.create_event(
+        tenant.id,
+        event_start: event_start,
+        event_end: event_end,
+        system_id: "sys-test-123"
+      )
+
+      # Create history records for the event
+      History.create!(
+        type: "event",
+        resource_id: event.event_id,
+        action: "created",
+        changed_fields: [] of String
+      )
+      History.create!(
+        type: "event",
+        resource_id: event.event_id,
+        action: "updated",
+        changed_fields: ["event_start", "event_end"]
+      )
+
+      # Query history
+      response = client.get(
+        "#{EVENTS_BASE}/history?period_start=#{event_start - 60}&period_end=#{event_end + 60}",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      histories = Array(History).from_json(response.body)
+      histories.size.should eq(2)
+      histories.map(&.action).should contain("created")
+      histories.map(&.action).should contain("updated")
+    end
+
+    it "filters history by system_ids" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      # Create events in different systems
+      event1 = EventMetadatasHelper.create_event(
+        tenant.id,
+        event_start: event_start,
+        event_end: event_end,
+        system_id: "sys-test-aaa"
+      )
+      event2 = EventMetadatasHelper.create_event(
+        tenant.id,
+        event_start: event_start,
+        event_end: event_end,
+        system_id: "sys-test-bbb"
+      )
+
+      # Create history for both events
+      History.create!(type: "event", resource_id: event1.event_id, action: "created", changed_fields: [] of String)
+      History.create!(type: "event", resource_id: event2.event_id, action: "created", changed_fields: [] of String)
+
+      # Query history filtered by system_id
+      response = client.get(
+        "#{EVENTS_BASE}/history?period_start=#{event_start - 60}&period_end=#{event_end + 60}&system_ids=sys-test-aaa",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      histories = Array(History).from_json(response.body)
+      histories.size.should eq(1)
+      histories.first.resource_id.should eq(event1.event_id)
+    end
+
+    it "returns empty array when no events in period" do
+      tenant = get_tenant
+      past_start = 2.hours.ago.to_unix
+      past_end = 1.hour.ago.to_unix
+
+      response = client.get(
+        "#{EVENTS_BASE}/history?period_start=#{past_start}&period_end=#{past_end}",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      histories = Array(History).from_json(response.body)
+      histories.size.should eq(0)
+    end
+
+    it "returns history matching by ical_uid" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      event = EventMetadatasHelper.create_event(
+        tenant.id,
+        event_start: event_start,
+        event_end: event_end,
+        ical_uid: "test-ical-uid-12345"
+      )
+
+      # Create history using ical_uid as resource_id (as might happen with some calendar providers)
+      History.create!(type: "event", resource_id: event.ical_uid, action: "updated", changed_fields: ["ext_data.notes"])
+
+      response = client.get(
+        "#{EVENTS_BASE}/history?period_start=#{event_start - 60}&period_end=#{event_end + 60}",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      histories = Array(History).from_json(response.body)
+      histories.size.should eq(1)
+      histories.first.resource_id.should eq(event.ical_uid)
+      histories.first.changed_fields.should eq(["ext_data.notes"])
+    end
+  end
 end
