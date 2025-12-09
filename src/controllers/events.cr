@@ -327,8 +327,14 @@ class Events < Application
     starting : Int64,
     @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
     ending : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
     @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil,
   ) : Array(History)
     # Query EventMetadata for events in the time period
     query = EventMetadata
@@ -340,6 +346,17 @@ class Events < Application
     sys_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
     if sys_ids.size > 0
       query = query.where({:system_id => sys_ids})
+    end
+
+    # Filter by calendars and zone_ids if provided
+    calendar_ids = matching_calendar_ids(calendars, zone_ids, nil, allow_default: false)
+    if calendar_ids.size > 0
+      query = query.where({:resource_calendar => calendar_ids.keys})
+    end
+
+    # Filter by ical_uid if provided
+    if icaluid
+      query = query.where({:ical_uid => icaluid})
     end
 
     metadatas = query.to_a
