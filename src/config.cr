@@ -16,6 +16,7 @@ alias EventMetadata = PlaceOS::Model::EventMetadata
 alias Booking = PlaceOS::Model::Booking
 alias Survey = PlaceOS::Model::Survey
 alias OutlookManifest = PlaceOS::Model::OutlookManifest
+alias History = PlaceOS::Model::History
 
 # Server required after application controllers
 require "action-controller/server"

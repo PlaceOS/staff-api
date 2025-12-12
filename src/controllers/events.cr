@@ -320,6 +320,55 @@ class Events < Application
     }
   end
 
+  # returns history records for events in the specified period
+  @[AC::Route::GET("/history")]
+  def history(
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    calendars : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    zone_ids : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    icaluid : String? = nil,
+  ) : Array(History)
+    # Query EventMetadata for events in the time period
+    query = EventMetadata
+      .by_tenant(tenant.id)
+      .is_ending_after(starting)
+      .is_starting_before(ending)
+
+    # Filter by system_ids if provided
+    sys_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
+    if sys_ids.size > 0
+      query = query.where({:system_id => sys_ids})
+    end
+
+    # Filter by calendars and zone_ids if provided
+    calendar_ids = matching_calendar_ids(calendars, zone_ids, nil, allow_default: false)
+    if calendar_ids.size > 0
+      query = query.where({:resource_calendar => calendar_ids.keys})
+    end
+
+    # Filter by ical_uid if provided
+    if icaluid
+      query = query.where({:ical_uid => icaluid})
+    end
+
+    metadatas = query.to_a
+    return [] of History if metadatas.empty?
+
+    # Collect event IDs from metadata
+    event_ids = metadatas.flat_map { |meta| [meta.event_id, meta.ical_uid] }.uniq!
+
+    # Query history for these event IDs
+    History.where({:type => "event", :resource_id => event_ids}).to_a
+  end
+
   protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
     # if the current user is not then host then they should be an attendee
     return true if user_email == host_email
@@ -1293,6 +1342,20 @@ class Events < Application
              end
       notify_destroyed(system, event_id, meta.try &.ical_uid, event, meta, reason: :deleted)
     end
+
+    # Record history for calendar event change
+    record_event_history(event_id, change.to_s.downcase)
+  end
+
+  private def record_event_history(event_id : String, action : String, changed_fields : Array(String) = [] of String)
+    History.create!(
+      type: "event",
+      resource_id: event_id,
+      action: action,
+      changed_fields: changed_fields
+    )
+  rescue ex
+    Log.error(exception: ex) { "failed to record event history for #{event_id}" }
   end
 
   # returns the event requested.
