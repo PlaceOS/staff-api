@@ -245,8 +245,8 @@ class Bookings < Application
     query = query.where(deleted: deleted_flag)
 
     unless include_checked_out
-      # query = checked_out_flag ? query.where("checked_out_at != ?", nil) : query.where(checked_out_at: nil)
-      query = checked_out_flag ? query.where("(bookings.checked_out_at IS NOT NULL OR bookings.checked_out_at != ?)", nil) : query.where("(bookings.checked_out_at IS NULL OR bookings.checked_out_at = ?)", nil)
+      # Simplified: IS NULL already covers the case, no need for redundant OR condition
+      query = checked_out_flag ? query.where("bookings.checked_out_at IS NOT NULL") : query.where(checked_out_at: nil)
     end
 
     total = query.count
