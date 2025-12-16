@@ -4368,6 +4368,129 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/history:
+    get:
+      summary: returns history records for events in the specified period
+      tags:
+      - Events
+      operationId: Events_history
+      parameters:
+      - name: period_start
+        in: query
+        description: event period start as a unix epoch
+        example: "1661725146"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: event period end as a unix epoch
+        example: "1661743123"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: calendars
+        in: query
+        description: a comma seperated list of calendar ids, recommend using `system_id`
+          for resource calendars
+        example: user@org.com,room2@resource.org.com
+        schema:
+          type: string
+          nullable: true
+      - name: zone_ids
+        in: query
+        description: a comma seperated list of zone ids
+        example: zone-123,zone-456
+        schema:
+          type: string
+          nullable: true
+      - name: system_ids
+        in: query
+        description: a comma seperated list of event spaces
+        example: sys-1234,sys-5678
+        schema:
+          type: string
+          nullable: true
+      - name: ical_uid
+        in: query
+        description: the ical uid of the event you are looking for
+        example: sqvitruh3ho3mrq896tplad4v8
+        schema:
+          type: string
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS__Model__History'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}:
     get:
       summary: returns the event requested.
@@ -12281,6 +12404,34 @@ components:
       - private
       - all_day
       - attachments
+    PlaceOS__Model__History:
+      type: object
+      properties:
+        created_at:
+          type: integer
+          format: Int64
+          nullable: true
+        updated_at:
+          type: integer
+          format: Int64
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        resource_id:
+          type: string
+          nullable: true
+        action:
+          type: string
+          nullable: true
+        changed_fields:
+          type: array
+          items:
+            type: string
+          nullable: true
+        id:
+          type: string
+          nullable: true
     _PlaceCalendar__Event__Attendee___PlaceOS__Model__Attendee_:
       anyOf:
       - type: object
