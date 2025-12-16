@@ -5,6 +5,7 @@ require "promise"
 module Utils::PlaceOSHelpers
   # Base URL of the PlaceOS instance we are interacting with
   PLACE_URI = App::PLACE_URI
+  PLACE_HOST_HEADER = App::PLACE_HOST_HEADER
 
   @placeos_client : PlaceOS::Client? = nil
 
@@ -13,7 +14,7 @@ module Utils::PlaceOSHelpers
                           if key = request.headers["X-API-Key"]?
                             PlaceOS::Client.new(
                               PLACE_URI,
-                              host_header: request.headers["Host"]?,
+                              host_header: PLACE_HOST_HEADER || request.headers["Host"]?,
                               insecure: ::App::SSL_VERIFY_NONE,
                               x_api_key: key
                             )
@@ -21,7 +22,7 @@ module Utils::PlaceOSHelpers
                             PlaceOS::Client.new(
                               PLACE_URI,
                               token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
-                              host_header: request.headers["Host"]?,
+                              host_header: PLACE_HOST_HEADER || request.headers["Host"]?,
                               insecure: ::App::SSL_VERIFY_NONE
                             )
                           end
