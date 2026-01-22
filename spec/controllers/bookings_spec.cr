@@ -2659,4 +2659,58 @@ describe Bookings do
       booking.induction.should eq(PlaceOS::Model::Booking::Induction::ACCEPTED)
     end
   end
+
+  it "#update should correctly change all-day booking to non all-day booking", tags: ["all-day-booking"] do
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+      .to_return(body: "")
+    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+      .to_return(body: "")
+
+    user_name = Faker::Internet.user_name
+    user_email = Faker::Internet.email
+
+    # Create an all-day booking for tomorrow
+    tomorrow = 1.day.from_now
+    tomorrow_start = Time.local(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0).to_unix
+    tomorrow_end = Time.local(tomorrow.year, tomorrow.month, tomorrow.day, 23, 59, 59).to_unix
+
+    created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+      body: %({"asset_id":"some_desk","booking_start":#{tomorrow_start},"booking_end":#{tomorrow_end},"booking_type":"desk","all_day":true,"attendees": [
+      {
+          "name": "#{user_name}",
+          "email": "#{user_email}",
+          "checked_in": false,
+          "visit_expected": true
+      }]})
+    ).body)
+
+    created["asset_id"].should eq("some_desk")
+    created["booking_start"].should eq(tomorrow_start)
+    created["booking_end"].should eq(tomorrow_end)
+    created["all_day"].should eq(true)
+
+    # Verify the booking in the database
+    booking = Booking.find(created["id"].as_i64)
+    booking.all_day.should be_true
+
+    # Update to a non all-day booking starting 10 minutes from now (1 hour duration)
+    today_start = 10.minutes.from_now.to_unix
+    today_end = 70.minutes.from_now.to_unix
+
+    updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
+      body: %({"booking_start":#{today_start},"booking_end":#{today_end},"all_day":false})
+    ).body).as_h
+
+    updated["booking_start"].should eq(today_start)
+    updated["booking_end"].should eq(today_end)
+    updated["all_day"].should eq(false)
+
+    # Verify the booking was updated correctly in the database
+    booking = Booking.find(updated["id"].as_i64)
+    booking.booking_start.should eq(today_start)
+    booking.booking_end.should eq(today_end)
+    booking.all_day.should be_false
+  end
 end
