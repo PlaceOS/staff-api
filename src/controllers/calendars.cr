@@ -121,8 +121,10 @@ class Calendars < Application
     raise AC::Route::Param::ValueError.new("free/busy availability intervals must be greater than 5 minutes", "period_end") if duration.total_minutes < 5
 
     user_email = tenant.which_account(user.email)
-    availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
-    busy = client.get_availability(user_email, calendars, period_start, period_end, view_interval: availability_view_interval)
+
+    # this is done in the library now
+    # availability_view_interval = [duration, Time::Span.new(minutes: 30)].min.total_minutes.to_i!
+    busy = client.get_availability(user_email, calendars, period_start, period_end)
 
     # Remove busy times that are outside of the period
     busy.each do |status|
