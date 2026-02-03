@@ -11,7 +11,7 @@ module Utils::PlaceOSHelpers
 
   def get_placeos_client : PlaceOS::Client
     @placeos_client ||= if App.running_in_production?
-                          if key = request.headers["X-API-Key"]?
+                          if key = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
                             PlaceOS::Client.new(
                               PLACE_URI,
                               host_header: PLACE_HOST_HEADER || request.headers["Host"]?,
