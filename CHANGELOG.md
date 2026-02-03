@@ -103,6 +103,7 @@
 
 ### Fix
 
+- api-key usage in params and cookies
 - **calendars**: use default view interval
 - **bookings**: [PPT-2337] update all_day booking field ([#360](https://github.com/PlaceOS/staff-api/pull/360))
 - **event**: [PPT-2294] populate attendee name from guest data ([#356](https://github.com/PlaceOS/staff-api/pull/356))
