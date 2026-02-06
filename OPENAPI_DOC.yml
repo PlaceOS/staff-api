@@ -13300,6 +13300,11 @@ components:
         suspended:
           type: boolean
           nullable: true
+        unmapped:
+          type: object
+          additionalProperties:
+            type: object
+          nullable: true
       required:
       - id
       - email
@@ -13448,6 +13453,11 @@ components:
           nullable: true
         suspended:
           type: boolean
+          nullable: true
+        unmapped:
+          type: object
+          additionalProperties:
+            type: object
           nullable: true
     PlaceOS__Model__Survey:
       type: object
