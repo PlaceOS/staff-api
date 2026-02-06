@@ -262,7 +262,7 @@ class Bookings < Application
     result = Booking.hydrate_parents(result) if include_parent_bookings && !result.empty?
 
     if starting && ending && num_standard < result.size
-      details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence, include_checked_out ? nil : checked_out_flag)
+      details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence, include_checked_out ? nil : checked_out_flag, deleted_flag)
 
       # Set link
       range_end = offset + num_standard + details.complete
