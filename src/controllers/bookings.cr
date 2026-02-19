@@ -142,7 +142,9 @@ class Bookings < Application
     ending : Int64 = 1.hours.from_now.to_unix,
     @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
     booking_type : String? = nil,
-    @[AC::Param::Info(name: "deleted", description: "when true, it returns deleted bookings", example: "true")]
+    @[AC::Param::Info(description: "when true, returns all bookings including deleted ones", example: "true")]
+    include_deleted : Bool = false,
+    @[AC::Param::Info(name: "deleted", description: "when true, only returns deleted bookings, unless `include_deleted=true`", example: "true")]
     deleted_flag : Bool = false,
     @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
     include_checked_out : Bool = false,
@@ -242,7 +244,7 @@ class Bookings < Application
       end
     {% end %}
 
-    query = query.where(deleted: deleted_flag)
+    query = query.where(deleted: deleted_flag) unless include_deleted
 
     unless include_checked_out
       # query = checked_out_flag ? query.where("checked_out_at != ?", nil) : query.where(checked_out_at: nil)
