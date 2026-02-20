@@ -6,7 +6,7 @@ class Guests < Application
   # =====================
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :update]
+  skip_action :check_jwt_scope, only: [:show, :update, :bookings]
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_guest(
