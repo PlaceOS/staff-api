@@ -103,6 +103,7 @@
 
 ### Fix
 
+- **guests**: listing their upcoming bookings
 - **bookings**: [PPT-2366] pass deleted_flag to expand_bookings to filter deleted recurring instances ([#361](https://github.com/PlaceOS/staff-api/pull/361))
 - api-key usage in params and cookies
 - **calendars**: use default view interval
