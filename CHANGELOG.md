@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **Dockerfile**: switch to static builds
 - **placeos**: add PLACE_HOST_HEADER ([#357](https://github.com/PlaceOS/staff-api/pull/357))
 - **events**: [PPT-2227] record event history ([#358](https://github.com/PlaceOS/staff-api/pull/358))
 - **bookings**: [PPT-2241] add clashing-assets endpoint ([#354](https://github.com/PlaceOS/staff-api/pull/354))
