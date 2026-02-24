@@ -35,9 +35,11 @@ COPY ./src src
 
 # Build App
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --error-trace
+    shards build --production --error-trace --static
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
+RUN mkdir deps
 
 # Extract binary dependencies
 RUN for binary in /app/bin/*; do \
