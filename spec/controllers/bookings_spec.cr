@@ -552,6 +552,96 @@ describe Bookings do
         end
       end
     end
+
+    context "[include_deleted/deleted flags]", tags: "include-deleted" do
+      it "returns only non-deleted bookings by default" do
+        tenant = get_tenant
+
+        booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2.deleted = true
+        booking2.deleted_at = Time.utc.to_unix
+        booking2.save!
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+        zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+
+        route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
+        response = client.get(route, headers: headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"].as_i64).should contain(booking1.id)
+        bookings.map(&.["id"].as_i64).should_not contain(booking2.id)
+      end
+
+      it "returns only deleted bookings when deleted=true" do
+        tenant = get_tenant
+
+        booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2.deleted = true
+        booking2.deleted_at = Time.utc.to_unix
+        booking2.save!
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+        zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+
+        route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&deleted=true"
+        response = client.get(route, headers: headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(1)
+        bookings.map(&.["id"].as_i64).should_not contain(booking1.id)
+        bookings.map(&.["id"].as_i64).should contain(booking2.id)
+      end
+
+      it "returns all bookings when include_deleted=true" do
+        tenant = get_tenant
+
+        booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2.deleted = true
+        booking2.deleted_at = Time.utc.to_unix
+        booking2.save!
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+        zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+
+        route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&include_deleted=true"
+        response = client.get(route, headers: headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(2)
+        bookings.map(&.["id"].as_i64).should contain(booking1.id)
+        bookings.map(&.["id"].as_i64).should contain(booking2.id)
+      end
+
+      it "returns all bookings when include_deleted=true and deleted=true" do
+        tenant = get_tenant
+
+        booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
+        booking2.deleted = true
+        booking2.deleted_at = Time.utc.to_unix
+        booking2.save!
+
+        starting = 5.minutes.from_now.to_unix
+        ending = 90.minutes.from_now.to_unix
+        zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
+
+        route = "#{BOOKINGS_BASE}?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}&include_deleted=true&deleted=true"
+        response = client.get(route, headers: headers)
+        response.status_code.should eq(200)
+        bookings = JSON.parse(response.body).as_a
+        bookings.size.should eq(2)
+        bookings.map(&.["id"].as_i64).should contain(booking1.id)
+        bookings.map(&.["id"].as_i64).should contain(booking2.id)
+      end
+    end
   end
 
   describe "#booked" do

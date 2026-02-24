@@ -37,9 +37,15 @@ paths:
         schema:
           type: string
           nullable: true
+      - name: include_deleted
+        in: query
+        description: when true, returns all bookings including deleted ones
+        example: "true"
+        schema:
+          type: boolean
       - name: deleted
         in: query
-        description: when true, it returns deleted bookings
+        description: when true, only returns deleted bookings, unless `include_deleted=true`
         example: "true"
         schema:
           type: boolean
