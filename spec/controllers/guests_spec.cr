@@ -11,6 +11,50 @@ describe Guests do
 
   Spec.before_each do
     Guest.clear
+    Booking.clear
+  end
+
+  describe "catering" do
+    it "should return 404 if no catering booking" do
+      user = Mock::Token.generate_auth_user(false, false)
+
+      tenant = get_tenant
+      BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, user_email: user.email.to_s, booking_type: "visitor")
+
+      # Since we are using Toby's token to login, user=current means Toby
+      route = "#{GUESTS_BASE}/#{user.email}/catering"
+      response = client.get(route, headers: headers)
+      response.status.not_found?.should eq true
+    end
+
+    it "should create and return the catering associated" do
+      tenant = get_tenant
+      user = Mock::Token.generate_auth_user(false, false)
+      guest_user = GuestsHelper.create_guest(tenant.id, user.name, user.email.to_s)
+      booking = BookingsHelper.create_booking(tenant_id: tenant.id.not_nil!, asset_id: user.email.to_s, user_email: user.email.to_s, booking_type: "visitor")
+
+      # Since we are using Toby's token to login, user=current means Toby
+      route = "#{GUESTS_BASE}/#{user.email}/catering?booking_id=#{booking.id}"
+      response = client.patch(route, headers: headers, body: %({
+        "id": "1234",
+        "name": "flat white",
+        "category": "coffee",
+        "quantity": 1
+      }))
+      response.success?.should eq true
+
+      response = client.get(route, headers: headers)
+      response.success?.should eq true
+      result = JSON.parse(response.body).as_h
+      result["id"].should eq booking.id.to_s
+      result["name"].should eq "flat white"
+
+      response = client.delete(route, headers: headers)
+      response.success?.should eq true
+
+      response = client.get(route, headers: headers)
+      response.status.not_found?.should eq true
+    end
   end
 
   describe "#index" do

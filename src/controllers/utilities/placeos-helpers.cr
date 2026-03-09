@@ -4,7 +4,7 @@ require "promise"
 # Helper to interact with PlaceOS API
 module Utils::PlaceOSHelpers
   # Base URL of the PlaceOS instance we are interacting with
-  PLACE_URI = App::PLACE_URI
+  PLACE_URI         = App::PLACE_URI
   PLACE_HOST_HEADER = App::PLACE_HOST_HEADER
 
   @placeos_client : PlaceOS::Client? = nil

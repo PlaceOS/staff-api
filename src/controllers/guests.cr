@@ -6,7 +6,7 @@ class Guests < Application
   # =====================
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :update, :bookings]
+  skip_action :check_jwt_scope, only: [:show, :update, :bookings, :catering_menu, :catering, :catering_update, :catering_destroy]
 
   @[AC::Route::Filter(:before_action, except: [:index, :create])]
   private def find_guest(
@@ -321,5 +321,185 @@ class Guests < Application
 
     future_only = !include_past
     guest.bookings(future_only, limit).to_a
+  end
+
+  protected def get_guest_booking(booking_id : Int64? = nil) : Booking
+    jwt_email = user_token.user.email
+
+    if user_token.guest_scope?
+      raise Error::Forbidden.new("guest #{jwt_email} attempting to view bookings for #{guest.email}") if guest.email != jwt_email
+
+      # find the preferred booking id
+      booking_id = booking_id || user_token.user.roles.first.to_i64
+    elsif booking_id.nil?
+      raise AC::Route::Param::ValueError.new("booking_id paramater required", "booking_id", "must be specified except for guest access")
+    end
+
+    # find the booking
+    booking = Booking.by_tenant(tenant.id).where(id: booking_id).first
+
+    # check the user should have access to the booking
+    raise Error::Forbidden.new("guest #{jwt_email} attempting to view bookings for #{booking.asset_id}") if booking.asset_id != jwt_email
+    booking
+  end
+
+  protected def get_catering_booking(booking : Booking) : Booking
+    # if the booking has a parent_id, then there is a parent booking with catering attached
+    # else the catering is attached to the current booking
+    bookings = Booking.by_tenant(tenant.id).where(parent_id: booking.parent_id || booking.id.to_s, booking_type: "catering-order").all.to_a
+    catering = if bookings.size > 1
+                 # the first catering booking is used for guest selections
+                 bookings.sort_by { |book|
+                   ext = book.extension_data["details"]
+                   ext["deliver_day_offset"].as_i * 1440 + ext["deliver_offset"].as_i
+                 }.first
+               else
+                 bookings.first?
+               end
+    raise Error::NotFound.new("no catering booking found") unless catering
+    catering
+  end
+
+  # NOTE:: same as rest-api metadata Children
+  record Children, zone : ::PlaceOS::Model::Zone, metadata : Hash(String, ::PlaceOS::Model::Metadata::Interface) do
+    include JSON::Serializable
+
+    def initialize(@zone, metadata_key : String?)
+      @metadata = ::PlaceOS::Model::Metadata.build_metadata(@zone, metadata_key)
+    end
+  end
+
+  @[AC::Route::GET("/:id/catering/menu")]
+  def catering_menu(
+    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    booking_id : Int64? = nil,
+  ) : Array(Children)
+    booking = get_guest_booking(booking_id)
+    current_zone = ::PlaceOS::Model::Zone.find_all(booking.zones).to_a.find!(&.tags.includes?("building"))
+
+    current_zone.children.all.compact_map do |zone|
+      Children.new(zone, "catering")
+    end
+  end
+
+  @[AC::Route::GET("/:id/catering")]
+  def catering(
+    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    booking_id : Int64? = nil,
+  ) : Hash(String, JSON::Any)
+    booking = get_guest_booking(booking_id)
+
+    # check if the current user has any associated catering
+    catering_item_id = booking.extension_data["beverage"]?.try(&.as_s?)
+    raise Error::NotFound.new("no catering associated with the booking") unless catering_item_id
+
+    catering = get_catering_booking(booking)
+
+    # find the current users catering item
+    items = catering.extension_data["details"]["items"].as_a
+    item = items.find { |itx| {itx["id"].as_s, itx["custom_id"]?.try(&.as_s?)}.includes?(catering_item_id) }
+    raise Error::NotFound.new("no catering item found") unless item
+
+    item.as_h
+  end
+
+  @[AC::Route::PATCH("/:id/catering", body: :selection)]
+  def catering_update(
+    selection : Hash(String, JSON::Any),
+    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    booking_id : Int64? = nil,
+  ) : Hash(String, JSON::Any)
+    booking = get_guest_booking(booking_id)
+
+    # check if the current user has any associated catering, otherwise we'll use this booking id as the id
+    catering_item_id = booking.extension_data["beverage"]?.try(&.as_s?) || booking.id.to_s
+    selection["id"] = JSON::Any.new(catering_item_id)
+
+    catering = begin
+      get_catering_booking(booking)
+    rescue Error::NotFound
+      # create a new catering booking
+      new_catering = Booking.new
+      # this won't clash as a different booking_type
+      new_catering.tenant_id = booking.tenant_id
+      new_catering.asset_ids = booking.asset_ids
+      new_catering.booking_type = "catering-order"
+      new_catering.parent_id = booking.parent_id || booking_id
+      new_catering.utm_source = "guest_catering"
+      new_catering.booked_by_id = booking.booked_by_id
+      new_catering.booked_by_email = booking.booked_by_email
+      new_catering.booked_by_name = booking.booked_by_name
+      new_catering.booking_start = booking.booking_start
+      new_catering.booking_end = booking.booking_end
+      new_catering.extension_data = JSON.parse(%({
+        "details": {
+          "id": "#{catering_item_id}",
+          "items": [],
+          "invoice_number": "#{rand(100_000)}",
+          "deliver_day_offset": 0,
+          "deliver_offset": 0,
+          "notes": ""
+        }
+      }))
+      new_catering
+    end
+
+    # Remove the existing ID entry
+    details = catering.extension_data["details"].as_h
+    items = details["items"].as_a
+    items.reject! { |item| {item["id"].as_s, item["custom_id"]?.try(&.as_s?)}.includes?(catering_item_id) }
+    items << JSON::Any.new(selection)
+    details["items"] = JSON::Any.new(items)
+
+    # Update entries
+    data = catering.extension_data.as_h
+    data["details"] = JSON::Any.new(details)
+    catering.change_extension_data(JSON::Any.new(data))
+
+    data = booking.extension_data.as_h
+    data["beverage"] = JSON::Any.new(catering_item_id)
+    booking.change_extension_data(JSON::Any.new(data))
+
+    PgORM::Database.transaction do
+      catering.save!
+      booking.save!
+    end
+
+    selection
+  end
+
+  # remove catering selection from the specified users visit
+  @[AC::Route::DELETE("/:id/catering", status_code: HTTP::Status::ACCEPTED)]
+  def catering_destroy(
+    @[AC::Param::Info(description: "the booking id to remove the catering from", example: "32")]
+    booking_id : Int64? = nil,
+  ) : Nil
+    booking = get_guest_booking(booking_id)
+
+    # check if the current user has any associated catering
+    catering_item_id = booking.extension_data["beverage"]?.try(&.as_s?)
+    raise Error::NotFound.new("no catering associated with the booking") unless catering_item_id
+
+    catering = get_catering_booking(booking)
+
+    # Remove the existing ID entry
+    details = catering.extension_data["details"].as_h
+    items = details["items"].as_a
+    items.reject! { |item| {item["id"].as_s, item["custom_id"]?.try(&.as_s?)}.includes?(catering_item_id) }
+    details["items"] = JSON::Any.new(items)
+
+    # Update entries
+    data = catering.extension_data.as_h
+    data["details"] = JSON::Any.new(details)
+    catering.change_extension_data(JSON::Any.new(data))
+
+    data = booking.extension_data.as_h
+    data.delete("beverage")
+    booking.change_extension_data(JSON::Any.new(data))
+
+    PgORM::Database.transaction do
+      catering.save!
+      booking.save!
+    end
   end
 end

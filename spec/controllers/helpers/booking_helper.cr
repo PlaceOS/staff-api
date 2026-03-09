@@ -5,18 +5,19 @@ module BookingsHelper
     ["zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}", "zone-#{Random.new.rand(500)}"]
   end
 
-  def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones, event_id = nil)
+  def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones, event_id = nil, booking_type = "desk", parent_id = nil, asset_id = nil)
     user_name = Faker::Internet.user_name
-    asset_id = "asset-#{Random.new.rand(500)}"
+    asset_id = asset_id.presence || "asset-#{Random.new.rand(500)}"
     Booking.create!(
       tenant_id: tenant_id,
+      parent_id: parent_id,
       user_id: user_email,
       user_email: PlaceOS::Model::Email.new(user_email),
       user_name: user_name,
       asset_id: asset_id,
       asset_ids: [asset_id],
       zones: zones,
-      booking_type: "desk",
+      booking_type: booking_type,
       booking_start: Random.new.rand(5..19).minutes.from_now.to_unix,
       booking_end: Random.new.rand(25..79).minutes.from_now.to_unix,
       checked_in: false,
