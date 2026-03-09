@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **guests**: add catering routes
 - **bookings**: [PPT-2346] include_deleted flag ([#362](https://github.com/PlaceOS/staff-api/pull/362))
 - **Dockerfile**: switch to static builds
 - **placeos**: add PLACE_HOST_HEADER ([#357](https://github.com/PlaceOS/staff-api/pull/357))
