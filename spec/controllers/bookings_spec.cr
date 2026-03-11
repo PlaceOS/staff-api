@@ -649,7 +649,7 @@ describe Bookings do
       tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
-      sleep 1
+      sleep 1.second
       booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       starting = 5.minutes.from_now.to_unix
@@ -691,7 +691,7 @@ describe Bookings do
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 35.minutes.from_now.to_unix, asset_id: "desk-2")
 
-      sleep 1
+      sleep 1.second
 
       zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
@@ -720,7 +720,7 @@ describe Bookings do
         booking_end: 35.minutes.from_now.to_unix, asset_id: "desk-2")
       client.delete("#{BOOKINGS_BASE}/#{booking2.id}", headers: headers)
 
-      sleep 1
+      sleep 1.second
 
       zones_string = "#{booking1.zones.not_nil!.first},#{booking2.zones.not_nil!.first}"
       route = "#{BOOKINGS_BASE}/booked?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zones_string}"
@@ -2120,7 +2120,7 @@ describe Bookings do
     ).status_code
     created.should eq(201)
 
-    sleep 3
+    sleep 3.seconds
 
     client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
       {
@@ -2156,7 +2156,7 @@ describe Bookings do
     ).status_code
     created.should eq(201)
 
-    sleep 3
+    sleep 3.seconds
 
     client.post("#{BOOKINGS_BASE}/", headers: headers, body: %({"asset_ids":["desk2"],"booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
       {
@@ -2535,7 +2535,7 @@ describe Bookings do
     booking.checked_out_at = 10.minutes.from_now.to_unix
     booking.save!
 
-    sleep 2
+    sleep 2.seconds
 
     should_create = BookingsHelper.http_create_booking(
       booking_start: 15.minutes.from_now.to_unix,
@@ -2562,7 +2562,7 @@ describe Bookings do
 
     BookingsHelper.create_booking(tenant.id.not_nil!, 15.minutes.from_now.to_unix, 25.minutes.from_now.to_unix, asset_id)
 
-    sleep 2
+    sleep 2.seconds
 
     not_checked_in = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in", headers: headers).status_code
     not_checked_in.should eq(405)

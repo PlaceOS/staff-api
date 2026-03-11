@@ -26,7 +26,7 @@ Spec.before_suite do
   {% if flag?(:quiet) %}
     ::Log.setup(:warn)
   {% else %}
-    ::Log.setup(:debug)
+    ::Log.setup(:info)
   {% end %}
 end
 

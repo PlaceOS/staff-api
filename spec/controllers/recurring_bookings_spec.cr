@@ -17,9 +17,9 @@ describe Bookings do
       tenant = get_tenant
 
       booking1 = BookingsHelper.create_booking(tenant.id.not_nil!)
-      sleep 1
+      sleep 1.second
       booking2 = BookingsHelper.create_booking(tenant.id.not_nil!)
-      sleep 1
+      sleep 1.second
       booking3 = BookingsHelper.create_booking(tenant.id.not_nil!)
 
       booking1.recurrence_type = :daily

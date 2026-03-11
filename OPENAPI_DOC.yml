@@ -6390,6 +6390,124 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/events/clashing-assets:
+    post:
+      summary: lists conflicting system_ids based on event time range
+      description: 'lists conflicting system_ids based on event time range
+
+        will return a list of system_ids that are already booked during the specified
+        time range
+
+        if system_ids is set, then it will only return booked systems from that list'
+      tags:
+      - Events
+      operationId: Events_clashing_assets
+      parameters:
+      - name: period_start
+        in: query
+        description: event period start as a unix epoch
+        example: "1661725146"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: event period end as a unix epoch
+        example: "1661743123"
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: system_ids
+        in: query
+        description: comma separated list of system_ids to check for clashes
+        example: sys-1234,sys-5678
+        schema:
+          type: string
+          nullable: true
+      - name: return_available
+        in: query
+        description: return available systems, this requires system_ids be set to
+          the full list
+        example: "false"
+        schema:
+          type: boolean
+      - name: include_clash_time
+        in: query
+        description: include the clash times, this is not compatible with return_available
+        example: "false"
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_Array_NamedTuple_system_id__String__event_start__Int64__event_end__Int64_____Array_String__'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/events/{id}/guests/{guest_id}/check_in:
     post:
       summary: a guest has arrived for a meeting in person.
@@ -13272,6 +13390,8 @@ components:
           type: integer
           format: Int64
           nullable: true
+    _Array_NamedTuple_system_id__String__event_start__Int64__event_end__Int64_____Array_String__:
+      type: array
     PlaceCalendar__Group:
       type: object
       properties:
