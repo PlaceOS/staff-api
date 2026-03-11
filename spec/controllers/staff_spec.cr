@@ -31,7 +31,7 @@ describe Staff do
 
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{user_id}")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{user_id}?%24select=id%2CuserPrincipalName%2Csurname%2CpreferredLanguage%2CofficeLocation%2CmobilePhone%2Cmail%2CjobTitle%2CgivenName%2CdisplayName%2CbusinessPhones%2CaccountEnabled%2CmailNickname")
       .to_return(body: File.read("./spec/fixtures/staff/show.json"))
 
     body = PlaceCalendar::User.from_json(client.get("#{STAFF_BASE}/#{user_id}", headers: headers).body)

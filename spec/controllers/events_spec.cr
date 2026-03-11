@@ -1336,4 +1336,111 @@ describe Events, tags: ["event"] do
       histories.first.changed_fields.should eq(["ext_data.notes"])
     end
   end
+
+  describe "#clashing_assets" do
+    it "returns clashing system_ids for overlapping events" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      # Create events with different system_ids
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-5678", event_start: event_start + 5, event_end: event_end + 5)
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-9999", event_start: event_end + 100, event_end: event_end + 200)
+
+      response = client.post(
+        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      clashing = Array(String).from_json(response.body)
+      clashing.size.should eq(2)
+      clashing.should contain("sys-1234")
+      clashing.should contain("sys-5678")
+      clashing.should_not contain("sys-9999")
+    end
+
+    it "returns only clashing system_ids from provided list" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-5678", event_start: event_start, event_end: event_end)
+
+      response = client.post(
+        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&system_ids=sys-1234,sys-9999",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      clashing = Array(String).from_json(response.body)
+      clashing.size.should eq(1)
+      clashing.should contain("sys-1234")
+      clashing.should_not contain("sys-5678")
+    end
+
+    it "returns available system_ids when return_available is true" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
+
+      response = client.post(
+        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&system_ids=sys-1234,sys-5678,sys-9999&return_available=true",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      available = Array(String).from_json(response.body)
+      available.size.should eq(2)
+      available.should contain("sys-5678")
+      available.should contain("sys-9999")
+      available.should_not contain("sys-1234")
+    end
+
+    it "returns clash times when include_clash_time is true" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
+
+      response = client.post(
+        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&include_clash_time=true",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      clashing = Array(NamedTuple(system_id: String, event_start: Int64, event_end: Int64)).from_json(response.body)
+      clashing.size.should eq(1)
+      clashing.first[:system_id].should eq("sys-1234")
+      clashing.first[:event_start].should eq(event_start)
+      clashing.first[:event_end].should eq(event_end)
+    end
+
+    it "excludes cancelled events from clashing results" do
+      tenant = get_tenant
+      event_start = 10.minutes.from_now.to_unix
+      event_end = 30.minutes.from_now.to_unix
+
+      EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
+      cancelled_event = EventMetadatasHelper.create_event(tenant.id, system_id: "sys-5678", event_start: event_start, event_end: event_end)
+      cancelled_event.cancelled = true
+      cancelled_event.save!
+
+      response = client.post(
+        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}",
+        headers: headers
+      )
+      response.status_code.should eq(200)
+
+      clashing = Array(String).from_json(response.body)
+      clashing.size.should eq(1)
+      clashing.should contain("sys-1234")
+      clashing.should_not contain("sys-5678")
+    end
+  end
 end

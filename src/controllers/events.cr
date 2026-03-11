@@ -1739,6 +1739,63 @@ class Events < Application
     query.limit(10_000).to_a
   end
 
+  # lists conflicting system_ids based on event time range
+  # will return a list of system_ids that are already booked during the specified time range
+  # if system_ids is set, then it will only return booked systems from that list
+  @[AC::Route::POST("/clashing-assets")]
+  def clashing_assets(
+    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    starting : Int64,
+    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    ending : Int64,
+    @[AC::Param::Info(description: "comma separated list of system_ids to check for clashes", example: "sys-1234,sys-5678")]
+    system_ids : String? = nil,
+    @[AC::Param::Info(description: "return available systems, this requires system_ids be set to the full list", example: "false")]
+    return_available : Bool = false,
+    @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
+    include_clash_time : Bool = false,
+  ) : Array(String) | Array(NamedTuple(system_id: String, event_start: Int64, event_end: Int64))
+    if return_available && system_ids.nil?
+      raise Error::ModelValidation.new([{field: "system_ids".as(String?), reason: "Missing system_ids"}], "error validating event data")
+    end
+
+    if return_available && include_clash_time
+      raise AC::Route::Param::Error.new("include_clash_time and return_available cannot be used together")
+    end
+
+    # Parse system_ids if provided
+    sys_ids = system_ids.try(&.split(',').map(&.strip).reject(&.empty?)) || [] of String
+
+    # Query for clashing events
+    query = EventMetadata
+      .by_tenant(tenant.id)
+      .where("event_end > ? AND event_start < ?", starting, ending)
+      .where("cancelled = ? OR cancelled IS NULL", false)
+
+    # Filter by system_ids if provided
+    query = query.where({:system_id => sys_ids}) unless sys_ids.empty?
+
+    clashing_events = query.to_a
+
+    if include_clash_time
+      result = [] of NamedTuple(system_id: String, event_start: Int64, event_end: Int64)
+      clashing_events.each do |event|
+        if sys_id = event.system_id
+          result << {system_id: sys_id, event_start: event.event_start, event_end: event.event_end}
+        end
+      end
+      result
+    else
+      clashing_system_ids = clashing_events.compact_map(&.system_id).uniq
+
+      if return_available
+        clashing_system_ids = sys_ids - clashing_system_ids
+      end
+
+      clashing_system_ids
+    end
+  end
+
   # a guest has arrived for a meeting in person.
   # This route can be used to notify hosts
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
