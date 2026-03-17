@@ -579,10 +579,10 @@ class Bookings < Application
     existing_booking = booking
 
     original_host_email = existing_booking.user_email
-    original_start  = existing_booking.booking_start
-    original_end    = existing_booking.booking_end
+    original_start = existing_booking.booking_start
+    original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
-    original_zones  = existing_booking.zones.dup
+    original_zones = existing_booking.zones.dup
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :all_day, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission, :user_email] %}
       begin
@@ -1170,10 +1170,10 @@ class Bookings < Application
     spawn do
       begin
         get_placeos_client.root.signal("staff/booking/changed", {
-          action:          signal,
-          id:              booking.id,
-          instance:        booking.instance,
-          booking_type:    booking.booking_type,
+          action:                 signal,
+          id:                     booking.id,
+          instance:               booking.instance,
+          booking_type:           booking.booking_type,
           booking_start:          booking.booking_start,
           booking_end:            booking.booking_end,
           timezone:               booking.timezone,
@@ -1182,21 +1182,21 @@ class Bookings < Application
           previous_booking_start: previous_booking_start,
           previous_booking_end:   previous_booking_end,
           previous_zones:         previous_zones,
-          user_id:         booking.user_id,
-          user_email:      booking.user_email,
-          user_name:       booking.user_name,
-          zones:           booking.zones,
-          process_state:   booking.process_state,
-          last_changed:    booking.last_changed,
-          approver_name:   booking.approver_name,
-          approver_email:  booking.approver_email,
-          title:           booking.title,
-          checked_in:      booking.checked_in,
-          description:     booking.description,
-          extension_data:  booking.extension_data,
-          booked_by_email: booking.booked_by_email,
-          booked_by_name:  booking.booked_by_name,
-          induction:       booking.induction,
+          user_id:                booking.user_id,
+          user_email:             booking.user_email,
+          user_name:              booking.user_name,
+          zones:                  booking.zones,
+          process_state:          booking.process_state,
+          last_changed:           booking.last_changed,
+          approver_name:          booking.approver_name,
+          approver_email:         booking.approver_email,
+          title:                  booking.title,
+          checked_in:             booking.checked_in,
+          description:            booking.description,
+          extension_data:         booking.extension_data,
+          booked_by_email:        booking.booked_by_email,
+          booked_by_name:         booking.booked_by_name,
+          induction:              booking.induction,
         })
       rescue error
         Log.error(exception: error) { "while signaling booking #{signal}" }
