@@ -578,16 +578,28 @@ class Bookings < Application
     changes.instance = booking.instance
     existing_booking = booking
 
+    original_host_email = existing_booking.user_email
     original_start = existing_booking.booking_start
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
 
-    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :all_day, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission] %}
+    {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :all_day, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission, :user_email] %}
       begin
         existing_booking.{{key.id}} = changes.{{key.id}} if changes.{{key.id}}_present?
       rescue NilAssertionError
       end
     {% end %}
+
+    # When the host (user_email) changes, resolve the new user's id and name
+    # from the directory rather than trusting client-supplied values.
+    if existing_booking.user_email_changed?
+      if new_user_email = existing_booking.user_email.to_s.presence
+        new_user = client.get_user_by_email(new_user_email)
+        raise Error::NotFound.new("user #{new_user_email} not found") unless new_user
+        existing_booking.user_id = new_user.id.presence || new_user_email
+        existing_booking.user_name = new_user.name.presence || new_user_email
+      end
+    end
 
     extension_data = changes.extension_data unless changes.extension_data.nil?
     if extension_data
@@ -716,7 +728,30 @@ class Bookings < Application
       end
     end
 
-    update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
+    result = update_booking(existing_booking, reset_state ? "changed" : "metadata_changed")
+
+    if original_host_email.to_s.downcase != existing_booking.user_email.to_s.downcase
+      spawn do
+        begin
+          get_placeos_client.root.signal("staff/booking/host_changed", {
+            action:              :host_changed,
+            booking_id:          existing_booking.id,
+            resource_id:         existing_booking.asset_id,
+            resource_ids:        existing_booking.asset_ids,
+            event_title:         existing_booking.title,
+            event_summary:       existing_booking.description.presence || existing_booking.title,
+            event_starting:      existing_booking.booking_start,
+            previous_host_email: original_host_email,
+            new_host_email:      existing_booking.user_email,
+            zones:               existing_booking.zones,
+          })
+        rescue error
+          Log.error(exception: error) { "while signaling booking host changed" }
+        end
+      end
+    end
+
+    result
   end
 
   # patches an existing booking extension data with the changes provided
