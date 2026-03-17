@@ -591,10 +591,9 @@ class Bookings < Application
       end
     {% end %}
 
-    # When the host (user_email) changes, resolve the new user's id and name
-    # from the directory rather than trusting client-supplied values.
+    # When the host changes, resolve the new user's id and name from the user_email
     if existing_booking.user_email_changed?
-      if new_user_email = existing_booking.user_email.to_s.presence
+      if new_user_email = existing_booking.user_email.presence
         new_user = client.get_user_by_email(new_user_email)
         raise Error::NotFound.new("user #{new_user_email} not found") unless new_user
         existing_booking.user_id = new_user.id.presence || new_user_email
