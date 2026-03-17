@@ -579,10 +579,10 @@ class Bookings < Application
     existing_booking = booking
 
     original_host_email = existing_booking.user_email
-    original_start      = existing_booking.booking_start
-    original_end        = existing_booking.booking_end
-    original_asset_id   = existing_booking.asset_id
-    original_assets     = existing_booking.asset_ids
+    original_start  = existing_booking.booking_start
+    original_end    = existing_booking.booking_end
+    original_assets = existing_booking.asset_ids
+    original_zones  = existing_booking.zones.dup
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :all_day, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission, :user_email] %}
       begin
@@ -734,8 +734,7 @@ class Bookings < Application
       reset_state ? "changed" : "metadata_changed",
       previous_booking_start: original_start,
       previous_booking_end: original_end,
-      previous_resource_id: original_asset_id,
-      previous_resource_ids: original_assets,
+      previous_zones: original_zones,
     )
 
     if original_host_email.to_s.downcase != existing_booking.user_email.to_s.downcase
@@ -1164,8 +1163,7 @@ class Bookings < Application
     signal = "changed",
     previous_booking_start : Int64? = nil,
     previous_booking_end : Int64? = nil,
-    previous_resource_id : String? = nil,
-    previous_resource_ids : Array(String)? = nil,
+    previous_zones : Array(String)? = nil,
   )
     booking.save! rescue raise Error::ModelValidation.new(booking.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking data")
 
@@ -1183,8 +1181,7 @@ class Bookings < Application
           resource_ids:           booking.asset_ids,
           previous_booking_start: previous_booking_start,
           previous_booking_end:   previous_booking_end,
-          previous_resource_id:   previous_resource_id,
-          previous_resource_ids:  previous_resource_ids,
+          previous_zones:         previous_zones,
           user_id:         booking.user_id,
           user_email:      booking.user_email,
           user_name:       booking.user_name,
