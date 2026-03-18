@@ -108,6 +108,99 @@ describe Calendars do
     bad_request = client.get(route, headers: headers).status_code
     bad_request.should eq(400)
   end
+
+  describe "#check_permission" do
+    it "should return owner role when checking own calendar" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+
+      route = "#{CALENDARS_BASE}/dev@acaprojects.onmicrosoft.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(true)
+      body["role"].should eq("owner")
+    end
+
+    it "should return write access when user has write permission" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep%40domain.com/calendar/calendarPermissions")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/calendar_permissions_write_access.json"))
+
+      route = "#{CALENDARS_BASE}/pradeep@domain.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(true)
+      body["role"].should eq("write")
+    end
+
+    it "should return delegate access when user has delegate permission" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep%40domain.com/calendar/calendarPermissions")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/calendar_permissions_delegate_access.json"))
+
+      route = "#{CALENDARS_BASE}/pradeep@domain.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(true)
+      body["role"].should eq("delegateWithoutPrivateEventAccess")
+    end
+
+    it "should return no access when user has only read permission" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep%40domain.com/calendar/calendarPermissions")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/calendar_permissions_read_only.json"))
+
+      route = "#{CALENDARS_BASE}/pradeep@domain.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(false)
+      body["role"].should eq("read")
+    end
+
+    it "should return no access when user is not in permissions list" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep%40domain.com/calendar/calendarPermissions")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/calendar_permissions_no_access.json"))
+
+      route = "#{CALENDARS_BASE}/pradeep@domain.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(false)
+      body["role"].should eq("none")
+    end
+
+    it "should handle errors gracefully and return error role" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      # Stub with both encoded and unencoded versions to ensure match
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep%40domain.com/calendar/calendarPermissions")
+        .to_return(status: 500, body: "Internal Server Error")
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/pradeep@domain.com/calendar/calendarPermissions")
+        .to_return(status: 500, body: "Internal Server Error")
+
+      route = "#{CALENDARS_BASE}/pradeep@domain.com/permission"
+      response = client.get(route, headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(response.body)
+      body["has_access"].should eq(false)
+      body["role"].should eq("error")
+    end
+  end
 end
 
 CALENDARS_BASE = Calendars.base_route

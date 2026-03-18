@@ -1,0 +1,21 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('pradeep%40domain.com')/calendar/calendarPermissions",
+    "value": [
+        {
+            "id": "RGVsZWdhdGVk",
+            "role": "write",
+            "allowedRoles": [
+                "freeBusyRead",
+                "limitedRead",
+                "read",
+                "write"
+            ],
+            "isRemovable": true,
+            "isInsideOrganization": true,
+            "emailAddress": {
+                "name": "Developer",
+                "address": "dev@acaprojects.onmicrosoft.com"
+            }
+        }
+    ]
+}

@@ -378,7 +378,31 @@ class Events < Application
     if host_email == service_account
       return attendees.includes?(user_email)
     end
-    !!get_user_calendars.find { |cal| cal.id.try(&.downcase) == host_email }
+
+    # Check if user has write access to the calendar (works for both Office365 and Google)
+    return true if get_user_calendars.find { |cal| cal.id.try(&.downcase) == host_email }
+
+    # Check calendar permissions via calendarPermissions API (Office365 only)
+    check_calendar_permission(user_email, host_email)
+  end
+
+  protected def check_calendar_permission(user_email : String, host_email : String) : Bool
+    # Only Office365 supports calendar permissions API
+    return true unless client.client_id == :office365
+
+    o365_client = client.calendar.as(PlaceCalendar::Office365).client
+    permissions_query = o365_client.list_calendar_permissions(host_email)
+
+    # Find current user in permissions list
+    user_permission = permissions_query.value.find do |perm|
+      perm.email_address.address.try(&.downcase) == user_email
+    end
+
+    user_permission ? user_permission.can_edit? : false
+  rescue ex
+    # If we can't check permissions due to an error (network, API timeout, etc.), log it and allow operation.
+    Log.warn(exception: ex) { "failed to check calendar permission for #{host_email}, allowing operation" }
+    true
   end
 
   # creates a new calendar event
