@@ -2,6 +2,7 @@
 
 ### Feat
 
+- [PPT-2420] added check calendar permission endpoint ([#365](https://github.com/PlaceOS/staff-api/pull/365))
 - [PPT-2358] add clashing-assets + cleanup spec errors/warnings ([#363](https://github.com/PlaceOS/staff-api/pull/363))
 - **guests**: add catering routes
 - **bookings**: [PPT-2346] include_deleted flag ([#362](https://github.com/PlaceOS/staff-api/pull/362))
