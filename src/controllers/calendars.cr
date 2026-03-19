@@ -14,7 +14,7 @@ class Calendars < Application
     current_tenant
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index])]
+  @[AC::Route::Filter(:before_action, except: [:index, :check_permission])]
   private def find_matching_calendars(
     @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
@@ -44,6 +44,47 @@ class Calendars < Application
   @[AC::Route::GET("/")]
   def index : Array(PlaceCalendar::Calendar)
     client.list_calendars(user.email)
+  end
+
+  record PermissionCheck, has_access : Bool, role : String do
+    include JSON::Serializable
+  end
+
+  # Check if current user has write access to specified user's calendar
+  @[AC::Route::GET("/:user_email/permission")]
+  def check_permission(
+    @[AC::Param::Info(description: "email or UPN of calendar owner", example: "foo@domain.com")]
+    user_email : String,
+  ) : PermissionCheck
+    current_user_email = user.email.downcase
+    target_email = user_email.downcase
+
+    # User always has permission to their own calendar
+    if current_user_email == target_email
+      return PermissionCheck.new(has_access: true, role: "owner")
+    end
+
+    # Get Office365 client and call calendarPermissions API
+    if client.client_id == :office365
+      o365_client = client.calendar.as(PlaceCalendar::Office365).client
+      permissions_query = o365_client.list_calendar_permissions(target_email)
+
+      # Find current user in permissions list
+      user_permission = permissions_query.value.find do |perm|
+        perm.email_address.address.try(&.downcase) == current_user_email
+      end
+
+      if user_permission && user_permission.can_edit?
+        PermissionCheck.new(has_access: true, role: user_permission.role)
+      else
+        PermissionCheck.new(has_access: false, role: user_permission.try(&.role) || "none")
+      end
+    else
+      PermissionCheck.new(has_access: false, role: "unsupported")
+    end
+  rescue ex
+    Log.warn(exception: ex) { "failed to check calendar permission for #{target_email}" }
+    PermissionCheck.new(has_access: false, role: "error")
   end
 
   # checks for availability of matched calendars, returns a list of calendars with availability

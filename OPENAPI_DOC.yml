@@ -3866,6 +3866,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/calendars/{user_email}/permission:
+    get:
+      summary: Check if current user has write access to specified user's calendar
+      tags:
+      - Calendars
+      operationId: Calendars_check_permission
+      parameters:
+      - name: user_email
+        in: path
+        description: email or UPN of calendar owner
+        example: foo@domain.com
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calendars__PermissionCheck'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
   /api/staff/v1/calendars/availability:
     get:
       summary: checks for availability of matched calendars, returns a list of calendars
@@ -7689,6 +7772,381 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlaceOS__Model__Booking'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/guests/{id}/catering/menu:
+    get:
+      tags:
+      - Guests
+      operationId: Guests_catering_menu
+      parameters:
+      - name: id
+        in: path
+        description: looks up a guest using either their id or email
+        example: external@org.com
+        required: true
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: string
+      - name: booking_id
+        in: query
+        description: the booking id to obtain catering for
+        example: "32"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guests__Children'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+  /api/staff/v1/guests/{id}/catering:
+    get:
+      tags:
+      - Guests
+      operationId: Guests_catering
+      parameters:
+      - name: id
+        in: path
+        description: looks up a guest using either their id or email
+        example: external@org.com
+        required: true
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: string
+      - name: booking_id
+        in: query
+        description: the booking id to obtain catering for
+        example: "32"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+    delete:
+      summary: remove catering selection from the specified users visit
+      tags:
+      - Guests
+      operationId: Guests_catering_destroy
+      parameters:
+      - name: id
+        in: path
+        description: looks up a guest using either their id or email
+        example: external@org.com
+        required: true
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: string
+      - name: booking_id
+        in: query
+        description: the booking id to remove the catering from
+        example: "32"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        202:
+          description: Accepted
+        429:
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        511:
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        406:
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        415:
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ContentError'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__ValidationError'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+        405:
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application__CommonError'
+    patch:
+      tags:
+      - Guests
+      operationId: Guests_catering_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hash_String__JSON__Any_'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        description: looks up a guest using either their id or email
+        example: external@org.com
+        required: true
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: string
+      - name: booking_id
+        in: query
+        description: the booking id to obtain catering for
+        example: "32"
+        schema:
+          type: integer
+          format: Int64
+          nullable: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hash_String__JSON__Any_'
         429:
           description: Too Many Requests
           content:
@@ -12095,6 +12553,16 @@ components:
       required:
       - summary
       - primary
+    Calendars__PermissionCheck:
+      type: object
+      properties:
+        has_access:
+          type: boolean
+        role:
+          type: string
+      required:
+      - has_access
+      - role
     Calendars__Availability:
       type: object
       properties:
@@ -13435,6 +13903,136 @@ components:
       - id
       - email
       - username
+    Guests__Children:
+      type: object
+      properties:
+        zone:
+          type: object
+          properties:
+            created_at:
+              type: integer
+              format: Int64
+              nullable: true
+            updated_at:
+              type: integer
+              format: Int64
+              nullable: true
+            name:
+              type: string
+              nullable: true
+            description:
+              type: string
+              nullable: true
+            tags:
+              type: array
+              items:
+                type: string
+              nullable: true
+            location:
+              type: string
+              nullable: true
+            display_name:
+              type: string
+              nullable: true
+            code:
+              type: string
+              nullable: true
+            type:
+              type: string
+              nullable: true
+            count:
+              type: integer
+              format: Int32
+              nullable: true
+            capacity:
+              type: integer
+              format: Int32
+              nullable: true
+            map_id:
+              type: string
+              nullable: true
+            timezone:
+              type: object
+              nullable: true
+            triggers:
+              type: array
+              items:
+                type: string
+              nullable: true
+            images:
+              type: array
+              items:
+                type: string
+              nullable: true
+            playlists:
+              type: array
+              items:
+                type: string
+              nullable: true
+            place_id:
+              type: string
+              nullable: true
+            parent_id:
+              type: string
+              nullable: true
+            remove_triggers:
+              type: array
+              items:
+                type: string
+              nullable: true
+            add_triggers:
+              type: array
+              items:
+                type: string
+              nullable: true
+            id:
+              type: string
+              nullable: true
+            update_systems:
+              type: boolean
+          required:
+          - update_systems
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              details:
+                type: object
+              parent_id:
+                type: string
+                nullable: true
+              schema_id:
+                type: string
+                nullable: true
+              editors:
+                type: array
+                items:
+                  type: string
+              modified_by_id:
+                type: string
+                nullable: true
+              updated_at:
+                type: integer
+                format: Int64
+              created_at:
+                type: integer
+                format: Int64
+            required:
+            - name
+            - description
+            - details
+            - editors
+            - updated_at
+            - created_at
+      required:
+      - zone
+      - metadata
+      description: 'NOTE:: same as rest-api metadata Children'
     HealthCheck__BuildInfo:
       type: object
       properties:
