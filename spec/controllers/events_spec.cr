@@ -1443,4 +1443,130 @@ describe Events, tags: ["event"] do
       clashing.should_not contain("sys-5678")
     end
   end
+
+  describe "permission", tags: ["auth"] do
+    it "#index should not return PRIVATE events for unauthenticated users" do
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = get_tenant
+      batch_ical_uid = "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F"
+
+      # Create a PRIVATE event metadata matching the batch fixture
+      EventMetadatasHelper.create_event(tenant.id,
+        ical_uid: batch_ical_uid,
+        permission: PlaceOS::Model::EventMetadata::Permission::PRIVATE,
+      )
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      # Unauthenticated user should NOT see PRIVATE events
+      response = client.get("#{EVENTS_BASE}?zone_ids=z1&period_start=#{starting}&period_end=#{ending}", headers: no_auth_headers)
+      (response.status_code < 300).should be_true
+      body = JSON.parse(response.body).as_a
+      body.size.should eq(0)
+    end
+
+    it "#index should return PUBLIC events for unauthenticated users" do
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
+        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
+
+      tenant = get_tenant
+      batch_ical_uid = "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F"
+
+      # Create a PUBLIC event metadata matching the batch fixture
+      EventMetadatasHelper.create_event(tenant.id,
+        ical_uid: batch_ical_uid,
+        permission: PlaceOS::Model::EventMetadata::Permission::PUBLIC,
+      )
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      # Unauthenticated user should see PUBLIC events
+      response = client.get("#{EVENTS_BASE}?zone_ids=z1&period_start=#{starting}&period_end=#{ending}", headers: no_auth_headers)
+      (response.status_code < 300).should be_true
+      body = JSON.parse(response.body).as_a
+      body.size.should eq(1)
+    end
+
+    it "#index should require system_ids or zone_ids for unauthenticated users" do
+      get_tenant
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      response = client.get("#{EVENTS_BASE}?period_start=#{starting}&period_end=#{ending}", headers: no_auth_headers)
+      response.status_code.should eq(422)
+    end
+
+    it "#show should allow unauthenticated access to PUBLIC events" do
+      event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+      create_ical_uid = "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
+
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/.*/)
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
+        .to_return(EventsHelper.event_query_response(event_id, create_ical_uid))
+
+      tenant = get_tenant
+
+      # Create PUBLIC event metadata matching the fixture
+      EventMetadatasHelper.create_event(tenant.id,
+        id: event_id,
+        ical_uid: create_ical_uid,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        permission: PlaceOS::Model::EventMetadata::Permission::PUBLIC,
+      )
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.get("#{EVENTS_BASE}/#{event_id}?system_id=sys-rJQQlR4Cn7", headers: no_auth_headers)
+      response.status_code.should eq(200)
+      event = JSON.parse(response.body)
+      event["event_start"].should eq(1598503500)
+      event["event_end"].should eq(1598507160)
+    end
+
+    it "#show should deny unauthenticated access to PRIVATE events" do
+      event_id = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+      create_ical_uid = "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
+
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/events\/.*/)
+        .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+      WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?.*/)
+        .to_return(EventsHelper.event_query_response(event_id, create_ical_uid))
+
+      tenant = get_tenant
+
+      # Create PRIVATE event metadata matching the fixture
+      EventMetadatasHelper.create_event(tenant.id,
+        id: event_id,
+        ical_uid: create_ical_uid,
+        system_id: "sys-rJQQlR4Cn7",
+        room_email: "room1@example.com",
+        permission: PlaceOS::Model::EventMetadata::Permission::PRIVATE,
+      )
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.get("#{EVENTS_BASE}/#{event_id}?system_id=sys-rJQQlR4Cn7", headers: no_auth_headers)
+      response.status_code.should eq(403)
+    end
+
+    it "#show should require system_id for unauthenticated access" do
+      get_tenant
+
+      no_auth_headers = Mock::Headers.office365_no_auth
+      response = client.get("#{EVENTS_BASE}/some-event-id", headers: no_auth_headers)
+      response.status_code.should eq(403)
+    end
+  end
 end
