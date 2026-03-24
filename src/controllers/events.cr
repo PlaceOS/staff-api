@@ -2,20 +2,21 @@ class Events < Application
   base "/api/staff/v1/events"
 
   # Skip scope check for relevant routes
-  skip_action :check_jwt_scope, only: [:show, :get_metadata, :patch_metadata, :guest_checkin, :add_attendee, :delete_attendee]
+  skip_action :check_jwt_scope, only: [:index, :show, :get_metadata, :patch_metadata, :guest_checkin, :add_attendee, :delete_attendee]
 
   # Skip actions that requres login
   # If a user is logged in then they will be run as part of
   # #set_tenant_from_domain
-  skip_action :determine_tenant_from_domain, only: [:add_attendee, :delete_attendee]
+  skip_action :determine_tenant_from_domain, only: [:index, :show, :add_attendee, :delete_attendee]
 
   # Set the tenant based on the domain
   # This allows unauthenticated requests through
   # (for public bookings, further checks are done later)
-  @[AC::Route::Filter(:before_action, only: [:add_attendee, :delete_attendee])]
+  @[AC::Route::Filter(:before_action, only: [:index, :show, :add_attendee, :delete_attendee])]
   private def set_tenant_from_domain
     if auth_token_present?
-      check_jwt_scope
+      # guest-scoped tokens have their own access controls, skip the scope check
+      check_jwt_scope unless user_token.guest_scope?
       determine_tenant_from_domain
     else
       domain = request.hostname.as?(String)
@@ -134,7 +135,16 @@ class Events < Application
     period_start = Time.unix(starting)
     period_end = Time.unix(ending)
 
-    calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: true)
+    # For unauthenticated (public) access, require system_ids or zone_ids
+    # and use the resource calendar identity for calendar API calls.
+    # Raw calendar IDs are ignored to prevent arbitrary calendar access.
+    unless auth_token_present?
+      raise AC::Route::Param::MissingError.new("system_ids or zone_ids required for public event listing", "system_ids", "String") unless system_ids.presence || zone_ids.presence
+      calendars = nil
+    end
+    user_email = user.email if auth_token_present?
+
+    calendars = matching_calendar_ids(calendars, zone_ids, system_ids, allow_default: auth_token_present?)
 
     Log.context.set(calendar_size: calendars.size.to_s)
     return [] of PlaceCalendar::Event unless calendars.size > 0
@@ -143,7 +153,7 @@ class Events < Application
     requests = [] of HTTP::Request
     mappings = calendars.map { |calendar_id, system|
       request = client.list_events_request(
-        user.email,
+        user_email || calendar_id,
         calendar_id,
         period_start: period_start,
         period_end: period_end,
@@ -156,7 +166,7 @@ class Events < Application
       {request, calendar_id, system}
     }
 
-    responses = client.batch(user.email, requests)
+    responses = client.batch(user_email || calendars.keys.first, requests)
 
     # Process the response (map requests back to responses)
     errors = 0
@@ -166,7 +176,7 @@ class Events < Application
     results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
     mappings.each do |(request, calendar_id, system)|
       begin
-        results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
+        results.concat client.list_events(user_email || calendar_id, responses[request]).map { |event| {calendar_id, system, event} }
       rescue error
         (error.message =~ /MailboxConcurrency/i ? calendar_rate_limit : calendar_other_error) << calendar_id
         errors += 1
@@ -309,6 +319,9 @@ class Events < Application
         metadata = metadatas[event.recurring_event_id]?
         parent_meta = true if metadata
       end
+
+      # For unauthenticated requests, only return public events
+      next unless auth_token_present? || metadata.try(&.permission.public?)
 
       if system.nil?
         if cal_id = event_resources[event.id.as(String)]?
@@ -1399,7 +1412,7 @@ class Events < Application
     event_id = original_id
 
     # Guest access
-    if user_token.guest_scope?
+    if auth_token_present? && user_token.guest_scope?
       guest_event_id, guest_system_id = user.roles
       system_id ||= guest_system_id
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless system_id == guest_system_id
@@ -1409,7 +1422,7 @@ class Events < Application
       # Need to grab the calendar associated with this system
       system = placeos_client.systems.fetch(system_id)
       cal_id = system.email
-      user_email = user_token.guest_scope? ? cal_id : user.email
+      user_email = (!auth_token_present? || user_token.guest_scope?) ? cal_id : user.email
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
       raise Error::InconsistentState.new("user_email must be present") unless user_email
@@ -1427,14 +1440,23 @@ class Events < Application
         end
       end
 
-      if user_token.guest_scope?
+      if auth_token_present? && user_token.guest_scope?
         raise Error::Forbidden.new("guest #{user_token.id} attempting to view an event they are not associated with") unless guest_event_id.in?({original_id, event_id, event.recurring_event_id}) && system_id == guest_system_id
       end
 
       metadata = get_event_metadata(event, system_id, search_recurring: true)
+
+      # For unauthenticated requests, only allow access to public events
+      unless auth_token_present?
+        raise Error::Forbidden.new("event is not publicly accessible") unless metadata.try(&.permission.public?)
+      end
+
       parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
       StaffApi::Event.augment(event, cal_id, system, metadata, parent_meta)
     else
+      # Personal calendar access requires authentication
+      raise Error::Forbidden.new("system_id is required for public event access") unless auth_token_present?
+
       # Need to confirm the user can access this calendar
       user_cal = user_cal.try &.downcase
       if user_cal == user.email
