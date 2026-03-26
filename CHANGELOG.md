@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: [PPT-2375] notify of changes after edit ([#364](https://github.com/PlaceOS/staff-api/pull/364))
 - [PPT-2420] added check calendar permission endpoint ([#365](https://github.com/PlaceOS/staff-api/pull/365))
 - [PPT-2358] add clashing-assets + cleanup spec errors/warnings ([#363](https://github.com/PlaceOS/staff-api/pull/363))
 - **guests**: add catering routes
