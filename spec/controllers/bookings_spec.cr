@@ -2803,4 +2803,39 @@ describe Bookings do
     booking.booking_end.should eq(today_end)
     booking.all_day.should be_false
   end
+
+  describe "PPT-2457", tags: "PPT-2457" do
+    it "#check_in should not allow a different user to check out another user's booking" do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      tenant = get_tenant
+
+      Timecop.scale(600) # 1 second == 10 minutes
+
+      # Create a booking owned by user-one
+      booking = BookingsHelper.create_booking(
+        tenant_id: tenant.id.not_nil!,
+        user_email: "user-one@example.com",
+        zones: ["zone-1234"],
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 15.minutes.from_now.to_unix,
+      )
+
+      # Check in the booking as the admin (owner proxy) so it's in checked_in state
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+      sleep(200.milliseconds) # advance time 2 minutes
+
+      # A different non-admin user attempts to check out (state=false) the booking
+      user_two_headers = Mock::Headers.office365_normal_user(email: "user-two@example.com")
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false", headers: user_two_headers)
+      response.status_code.should eq(403)
+
+      # Verify the booking is still checked in and was NOT checked out
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
+      body["checked_in"].should be_true
+      body["checked_out_at"]?.should be_nil
+    end
+  end
 end
