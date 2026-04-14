@@ -50,6 +50,13 @@ Naming/PredicateName:
 Documentation/DocumentationAdmonition:
   Enabled: false
 
+Style/MultilineStringLiteral:
+  Excluded:
+    - spec/**/*
+
+Lint/BeTruthy:
+  Enabled: false
+
 Lint/SpecFilename:
   Excluded:
     - spec/controllers/helpers/*

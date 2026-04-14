@@ -65,7 +65,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata])]
+  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata, :check_in])]
   private def confirm_access
     return if is_support?
     if user = current_user
