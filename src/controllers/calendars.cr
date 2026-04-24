@@ -46,45 +46,31 @@ class Calendars < Application
     client.list_calendars(user.email)
   end
 
-  record PermissionCheck, has_access : Bool, role : String do
-    include JSON::Serializable
-  end
-
   # Check if current user has write access to specified user's calendar
   @[AC::Route::GET("/:user_email/permission")]
   def check_permission(
     @[AC::Param::Info(description: "email or UPN of calendar owner", example: "foo@domain.com")]
     user_email : String,
-  ) : PermissionCheck
+  ) : NamedTuple(can_edit: Bool)
     current_user_email = user.email.downcase
     target_email = user_email.downcase
 
     # User always has permission to their own calendar
     if current_user_email == target_email
-      return PermissionCheck.new(has_access: true, role: "owner")
+      return {can_edit: true}
     end
 
     # Get Office365 client and call calendarPermissions API
     if client.client_id == :office365
       o365_client = client.calendar.as(PlaceCalendar::Office365).client
-      permissions_query = o365_client.list_calendar_permissions(target_email)
-
-      # Find current user in permissions list
-      user_permission = permissions_query.value.find do |perm|
-        perm.email_address.address.try(&.downcase) == current_user_email
-      end
-
-      if user_permission && user_permission.can_edit?
-        PermissionCheck.new(has_access: true, role: user_permission.role)
-      else
-        PermissionCheck.new(has_access: false, role: user_permission.try(&.role) || "none")
-      end
+      cal_res = o365_client.get_calendar(mailbox: target_email)
+      {can_edit: cal_res.can_edit? || false}
     else
-      PermissionCheck.new(has_access: false, role: "unsupported")
+      {can_edit: false}
     end
   rescue ex
     Log.warn(exception: ex) { "failed to check calendar permission for #{target_email}" }
-    PermissionCheck.new(has_access: false, role: "error")
+    raise Error::NotFound.new(ex.message || {error: "Not Found"}.to_json)
   end
 
   # checks for availability of matched calendars, returns a list of calendars with availability
