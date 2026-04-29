@@ -3886,7 +3886,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Calendars__PermissionCheck'
+                $ref: '#/components/schemas/NamedTuple_can_edit__Bool_'
         429:
           description: Too Many Requests
           content:
@@ -12553,16 +12553,13 @@ components:
       required:
       - summary
       - primary
-    Calendars__PermissionCheck:
+    NamedTuple_can_edit__Bool_:
       type: object
       properties:
-        has_access:
+        can_edit:
           type: boolean
-        role:
-          type: string
       required:
-      - has_access
-      - role
+      - can_edit
     Calendars__Availability:
       type: object
       properties:
