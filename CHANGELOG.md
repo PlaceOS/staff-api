@@ -230,6 +230,7 @@
 
 ### Refactor
 
+- **events**: [PPT-2358] classhing-assets to follow bookings signature ([#369](https://github.com/PlaceOS/staff-api/pull/369))
 - **calendars**: [PPT-2471] check_permission to call MS G get calendar instead ([#368](https://github.com/PlaceOS/staff-api/pull/368))
 - **events**: [PPT 503] replace #not_nil! with more specific errors ([#287](https://github.com/PlaceOS/staff-api/pull/287))
 - migrated staff-api to pg-orm ([#277](https://github.com/PlaceOS/staff-api/pull/277))
