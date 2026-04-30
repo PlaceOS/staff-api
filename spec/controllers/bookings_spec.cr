@@ -2954,7 +2954,7 @@ describe Bookings do
       payload["booking_end"].should eq ending
     end
 
-    it "#update with shrunk time window emits action changed (not metadata_changed)" do
+    it "#update with shrunk time window emits action metadata_changed with previous values" do
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return do |request|
@@ -2986,7 +2986,7 @@ describe Bookings do
       # The last captured body should be from the update, not the create
       captured_bodies.size.should be >= 2
       update_payload = JSON.parse(captured_bodies.last)
-      update_payload["action"].should eq "changed"
+      update_payload["action"].should eq "metadata_changed"
       update_payload["booking_start"].should eq new_starting
       update_payload["booking_end"].should eq new_ending
       update_payload["previous_booking_start"].should eq starting
