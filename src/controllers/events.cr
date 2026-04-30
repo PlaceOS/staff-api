@@ -1765,30 +1765,30 @@ class Events < Application
 
   # lists conflicting system_ids based on event time range
   # will return a list of system_ids that are already booked during the specified time range
-  # if system_ids is set, then it will only return booked systems from that list
-  @[AC::Route::POST("/clashing-assets")]
+  # if system_id is set on the event, then it will only return booked systems from that list
+  @[AC::Route::POST("/clashing-assets", body: :input_event)]
   def clashing_assets(
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
-    starting : Int64,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
-    ending : Int64,
-    @[AC::Param::Info(description: "comma separated list of system_ids to check for clashes", example: "sys-1234,sys-5678")]
-    system_ids : String? = nil,
-    @[AC::Param::Info(description: "return available systems, this requires system_ids be set to the full list", example: "false")]
+    input_event : PlaceCalendar::Event,
+    @[AC::Param::Info(description: "return available systems, this requires system_id be set on the event", example: "false")]
     return_available : Bool = false,
     @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
     include_clash_time : Bool = false,
   ) : Array(String) | Array(NamedTuple(system_id: String, event_start: Int64, event_end: Int64))
-    if return_available && system_ids.nil?
-      raise Error::ModelValidation.new([{field: "system_ids".as(String?), reason: "Missing system_ids"}], "error validating event data")
+    raise Error::BadRequest.new("event_start must be present") unless event_start = input_event.event_start
+    raise Error::BadRequest.new("event_end must be present") unless event_end = input_event.event_end
+
+    sys_id = input_event.system_id || input_event.system.try(&.id)
+
+    if return_available && sys_id.nil?
+      raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing system_id"}], "error validating event data")
     end
 
     if return_available && include_clash_time
       raise AC::Route::Param::Error.new("include_clash_time and return_available cannot be used together")
     end
 
-    # Parse system_ids if provided
-    sys_ids = system_ids.try(&.split(',').map(&.strip).reject(&.empty?)) || [] of String
+    starting = event_start.to_unix
+    ending = event_end.to_unix
 
     # Query for clashing events
     query = EventMetadata
@@ -1796,16 +1796,16 @@ class Events < Application
       .where("event_end > ? AND event_start < ?", starting, ending)
       .where("cancelled = ? OR cancelled IS NULL", false)
 
-    # Filter by system_ids if provided
-    query = query.where({:system_id => sys_ids}) unless sys_ids.empty?
+    # Filter by system_id if provided
+    query = query.where({:system_id => sys_id}) if sys_id.try(&.presence)
 
     clashing_events = query.to_a
 
     if include_clash_time
       result = [] of NamedTuple(system_id: String, event_start: Int64, event_end: Int64)
-      clashing_events.each do |event|
-        if sys_id = event.system_id
-          result << {system_id: sys_id, event_start: event.event_start, event_end: event.event_end}
+      clashing_events.each do |evt|
+        if clashing_sys_id = evt.system_id
+          result << {system_id: clashing_sys_id, event_start: evt.event_start, event_end: evt.event_end}
         end
       end
       result
@@ -1813,7 +1813,7 @@ class Events < Application
       clashing_system_ids = clashing_events.compact_map(&.system_id).uniq
 
       if return_available
-        clashing_system_ids = sys_ids - clashing_system_ids
+        clashing_system_ids = [sys_id].compact - clashing_system_ids
       end
 
       clashing_system_ids

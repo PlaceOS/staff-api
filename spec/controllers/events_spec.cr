@@ -1348,9 +1348,18 @@ describe Events, tags: ["event"] do
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-5678", event_start: event_start + 5, event_end: event_end + 5)
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-9999", event_start: event_end + 100, event_end: event_end + 200)
 
+      clashing_event_body = {
+        event_start: event_start,
+        event_end:   event_end,
+        attendees:   [] of String,
+        private:     false,
+        all_day:     false,
+      }.to_json
+
       response = client.post(
-        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}",
-        headers: headers
+        "#{EVENTS_BASE}/clashing-assets",
+        headers: headers,
+        body: clashing_event_body
       )
       response.status_code.should eq(200)
 
@@ -1361,7 +1370,7 @@ describe Events, tags: ["event"] do
       clashing.should_not contain("sys-9999")
     end
 
-    it "returns only clashing system_ids from provided list" do
+    it "returns only clashing system_ids from provided system_id" do
       tenant = get_tenant
       event_start = 10.minutes.from_now.to_unix
       event_end = 30.minutes.from_now.to_unix
@@ -1369,9 +1378,19 @@ describe Events, tags: ["event"] do
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-5678", event_start: event_start, event_end: event_end)
 
+      clashing_event_body = {
+        event_start: event_start,
+        event_end:   event_end,
+        system_id:   "sys-1234",
+        attendees:   [] of String,
+        private:     false,
+        all_day:     false,
+      }.to_json
+
       response = client.post(
-        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&system_ids=sys-1234,sys-9999",
-        headers: headers
+        "#{EVENTS_BASE}/clashing-assets",
+        headers: headers,
+        body: clashing_event_body
       )
       response.status_code.should eq(200)
 
@@ -1388,16 +1407,23 @@ describe Events, tags: ["event"] do
 
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
 
+      clashing_event_body = {
+        event_start: event_start,
+        event_end:   event_end,
+        system_id:   "sys-1234",
+        attendees:   [] of String,
+        private:     false,
+        all_day:     false,
+      }.to_json
+
       response = client.post(
-        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&system_ids=sys-1234,sys-5678,sys-9999&return_available=true",
-        headers: headers
+        "#{EVENTS_BASE}/clashing-assets?return_available=true",
+        headers: headers,
+        body: clashing_event_body
       )
       response.status_code.should eq(200)
 
       available = Array(String).from_json(response.body)
-      available.size.should eq(2)
-      available.should contain("sys-5678")
-      available.should contain("sys-9999")
       available.should_not contain("sys-1234")
     end
 
@@ -1408,9 +1434,18 @@ describe Events, tags: ["event"] do
 
       EventMetadatasHelper.create_event(tenant.id, system_id: "sys-1234", event_start: event_start, event_end: event_end)
 
+      clashing_event_body = {
+        event_start: event_start,
+        event_end:   event_end,
+        attendees:   [] of String,
+        private:     false,
+        all_day:     false,
+      }.to_json
+
       response = client.post(
-        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}&include_clash_time=true",
-        headers: headers
+        "#{EVENTS_BASE}/clashing-assets?include_clash_time=true",
+        headers: headers,
+        body: clashing_event_body
       )
       response.status_code.should eq(200)
 
@@ -1431,9 +1466,18 @@ describe Events, tags: ["event"] do
       cancelled_event.cancelled = true
       cancelled_event.save!
 
+      clashing_event_body = {
+        event_start: event_start,
+        event_end:   event_end,
+        attendees:   [] of String,
+        private:     false,
+        all_day:     false,
+      }.to_json
+
       response = client.post(
-        "#{EVENTS_BASE}/clashing-assets?period_start=#{event_start}&period_end=#{event_end}",
-        headers: headers
+        "#{EVENTS_BASE}/clashing-assets",
+        headers: headers,
+        body: clashing_event_body
       )
       response.status_code.should eq(200)
 
