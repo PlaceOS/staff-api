@@ -728,9 +728,17 @@ class Bookings < Application
       end
     end
 
+    # Determine signal action: "changed" when any visitor-relevant field differs
+    # from its original value, "metadata_changed" otherwise.  This is intentionally
+    # independent of reset_state which governs approval/check-in clearing.
+    visitor_fields_changed = reset_state ||
+                             original_start != existing_booking.booking_start ||
+                             original_end != existing_booking.booking_end ||
+                             original_zones.sort != existing_booking.zones.sort
+
     result = update_booking(
       existing_booking,
-      reset_state ? "changed" : "metadata_changed",
+      visitor_fields_changed ? "changed" : "metadata_changed",
       previous_booking_start: original_start,
       previous_booking_end: original_end,
       previous_zones: original_zones,

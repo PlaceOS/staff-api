@@ -2920,4 +2920,136 @@ describe Bookings do
       body["checked_out_at"]?.should be_nil
     end
   end
+
+  describe "signal payloads", tags: "PPT-2375" do
+    before_each do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    end
+
+    it "#create emits staff/booking/changed with action create" do
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+
+      client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"desk-signal-1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}))
+
+      sleep 50.milliseconds # let spawn fibres run
+
+      captured_bodies.size.should be >= 1
+      payload = JSON.parse(captured_bodies.last)
+      payload["action"].should eq "create"
+      payload["booking_start"].should eq starting
+      payload["booking_end"].should eq ending
+    end
+
+    it "#update with shrunk time window emits action changed (not metadata_changed)" do
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 90.minutes.from_now.to_unix
+
+      created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"desk-signal-2","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
+
+      sleep 50.milliseconds
+
+      # Shrink the window: move start later, move end earlier
+      new_starting = starting + 600
+      new_ending = ending - 600
+
+      client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
+        body: %({"booking_start":#{new_starting},"booking_end":#{new_ending}}))
+
+      sleep 50.milliseconds
+
+      # The last captured body should be from the update, not the create
+      captured_bodies.size.should be >= 2
+      update_payload = JSON.parse(captured_bodies.last)
+      update_payload["action"].should eq "changed"
+      update_payload["booking_start"].should eq new_starting
+      update_payload["booking_end"].should eq new_ending
+      update_payload["previous_booking_start"].should eq starting
+      update_payload["previous_booking_end"].should eq ending
+    end
+
+    it "#update with metadata-only change emits action metadata_changed" do
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+
+      created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"desk-signal-3","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
+
+      sleep 50.milliseconds
+
+      # Update only the title — no visitor-relevant fields change
+      client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
+        body: %({"title":"just a title change"}))
+
+      sleep 50.milliseconds
+
+      captured_bodies.size.should be >= 2
+      update_payload = JSON.parse(captured_bodies.last)
+      update_payload["action"].should eq "metadata_changed"
+      update_payload["title"].should eq "just a title change"
+    end
+
+    it "#destroy emits staff/booking/changed with action cancelled" do
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
+        .to_return(body: "")
+
+      starting = 5.minutes.from_now.to_unix
+      ending = 40.minutes.from_now.to_unix
+
+      created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"desk-signal-4","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
+
+      sleep 50.milliseconds
+
+      client.delete("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers)
+
+      sleep 50.milliseconds
+
+      captured_bodies.size.should be >= 2
+      destroy_payload = JSON.parse(captured_bodies.last)
+      destroy_payload["action"].should eq "cancelled"
+    end
+  end
 end
