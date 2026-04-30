@@ -1520,6 +1520,8 @@ describe Events, tags: ["event"] do
       captured_bodies.size.should be >= 1
       payload = JSON.parse(captured_bodies.last)
       payload["action"].as_s.should eq "update"
+      payload["previous_host_email"].as_s.should eq initial_host
+      payload["host"].as_s.should eq new_host
     end
   end
 end
