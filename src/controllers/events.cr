@@ -1810,7 +1810,7 @@ class Events < Application
       end
       result
     else
-      clashing_system_ids = clashing_events.compact_map(&.system_id).uniq
+      clashing_system_ids = clashing_events.compact_map(&.system_id).uniq!
 
       if return_available
         clashing_system_ids = [sys_id].compact - clashing_system_ids
