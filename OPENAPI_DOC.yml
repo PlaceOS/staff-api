@@ -6481,38 +6481,22 @@ paths:
         will return a list of system_ids that are already booked during the specified
         time range
 
-        if system_ids is set, then it will only return booked systems from that list'
+        if system_id is set on the event, then it will only return booked systems
+        from that list'
       tags:
       - Events
       operationId: Events_clashing_assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceCalendar__Event'
+        required: true
       parameters:
-      - name: period_start
-        in: query
-        description: event period start as a unix epoch
-        example: "1661725146"
-        required: true
-        schema:
-          type: integer
-          format: Int64
-      - name: period_end
-        in: query
-        description: event period end as a unix epoch
-        example: "1661743123"
-        required: true
-        schema:
-          type: integer
-          format: Int64
-      - name: system_ids
-        in: query
-        description: comma separated list of system_ids to check for clashes
-        example: sys-1234,sys-5678
-        schema:
-          type: string
-          nullable: true
       - name: return_available
         in: query
-        description: return available systems, this requires system_ids be set to
-          the full list
+        description: return available systems, this requires system_id be set on the
+          event
         example: "false"
         schema:
           type: boolean
