@@ -1979,7 +1979,8 @@ class Events < Application
                   meta.system_id == system.id &&
                   meta.event_start == starting &&
                   meta.event_end == ending &&
-                  meta.cancelled == cancelled
+                  meta.cancelled == cancelled &&
+                  meta.host_email == event.host.to_s.downcase
 
     meta = meta || EventMetadata.new
 
