@@ -1981,7 +1981,7 @@ class Events < Application
                   meta.event_start == starting &&
                   meta.event_end == ending &&
                   meta.cancelled == cancelled &&
-                  meta.host_email == event.host.to_s.downcase
+                  meta.host_email == event.host.as(String).downcase
 
     meta = meta || EventMetadata.new
 
