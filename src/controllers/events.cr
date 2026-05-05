@@ -298,7 +298,7 @@ class Events < Application
                     end
 
     # return array of standardised events
-    events = results.compact_map do |(calendar_id, system, event)|
+    render response_code, json: results.compact_map do |(calendar_id, system, event)|
       next if icaluid && event.ical_uid != icaluid
 
       parent_meta = false
@@ -318,7 +318,6 @@ class Events < Application
 
       StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
     end
-    render response_code, json: events
   end
 
   # returns history records for events in the specified period
@@ -451,9 +450,7 @@ class Events < Application
     # Update PlaceOS with an signal "/staff/event/changed"
     if sys = system
       # Grab the list of externals that might be attending
-      attending = input_event.attendees.try do |list|
-        list.select { |attendee| attendee.visit_expected }
-      end
+      attending = input_event.attendees.try(&.select { |attendee| attendee.visit_expected })
 
       # Save custom data
       meta = EventMetadata.new
