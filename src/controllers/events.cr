@@ -141,7 +141,7 @@ class Events < Application
 
     # Grab events in batches
     requests = [] of HTTP::Request
-    mappings = calendars.map do |calendar_id, system|
+    mappings = calendars.map { |calendar_id, system|
       request = client.list_events_request(
         user.email,
         calendar_id,
@@ -154,7 +154,7 @@ class Events < Application
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
       {request, calendar_id, system}
-    end
+    }
 
     responses = client.batch(user.email, requests)
 
@@ -227,7 +227,7 @@ class Events < Application
       if client.client_id == :office365
         # Metadata is stored against a resource calendar which in office365 can only
         # be matched by the `ical_uid`
-        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(ical_uids, event_master_ids).each do |meta|
+        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(ical_uids, event_master_ids).each { |meta|
           # where there might be multiple resource calendars on the event we want to pick
           # metadatas that most closely match the request
           # and has the most information
@@ -261,9 +261,9 @@ class Events < Application
               metadatas[resource_master_id] = meta
             end
           end
-        end
+        }
       else
-        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(event_ids, event_master_ids).each do |meta|
+        EventMetadata.by_tenant(tenant.id).by_events_or_master_ids(event_ids, event_master_ids).each { |meta|
           next if (existing = metadatas[meta.event_id]?) && calendars.has_key?(existing.resource_calendar) &&
                   !(calendars.has_key?(meta.resource_calendar) && meta.ext_data != nil)
 
@@ -274,7 +274,7 @@ class Events < Application
 
             metadatas[recurring_master_id] = meta
           end
-        end
+        }
       end
     end
 
@@ -298,7 +298,7 @@ class Events < Application
                     end
 
     # return array of standardised events
-    render response_code, json: results.compact_map do |(calendar_id, system, event)|
+    render response_code, json: results.compact_map { |(calendar_id, system, event)|
       next if icaluid && event.ical_uid != icaluid
 
       parent_meta = false
@@ -317,7 +317,7 @@ class Events < Application
       end
 
       StaffApi::Event.augment(event, calendar_id, system, metadata, parent_meta)
-    end
+    }
   end
 
   # returns history records for events in the specified period
@@ -1635,7 +1635,7 @@ class Events < Application
 
     # Grab events in batches
     requests = [] of HTTP::Request
-    mappings = system_calendars.compact_map do |calendar_id, system|
+    mappings = system_calendars.compact_map { |calendar_id, system|
       next unless system
       request = client.list_events_request(
         user.email,
@@ -1648,7 +1648,7 @@ class Events < Application
       Log.debug { "requesting events from: #{request.path}" }
       requests << request
       {request, calendar_id, system}
-    end
+    }
 
     responses = client.batch(user.email, requests)
 
