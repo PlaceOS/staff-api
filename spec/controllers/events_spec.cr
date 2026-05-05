@@ -1487,4 +1487,85 @@ describe Events, tags: ["event"] do
       clashing.should_not contain("sys-5678")
     end
   end
+
+  describe "signal payloads", tags: "PPT-2375" do
+    before_each do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+    end
+
+    it "#notify_change emits staff/event/changed signal when only the host changes" do
+      # Reset and re-register stubs so our capturing stub is registered first
+      # (WebMock uses the first matching stub, not the last)
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      # Capture the signal
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+
+      # Create a ControlSystem in the database
+      system_id = "sys-host-change-test"
+      # Cleanup any leftover from a previous run
+      PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
+      test_system = PlaceOS::Model::Generator.control_system
+      test_system.id = system_id
+      test_system.save!
+
+      # Create EventMetadata with initial host A
+      event_id = "evt-host-change-001"
+      ical_uid = "ical-host-change-001"
+      event_start = Time.utc(2024, 6, 1, 9, 0, 0).to_unix
+      event_end = Time.utc(2024, 6, 1, 10, 0, 0).to_unix
+      initial_host = "host-a@example.com"
+
+      tenant = get_tenant
+      EventMetadata.create!(
+        tenant_id: tenant.id,
+        system_id: system_id,
+        event_id: event_id,
+        host_email: initial_host,
+        resource_calendar: "test-room@example.com",
+        event_start: event_start,
+        event_end: event_end,
+        ical_uid: ical_uid,
+      )
+
+      # Notify a change where only the host changed (time and room are identical)
+      new_host = "host-b@example.com"
+      event_body = %({
+        "event_start": #{event_start},
+        "event_end": #{event_end},
+        "id": "#{event_id}",
+        "host": "#{new_host}",
+        "ical_uid": "#{ical_uid}",
+        "attendees": [],
+        "private": false,
+        "all_day": false
+      })
+
+      resp = client.post(
+        "#{EVENTS_BASE}/notify/updated/#{system_id}/#{event_id}",
+        headers: headers,
+        body: event_body
+      )
+      resp.status_code.should eq(202)
+
+      sleep 100.milliseconds # let spawn fibres run
+
+      # Signal MUST be emitted because the host changed
+      captured_bodies.size.should be >= 1
+      payload = JSON.parse(captured_bodies.last)
+      payload["action"].as_s.should eq "update"
+      payload["previous_host_email"].as_s.should eq initial_host
+      payload["host"].as_s.should eq new_host
+    end
+  end
 end

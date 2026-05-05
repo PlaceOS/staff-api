@@ -1979,17 +1979,25 @@ class Events < Application
                   meta.system_id == system.id &&
                   meta.event_start == starting &&
                   meta.event_end == ending &&
-                  meta.cancelled == cancelled
+                  meta.cancelled == cancelled &&
+                  meta.host_email == event.host.as(String).downcase
 
     meta = meta || EventMetadata.new
+
+    # Capture previous values for change detection in downstream consumers
+    previous_event_start = meta.event_start if meta.persisted?
+    previous_event_end = meta.event_end if meta.persisted?
+    previous_system_id = meta.system_id if meta.persisted?
+    previous_host_email = meta.host_email if meta.persisted?
+
     if !meta.persisted?
       meta.event_id = event.id.as(String)
       meta.recurring_master_id = event.recurring_event_id || event.id if event.recurring && is_host
       meta.resource_master_id = event.recurring_event_id || event.id if event.recurring && !is_host
-      meta.host_email = event.host.as(String).downcase
       meta.ical_uid = event.ical_uid.as(String)
     end
     meta.system_id = system.id.as(String)
+    meta.host_email = event.host.as(String).downcase
     meta.event_start = starting
     meta.event_end = ending
     meta.resource_calendar = system.email.to_s.as(String).downcase
@@ -2006,14 +2014,22 @@ class Events < Application
 
     spawn do
       get_placeos_client.root.signal("staff/event/changed", {
-        action:         action,
-        system_id:      system.id,
-        event_id:       meta.event_id,
-        event_ical_uid: meta.ical_uid,
-        host:           meta.host_email,
-        resource:       meta.resource_calendar,
-        event:          event,
-        ext_data:       meta.try &.ext_data,
+        action:               action,
+        system_id:            system.id,
+        event_id:             meta.event_id,
+        event_ical_uid:       meta.ical_uid,
+        host:                 meta.host_email,
+        resource:             meta.resource_calendar,
+        event:                event,
+        ext_data:             meta.try &.ext_data,
+        title:                event.title,
+        event_start:          starting,
+        event_end:            ending,
+        zones:                system.zones,
+        previous_event_start: previous_event_start,
+        previous_event_end:   previous_event_end,
+        previous_system_id:   previous_system_id,
+        previous_host_email:  previous_host_email,
       })
     end
   end

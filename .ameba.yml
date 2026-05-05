@@ -32,6 +32,9 @@ Lint/NotNil:
 Style/QueryBoolMethods:
   Enabled: false
 
+Style/MultilineCurlyBlock:
+  Enabled: false
+
 Style/PredicateName:
   Enabled: false
 
