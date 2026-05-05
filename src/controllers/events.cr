@@ -451,8 +451,8 @@ class Events < Application
     if sys = system
       # Grab the list of externals that might be attending
       attending = input_event.attendees.try(&.select { |attendee|
-              attendee.visit_expected
-            })
+        attendee.visit_expected
+      })
 
       # Save custom data
       meta = EventMetadata.new
