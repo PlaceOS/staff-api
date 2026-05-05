@@ -450,7 +450,9 @@ class Events < Application
     # Update PlaceOS with an signal "/staff/event/changed"
     if sys = system
       # Grab the list of externals that might be attending
-      attending = input_event.attendees.try(&.select { |attendee| attendee.visit_expected })
+      attending = input_event.attendees.try(&.select { |attendee|
+              attendee.visit_expected
+            })
 
       # Save custom data
       meta = EventMetadata.new
