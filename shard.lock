@@ -139,7 +139,7 @@ shards:
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
-    version: 2.11.11
+    version: 2.12.1
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -147,7 +147,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.89.1
+    version: 9.90.0
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
