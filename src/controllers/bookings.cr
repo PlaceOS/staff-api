@@ -1102,7 +1102,7 @@ class Bookings < Application
   # ============================================
 
   private def check_clashing(new_booking, ignore_assets : Bool = false)
-    new_booking.clashing_bookings(ignore_assets: ignore_assets).reject! { |book| book.id == new_booking.id && book.instance == new_booking.instance }
+    new_booking.clashing_bookings(ignore_assets: ignore_assets).reject! { |book| book.id == new_booking.id && (new_booking.instance.nil? || book.instance == new_booking.instance) }
   end
 
   private def check_in_clashing(time_now, booking)
