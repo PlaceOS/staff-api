@@ -1706,16 +1706,24 @@ class Events < Application
     event_id : String,
     @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
     system_id : String,
+    @[AC::Param::Info(description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    ical_uid : String? = nil,
   ) : Array(Guest)
-    cal_id = get_placeos_client.systems.fetch(system_id).email
-    return [] of Guest unless cal_id
+    if ical_uid.presence
+      metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ical_uid, system_id: system_id).first?
+      parent_meta = false
+    else
+      cal_id = get_placeos_client.systems.fetch(system_id).email
+      return [] of Guest unless cal_id
 
-    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
-    raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
+      event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+      raise Error::NotFound.new("event #{event_id} not found on system calendar #{cal_id}") unless event
 
-    # Grab meeting metadata if it exists
-    metadata = get_event_metadata(event, system_id)
-    parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
+      # Grab meeting metadata if it exists
+      metadata = get_event_metadata(event, system_id)
+      parent_meta = !metadata.try &.for_event_instance?(event, client.client_id)
+    end
+
     return [] of Guest unless metadata
 
     # Find anyone who is attending
