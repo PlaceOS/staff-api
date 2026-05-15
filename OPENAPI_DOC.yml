@@ -3253,6 +3253,12 @@ paths:
         schema:
           type: integer
           format: Int64
+      - name: include_linked
+        in: query
+        description: include guests from linked (child) bookings
+        example: "true"
+        schema:
+          type: boolean
       - name: instance
         in: query
         description: a recurring instance id

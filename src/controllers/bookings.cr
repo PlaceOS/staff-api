@@ -963,10 +963,23 @@ class Bookings < Application
 
   # returns a list of guests associated with a booking
   @[AC::Route::GET("/:id/guests")]
-  def guest_list : Array(Guest)
-    booking.attendees.to_a.map do |visitor|
+  def guest_list(
+    @[AC::Param::Info(description: "include guests from linked (child) bookings", example: "true")]
+    include_linked : Bool = false,
+  ) : Array(Guest)
+    guests = booking.attendees.to_a.map do |visitor|
       visitor.guest.not_nil!.for_booking_to_h(visitor, booking)
     end
+
+    if include_linked && booking.parent?
+      Booking.where(parent_id: booking.id).each do |child|
+        child.attendees.to_a.each do |visitor|
+          guests << visitor.guest.not_nil!.for_booking_to_h(visitor, child)
+        end
+      end
+    end
+
+    guests
   end
 
   # marks the standalone visitor as checked-in or checked-out based on the state param
