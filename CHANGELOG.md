@@ -110,6 +110,7 @@
 
 ### Fix
 
+- **events**: support #guest_list ical_uid lookup (PPT-2375) ([#371](https://github.com/PlaceOS/staff-api/pull/371))
 - **bookings**: recurring booking clash detection edge case
 - **bookings**: [PPT-2457] checkout other users booking ([#367](https://github.com/PlaceOS/staff-api/pull/367))
 - **guests**: listing their upcoming bookings
