@@ -54,8 +54,7 @@ Documentation/DocumentationAdmonition:
   Enabled: false
 
 Style/MultilineStringLiteral:
-  Excluded:
-    - spec/**/*
+  Enabled: false
 
 Lint/BeTruthy:
   Enabled: false
@@ -68,3 +67,15 @@ Lint/SpecFilename:
 Lint/UselessAssign:
   Excluded:
     - spec/**/*
+
+Lint/WhitespaceAroundMacroExpression:
+  Enabled: false
+
+Style/PercentLiteralDelimiters:
+  Enabled: false
+
+Style/RedundantSelf:
+  Enabled: false
+
+Lint/SpecEqWithBoolOrNilLiteral:
+  Enabled: false

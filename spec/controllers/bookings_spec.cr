@@ -1432,6 +1432,67 @@ describe Bookings do
     body.map(&.["name"]).should eq([guest.name])
   end
 
+  it "#guest_list with include_linked should include guests from child bookings" do
+    tenant = get_tenant
+    user_email = Faker::Internet.email
+
+    parent = BookingsHelper.create_booking(
+      tenant_id: tenant.id.not_nil!,
+      user_email: user_email,
+      booking_type: "group",
+    )
+
+    parent_guest = GuestsHelper.create_guest(tenant.id, "parent-guest@example.com")
+    Attendee.create!(booking_id: parent.id.not_nil!,
+      guest_id: parent_guest.id,
+      tenant_id: parent_guest.tenant_id,
+      checked_in: false,
+      visit_expected: true,
+    )
+
+    child = BookingsHelper.create_booking(
+      tenant_id: tenant.id.not_nil!,
+      user_email: user_email,
+      booking_type: "visitor",
+      parent_id: parent.id,
+    )
+
+    child_guest = GuestsHelper.create_guest(tenant.id, "child-guest@example.com")
+    Attendee.create!(booking_id: child.id.not_nil!,
+      guest_id: child_guest.id,
+      tenant_id: child_guest.tenant_id,
+      checked_in: false,
+      visit_expected: true,
+    )
+
+    # Without include_linked: only the parent's own guest is returned
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{parent.id}/guests", headers: headers).body).as_a
+    body.map(&.["email"]).should eq([parent_guest.email])
+
+    # With include_linked: guests from both parent and child are returned
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{parent.id}/guests?include_linked=true", headers: headers).body).as_a
+    emails = body.map(&.["email"].as_s).sort!
+    emails.should eq(["child-guest@example.com", "parent-guest@example.com"])
+
+    # include_linked on a child booking should be silently ignored —
+    # only the child's own guests are returned
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{child.id}/guests?include_linked=true", headers: headers).body).as_a
+    body.map(&.["email"].as_s).should eq([child_guest.email])
+
+    # Deduplication: add the same guest (parent_guest) to the child booking.
+    # The API should return only one entry per email address.
+    Attendee.create!(booking_id: child.id.not_nil!,
+      guest_id: parent_guest.id,
+      tenant_id: parent_guest.tenant_id,
+      checked_in: false,
+      visit_expected: true,
+    )
+
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{parent.id}/guests?include_linked=true", headers: headers).body).as_a
+    emails = body.map(&.["email"].as_s).sort!
+    emails.should eq(["child-guest@example.com", "parent-guest@example.com"])
+  end
+
   describe "permission", tags: ["auth", "group-event"] do
     it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
