@@ -972,11 +972,18 @@ class Bookings < Application
     end
 
     if include_linked && booking.parent?
-      Booking.where(parent_id: booking.id).each do |child|
+      Booking.where(parent_id: booking.id)
+        .join(:left, Attendee, :booking_id)
+        .join(:left, Guest, "guests.id = attendees.guest_id")
+        .to_a.each do |child|
         child.attendees.to_a.each do |visitor|
           guests << visitor.guest.not_nil!.for_booking_to_h(visitor, child)
         end
       end
+
+      # Deduplicate by email in case a guest appears on both the parent
+      # and a child booking
+      guests.uniq! { |guest| guest.email.downcase }
     end
 
     guests

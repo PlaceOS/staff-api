@@ -1473,6 +1473,24 @@ describe Bookings do
     body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{parent.id}/guests?include_linked=true", headers: headers).body).as_a
     emails = body.map(&.["email"].as_s).sort!
     emails.should eq(["child-guest@example.com", "parent-guest@example.com"])
+
+    # include_linked on a child booking should be silently ignored —
+    # only the child's own guests are returned
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{child.id}/guests?include_linked=true", headers: headers).body).as_a
+    body.map(&.["email"].as_s).should eq([child_guest.email])
+
+    # Deduplication: add the same guest (parent_guest) to the child booking.
+    # The API should return only one entry per email address.
+    Attendee.create!(booking_id: child.id.not_nil!,
+      guest_id: parent_guest.id,
+      tenant_id: parent_guest.tenant_id,
+      checked_in: false,
+      visit_expected: true,
+    )
+
+    body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{parent.id}/guests?include_linked=true", headers: headers).body).as_a
+    emails = body.map(&.["email"].as_s).sort!
+    emails.should eq(["child-guest@example.com", "parent-guest@example.com"])
   end
 
   describe "permission", tags: ["auth", "group-event"] do
