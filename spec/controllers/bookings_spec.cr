@@ -957,6 +957,176 @@ describe Bookings do
         entry["booking_end"].as_i64.should eq(clash_end)
       end
     end
+
+    it "should detect clash between all-day booking and regular booking on same day" do
+      tenant = get_tenant
+      asset_id = "desk-allday-1"
+
+      # Create an all-day booking for tomorrow (00:00:00 to 23:59:59)
+      tomorrow = 1.day.from_now
+      tomorrow_start = tomorrow.at_beginning_of_day.to_unix
+      tomorrow_end = tomorrow.at_end_of_day.to_unix
+
+      all_day_booking = Booking.create!(
+        tenant_id: tenant.id.not_nil!,
+        user_id: "user1@example.com",
+        user_email: PlaceOS::Model::Email.new("user1@example.com"),
+        user_name: "User One",
+        asset_id: asset_id,
+        asset_ids: [asset_id],
+        zones: ["zone-1"],
+        booking_type: "desk",
+        booking_start: tomorrow_start,
+        booking_end: tomorrow_end,
+        all_day: true,
+        booked_by_email: PlaceOS::Model::Email.new("user1@example.com"),
+        booked_by_id: "user1@example.com",
+        booked_by_name: "User One",
+        history: [] of Booking::History,
+      )
+
+      # Try to create a regular booking for tomorrow 10am-11am (should clash)
+      regular_booking_start = tomorrow.at_beginning_of_day.shift(hours: 10).to_unix
+      regular_booking_end = tomorrow.at_beginning_of_day.shift(hours: 11).to_unix
+
+      # Test via clashing_assets endpoint
+      body = {
+        booking_type:  "desk",
+        booking_start: regular_booking_start,
+        booking_end:   regular_booking_end,
+        asset_id:      asset_id,
+        asset_ids:     [asset_id],
+      }.to_json
+
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", body: body, headers: headers)
+      response.success?.should be_true
+
+      clashing_assets = JSON.parse(response.body).as_a.map(&.as_s)
+      clashing_assets.should_not be_empty
+      clashing_assets.should contain(asset_id)
+    end
+
+    it "should detect clash between all-day booking and recurring booking" do
+      tenant = get_tenant
+      asset_id = "f-011"
+
+      # Scenario: All-day booking on May 23rd
+      # Create an all-day booking for May 23rd (00:00:00 to 23:59:59)
+      may_23 = Time.utc(2024, 5, 23)
+      may_23_start = may_23.at_beginning_of_day.to_unix
+      may_23_end = may_23.at_end_of_day.to_unix
+
+      all_day_booking = Booking.create!(
+        tenant_id: tenant.id.not_nil!,
+        user_id: "user2@example.com",
+        user_email: PlaceOS::Model::Email.new("user2@example.com"),
+        user_name: "User Two",
+        asset_id: asset_id,
+        asset_ids: [asset_id],
+        zones: ["zone-1"],
+        booking_type: "desk",
+        booking_start: may_23_start,
+        booking_end: may_23_end,
+        all_day: true,
+        booked_by_email: PlaceOS::Model::Email.new("user2@example.com"),
+        booked_by_id: "user2@example.com",
+        booked_by_name: "User Two",
+        history: [] of Booking::History,
+      )
+
+      # Scenario: Recurring booking from May 19th, every day 3 PM to 4 PM
+      # This should clash on May 23rd because there's an all-day booking
+      may_19 = Time.utc(2024, 5, 19)
+      recurring_start = may_19.at_beginning_of_day.shift(hours: 15).to_unix # 3 PM
+      recurring_end = may_19.at_beginning_of_day.shift(hours: 16).to_unix   # 4 PM
+      recurrence_end = may_19.shift(days: 10).to_unix                       # Extend past May 23rd
+
+      # Test via clashing_assets endpoint
+      body = {
+        booking_type:        "desk",
+        booking_start:       recurring_start,
+        booking_end:         recurring_end,
+        asset_id:            asset_id,
+        asset_ids:           [asset_id],
+        recurrence_type:     "DAILY",
+        recurrence_interval: 1,
+        recurrence_end:      recurrence_end,
+        timezone:            "UTC",
+      }.to_json
+
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", body: body, headers: headers)
+      response.success?.should be_true
+
+      clashing_assets = JSON.parse(response.body).as_a.map(&.as_s)
+      clashing_assets.should_not be_empty, "Expected f-011 to be in clashing assets because May 23rd has an all-day booking"
+      clashing_assets.should contain(asset_id)
+    end
+
+    it "should NOT detect clash when bookings are on different days" do
+      tenant = get_tenant
+      asset_id = "desk-allday-3"
+
+      # Create all-day booking for tomorrow
+      tomorrow = 1.day.from_now
+      tomorrow_start = tomorrow.at_beginning_of_day.to_unix
+      tomorrow_end = tomorrow.at_end_of_day.to_unix
+
+      all_day_booking = Booking.create!(
+        tenant_id: tenant.id.not_nil!,
+        user_id: "user3@example.com",
+        user_email: PlaceOS::Model::Email.new("user3@example.com"),
+        user_name: "User Three",
+        asset_id: asset_id,
+        asset_ids: [asset_id],
+        zones: ["zone-1"],
+        booking_type: "desk",
+        booking_start: tomorrow_start,
+        booking_end: tomorrow_end,
+        all_day: true,
+        booked_by_email: PlaceOS::Model::Email.new("user3@example.com"),
+        booked_by_id: "user3@example.com",
+        booked_by_name: "User Three",
+        history: [] of Booking::History,
+      )
+
+      # Try to create booking for day after tomorrow (should NOT clash)
+      day_after = 2.days.from_now
+      booking_start = day_after.at_beginning_of_day.shift(hours: 10).to_unix
+      booking_end = day_after.at_beginning_of_day.shift(hours: 11).to_unix
+
+      body = {
+        booking_type:  "desk",
+        booking_start: booking_start,
+        booking_end:   booking_end,
+        asset_id:      asset_id,
+        asset_ids:     [asset_id],
+      }.to_json
+
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", body: body, headers: headers)
+      response.success?.should be_true
+
+      clashing_assets = JSON.parse(response.body).as_a.map(&.as_s)
+      clashing_assets.should be_empty
+    end
+
+    it "should return validation error when booking_start is after booking_end" do
+      tenant = get_tenant
+
+      # Create a booking with inverted timestamps (start > end)
+      body = {
+        booking_type:  "desk",
+        booking_start: 1779242400, # May 23, 2025, 14:00:00 UTC
+        booking_end:   1779181200, # May 22, 2025, 21:00:00 UTC (BEFORE start!)
+        asset_id:      "F-009",
+        asset_ids:     ["F-009"],
+      }.to_json
+
+      response = client.post("#{BOOKINGS_BASE}/clashing-assets", body: body, headers: headers)
+      response.status_code.should eq(422) # Unprocessable Entity
+
+      error_response = JSON.parse(response.body).as_h
+      error_response["error"].should_not be_nil
+    end
   end
 
   it "should include bookins made on behalf of other users when include_booked_by=true" do
