@@ -648,12 +648,18 @@ class Events < Application
 
     # are we moving the event room?
     changing_room = system_id != (changes.system_id.presence || system_id)
+    # Captured before any mutation so the downstream `staff/event/changed`
+    # signal can report the actual prior room (the new room's meta is fresh
+    # and would otherwise have null previous_* fields).
+    previous_meta_for_signal : EventMetadata? = nil
     if changing_room
       raise Error::BadRequest.new("system_id must be present when changing room") unless new_system_id = changes.system_id
 
       new_system = placeos_client.systems.fetch(new_system_id)
       new_sys_cal = new_system.email.presence.try &.downcase
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
+
+      previous_meta_for_signal = system_id ? get_event_metadata(event, system_id) : nil
 
       # NOTE:: we're allowing this now, the expected behaviour is to overwrite the metadata
       # Check this room isn't already invited
@@ -718,7 +724,7 @@ class Events < Application
       if permission = changes.permission
         meta.permission = permission
       end
-      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true)
+      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true, previous_meta: previous_meta_for_signal)
 
       # Grab the list of externals that might be attending
       if update_attendees || changing_room
@@ -1975,7 +1981,7 @@ class Events < Application
   # NOTIFICATIONS
   # ==========================
 
-  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true)
+  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true, previous_meta : EventMetadata? = nil)
     raise Error::InconsistentState.new("event_start must be present on event") unless event_start = event.event_start
     raise Error::InconsistentState.new("event_end must be present on event") unless event_end = event.event_end
 
@@ -1992,11 +1998,20 @@ class Events < Application
 
     meta = meta || EventMetadata.new
 
-    # Capture previous values for change detection in downstream consumers
-    previous_event_start = meta.event_start if meta.persisted?
-    previous_event_end = meta.event_end if meta.persisted?
-    previous_system_id = meta.system_id if meta.persisted?
-    previous_host_email = meta.host_email if meta.persisted?
+    # `previous_meta` (when supplied) represents a different prior record
+    # (e.g. the old room when an event is moved between systems) and takes
+    # precedence over the current `meta`.
+    if previous_meta
+      previous_event_start = previous_meta.event_start
+      previous_event_end = previous_meta.event_end
+      previous_system_id = previous_meta.system_id
+      previous_host_email = previous_meta.host_email
+    elsif meta.persisted?
+      previous_event_start = meta.event_start
+      previous_event_end = meta.event_end
+      previous_system_id = meta.system_id
+      previous_host_email = meta.host_email
+    end
 
     if !meta.persisted?
       meta.event_id = event.id.as(String)
