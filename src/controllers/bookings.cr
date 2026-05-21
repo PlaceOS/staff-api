@@ -362,6 +362,11 @@ class Bookings < Application
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing one of booking_start, booking_end, booking_type"}], "error validating booking data")
     end
 
+    # Validate that booking_end is after booking_start
+    if booking.booking_end <= booking.booking_start
+      raise Error::ModelValidation.new([{field: "booking_end".as(String?), reason: "booking_end must be after booking_start"}], "error validating booking data")
+    end
+
     if return_available && !(booking.asset_ids_present? || booking.asset_id_present?)
       raise Error::ModelValidation.new([{field: nil.as(String?), reason: "Missing asset_ids or asset_id"}], "error validating booking data")
     end
