@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **bookings**: add include_linked guests (PPT-2375) ([#372](https://github.com/PlaceOS/staff-api/pull/372))
 - **events**: [PPT-2375] add previous detail to change signal ([#370](https://github.com/PlaceOS/staff-api/pull/370))
 - **bookings**: [PPT-2375] notify of changes after edit ([#364](https://github.com/PlaceOS/staff-api/pull/364))
 - [PPT-2420] added check calendar permission endpoint ([#365](https://github.com/PlaceOS/staff-api/pull/365))
