@@ -23,14 +23,6 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-RUN apk add \
-  --update \
-  --no-cache \
-  libunwind-static \
-  libunwind-dev \
-  xz-static \
-  xz-dev
-
 # Install shards for caching
 COPY shard.yml .
 COPY shard.override.yml .
@@ -58,7 +50,7 @@ RUN mkdir deps
 
 # Extract binary dependencies
 RUN for binary in /app/bin/*; do \
-        file "$binary" | grep -q ELF || continue; \
+        file "$binary" | grep -q "dynamically linked" || continue; \
         ldd "$binary" | \
         tr -s '[:blank:]' '\n' | \
         grep '^/' | \
