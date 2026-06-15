@@ -29,6 +29,9 @@ dependencies:
   secrets-env:
     github: place-labs/secrets-env
 
+  dns:
+    github: spider-gazelle/dns
+
 development_dependencies:
   ameba:
     github: veelenga/ameba
