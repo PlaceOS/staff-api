@@ -51,7 +51,7 @@ shards:
 
   dns:
     git: https://github.com/spider-gazelle/dns.git
-    version: 1.6.0
+    version: 1.6.1
 
   ed25519:
     git: https://github.com/spider-gazelle/ed25519.git
@@ -151,7 +151,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.98.0
+    version: 9.98.1
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
