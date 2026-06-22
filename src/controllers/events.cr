@@ -1230,7 +1230,7 @@ class Events < Application
     end
 
     # if it doesn't exist then we need to fallback to getting the events
-    meta = if mdata = query.to_a.first?
+    meta = if mdata = on_primary { query.to_a.first? }
              if user_token.guest_scope?
                raise Error::Forbidden.new("guest #{user_token.id} attempting to edit an event they are not associated with") unless merge && guest_event_id.in?({mdata.event_id, mdata.recurring_master_id, mdata.resource_master_id, mdata.ical_uid})
              elsif mdata.host_email.downcase != user.email.downcase
@@ -1275,7 +1275,7 @@ class Events < Application
              is_host = event_host.downcase == cal_id.downcase
 
              # attempt to find the metadata
-             get_migrated_metadata(event, system_id) || EventMetadata.create!(
+             on_primary { get_migrated_metadata(event, system_id) } || EventMetadata.create!(
                system_id: upstream_system_id,
                event_id: upstream_event_id,
                recurring_master_id: (event.recurring_event_id || event.id if event.recurring && is_host),
@@ -1898,7 +1898,7 @@ class Events < Application
 
     # Create the guest model if not already in the database
     guest = begin
-      Guest.by_tenant(tenant.id).find_by(email: guest_email)
+      on_primary { Guest.by_tenant(tenant.id).find_by(email: guest_email) }
     rescue PgORM::Error::RecordNotFound
       g = Guest.new(
         tenant_id: tenant.id,
@@ -1924,7 +1924,7 @@ class Events < Application
 
     is_host = meta_event_host.downcase == cal_id.downcase
 
-    eventmeta = get_migrated_metadata(event, system_id) || EventMetadata.create!(
+    eventmeta = on_primary { get_migrated_metadata(event, system_id) } || EventMetadata.create!(
       system_id: meta_system_id,
       event_id: meta_event_id,
       recurring_master_id: (event.recurring_event_id || event.id if event.recurring && is_host),
@@ -1939,7 +1939,7 @@ class Events < Application
 
     raise Error::BadUpstreamResponse.new("id must be present on event metadata") unless eventmeta_id = eventmeta.id
 
-    if attendee = Attendee.by_tenant(tenant.id).find_by?(guest_id: guest.id, event_id: eventmeta_id)
+    if attendee = on_primary { Attendee.by_tenant(tenant.id).find_by?(guest_id: guest.id, event_id: eventmeta_id) }
       attendee.update!(checked_in: checkin)
     else
       attendee = Attendee.create!(

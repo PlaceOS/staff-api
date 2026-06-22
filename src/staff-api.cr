@@ -69,6 +69,12 @@ else
   PgORM::Database.configure { |_| }
 end
 
+# Optionally route read-only queries to a separate read replica (e.g. a DNS
+# entry fronting one or more read-only pods). When PG_DATABASE_READ_URL is set,
+# SELECTs outside of a transaction are sent to the replica while all writes and
+# in-transaction reads continue to use the primary connection (PG_DATABASE_URL).
+PgORM::Database.parse_read(ENV["PG_DATABASE_READ_URL"]?)
+
 server = ActionController::Server.new(port, host)
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate

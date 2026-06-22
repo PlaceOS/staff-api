@@ -335,6 +335,15 @@ abstract class Application < ActionController::Base
     end
   end
 
+  # Runs the supplied read against the primary database, bypassing any read
+  # replica. Use this for the existence check of a find-or-create: a lagging
+  # replica may not yet see a row created by a recent/concurrent request, which
+  # would cause a duplicate insert. Pinning the gating read to the primary keeps
+  # the behaviour identical to a single-database deployment.
+  protected def on_primary(&)
+    PgORM::Database.with_connection { yield }
+  end
+
   protected def get_migrated_metadata(event : PlaceCalendar::Event, system_id : String) : EventMetadata?
     meta = get_event_metadata(event, system_id, search_recurring: true)
 
