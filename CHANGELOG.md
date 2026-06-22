@@ -2,6 +2,7 @@
 
 ### Feat
 
+- add support for read-replicas
 - add nonblocking DNS
 - [PPT-2525] Update crystal build for unwind support ([#375](https://github.com/PlaceOS/staff-api/pull/375))
 - **bookings**: add include_linked guests (PPT-2375) ([#372](https://github.com/PlaceOS/staff-api/pull/372))
