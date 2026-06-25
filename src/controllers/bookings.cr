@@ -4,24 +4,32 @@ class Bookings < Application
   # =====================
   # Filters
   # =====================
+  # SERIALIZABLE isolation closes the read-committed race where two concurrent
+  # create/update requests for the same asset+time both pass the clash check
+  # before either commits, producing duplicate active bookings. On a
+  # serialization failure (40001) or deadlock (40P01) the whole action is
+  # retried a few times with jittered backoff before giving up.
+  SERIALIZE_RETRY_CODES = {"40001", "40P01"}
+
   @[AC::Route::Filter(:around_action, only: [:create, :update])]
   def wrap_in_transaction(&)
-    # attempt = 0
-    # loop do
-    PgORM::Database.transaction do |_tx|
-      # tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-      yield
-    end
-    #   break
-    # rescue error : PQ::PQError
-    #   attempt += 1
-    #   raise error if attempt == 3
+    attempt = 0
+    loop do
+      PgORM::Database.transaction do |tx|
+        tx.connection.exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        yield
+      end
+      break
+    rescue error : PQ::PQError
+      # only transient serialization/deadlock failures are safe to retry;
+      # anything else (validation, conflict, etc.) must propagate immediately
+      raise error unless SERIALIZE_RETRY_CODES.includes?(error.field_message(:code))
+      attempt += 1
+      raise error if attempt >= 3
 
-    # most likely couldn't serialise the transaction
-    #   Log.info { "error serialising transaction: #{error.message}" }
-    #   backoff = 100 + rand(400)
-    #   sleep backoff.milliseconds
-    # end
+      Log.info { "retrying serialised booking transaction (attempt #{attempt}): #{error.message}" }
+      sleep((100 + rand(400)).milliseconds)
+    end
   end
 
   # Skip actions that requres login
@@ -449,9 +457,11 @@ class Bookings < Application
     # Add the tenant details
     booking.tenant_id = tenant.id.not_nil!
 
-    # check there isn't a clashing booking
+    # check there isn't a clashing booking. we own clash detection here, so the
+    # subsequent save! does not need to repeat the (expensive) check.
     clashing_bookings = check_clashing(booking)
     raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
+    booking.skip_clash_check = true
 
     # clear history
     booking.history = [] of Booking::History
@@ -634,9 +644,15 @@ class Bookings < Application
       )
     end
 
-    # check there isn't a clashing booking
-    clashing_bookings = check_clashing(existing_booking)
-    raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
+    # only check for clashes when the booked slot itself changed (time, asset or
+    # recurrence pattern). metadata-only edits (approve, check-in, title, ...)
+    # can't introduce a clash, so skip the expensive check. when we do check, the
+    # save! below need not repeat it.
+    if existing_booking.slot_changed?
+      clashing_bookings = check_clashing(existing_booking)
+      raise Error::BookingConflict.new(clashing_bookings) if clashing_bookings.size > 0
+    end
+    existing_booking.skip_clash_check = true
 
     # check concurrent bookings don't exceed booking limits
     check_booking_limits(tenant, existing_booking, limit_override) if reset_state
@@ -1151,20 +1167,18 @@ class Bookings < Application
     booking_type = new_booking.booking_type
     user_id = new_booking.user_id || new_booking.booked_by_id
     zones = new_booking.zones || [] of String
+    # a booking with no zones can never share a zone, so no concurrent booking
+    # applies to it (matches the previous in-memory intersection behaviour)
+    return [] of Booking if zones.empty?
 
     query = Booking
       .by_tenant(tenant.id)
       .where(
-        "booking_start < ? AND booking_end > ? AND booking_type = ? AND user_id = ? AND rejected = FALSE AND deleted <> TRUE",
+        "booking_start < ? AND booking_end > ? AND booking_type = ? AND user_id = ? AND zones && #{new_booking.format_list_for_postgres(zones)} AND rejected = FALSE AND deleted <> TRUE",
         ending, starting, booking_type, user_id
       )
     query = query.where("id != ?", new_booking.id) unless new_booking.id.nil?
-    # TODO: Change to use the PostgreSQL `&&` array operator in the query above. (https://www.postgresql.org/docs/9.1/functions-array.html)
-    query.to_a.reject do |booking|
-      if (b_zones = booking.zones) && zones
-        (b_zones & zones).empty?
-      end
-    end
+    query.to_a
   end
 
   private def check_booking_limits(tenant, booking, limit_override = nil)
