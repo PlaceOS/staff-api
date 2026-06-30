@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **config**: add execution contexts
 - add additional specs
 - add support for read-replicas
 - add nonblocking DNS
