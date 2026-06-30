@@ -34,8 +34,10 @@ RUN shards install --production --ignore-crystal-version --skip-postinstall --sk
 COPY ./src src
 
 # Build App
+# -Dpreview_mt -Dexecution_context enable RFC 2 execution contexts so heavy
+# routes (e.g. bookings index) serialise responses in dedicated parallel pools.
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --error-trace --static
+    shards build --production --error-trace --static -Dpreview_mt -Dexecution_context
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 

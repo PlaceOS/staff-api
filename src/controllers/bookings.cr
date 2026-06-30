@@ -142,7 +142,7 @@ class Bookings < Application
   # lists bookings based on the parameters provided
   #
   # booking_type is required unless event_id or ical_uid is present
-  @[AC::Route::GET("/")]
+  @[AC::Route::GET("/", execution_context: "bookings")]
   def index(
     @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
     starting : Int64 = Time.utc.to_unix,

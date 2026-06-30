@@ -24,6 +24,16 @@ alias History = PlaceOS::Model::History
 # Server required after application controllers
 require "action-controller/server"
 
+# Execution contexts (no-ops without -Dpreview_mt -Dexecution_context).
+# The bookings index route can return large payloads, so it runs the whole
+# request in a dedicated "bookings" context. Unbound routes offload their
+# response serialisation to the shared response context.
+ActionController::ExecutionContext.define "bookings"
+ActionController::ExecutionContext.parallelism "bookings", ENV["BOOKINGS_WORKERS"]?.try(&.to_i) || 4
+
+ActionController::ExecutionContext.offload_responses
+ActionController::ExecutionContext.response_parallelism = ENV["OFFLOAD_WORKERS"]?.try(&.to_i) || 4
+
 # Filter out sensitive params that shouldn't be logged
 filter_params = ["password", "bearer_token"]
 keeps_headers = ["X-Request-ID"]
