@@ -74,6 +74,7 @@ end
 # SELECTs outside of a transaction are sent to the replica while all writes and
 # in-transaction reads continue to use the primary connection (PG_DATABASE_URL).
 PgORM::Database.parse_read(ENV["PG_DATABASE_READ_URL"]?)
+PgORM::Settings.to_uri
 
 server = ActionController::Server.new(port, host)
 
