@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **config.cr**: make OFFLOAD_WORKERS optional
 - **config**: add execution contexts
 - add additional specs
 - add support for read-replicas
