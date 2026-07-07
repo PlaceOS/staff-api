@@ -31,8 +31,10 @@ require "action-controller/server"
 ActionController::ExecutionContext.define "bookings"
 ActionController::ExecutionContext.parallelism "bookings", ENV["BOOKINGS_WORKERS"]?.try(&.to_i) || 4
 
-ActionController::ExecutionContext.offload_responses
-ActionController::ExecutionContext.response_parallelism = ENV["OFFLOAD_WORKERS"]?.try(&.to_i) || 4
+if (response_parallelism = ENV["OFFLOAD_WORKERS"]?.try(&.to_i)) && response_parallelism > 0
+  ActionController::ExecutionContext.offload_responses
+  ActionController::ExecutionContext.response_parallelism = response_parallelism
+end
 
 # Filter out sensitive params that shouldn't be logged
 filter_params = ["password", "bearer_token"]
