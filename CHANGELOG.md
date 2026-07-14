@@ -2,6 +2,9 @@
 
 ### Feat
 
+- **config.cr**: make OFFLOAD_WORKERS optional
+- **config**: add execution contexts
+- add additional specs
 - add support for read-replicas
 - add nonblocking DNS
 - [PPT-2525] Update crystal build for unwind support ([#375](https://github.com/PlaceOS/staff-api/pull/375))
@@ -114,6 +117,7 @@
 
 ### Fix
 
+- **bookings**: serializable transaction for bookings
 - **events**: correctly signal on room only change (PPT-2375) ([#374](https://github.com/PlaceOS/staff-api/pull/374))
 - **events**: support #guest_list ical_uid lookup (PPT-2375) ([#371](https://github.com/PlaceOS/staff-api/pull/371))
 - **bookings**: recurring booking clash detection edge case
