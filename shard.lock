@@ -139,7 +139,7 @@ shards:
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.29.4
+    version: 4.30.0
 
   placeos:
     git: https://github.com/placeos/crystal-client.git
@@ -167,7 +167,7 @@ shards:
 
   tasker:
     git: https://github.com/spider-gazelle/tasker.git
-    version: 3.0.1
+    version: 3.1.0
 
   timecop:
     git: https://github.com/crystal-community/timecop.cr.git
