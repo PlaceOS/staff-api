@@ -4749,9 +4749,10 @@ paths:
           nullable: true
       - name: notify_existing_attendees
         in: query
-        description: (office365 only) set false when the only change is adding attendees
-          to avoid emailing existing attendees; note that when false only the attendee
-          changes are sent upstream
+        description: '(office365 only) set to false when the only change is adding
+          attendees, so that existing attendees aren''t notified by email. Warning:
+          while false, only the attendee changes are propagated to the provider -
+          any other edits in the request body are ignored'
         example: "false"
         schema:
           type: boolean
@@ -4993,9 +4994,10 @@ paths:
           nullable: true
       - name: notify_existing_attendees
         in: query
-        description: (office365 only) set false when the only change is adding attendees
-          to avoid emailing existing attendees; note that when false only the attendee
-          changes are sent upstream
+        description: '(office365 only) set to false when the only change is adding
+          attendees, so that existing attendees aren''t notified by email. Warning:
+          while false, only the attendee changes are propagated to the provider -
+          any other edits in the request body are ignored'
         example: "false"
         schema:
           type: boolean

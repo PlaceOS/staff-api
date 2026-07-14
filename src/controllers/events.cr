@@ -564,7 +564,7 @@ class Events < Application
     associated_system : String? = nil,
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(description: "(office365 only) set false when the only change is adding attendees to avoid emailing existing attendees; note that when false only the attendee changes are sent upstream", example: "false")]
+    @[AC::Param::Info(description: "(office365 only) set to false when the only change is adding attendees, so that existing attendees aren't notified by email. Warning: while false, only the attendee changes are propagated to the provider - any other edits in the request body are ignored", example: "false")]
     notify_existing_attendees : Bool = true,
   ) : PlaceCalendar::Event
     changes.id = event_id = original_id
@@ -933,9 +933,7 @@ class Events < Application
     # Add the new attendee to the event
     event.attendees = (event.attendees || [] of PlaceCalendar::Event::Attendee) << attendee
 
-    # Update the event with the new attendee. When notify_existing_attendees is
-    # false (the default), office365 only emails the newly added attendee rather
-    # than spamming everyone already on the booking.
+    # Update the event with the new attendee.
     updated_event = client.update_event(user_id: host, event: event, calendar_id: host, notify_existing_attendees: notify_existing_attendees)
     raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
 
