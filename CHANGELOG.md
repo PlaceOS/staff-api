@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: skip notification on attendee only changes (PPT-2514) ([#377](https://github.com/PlaceOS/staff-api/pull/377))
 - **config.cr**: make OFFLOAD_WORKERS optional
 - **config**: add execution contexts
 - add additional specs
