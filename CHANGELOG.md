@@ -118,6 +118,7 @@
 
 ### Fix
 
+- **bookings**: don't reset on unallocated bookings
 - **bookings**: serializable transaction for bookings
 - **events**: correctly signal on room only change (PPT-2375) ([#374](https://github.com/PlaceOS/staff-api/pull/374))
 - **events**: support #guest_list ical_uid lookup (PPT-2375) ([#371](https://github.com/PlaceOS/staff-api/pull/371))
