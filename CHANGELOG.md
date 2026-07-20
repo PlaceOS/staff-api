@@ -118,6 +118,7 @@
 
 ### Fix
 
+- **bookings**: resource_ids typo ([#378](https://github.com/PlaceOS/staff-api/pull/378))
 - **bookings**: don't reset on unallocated bookings
 - **bookings**: serializable transaction for bookings
 - **events**: correctly signal on room only change (PPT-2375) ([#374](https://github.com/PlaceOS/staff-api/pull/374))
