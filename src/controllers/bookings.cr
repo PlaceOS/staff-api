@@ -625,7 +625,11 @@ class Bookings < Application
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
-    reset_state = existing_booking.asset_ids_changed? && original_assets != existing_booking.asset_ids
+    if existing_booking.asset_ids_changed? && original_assets != existing_booking.asset_ids
+      original_asset = original_assets.first?
+      reset_state = true if original_asset && !original_asset.starts_with?("unallocated")
+    end
+
     if existing_booking.booking_start_changed? || existing_booking.booking_end_changed?
       raise Error::NotAllowed.new("editing booking times is allowed on parent bookings only.") unless existing_booking.parent?
 
