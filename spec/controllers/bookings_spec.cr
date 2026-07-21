@@ -2462,7 +2462,7 @@ describe Bookings do
   end
 
   describe "booking_limits" do
-    before_all do
+    before_each do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
@@ -2477,6 +2477,11 @@ describe Bookings do
 
     after_all do
       WebMock.reset
+      # these specs mutate the shared tenant's booking limits; restore the
+      # default (no limits) so the state does not leak into other specs.
+      tenant = get_tenant
+      tenant.booking_limits = JSON::Any.new({} of String => JSON::Any)
+      tenant.save!
     end
 
     # add support for configurable booking limits on resources
@@ -3158,7 +3163,15 @@ describe Bookings do
         .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     end
 
+    # Reset and re-register the stubs at the start of each spec so our capturing
+    # stub is the first match (WebMock uses the first matching stub, not the
+    # last) and any stubs / allow_net_connect leaked from earlier specs are
+    # cleared. The signals are emitted from spawned fibres, so `wait_until` polls
+    # until they arrive rather than relying on a fixed sleep.
     it "#create emits staff/booking/changed with action create" do
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return do |request|
@@ -3176,7 +3189,7 @@ describe Bookings do
       client.post(BOOKINGS_BASE, headers: headers,
         body: %({"asset_id":"desk-signal-1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}))
 
-      sleep 50.milliseconds # let spawn fibres run
+      wait_until { captured_bodies.size >= 1 }
 
       captured_bodies.size.should be >= 1
       payload = JSON.parse(captured_bodies.last)
@@ -3186,6 +3199,9 @@ describe Bookings do
     end
 
     it "#update with shrunk time window emits action metadata_changed with previous values" do
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return do |request|
@@ -3203,7 +3219,7 @@ describe Bookings do
       created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
         body: %({"asset_id":"desk-signal-2","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 1 }
 
       # Shrink the window: move start later, move end earlier
       new_starting = starting + 600
@@ -3212,7 +3228,7 @@ describe Bookings do
       client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
         body: %({"booking_start":#{new_starting},"booking_end":#{new_ending}}))
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 2 }
 
       # The last captured body should be from the update, not the create
       captured_bodies.size.should be >= 2
@@ -3225,6 +3241,9 @@ describe Bookings do
     end
 
     it "#update with metadata-only change emits action metadata_changed" do
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return do |request|
@@ -3242,13 +3261,13 @@ describe Bookings do
       created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
         body: %({"asset_id":"desk-signal-3","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 1 }
 
       # Update only the title — no visitor-relevant fields change
       client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
         body: %({"title":"just a title change"}))
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 2 }
 
       captured_bodies.size.should be >= 2
       update_payload = JSON.parse(captured_bodies.last)
@@ -3257,6 +3276,9 @@ describe Bookings do
     end
 
     it "#destroy emits staff/booking/changed with action cancelled" do
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
         .to_return do |request|
@@ -3272,11 +3294,11 @@ describe Bookings do
       created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
         body: %({"asset_id":"desk-signal-4","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 1 }
 
       client.delete("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers)
 
-      sleep 50.milliseconds
+      wait_until { captured_bodies.size >= 2 }
 
       captured_bodies.size.should be >= 2
       destroy_payload = JSON.parse(captured_bodies.last)
