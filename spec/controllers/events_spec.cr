@@ -1627,5 +1627,85 @@ describe Events, tags: ["event"] do
       payload["previous_host_email"].as_s.should eq initial_host
       payload["host"].as_s.should eq new_host
     end
+
+    it "#notify_change ignores the stale room-mailbox echo but never the master copy" do
+      WebMock.reset
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return(body: "")
+
+      captured_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+        .to_return do |request|
+          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+
+      system_id = "sys-mirror-echo-test"
+      PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
+      test_system = PlaceOS::Model::Generator.control_system
+      test_system.id = system_id
+      test_system.save!
+
+      # Organizer and room copies share one ical_uid -> same metadata record.
+      master_event_id = "evt-mirror-master"
+      room_event_id = "evt-mirror-room"
+      ical_uid = "ical-mirror-001"
+      host = "host@example.com"
+      room = "test-room@example.com"
+      wed = Time.utc(2024, 6, 1, 9, 0, 0).to_unix
+      wed_end = Time.utc(2024, 6, 1, 10, 0, 0).to_unix
+      thu = Time.utc(2024, 6, 2, 9, 0, 0).to_unix
+      thu_end = Time.utc(2024, 6, 2, 10, 0, 0).to_unix
+      fri = Time.utc(2024, 6, 3, 9, 0, 0).to_unix
+      fri_end = Time.utc(2024, 6, 3, 10, 0, 0).to_unix
+
+      tenant = get_tenant
+      EventMetadata.create!(
+        tenant_id: tenant.id,
+        system_id: system_id,
+        event_id: master_event_id,
+        host_email: host,
+        resource_calendar: room,
+        event_start: wed,
+        event_end: wed_end,
+        ical_uid: ical_uid,
+      )
+
+      event_body = ->(id : String, starting : Int64, ending : Int64) do
+        %({"event_start": #{starting}, "event_end": #{ending}, "id": "#{id}", "host": "#{host}", "ical_uid": "#{ical_uid}", "attendees": [], "private": false, "all_day": false})
+      end
+
+      # 1) Organizer/master copy moves the event Wed -> Thu: a real change.
+      client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{master_event_id}",
+        headers: headers, body: event_body.call(master_event_id, thu, thu_end)).status_code.should eq(202)
+      sleep 100.milliseconds
+
+      captured_bodies.size.should eq 1
+      first = JSON.parse(captured_bodies.last)
+      first["event_start"].as_i64.should eq thu
+      first["previous_event_start"].as_i64.should eq wed
+
+      # 2) Room copy lags and reports the OLD time (Wed): the stale echo that must
+      #    now be ignored.
+      client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{room_event_id}",
+        headers: headers, body: event_body.call(room_event_id, wed, wed_end)).status_code.should eq(202)
+      sleep 100.milliseconds
+
+      captured_bodies.size.should eq 1                                    # no reversed signal emitted
+      EventMetadata.find_by(ical_uid: ical_uid).event_start.should eq thu # record not corrupted
+
+      # 3) A further master-copy change (Thu -> Fri) within the window is a real
+      #    edit and must still emit — the guard only targets mirror copies.
+      client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{master_event_id}",
+        headers: headers, body: event_body.call(master_event_id, fri, fri_end)).status_code.should eq(202)
+      sleep 100.milliseconds
+
+      captured_bodies.size.should eq 2
+      last = JSON.parse(captured_bodies.last)
+      last["event_start"].as_i64.should eq fri
+      last["previous_event_start"].as_i64.should eq thu
+    end
   end
 end
