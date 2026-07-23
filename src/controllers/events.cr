@@ -1985,6 +1985,10 @@ class Events < Application
   # NOTIFICATIONS
   # ==========================
 
+  # Window after a metadata update within which a differing non-host webhook from
+  # a non-master mailbox copy is treated as a stale echo (PPT-2375).
+  STALE_MIRROR_ECHO_WINDOW = 30.seconds
+
   def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true, previous_meta : EventMetadata? = nil)
     raise Error::InconsistentState.new("event_start must be present on event") unless event_start = event.event_start
     raise Error::InconsistentState.new("event_end must be present on event") unless event_end = event.event_end
@@ -1999,6 +2003,19 @@ class Events < Application
                   meta.event_end == ending &&
                   meta.cancelled == cancelled &&
                   meta.host_email == event.host.as(String).downcase
+
+    # Office365 sends a webhook per mailbox copy (organizer + room), sharing one
+    # metadata record. A lagging room copy can report the OLD time just after the
+    # organizer's edit advanced the record, emitting a reversed signal and
+    # corrupting the record (PPT-2375). Ignore such a lagging mirror: a non-host
+    # webhook for a non-master copy that differs from a just-updated record. A
+    # genuine room-only change arrives later, outside the window.
+    if !is_host && meta && meta.persisted? && meta.event_id != event.id &&
+       (meta.event_start != starting || meta.event_end != ending || meta.system_id != system.id) &&
+       (last_updated = meta.updated_at) && (Time.utc - last_updated) < STALE_MIRROR_ECHO_WINDOW
+      Log.info { "ignoring stale mirror echo for event #{meta.event_id} (mailbox copy #{event.id}) on #{system.id}" }
+      return
+    end
 
     meta = meta || EventMetadata.new
 
