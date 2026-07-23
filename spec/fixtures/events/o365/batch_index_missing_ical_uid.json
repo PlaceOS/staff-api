@@ -1,0 +1,163 @@
+{
+  "responses": [
+    {
+      "id": 0,
+      "status": 200,
+      "body": {
+        "value": [
+          {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendar/events/$entity",
+            "@odata.etag": "W/\"dPHcBLqEvkGEgQ87r+efLAAAfPJXoQ==\"",
+            "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=",
+            "createdDateTime": "2020-08-31T04:20:56.2768516Z",
+            "lastModifiedDateTime": "2020-08-31T04:20:56.7915535Z",
+            "changeKey": "dPHcBLqEvkGEgQ87r+efLAAAfPJXoQ==",
+            "categories": [],
+            "originalStartTimeZone": "Australia/Sydney",
+            "originalEndTimeZone": "Australia/Sydney",
+            "iCalUId": "040000008200E00074C5B7101A82E008000000008CD0441F4E7FD60100000000000000001000000087A54520ECE5BD4AA552D826F3718E7F",
+            "reminderMinutesBeforeStart": 15,
+            "isReminderOn": true,
+            "hasAttachments": false,
+            "subject": "Event with ical_uid",
+            "bodyPreview": "This event has an ical_uid",
+            "importance": "normal",
+            "sensitivity": "normal",
+            "isAllDay": false,
+            "isCancelled": false,
+            "isOrganizer": true,
+            "responseRequested": true,
+            "seriesMasterId": null,
+            "showAs": "busy",
+            "type": "singleInstance",
+            "webLink": "https://outlook.office365.com/owa/",
+            "onlineMeetingUrl": null,
+            "isOnlineMeeting": false,
+            "onlineMeetingProvider": "unknown",
+            "allowNewTimeProposals": true,
+            "recurrence": null,
+            "onlineMeeting": null,
+            "responseStatus": {
+              "response": "organizer",
+              "time": "0001-01-01T00:00:00Z"
+            },
+            "body": {
+              "contentType": "text",
+              "content": "This event has an ical_uid"
+            },
+            "start": {
+              "dateTime": "2020-08-31T10:00:00.0000000",
+              "timeZone": "Australia/Sydney"
+            },
+            "end": {
+              "dateTime": "2020-08-31T10:30:00.0000000",
+              "timeZone": "Australia/Sydney"
+            },
+            "location": {
+              "displayName": "",
+              "locationType": "default",
+              "uniqueIdType": "unknown",
+              "address": {},
+              "coordinates": {}
+            },
+            "locations": [],
+            "attendees": [
+              {
+                "type": "required",
+                "status": {
+                  "response": "none",
+                  "time": "0001-01-01T00:00:00Z"
+                },
+                "emailAddress": {
+                  "name": "Toby Carvan",
+                  "address": "testing@redant.com.au"
+                }
+              }
+            ],
+            "organizer": {
+              "emailAddress": {
+                "name": "Developer",
+                "address": "dev@acaprojects.onmicrosoft.com"
+              }
+            }
+          },
+          {
+            "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('dev%40acaprojects.com')/calendar/events/$entity",
+            "@odata.etag": "W/\"abc123==\"",
+            "id": "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sMISSINGICALUID=",
+            "createdDateTime": "2020-08-31T05:00:00.0000000Z",
+            "lastModifiedDateTime": "2020-08-31T05:00:00.0000000Z",
+            "changeKey": "abc123==",
+            "categories": [],
+            "originalStartTimeZone": "Australia/Sydney",
+            "originalEndTimeZone": "Australia/Sydney",
+            "reminderMinutesBeforeStart": 15,
+            "isReminderOn": true,
+            "hasAttachments": false,
+            "subject": "Event missing ical_uid",
+            "bodyPreview": "This event is missing ical_uid field",
+            "importance": "normal",
+            "sensitivity": "normal",
+            "isAllDay": false,
+            "isCancelled": false,
+            "isOrganizer": true,
+            "responseRequested": true,
+            "seriesMasterId": null,
+            "showAs": "busy",
+            "type": "singleInstance",
+            "webLink": "https://outlook.office365.com/owa/",
+            "onlineMeetingUrl": null,
+            "isOnlineMeeting": false,
+            "onlineMeetingProvider": "unknown",
+            "allowNewTimeProposals": true,
+            "recurrence": null,
+            "onlineMeeting": null,
+            "responseStatus": {
+              "response": "organizer",
+              "time": "0001-01-01T00:00:00Z"
+            },
+            "body": {
+              "contentType": "text",
+              "content": "This event is missing ical_uid field"
+            },
+            "start": {
+              "dateTime": "2020-08-31T11:00:00.0000000",
+              "timeZone": "Australia/Sydney"
+            },
+            "end": {
+              "dateTime": "2020-08-31T11:30:00.0000000",
+              "timeZone": "Australia/Sydney"
+            },
+            "location": {
+              "displayName": "",
+              "locationType": "default",
+              "uniqueIdType": "unknown",
+              "address": {},
+              "coordinates": {}
+            },
+            "locations": [],
+            "attendees": [
+              {
+                "type": "required",
+                "status": {
+                  "response": "none",
+                  "time": "0001-01-01T00:00:00Z"
+                },
+                "emailAddress": {
+                  "name": "John Doe",
+                  "address": "john@example.com"
+                }
+              }
+            ],
+            "organizer": {
+              "emailAddress": {
+                "name": "Developer",
+                "address": "dev@acaprojects.onmicrosoft.com"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
