@@ -75,6 +75,26 @@ describe Events, tags: ["event"] do
       body.includes?(%("recurring_master_id": "#{master_event_id}"))
     end
 
+    it "#index should skip events with missing ical_uid and return the rest" do
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
+        .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
+        .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
+        .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_missing_ical_uid.json"))
+
+      now = 1.minutes.from_now.to_unix
+      later = 80.minutes.from_now.to_unix
+
+      body = JSON.parse(client.get("#{EVENTS_BASE}/?period_start=#{now}&period_end=#{later}", headers: headers).body).as_a
+
+      # The event with ical_uid should be returned
+      body.size.should eq(1)
+      body.first["title"].as_s.should eq("Event with ical_uid")
+    end
+
     it "#index should return a list of events with the most detailed metadata" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
