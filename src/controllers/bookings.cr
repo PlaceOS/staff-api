@@ -636,16 +636,17 @@ class Bookings < Application
       reset_state = true if existing_booking.booking_start < original_start || existing_booking.booking_end > original_end
     end
 
+    # We should never change the booked_by fields so instead let's add a history entry instead
     if reset_state
+      change_time = Time.utc.to_unix
       existing_booking.assign_attributes(
-        booked_by_id: user_token.id,
-        booked_by_email: PlaceOS::Model::Email.new(user.email),
-        booked_by_name: user.name,
         checked_in: false,
         rejected: false,
         approved: false,
-        last_changed: Time.utc.to_unix,
+        last_changed: change_time,
       )
+      existing_booking.history << Booking::History.new(state: :reserved, time: change_time, source: "updated by #{user.email}")
+      existing_booking.history_will_change!
     end
 
     # only check for clashes when the booked slot itself changed (time, asset or
