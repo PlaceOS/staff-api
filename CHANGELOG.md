@@ -118,6 +118,7 @@
 
 ### Fix
 
+- **bookings**: change reset behaviour
 - **events**: [PPT-2627] Skip  Exchange events with no ical_uid instead of raising ([#381](https://github.com/PlaceOS/staff-api/pull/381))
 - **bookings**: resource_ids typo ([#378](https://github.com/PlaceOS/staff-api/pull/378))
 - **bookings**: don't reset on unallocated bookings
