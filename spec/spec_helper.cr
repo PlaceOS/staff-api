@@ -42,7 +42,24 @@ def truncate_db
   Tenant.truncate
 end
 
+# Waits for an asynchronous expectation to be satisfied, yielding to the
+# scheduler between checks so spawned fibres (e.g. signal emitters) can run.
+# Returns as soon as the block is truthy, or after exhausting the budget.
+# Iteration-based (not wall-clock) so it is unaffected by any Timecop scaling.
+def wait_until(attempts : Int32 = 150, delay : Time::Span = 20.milliseconds, & : -> Bool) : Nil
+  attempts.times do
+    return if yield
+    sleep delay
+  end
+end
+
 Spec.before_each &->WebMock.reset
+
+# Timecop.scale/travel push onto an internal stack that is never popped unless a
+# block form is used (see lib/timecop). Individual specs that scale time without
+# restoring it would otherwise leak scaled time into every subsequent example
+# (e.g. breaking sleep-based fibre timing). Clear the stack after every example.
+Spec.after_each { Timecop.return }
 
 module Mock
   extend self

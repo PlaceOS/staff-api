@@ -12,6 +12,14 @@ describe Bookings do
     Attendee.truncate
     Guest.truncate
 
+    # these specs rely on the tenant having no booking limits configured; other
+    # specs mutate the shared tenant, so establish a clean baseline here.
+    tenant = get_tenant
+    unless tenant.booking_limits.as_h.empty?
+      tenant.booking_limits = JSON::Any.new({} of String => JSON::Any)
+      tenant.save!
+    end
+
     # the create action fans out signals to the engine -- stub them
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
