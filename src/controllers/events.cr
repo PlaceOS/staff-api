@@ -196,7 +196,10 @@ class Events < Application
       # However they have a new `uid` field on the beta API which we can use when it's moved to production
 
       raise Error::BadUpstreamResponse.new("id must be present on event") unless event_id = event.id
-      raise Error::BadUpstreamResponse.new("ical_uid must be present on event") unless event_ical_uid = event.ical_uid
+      unless event_ical_uid = event.ical_uid
+        Log.warn { "skipping event #{event_id} due to missing ical_uid" }
+        next
+      end
 
       # Attempt to return metadata regardless of system id availability
       event_ids << event_id
@@ -300,6 +303,7 @@ class Events < Application
     # return array of standardised events
     render response_code, json: results.compact_map { |(calendar_id, system, event)|
       next if icaluid && event.ical_uid != icaluid
+      next unless event.ical_uid
 
       parent_meta = false
       event_id = client.client_id == :office365 ? event.ical_uid : event.id
