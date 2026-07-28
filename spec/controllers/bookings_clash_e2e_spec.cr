@@ -11,8 +11,18 @@ describe Bookings do
     Booking.clear
     Attendee.truncate
     Guest.truncate
+  end
 
-    # the create action fans out signals to the engine -- stub them
+  # the create action fans out signals to the engine -- stub them.
+  #
+  # NOTE:: these must NOT go in the `Spec.before_each` above. `Spec.before_each`
+  # is GLOBAL: it runs before every example in the whole suite, so registering
+  # stubs there shadows stubs other spec files register inside their own
+  # examples -- `WebMock::StubRegistry#find_stub` returns the FIRST match, and
+  # these would always be registered first. That silently broke the
+  # "signal payloads" specs in bookings_spec.cr, whose capturing stub for the
+  # same channel never matched.
+  stub_engine = -> do
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
       .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
     WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed").to_return(body: "")
@@ -29,6 +39,7 @@ describe Bookings do
 
   describe "recurring vs a single-occurrence booking" do
     it "rejects a single booking that clashes with one occurrence of a recurring booking" do
+      stub_engine.call
       created = BookingsHelper.http_create_booking(
         asset_id: "desk-r1", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 11, 0),
         recurrence_type: "DAILY", recurrence_end: rec_end, timezone: "UTC")
@@ -41,6 +52,7 @@ describe Bookings do
     end
 
     it "allows a single booking on the recurring asset at a non-overlapping time" do
+      stub_engine.call
       created = BookingsHelper.http_create_booking(
         asset_id: "desk-r2", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 11, 0),
         recurrence_type: "DAILY", recurrence_end: rec_end, timezone: "UTC")
@@ -53,6 +65,7 @@ describe Bookings do
     end
 
     it "allows a single booking on a different asset at the same time as an occurrence" do
+      stub_engine.call
       created = BookingsHelper.http_create_booking(
         asset_id: "desk-r3", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 11, 0),
         recurrence_type: "DAILY", recurrence_end: rec_end, timezone: "UTC")
@@ -66,6 +79,7 @@ describe Bookings do
 
   describe "interleaved recurring bookings" do
     it "rejects two interleaved recurring bookings on the same asset (partial time overlap)" do
+      stub_engine.call
       first = BookingsHelper.http_create_booking(
         asset_id: "desk-i1", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 12, 0),
         recurrence_type: "DAILY", recurrence_end: rec_end, timezone: "UTC")
@@ -79,6 +93,7 @@ describe Bookings do
     end
 
     it "allows two adjacent recurring bookings on the same asset (no overlap)" do
+      stub_engine.call
       first = BookingsHelper.http_create_booking(
         asset_id: "desk-i2", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 11, 0),
         recurrence_type: "DAILY", recurrence_end: rec_end, timezone: "UTC")
@@ -92,6 +107,7 @@ describe Bookings do
     end
 
     it "allows two recurring bookings on the same asset that fall on different weekdays" do
+      stub_engine.call
       monday = base
       until monday.day_of_week.monday?
         monday = monday.shift(days: 1)
@@ -120,6 +136,7 @@ describe Bookings do
     perth = Time::Location.load("Australia/Perth") # UTC+8
 
     it "rejects a second overlapping all-day recurring booking that wraps UTC midnight" do
+      stub_engine.call
       # Perth-local 00:00 -> 23:59 wraps UTC midnight (16:00 prev day -> 15:59);
       # this is the row whose inverted time-of-day used to be dropped from the
       # candidate set, letting a duplicate through.
@@ -142,6 +159,7 @@ describe Bookings do
     end
 
     it "allows the second all-day recurring booking on a different desk" do
+      stub_engine.call
       b1_start = Time.local(2026, 7, 6, 0, 0, 0, location: perth)
       b1_end = Time.local(2026, 7, 6, 23, 59, 0, location: perth)
       perth_rec_end = b1_start.shift(days: 7).to_unix
@@ -162,6 +180,7 @@ describe Bookings do
 
   describe "interleaved single bookings" do
     it "rejects a partially overlapping single booking on the same asset" do
+      stub_engine.call
       first = BookingsHelper.http_create_booking(
         asset_id: "desk-s1", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 12, 0))
       status.call(first).should eq 201
@@ -172,6 +191,7 @@ describe Bookings do
     end
 
     it "allows an adjacent single booking on the same asset" do
+      stub_engine.call
       first = BookingsHelper.http_create_booking(
         asset_id: "desk-s2", booking_start: at.call(0, 10, 0), booking_end: at.call(0, 11, 0))
       status.call(first).should eq 201

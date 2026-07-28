@@ -1514,7 +1514,15 @@ describe Bookings do
           Booking::History.new(Booking::State::Cancelled, Time.local.to_unix),
         ],
       }.to_json).body).as_h
-      updated["history"].as_a.size.should eq(1)
+
+      # the update moves booking_start earlier, which resets the booking state
+      # and appends a *server generated* history entry (see
+      # `fix(bookings): change reset behaviour`). The client supplied history is
+      # still ignored entirely -- none of its states make it through.
+      history = updated["history"].as_a
+      history.size.should eq(2)
+      history.map(&.["state"].as_s).should eq(["reserved", "reserved"])
+      history.last["source"].as_s.should start_with("updated by ")
     end
   end
 
