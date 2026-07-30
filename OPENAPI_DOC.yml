@@ -4715,7 +4715,29 @@ paths:
 
         set to the current rooms associated system.
 
-        Then in the event body, the `system_id` field should be the new system.'
+        Then in the event body, the `system_id` field should be the new system.
+
+
+        Changing `host` hands the meeting to that person. Office365 cannot change
+        a
+
+        meeting''s organiser, so this does what a person does in Outlook: the meeting
+
+        is cancelled and sent again from the new host''s calendar, which re-invites
+
+        the attendees and gives the event a new id and ical uid. Recurring meetings
+
+        are refused. A `host` matching the requesting user is ignored, as front ends
+
+        fall back to the current user when they cannot resolve the organiser.
+
+
+        `extension_data.host_override` instead records who is hosting while leaving
+
+        the meeting on the organiser''s calendar — for deployments that book rooms
+        as
+
+        a service account. Send an empty string to clear it.'
       tags:
       - Events
       operationId: Events_update
@@ -4960,7 +4982,29 @@ paths:
 
         set to the current rooms associated system.
 
-        Then in the event body, the `system_id` field should be the new system.'
+        Then in the event body, the `system_id` field should be the new system.
+
+
+        Changing `host` hands the meeting to that person. Office365 cannot change
+        a
+
+        meeting''s organiser, so this does what a person does in Outlook: the meeting
+
+        is cancelled and sent again from the new host''s calendar, which re-invites
+
+        the attendees and gives the event a new id and ical uid. Recurring meetings
+
+        are refused. A `host` matching the requesting user is ignored, as front ends
+
+        fall back to the current user when they cannot resolve the organiser.
+
+
+        `extension_data.host_override` instead records who is hosting while leaving
+
+        the meeting on the organiser''s calendar — for deployments that book rooms
+        as
+
+        a service account. Send an empty string to clear it.'
       tags:
       - Events
       operationId: Events_update{2}
