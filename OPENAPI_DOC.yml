@@ -4737,7 +4737,9 @@ paths:
         the meeting on the organiser''s calendar — for deployments that book rooms
         as
 
-        a service account. Send an empty string to clear it.'
+        a service account. Send an empty string to clear it. Moving the meeting
+
+        supersedes it, as the new host owns the meeting afterwards.'
       tags:
       - Events
       operationId: Events_update
@@ -5004,7 +5006,9 @@ paths:
         the meeting on the organiser''s calendar — for deployments that book rooms
         as
 
-        a service account. Send an empty string to clear it.'
+        a service account. Send an empty string to clear it. Moving the meeting
+
+        supersedes it, as the new host owns the meeting afterwards.'
       tags:
       - Events
       operationId: Events_update{2}

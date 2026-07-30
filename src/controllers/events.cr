@@ -568,7 +568,8 @@ class Events < Application
   #
   # `extension_data.host_override` instead records who is hosting while leaving
   # the meeting on the organiser's calendar — for deployments that book rooms as
-  # a service account. Send an empty string to clear it.
+  # a service account. Send an empty string to clear it. Moving the meeting
+  # supersedes it, as the new host owns the meeting afterwards.
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
@@ -646,11 +647,14 @@ class Events < Application
     # which Office365 only allows by cancelling and re-sending it (PPT-2375).
     new_organiser = requested_organiser(changes, organiser: host, requester: user_email)
 
-    # A host reassignment that keeps the organiser is recorded against the event
-    # metadata instead. Whoever it names still has to be in the meeting to host
-    # it, so that it reaches their calendar.
-    reassigned_host = requested_host(changes, organiser: host, requester: user_email)
-    if reassigned_host && !new_organiser && !reassigned_host.in?(attendees)
+    # Naming a host without moving the meeting is recorded against the event
+    # metadata instead, for deployments where the organiser is a room or a
+    # service account rather than a person. A transfer supersedes it: the new
+    # host owns the meeting afterwards, so there is nothing left to override.
+    # Whoever it names still has to be in the meeting to host it, so that it
+    # reaches their calendar.
+    reassigned_host = host_override(changes.extension_data) unless new_organiser
+    if reassigned_host && !reassigned_host.in?(attendees)
       new_host_attendee = PlaceCalendar::Event::Attendee.new(name: reassigned_host, email: reassigned_host, response_status: "none")
       new_host_attendee.visit_expected = true
       changes.attendees << new_host_attendee
@@ -756,7 +760,7 @@ class Events < Application
       previous_host = previous_record.try { |record| host_override(record.ext_data) || record.host_email }
 
       extension_data = changes.extension_data
-      if extension_data || reassigned_host
+      if extension_data || reassigned_host || new_organiser
         meta_ext_data = meta.ext_data
         data = if (val = meta_ext_data) && val.as_h?
                  val.as_h
@@ -767,8 +771,11 @@ class Events < Application
         extension_data.as_h.each { |key, value| data[key] = value } if extension_data
         data[HOST_OVERRIDE_KEY] = JSON::Any.new(reassigned_host) if reassigned_host
 
-        # an explicitly emptied override returns the event to its organiser
-        if (override = data[HOST_OVERRIDE_KEY]?) && (override_email = override.as_s?)
+        if new_organiser
+          # the meeting is theirs now, so any override of it is spent
+          data.delete(HOST_OVERRIDE_KEY)
+        elsif (override = data[HOST_OVERRIDE_KEY]?) && (override_email = override.as_s?)
+          # an explicitly emptied override returns the event to its organiser
           if override_email.blank?
             data.delete(HOST_OVERRIDE_KEY)
           else
@@ -2043,28 +2050,15 @@ class Events < Application
   # a non-master mailbox copy is treated as a stale echo (PPT-2375).
   STALE_MIRROR_ECHO_WINDOW = 30.seconds
 
-  # Office365 will not let the organiser of a meeting change, so a host
-  # reassignment is recorded against the event metadata instead. The organiser
-  # still owns the mailbox copy we read and write (PPT-2375).
+  # Who is hosting a meeting that someone else's mailbox owns — a room or a
+  # service account in deployments that book that way, or a host reassignment
+  # Office365 will not let us make by changing the organiser (PPT-2375). Room
+  # panels resolve their host the same way.
   HOST_OVERRIDE_KEY = "host_override"
 
+  # Reads the key from event metadata, or from the extension data of an update.
   protected def host_override(ext_data : JSON::Any?) : String?
     ext_data.try(&.as_h?).try(&.[]?(HOST_OVERRIDE_KEY)).try(&.as_s?).try(&.downcase.presence)
-  end
-
-  # Who an update is asking to host the event, if anyone.
-  #
-  # `extension_data.host_override` states it outright. A front end also sends
-  # the whole event back, so a `host` differing from the organiser is a
-  # reassignment too — unless it matches the requesting user, which is what a
-  # front end falls back to when it cannot resolve the organiser and would
-  # otherwise silently steal the meeting.
-  protected def requested_host(changes : PlaceCalendar::Event, organiser : String, requester : String) : String?
-    if override = changes.extension_data.try(&.as_h?).try(&.[]?(HOST_OVERRIDE_KEY))
-      return override.as_s?.try(&.downcase.presence)
-    end
-
-    requested_organiser(changes, organiser, requester)
   end
 
   # Who an update is asking to take the meeting over, as opposed to hosting it

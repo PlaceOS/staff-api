@@ -1853,6 +1853,41 @@ describe Events, tags: ["event"] do
       payload["previous_host_email"].as_s.should eq organiser
     end
 
+    it "supersedes a reassignment when the meeting moves to the new host" do
+      event_id, changed_bodies, _, _ = create_event.call(true)
+
+      # a meeting hosted by someone other than the mailbox that owns it
+      stand_in = "stand-in-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: stand_in)).status_code.should eq(200)
+      sleep 100.milliseconds
+      host_override_of = ->(meta : EventMetadata) { meta.ext_data.try(&.as_h?).try(&.[]?("host_override")).try(&.as_s) }
+      host_override_of.call(EventMetadata.find_by(event_id: event_id)).should eq stand_in
+
+      new_host = "another-host@example.com"
+      EventsHelper.stub_calendar_write_access(new_host)
+      moved_event_id = "evt-superseding-the-override"
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+        .to_return(status: 204, body: "")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(new_host)}/calendar/events")
+        .to_return(body: EventsHelper.mock_event_id(moved_event_id, "ical-superseded", recurring: false, organizer: new_host).to_json)
+
+      changed_bodies.clear
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: new_host)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      # the new host owns the meeting, so nothing is left standing in for them
+      moved = EventMetadata.find_by(event_id: moved_event_id)
+      moved.host_email.should eq new_host
+      host_override_of.call(moved).should be_nil
+
+      # and the person who was actually hosting is the one told they no longer are
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq stand_in
+    end
+
     it "does not move the meeting when the host field repeats the organiser" do
       event_id, changed_bodies, _, _ = create_event.call(false)
 
