@@ -119,6 +119,7 @@
 
 ### Fix
 
+- **events**: suppress stale mirror echo in staff/event/changed signal (PPT-2375) ([#380](https://github.com/PlaceOS/staff-api/pull/380))
 - **bookings**: stop recurrence instances detaching from the series' ext data
 - **bookings**: change reset behaviour
 - **events**: [PPT-2627] Skip  Exchange events with no ical_uid instead of raising ([#381](https://github.com/PlaceOS/staff-api/pull/381))
