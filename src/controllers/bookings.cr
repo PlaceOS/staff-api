@@ -616,19 +616,22 @@ class Bookings < Application
       end
     end
 
-    # only touch the extension data when the client actually sent some. the
+    # Only persist extension data when the client explicitly sends it. The
     # attribute is non-nilable with a `{}` default, so an absent key still
-    # deserialises to an empty hash -- without the `_present?` guard *every*
-    # update (an asset swap, a title tweak) wrote a snapshot of the series'
-    # extension data onto the recurrence instance, detaching that occurrence
-    # from any later change to the parent booking.
-    if changes.extension_data_present? && (extension_data = changes.extension_data)
-      booking_ext_data = existing_booking.extension_data
-      # dup: on an instance `existing_booking` is a shallow copy of the parent,
-      # so merging in place would mutate the parent's hash as well
-      data = booking_ext_data ? booking_ext_data.as_h.dup : Hash(String, JSON::Any).new
-      extension_data.as_h.each { |key, value| data[key] = value }
-      existing_booking.change_extension_data(JSON::Any.new(data))
+    # deserialises to an empty hash. Without the `_present?` guard an asset-only
+    # update would snapshot the series' extension data onto the occurrence and
+    # stop it inheriting later parent changes.
+    if changes.extension_data_present? && !(extension_data = changes.extension_data).raw.nil?
+      extension_data = extension_data.as_h
+      unless extension_data.empty?
+        booking_ext_data = existing_booking.extension_data
+        # On an instance `existing_booking` contains the effective extension data.
+        # Duplicate it before merging so the complete snapshot is persisted without
+        # mutating the parent booking's shared hash.
+        data = booking_ext_data ? booking_ext_data.as_h.dup : Hash(String, JSON::Any).new
+        extension_data.each { |key, value| data[key] = value }
+        existing_booking.change_extension_data(JSON::Any.new(data))
+      end
     end
 
     # reset the checked-in state if asset is different, or booking times are outside the originally approved window
@@ -803,16 +806,12 @@ class Bookings < Application
     signal_changes : Bool = false,
   ) : Booking
     book = booking
+    return book if changes.empty?
 
-    # a recurrence instance persists only the keys it overrides, so the rest of
-    # the series' extension data keeps flowing through to that occurrence --
-    # see `BookingInstance#hydrate_booking`. `book` is already the merged view.
-    inherited = book.instance ? book.extension_data.as_h : nil
-    ext_data = if inherited
-                 book.as_instance.extension_data.try(&.as_h.dup) || Hash(String, JSON::Any).new
-               else
-                 book.extension_data.as_h.dup
-               end
+    # `book` contains the effective extension data for a recurrence instance.
+    # Duplicate it before merging so an explicit instance update persists a
+    # complete snapshot without mutating the parent booking's shared hash.
+    ext_data = book.extension_data.as_h.dup
     changes.each { |key, value| ext_data[key] = value }
     book.change_extension_data(JSON::Any.new ext_data)
 
@@ -820,13 +819,6 @@ class Bookings < Application
       update_booking(book, "extdata_changed")
     else
       book.save! rescue raise Error::ModelValidation.new(book.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating booking data")
-    end
-
-    # respond with the merged view clients read back, not the stored override
-    if inherited
-      merged = inherited.dup
-      ext_data.each { |key, value| merged[key] = value }
-      book.change_extension_data(JSON::Any.new merged)
     end
 
     book

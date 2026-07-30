@@ -28,11 +28,11 @@ PARKING_EXT_DATA = {
 # End to end coverage for `extension_data` on recurring bookings.
 #
 # The parent booking carries the extension data, individual occurrences are
-# virtual until something is changed on them -- at which point a
-# `BookingInstance` row is written that holds *only* the overridden fields.
-# Anything not overridden must continue to be inherited from the parent, so
-# changing the asset of a single occurrence must not drop the parent's
-# extension data from that occurrence (or from any of its siblings).
+# virtual until something is changed on them. An occurrence continues to inherit
+# extension data when only another field changes. Once its extension data is
+# explicitly updated, the `BookingInstance` row holds a complete snapshot of the
+# effective data and no longer inherits later extension-data changes from the
+# parent series.
 describe Bookings do
   Spec.before_each {
     Booking.clear
@@ -196,7 +196,44 @@ describe Bookings do
       end
     end
 
-    it "merges new extension data into the parent's when an occurrence is updated" do
+    {
+      "JSON null"       => JSON::Any.new(nil),
+      "an empty object" => JSON::Any.new({} of String => JSON::Any),
+    }.each do |description, extension_data|
+      it "keeps inheriting when an occurrence update sends #{description}" do
+        stub_engine.call
+
+        booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
+        instance = instances_of.call(booking_id).first
+
+        response = client.patch(
+          "#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}",
+          headers: headers,
+          body: {
+            "asset_id"       => JSON::Any.new("parking-bay-7"),
+            "extension_data" => extension_data,
+          }.to_json,
+        )
+        puts "failed to update instance: #{response.body}" unless response.success?
+        response.success?.should be_true
+
+        stored = PlaceOS::Model::BookingInstance
+          .where(id: booking_id, instance_start: instance)
+          .first
+        stored.extension_data.try(&.as_h?).should be_nil
+
+        client.patch(
+          "#{BOOKINGS_BASE}/#{booking_id}/ext_data",
+          headers: headers,
+          body: {location: "Second Street"}.to_json,
+        ).success?.should be_true
+
+        inherited = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}", headers: headers).body).as_h
+        inherited["extension_data"]["location"].should eq("Second Street")
+      end
+    end
+
+    it "snapshots the effective extension data when an occurrence is updated" do
       stub_engine.call
 
       booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
@@ -218,14 +255,31 @@ describe Bookings do
       shown = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}", headers: headers).body).as_h
       # the supplied key is overridden ...
       shown["extension_data"]["plate_number"].should eq("testplate2")
-      # ... and everything else is inherited from the parent
+      # ... and the complete effective value is captured on the instance
       shown["extension_data"]["location"].should eq("Test Street")
       shown["extension_data"]["app_name"].should eq("Workplace")
+
+      stored = PlaceOS::Model::BookingInstance
+        .where(id: booking_id, instance_start: instance)
+        .first.extension_data.not_nil!.as_h
+      stored.keys.sort!.should eq(PARKING_EXT_DATA.keys.sort!)
+      stored["plate_number"].should eq("testplate2")
+      stored["location"].should eq("Test Street")
 
       # the parent booking is left untouched
       parent = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}", headers: headers).body).as_h
       parent["extension_data"]["plate_number"].should eq("testplate1")
       parent["asset_id"].should eq("unallocated-Ez15vtMs")
+
+      client.patch(
+        "#{BOOKINGS_BASE}/#{booking_id}/ext_data",
+        headers: headers,
+        body: {location: "Second Street"}.to_json,
+      ).success?.should be_true
+
+      snapshotted = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}", headers: headers).body).as_h
+      snapshotted["extension_data"]["plate_number"].should eq("testplate2")
+      snapshotted["extension_data"]["location"].should eq("Test Street")
     end
   end
 
@@ -374,6 +428,11 @@ describe Bookings do
         body: {asset_id: "parking-bay-7"}.to_json,
       ).success?.should be_true
 
+      stored = PlaceOS::Model::BookingInstance
+        .where(id: booking_id, instance_start: instance)
+        .first
+      stored.extension_data.try(&.as_h?).should be_nil
+
       # now update the extension data on the parent series
       client.patch(
         "#{BOOKINGS_BASE}/#{booking_id}/ext_data",
@@ -434,7 +493,7 @@ describe Bookings do
       shown["extension_data"]["location"].should eq("Test Street")
     end
 
-    it "keeps an occurrence's own extension data override while inheriting the rest" do
+    it "snapshots all effective data when an occurrence's extension data changes" do
       stub_engine.call
 
       booking_id, first_day = create_parking.call
@@ -447,6 +506,13 @@ describe Bookings do
         body: {plate_number: "testplate2"}.to_json,
       ).success?.should be_true
 
+      stored = PlaceOS::Model::BookingInstance
+        .where(id: booking_id, instance_start: instance)
+        .first.extension_data.not_nil!.as_h
+      stored.keys.sort!.should eq(PARKING_EXT_DATA.keys.sort!)
+      stored["plate_number"].should eq("testplate2")
+      stored["location"].should eq("Test Street")
+
       # the series later changes a different key
       client.patch(
         "#{BOOKINGS_BASE}/#{booking_id}/ext_data",
@@ -455,14 +521,40 @@ describe Bookings do
       ).success?.should be_true
 
       shown = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}", headers: headers).body).as_h
-      shown["extension_data"]["plate_number"].should eq("testplate2") # the override wins
-      shown["extension_data"]["location"].should eq("Second Street")  # the rest still inherits
+      shown["extension_data"]["plate_number"].should eq("testplate2")
+      shown["extension_data"]["location"].should eq("Test Street")
 
-      # siblings are unaffected by the occurrence's override
+      # siblings continue inheriting from the parent series
       sibling = parking_instances.call(booking_id, first_day)[1]
       other = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{sibling}", headers: headers).body).as_h
       other["extension_data"]["plate_number"].should eq("testplate1")
       other["extension_data"]["location"].should eq("Second Street")
+    end
+
+    it "keeps inheriting when the instance extension-data route receives an empty object" do
+      stub_engine.call
+
+      booking_id, first_day = create_parking.call
+      instance = parking_instances.call(booking_id, first_day).first
+
+      client.patch(
+        "#{BOOKINGS_BASE}/#{booking_id}/ext_data/#{instance}",
+        headers: headers,
+        body: ({} of String => JSON::Any).to_json,
+      ).success?.should be_true
+
+      PlaceOS::Model::BookingInstance
+        .where(id: booking_id, instance_start: instance)
+        .first?.should be_nil
+
+      client.patch(
+        "#{BOOKINGS_BASE}/#{booking_id}/ext_data",
+        headers: headers,
+        body: {location: "Second Street"}.to_json,
+      ).success?.should be_true
+
+      inherited = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}/instance/#{instance}", headers: headers).body).as_h
+      inherited["extension_data"]["location"].should eq("Second Street")
     end
   end
 end
