@@ -558,6 +558,17 @@ class Events < Application
   # when moving a room from one system to another, the `system_id` param should be
   # set to the current rooms associated system.
   # Then in the event body, the `system_id` field should be the new system.
+  #
+  # Changing `host` hands the meeting to that person. Office365 cannot change a
+  # meeting's organiser, so this does what a person does in Outlook: the meeting
+  # is cancelled and sent again from the new host's calendar, which re-invites
+  # the attendees and gives the event a new id and ical uid. Recurring meetings
+  # are refused. A `host` matching the requesting user is ignored, as front ends
+  # fall back to the current user when they cannot resolve the organiser.
+  #
+  # `extension_data.host_override` instead records who is hosting while leaving
+  # the meeting on the organiser's calendar — for deployments that book rooms as
+  # a service account. Send an empty string to clear it.
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
@@ -631,6 +642,22 @@ class Events < Application
       attendees << host
     end
 
+    # Handing the meeting to someone else means moving it to their calendar,
+    # which Office365 only allows by cancelling and re-sending it (PPT-2375).
+    new_organiser = requested_organiser(changes, organiser: host, requester: user_email)
+
+    # A host reassignment that keeps the organiser is recorded against the event
+    # metadata instead. Whoever it names still has to be in the meeting to host
+    # it, so that it reaches their calendar.
+    reassigned_host = requested_host(changes, organiser: host, requester: user_email)
+    if reassigned_host && !new_organiser && !reassigned_host.in?(attendees)
+      new_host_attendee = PlaceCalendar::Event::Attendee.new(name: reassigned_host, email: reassigned_host, response_status: "none")
+      new_host_attendee.visit_expected = true
+      changes.attendees << new_host_attendee
+      attendees << reassigned_host
+      update_attendees = true
+    end
+
     attendees << cal_id
     attendees.uniq!
 
@@ -696,7 +723,15 @@ class Events < Application
       end
     end
 
-    updated_event = client.update_event(user_id: host, event: changes, calendar_id: host, notify_existing_attendees: notify_existing_attendees)
+    # The metadata belongs to the meeting rather than to the calendar entry, so
+    # it is looked up before a transfer replaces the event.
+    transferred_meta = get_event_metadata(event, system_id) if new_organiser && system_id
+
+    updated_event = if new_organiser
+                      transfer_event(changes, event, event_id, from: host, to: new_organiser, notify: notify_existing_attendees)
+                    else
+                      client.update_event(user_id: host, event: changes, calendar_id: host, notify_existing_attendees: notify_existing_attendees)
+                    end
     raise Error::BadUpstreamResponse.new("failed to update event #{event_id} as #{host}") unless updated_event
 
     if system
@@ -708,9 +743,20 @@ class Events < Application
       # start a fresh record, orphaning all of that and making every visitor
       # look newly invited (PPT-2375).
       moved_meta = previous_meta_for_signal if changing_room
-      meta = moved_meta || get_migrated_metadata(updated_event, system_id) || EventMetadata.new
+      meta = moved_meta || transferred_meta || get_migrated_metadata(updated_event, system_id) || EventMetadata.new
 
-      if extension_data = changes.extension_data
+      # A transferred meeting is a new calendar entry, so the record follows it.
+      if new_organiser && meta.persisted?
+        meta.event_id = updated_event.id.as(String)
+        meta.ical_uid = updated_event.ical_uid.as(String)
+      end
+
+      # Captured before the merge below, as a reassignment overwrites it.
+      previous_record = previous_meta_for_signal || (meta if meta.persisted?)
+      previous_host = previous_record.try { |record| host_override(record.ext_data) || record.host_email }
+
+      extension_data = changes.extension_data
+      if extension_data || reassigned_host
         meta_ext_data = meta.ext_data
         data = if (val = meta_ext_data) && val.as_h?
                  val.as_h
@@ -718,7 +764,18 @@ class Events < Application
                  Hash(String, JSON::Any).new
                end
         # Updating extension data by merging into existing.
-        extension_data.as_h.each { |key, value| data[key] = value }
+        extension_data.as_h.each { |key, value| data[key] = value } if extension_data
+        data[HOST_OVERRIDE_KEY] = JSON::Any.new(reassigned_host) if reassigned_host
+
+        # an explicitly emptied override returns the event to its organiser
+        if (override = data[HOST_OVERRIDE_KEY]?) && (override_email = override.as_s?)
+          if override_email.blank?
+            data.delete(HOST_OVERRIDE_KEY)
+          else
+            data[HOST_OVERRIDE_KEY] = JSON::Any.new(override_email.downcase)
+          end
+        end
+
         meta.ext_data = JSON::Any.new(data)
         meta.ext_data_will_change!
       end
@@ -737,7 +794,11 @@ class Events < Application
       if permission = changes.permission
         meta.permission = permission
       end
-      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true, previous_meta: previous_meta_for_signal)
+      notify_created_or_updated(:update, system, updated_event, meta, can_skip: false, is_host: true, previous_meta: previous_meta_for_signal, previous_host: previous_host)
+
+      # Visitors are hosted by whoever the event was reassigned to, not by
+      # whichever mailbox the meeting happens to live on.
+      signal_host = effective_host(meta)
 
       # Grab the list of externals that might be attending
       if update_attendees || changing_room
@@ -824,7 +885,7 @@ class Events < Application
                   system_id:      sys.id,
                   event_id:       event_id,
                   event_ical_uid: updated_event.ical_uid,
-                  host:           host,
+                  host:           signal_host,
                   resource:       sys.email,
                   event_title:    updated_event.title,
                   event_summary:  updated_event.title,
@@ -1302,14 +1363,15 @@ class Events < Application
 
     spawn do
       placeos_client.root.signal("staff/event/changed", {
-        action:         :update,
-        system_id:      system.id,
-        event_id:       original_id,
-        event_ical_uid: meta.ical_uid,
-        host:           meta.host_email,
-        resource:       system.email,
-        event:          event,
-        ext_data:       meta.ext_data,
+        action:          :update,
+        system_id:       system.id,
+        event_id:        original_id,
+        event_ical_uid:  meta.ical_uid,
+        host:            effective_host(meta),
+        organiser_email: meta.host_email,
+        resource:        system.email,
+        event:           event,
+        ext_data:        meta.ext_data,
       })
     end
 
@@ -1959,7 +2021,7 @@ class Events < Application
         system_id:      system_id,
         event_id:       event_id,
         event_ical_uid: eventmeta.ical_uid,
-        host:           event.host,
+        host:           effective_host(eventmeta),
         resource:       eventmeta.resource_calendar,
         event_title:    event.title,
         event_summary:  event.title,
@@ -1981,7 +2043,91 @@ class Events < Application
   # a non-master mailbox copy is treated as a stale echo (PPT-2375).
   STALE_MIRROR_ECHO_WINDOW = 30.seconds
 
-  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true, previous_meta : EventMetadata? = nil)
+  # Office365 will not let the organiser of a meeting change, so a host
+  # reassignment is recorded against the event metadata instead. The organiser
+  # still owns the mailbox copy we read and write (PPT-2375).
+  HOST_OVERRIDE_KEY = "host_override"
+
+  protected def host_override(ext_data : JSON::Any?) : String?
+    ext_data.try(&.as_h?).try(&.[]?(HOST_OVERRIDE_KEY)).try(&.as_s?).try(&.downcase.presence)
+  end
+
+  # Who an update is asking to host the event, if anyone.
+  #
+  # `extension_data.host_override` states it outright. A front end also sends
+  # the whole event back, so a `host` differing from the organiser is a
+  # reassignment too — unless it matches the requesting user, which is what a
+  # front end falls back to when it cannot resolve the organiser and would
+  # otherwise silently steal the meeting.
+  protected def requested_host(changes : PlaceCalendar::Event, organiser : String, requester : String) : String?
+    if override = changes.extension_data.try(&.as_h?).try(&.[]?(HOST_OVERRIDE_KEY))
+      return override.as_s?.try(&.downcase.presence)
+    end
+
+    requested_organiser(changes, organiser, requester)
+  end
+
+  # Who an update is asking to take the meeting over, as opposed to hosting it
+  # on the organiser's behalf. Only a changed `host` means that: it names the
+  # mailbox the meeting should belong to.
+  protected def requested_organiser(changes : PlaceCalendar::Event, organiser : String, requester : String) : String?
+    changed_host = changes.host.try(&.downcase).presence
+    changed_host if changed_host && changed_host != organiser && changed_host != requester
+  end
+
+  # Hands a meeting to a new host.
+  #
+  # Office365 has no way to change a meeting's organiser, so this does what a
+  # person does in Outlook: cancels the meeting and sends it again from the new
+  # host's calendar. The old one goes first, otherwise the room declines the new
+  # invitation as clashing with itself.
+  protected def transfer_event(changes : PlaceCalendar::Event, event : PlaceCalendar::Event, event_id : String, from : String, to : String, notify : Bool) : PlaceCalendar::Event
+    attendee_emails = changes.attendees.map(&.email.downcase)
+    raise Error::Forbidden.new("user #{user.email} does not have write access to #{to} calendar") unless can_create?(user.email.downcase, to, attendee_emails)
+
+    # Every occurrence would have to be re-sent, and any exception to the series
+    # rebuilt, so this is refused rather than done badly.
+    raise Error::BadRequest.new("a recurring meeting cannot be moved to another host, as Office365 requires it to be cancelled and sent again") if event.recurring || event.recurring_event_id.presence
+
+    # the new host organises the meeting, and organises it for themselves
+    changes.id = nil
+    changes.host = to
+    changes.attendees = changes.attendees.reject { |attendee| attendee.email.downcase == to }
+    new_host_attendee = PlaceCalendar::Event::Attendee.new(name: to, email: to, response_status: "accepted")
+    new_host_attendee.visit_expected = true
+    changes.attendees << new_host_attendee
+
+    Log.info { "moving event #{event_id} from #{from} to #{to}" }
+    client.delete_event(user_id: from, id: event_id, calendar_id: from, notify: notify)
+
+    begin
+      transferred = client.create_event(user_id: to, event: changes, calendar_id: to)
+      raise Error::BadUpstreamResponse.new("event was not created on #{to}") unless transferred
+      transferred
+    rescue error
+      # The meeting has already been cancelled at this point, so put it back
+      # where it was rather than leaving the room free and everyone uninvited.
+      Log.error(exception: error) { "failed to move event #{event_id} to #{to}, restoring it on #{from}" }
+      begin
+        event.id = nil
+        client.create_event(user_id: from, event: event, calendar_id: from)
+      rescue ex
+        Log.error(exception: ex) { "failed to restore event #{event_id} on #{from}" }
+        raise Error::BadUpstreamResponse.new("failed to move the meeting to #{to} and it could not be restored on #{from}, it must be booked again")
+      end
+      raise Error::BadUpstreamResponse.new("failed to move the meeting to #{to}, it remains with #{from}")
+    end
+  end
+
+  # Who is hosting the event: the organiser, unless the host was reassigned.
+  protected def effective_host(meta : EventMetadata) : String
+    host_override(meta.ext_data) || meta.host_email
+  end
+
+  # `previous_host` is who was hosting before the edit. Only the caller knows
+  # when a reassignment has just overwritten it, as a reassignment lives in the
+  # metadata rather than on the mailbox organiser.
+  def notify_created_or_updated(action, system, event, meta = nil, can_skip = true, is_host = true, previous_meta : EventMetadata? = nil, previous_host : String? = nil)
     raise Error::InconsistentState.new("event_start must be present on event") unless event_start = event.event_start
     raise Error::InconsistentState.new("event_end must be present on event") unless event_end = event.event_end
 
@@ -2032,6 +2178,21 @@ class Events < Application
       meta.resource_master_id = event.recurring_event_id || event.id if event.recurring && !is_host
       meta.ical_uid = event.ical_uid.as(String)
     end
+
+    # The calendar owns the organiser: when it reports a different one, any
+    # reassignment PlaceOS was holding is stale and gets dropped, so the two can
+    # never disagree about who is hosting (PPT-2375).
+    stale_reassignment = if meta.persisted? && meta.host_email.downcase != event.host.as(String).downcase
+                           dropped = host_override(meta.ext_data)
+                           if dropped
+                             data = meta.ext_data.try(&.as_h?) || Hash(String, JSON::Any).new
+                             data.delete(HOST_OVERRIDE_KEY)
+                             meta.ext_data = JSON::Any.new(data)
+                             meta.ext_data_will_change!
+                           end
+                           dropped
+                         end
+
     meta.system_id = system.id.as(String)
     meta.host_email = event.host.as(String).downcase
     meta.event_start = starting
@@ -2046,6 +2207,13 @@ class Events < Application
     event.setup_event_id = meta.setup_event_id
     event.breakdown_event_id = meta.breakdown_event_id
 
+    # A reassignment can only be reported by the caller that performed it, or by
+    # the organiser change that just invalidated it. Otherwise an existing
+    # reassignment is both the previous and current host, so that a webhook for
+    # an unrelated edit doesn't look like the host changing back.
+    host_email = effective_host(meta)
+    previous_host_email = previous_host.presence || stale_reassignment || host_override(meta.ext_data) || previous_host_email
+
     return if skip_signal
 
     spawn do
@@ -2054,7 +2222,8 @@ class Events < Application
         system_id:            system.id,
         event_id:             meta.event_id,
         event_ical_uid:       meta.ical_uid,
-        host:                 meta.host_email,
+        host:                 host_email,
+        organiser_email:      meta.host_email,
         resource:             meta.resource_calendar,
         event:                event,
         ext_data:             meta.try &.ext_data,
