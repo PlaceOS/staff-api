@@ -1728,4 +1728,62 @@ describe Events, tags: ["event"] do
       last["previous_event_start"].as_i64.should eq thu
     end
   end
+
+  # Metadata is stored per room, so an event that changes room used to start a
+  # fresh record and re-announce every visitor as newly invited (PPT-2375).
+  describe "room moves", tags: "PPT-2375" do
+    it "keeps the meeting's metadata and does not re-invite anyone" do
+      WebMock.reset
+      attending_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return do |request|
+          attending_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      changed_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+        .to_return do |request|
+          changed_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      EventsHelper.stub_event_tokens
+      EventsHelper.stub_update_endpoints
+
+      system_id = "sys-rJQQlR4Cn7"
+      EventsHelper.stub_permissions_check(system_id)
+      created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_event_input).body).as_h
+      event_id = created["id"].to_s
+      EventsHelper.stub_room_event_query(event_id)
+
+      # the room the event moves to
+      systems = Array(JSON::Any).from_json(File.read("./spec/fixtures/placeos/systems.json")).map &.to_json
+      moved_system_id = "sys_id"
+      WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{moved_system_id}")
+        .to_return(body: systems[1])
+      EventsHelper.stub_permissions_check(moved_system_id)
+
+      before = EventMetadata.find_by(event_id: event_id)
+      before.system_id.should eq system_id
+      attending_bodies.clear
+      changed_bodies.clear
+
+      # the same guest list as the meeting was created with, moved to another room
+      body = EventsHelper.create_event_input.gsub(%("system_id": "#{system_id}"), %("system_id": "#{moved_system_id}"))
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers, body: body).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      # the same record, now against the new room, so the visitors and their
+      # check-in state come with it
+      after = EventMetadata.find!(before.id.not_nil!)
+      after.system_id.should eq moved_system_id
+      after.resource_calendar.should eq "room2@example.com"
+      after.attendees.to_a.size.should eq before.attendees.to_a.size
+
+      # the move is a change, not an invitation
+      payload = JSON.parse(changed_bodies.last)
+      payload["previous_system_id"].as_s.should eq system_id
+      payload["system_id"].as_s.should eq moved_system_id
+      attending_bodies.map { |signal| JSON.parse(signal)["attendee_email"].as_s }.should_not contain "jon@example.com"
+    end
+  end
 end

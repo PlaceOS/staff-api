@@ -34,6 +34,25 @@ module EventsHelper
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
   end
 
+  # Everything Graph needs stubbed to create an event and then PATCH it.
+  def stub_update_endpoints
+    stub_create_endpoints
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+      .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
+    WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+      .to_return(body: File.read("./spec/fixtures/events/o365/update.json"))
+    # the host's copy of the event, looked up by ical uid
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/calendarView?startDateTime=2020-08-26T14%3A00%3A00-00%3A00&endDateTime=2020-08-27T13%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&%24top=10000")
+      .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
+  end
+
+  # The room's copy of the event, looked up by ical uid once the id is known.
+  def stub_room_event_query(event_id)
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
+      .to_return(event_query_response(event_id))
+  end
+
   def mock_event_id(id, ical = nil)
     event = Office365::Event.new(**{
       id:              id,
