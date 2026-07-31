@@ -1729,6 +1729,336 @@ describe Events, tags: ["event"] do
     end
   end
 
+  # Office365 will not let the organiser of a meeting change, so a host
+  # reassignment made in the front end is recorded against the event metadata
+  # instead.  Both that and an organiser change reported by Office365 have to
+  # surface as a host change on the signal (PPT-2375).
+  describe "host reassignment", tags: "PPT-2375" do
+    system_id = "sys-rJQQlR4Cn7"
+    organiser = "dev@acaprojects.onmicrosoft.com"
+    # an attendee of the event, used where the requester must not be the host
+    requester = "jon@example.com"
+
+    # Creates an event and returns {event_id, staff/event/changed bodies,
+    # staff/guest/attending bodies, bodies PATCHed upstream}. Everything is
+    # captured from here on; WebMock matches the first stub registered, so these
+    # have to go in ahead of the shared ones.
+    create_event = ->(one_off : Bool) do
+      WebMock.reset
+      changed_bodies = [] of String
+      attending_bodies = [] of String
+      patch_bodies = [] of String
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
+        .to_return do |request|
+          changed_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
+        .to_return do |request|
+          attending_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: "")
+        end
+      WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
+        .to_return do |request|
+          patch_bodies << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(200, body: File.read("./spec/fixtures/events/o365/update.json"))
+        end
+      # the shared fixtures are a recurring series, which cannot be moved
+      EventsHelper.stub_one_off_event if one_off
+      EventsHelper.stub_event_tokens
+      EventsHelper.stub_update_endpoints
+      EventsHelper.stub_permissions_check(system_id)
+
+      created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_event_input).body).as_h
+      event_id = created["id"].to_s
+      EventsHelper.stub_room_event_query(event_id)
+
+      changed_bodies.clear
+      attending_bodies.clear
+      patch_bodies.clear
+      {event_id, changed_bodies, attending_bodies, patch_bodies}
+    end
+
+    it "reports extension_data.host_override as the host" do
+      event_id, changed_bodies, _, _ = create_event.call(false)
+
+      new_host = "new-host@example.com"
+      resp = client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host))
+      resp.status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq organiser
+      # the mailbox the event actually lives on is still reported
+      payload["organiser_email"].as_s.should eq organiser
+
+      # a later edit that does not touch the host is not a reassignment
+      changed_bodies.clear
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq new_host
+    end
+
+    it "moves the meeting to the new host's calendar when the host field changes" do
+      event_id, changed_bodies, _, _ = create_event.call(true)
+      new_host = "another-host@example.com"
+      EventsHelper.stub_calendar_write_access(new_host)
+
+      # Office365 cannot change a meeting's organiser, so this is what a person
+      # does in Outlook: cancel the meeting and send it again from the new host
+      cancelled = [] of String
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+        .to_return do |request|
+          cancelled << (request.path || "")
+          HTTP::Client::Response.new(204, body: "")
+        end
+      resent = [] of String
+      moved_event_id = "evt-moved-to-another-host"
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(new_host)}/calendar/events")
+        .to_return do |request|
+          resent << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(201, body: EventsHelper.mock_event_id(moved_event_id, "ical-moved-001", recurring: false, organizer: new_host).to_json)
+        end
+
+      before = EventMetadata.find_by(event_id: event_id)
+      resp = client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: new_host))
+      resp.status_code.should eq(200)
+      sleep 100.milliseconds
+
+      cancelled.size.should eq 1
+      resent.size.should eq 1
+      # the room is invited by the new meeting, and the old host stays involved
+      invited = JSON.parse(resent.first)["attendees"].as_a.map { |attendee| attendee["emailAddress"]["address"].as_s.downcase }
+      invited.should contain "room1@example.com"
+      invited.should contain organiser
+
+      # the meeting keeps its identity in PlaceOS: same metadata record, so
+      # visitors, check-in state and extension data survive the move
+      after = EventMetadata.find!(before.id.not_nil!)
+      after.host_email.should eq new_host
+      after.event_id.should eq moved_event_id
+      after.ical_uid.should eq "ical-moved-001"
+      after.attendees.to_a.size.should eq before.attendees.to_a.size
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq new_host
+      payload["organiser_email"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq organiser
+    end
+
+    it "supersedes a reassignment when the meeting moves to the new host" do
+      event_id, changed_bodies, _, _ = create_event.call(true)
+
+      # a meeting hosted by someone other than the mailbox that owns it
+      stand_in = "stand-in-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: stand_in)).status_code.should eq(200)
+      sleep 100.milliseconds
+      host_override_of = ->(meta : EventMetadata) { meta.ext_data.try(&.as_h?).try(&.[]?("host_override")).try(&.as_s) }
+      host_override_of.call(EventMetadata.find_by(event_id: event_id)).should eq stand_in
+
+      new_host = "another-host@example.com"
+      EventsHelper.stub_calendar_write_access(new_host)
+      moved_event_id = "evt-superseding-the-override"
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+        .to_return(status: 204, body: "")
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(new_host)}/calendar/events")
+        .to_return(body: EventsHelper.mock_event_id(moved_event_id, "ical-superseded", recurring: false, organizer: new_host).to_json)
+
+      changed_bodies.clear
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: new_host)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      # the new host owns the meeting, so nothing is left standing in for them
+      moved = EventMetadata.find_by(event_id: moved_event_id)
+      moved.host_email.should eq new_host
+      host_override_of.call(moved).should be_nil
+
+      # and the person who was actually hosting is the one told they no longer are
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq stand_in
+    end
+
+    it "does not move the meeting when the host field repeats the organiser" do
+      event_id, changed_bodies, _, _ = create_event.call(false)
+
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+        .to_return { raise "the meeting must not be cancelled" }
+
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: organiser)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq organiser
+      payload["previous_host_email"].as_s.should eq organiser
+    end
+
+    it "refuses to move a recurring meeting rather than mangling the series" do
+      WebMock.reset
+      EventsHelper.stub_event_tokens
+      EventsHelper.stub_update_endpoints
+      EventsHelper.stub_permissions_check(system_id)
+
+      created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_recurring_event_input).body).as_h
+      recurring_id = created["id"].to_s
+      EventsHelper.stub_room_event_query(recurring_id)
+
+      new_host = "another-host@example.com"
+      EventsHelper.stub_calendar_write_access(new_host)
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(recurring_id)}")
+        .to_return { raise "the series must not be cancelled" }
+
+      resp = client.patch("#{EVENTS_BASE}/#{recurring_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: new_host))
+      resp.status_code.should eq(400)
+      resp.body.should contain "recurring"
+    end
+
+    it "ignores a host field that has fallen back to the requesting user" do
+      event_id, changed_bodies, _, _ = create_event.call(false)
+
+      # an attendee edits the meeting; front ends fall back to the current user
+      # when they cannot resolve the organiser, which must not steal the event
+      attendee_headers = Mock::Headers.office365_normal_user(requester)
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: attendee_headers,
+        body: EventsHelper.reassign_host_input(host: requester)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq organiser
+      payload["previous_host_email"].as_s.should eq organiser
+    end
+
+    it "clears the reassignment when the override is emptied" do
+      event_id, changed_bodies, _, _ = create_event.call(false)
+
+      new_host = "temporary-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      changed_bodies.clear
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: "")).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq organiser
+      payload["previous_host_email"].as_s.should eq new_host
+    end
+
+    it "keeps the reassignment, and does not re-invite anyone, when the event changes room" do
+      event_id, changed_bodies, attending_bodies, _ = create_event.call(false)
+
+      new_host = "moved-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host, attendee: requester)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      # the room the event moves to
+      systems = Array(JSON::Any).from_json(File.read("./spec/fixtures/placeos/systems.json")).map &.to_json
+      moved_system_id = "sys_id"
+      WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{moved_system_id}")
+        .to_return(body: systems[1])
+      EventsHelper.stub_permissions_check(moved_system_id)
+
+      changed_bodies.clear
+      attending_bodies.clear
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host, attendee: requester, system_id: moved_system_id)).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["previous_system_id"].as_s.should eq system_id
+      payload["system_id"].as_s.should eq moved_system_id
+      # a move must not read as a reassignment back to the organiser
+      payload["host"].as_s.should eq new_host
+      payload["previous_host_email"].as_s.should eq new_host
+
+      # the visitor was already attending — the move is a change, not an invite
+      attending_bodies.map { |body| JSON.parse(body)["attendee_email"].as_s }.should_not contain requester
+    end
+
+    it "puts the new host in the meeting so it reaches their calendar" do
+      event_id, _, _, patch_bodies = create_event.call(false)
+
+      new_host = "not-invited@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
+
+      # Office365 cannot move the organiser, but the new host must at least be
+      # in the meeting for it to show up in their calendar
+      invited = JSON.parse(patch_bodies.first)["attendees"].as_a.map { |attendee| attendee["emailAddress"]["address"].as_s.downcase }
+      invited.should contain new_host
+    end
+
+    it "drops a reassignment when the calendar reports a different organiser" do
+      event_id, changed_bodies, _, _ = create_event.call(false)
+
+      new_host = "placeos-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
+      sleep 100.milliseconds
+      JSON.parse(changed_bodies.last)["host"].as_s.should eq new_host
+
+      # Office365 owns the organiser, so a change there wins: recreating the
+      # meeting under someone else must not leave the old reassignment in place
+      changed_bodies.clear
+      outlook_organiser = "outlook-organiser@example.com"
+      meta = EventMetadata.find_by(event_id: event_id)
+
+      # the webhook route resolves the system from the database
+      PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
+      webhook_system = PlaceOS::Model::Generator.control_system
+      webhook_system.id = system_id
+      webhook_system.save!
+
+      client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{event_id}", headers: headers, body: %({
+        "event_start": #{meta.event_start},
+        "event_end": #{meta.event_end},
+        "id": "#{event_id}",
+        "host": "#{outlook_organiser}",
+        "ical_uid": "#{meta.ical_uid}",
+        "attendees": [],
+        "private": false,
+        "all_day": false
+      })).status_code.should eq(202)
+      sleep 100.milliseconds
+
+      payload = JSON.parse(changed_bodies.last)
+      payload["host"].as_s.should eq outlook_organiser
+      payload["organiser_email"].as_s.should eq outlook_organiser
+      # the person who was hosting is told they no longer are
+      payload["previous_host_email"].as_s.should eq new_host
+      EventMetadata.find_by(event_id: event_id).ext_data.not_nil!.as_h.has_key?("host_override").should be_false
+    end
+
+    it "announces new visitors as attending the reassigned host" do
+      event_id, _, attending_bodies, _ = create_event.call(false)
+
+      new_host = "new-host@example.com"
+      client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host_override: new_host, extra_attendee: "guest@external.com")).status_code.should eq(200)
+      sleep 100.milliseconds
+
+      # the visitor mailer skips emailing the host their own invite, which only
+      # works when the reassignment is reflected here too
+      guest = attending_bodies.map { |body| JSON.parse(body) }.find { |body| body["attendee_email"].as_s == "guest@external.com" }
+      guest.should_not be_nil
+      guest.not_nil!["host"].as_s.should eq new_host
+    end
+  end
+
   # Metadata is stored per room, so an event that changes room used to start a
   # fresh record and re-announce every visitor as newly invited (PPT-2375).
   describe "room moves", tags: "PPT-2375" do

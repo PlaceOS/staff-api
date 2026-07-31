@@ -47,14 +47,78 @@ module EventsHelper
       .to_return(body: File.read("./spec/fixtures/events/o365/events_query.json"))
   end
 
+  # Lets `can_create?` see the requesting user as a delegate of `mailbox`, so a
+  # meeting can be re-sent from their calendar.
+  def stub_calendar_write_access(mailbox : String, user = "dev@acaprojects.onmicrosoft.com")
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(user)}/calendars")
+      .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(mailbox)}/calendar/calendarPermissions")
+      .to_return(body: {value: [{
+        id:                   "permission-1",
+        role:                 "write",
+        isRemovable:          true,
+        isInsideOrganization: true,
+        allowedRoles:         ["write"],
+        emailAddress:         {address: user, name: user},
+      }]}.to_json)
+  end
+
   # The room's copy of the event, looked up by ical uid once the id is known.
   def stub_room_event_query(event_id)
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/calendarView?startDateTime=2020-08-26T14:00:00-00:00&endDateTime=2020-08-27T13:59:59-00:00&%24filter=iCalUId+eq+%27040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10%27&$top=10000")
       .to_return(event_query_response(event_id))
   end
 
-  def mock_event_id(id, ical = nil)
+  # An update body with a configurable host and host_override, for exercising
+  # host reassignment on an existing event.
+  def reassign_host_input(host = "dev@acaprojects.onmicrosoft.com", host_override : String? = nil, extra_attendee : String? = nil, attendee = "amit@redant.com.au", system_id = "sys-rJQQlR4Cn7")
+    extension_data = host_override.nil? ? %({"fizz": "buzz"}) : %({"fizz": "buzz", "host_override": "#{host_override}"})
+    attendees = [%({
+            "name": "Amit",
+            "email": "#{attendee}",
+            "response_status": "accepted",
+            "resource": false,
+            "organizer": true,
+            "checked_in": true,
+            "visit_expected": true
+        })]
+    if extra_attendee
+      attendees << %({
+            "name": "New Guest",
+            "email": "#{extra_attendee}",
+            "response_status": "tentative",
+            "resource": false,
+            "organizer": false,
+            "checked_in": false,
+            "visit_expected": true
+        })
+    end
+
+    %({
+    "event_start": 1598504460,
+    "event_end": 1598508120,
+    "attendees": [#{attendees.join(",")}],
+    "private": false,
+    "all_day": false,
+    "recurring": false,
+    "host": "#{host}",
+    "title": "tentative event response status and default timezone trial",
+    "body": "yeehaw hiya updated",
+    "location": "test",
+    "system_id": "#{system_id}",
+    "system": {
+        "id": "#{system_id}"
+    },
+    "extension_data": #{extension_data}
+    })
+  end
+
+  # The ical uid carried by the o365 event fixtures.
+  ICAL_UID = "040000008200E00074C5B7101A82E008000000006DE2E3761F8AD6010000000000000000100000009CCCDBB1F09DE74D8B157797D97F6A10"
+
+  def mock_event_id(id, ical = nil, recurring = true, organizer : String? = nil)
     event = Office365::Event.new(**{
+      organizer:       organizer,
       id:              id,
       starts_at:       Time.unix(1598503500),
       ends_at:         Time.unix(1598507160),
@@ -62,10 +126,26 @@ module EventsHelper
       rooms:           ["Red Room"],
       attendees:       ["elon@musk.com", Office365::EmailAddress.new(address: "david@bowie.net", name: "David Bowie"), Office365::Attendee.new(email: "the@goodies.org")],
       response_status: Office365::ResponseStatus.new(response: Office365::ResponseStatus::Response::Organizer, time: "0001-01-01T00:00:00Z"),
-      recurrence:      Office365::RecurrenceParam.new(pattern: "daily", range_end: Time.unix(1598508160)),
+      recurrence:      (Office365::RecurrenceParam.new(pattern: "daily", range_end: Time.unix(1598508160)) if recurring),
     })
     event.icaluid = ical
     event
+  end
+
+  # The event id carried by the o365 event fixtures.
+  FIXTURE_EVENT_ID = "AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA="
+
+  # Serves the event as a one-off rather than a recurring series, on both the
+  # room's and the host's calendar. Register before the shared stubs.
+  def stub_one_off_event(event_id = FIXTURE_EVENT_ID, host = "dev@acaprojects.onmicrosoft.com")
+    event = mock_event_id(event_id, ICAL_UID, recurring: false, organizer: host).to_json
+
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+      .to_return(body: event)
+    # the host's copy is looked up over the event's day, which this event spans
+    # in UTC rather than in the fixture's timezone
+    WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(host)}/calendar/calendarView?startDateTime=2020-08-27T00%3A00%3A00-00%3A00&endDateTime=2020-08-27T23%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27#{ICAL_UID}%27&%24top=10000")
+      .to_return(body: %({"value": [#{event}]}))
   end
 
   def stub_permissions_check(system_id)
