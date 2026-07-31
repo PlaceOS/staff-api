@@ -702,7 +702,14 @@ class Events < Application
     if system
       raise Error::BadRequest.new("system_id must be present") if system_id.nil?
 
-      meta = get_migrated_metadata(updated_event, system_id) || EventMetadata.new
+      # An event that moves takes its metadata with it: the attendee records,
+      # their check-in state and the extension data belong to the meeting, not
+      # to the room. Metadata is looked up per room, so a move would otherwise
+      # start a fresh record, orphaning all of that and making every visitor
+      # look newly invited (PPT-2375).
+      moved_meta = previous_meta_for_signal if changing_room
+      meta = moved_meta || get_migrated_metadata(updated_event, system_id) || EventMetadata.new
+
       if extension_data = changes.extension_data
         meta_ext_data = meta.ext_data
         data = if (val = meta_ext_data) && val.as_h?
@@ -802,7 +809,12 @@ class Events < Application
 
             next unless attend.visit_expected
 
-            if !previously_visiting || changing_room
+            # Only a visitor who wasn't already attending is being invited.
+            # Moving the event to another room used to re-announce everyone,
+            # which reads downstream as a fresh invitation for each of them --
+            # the room change is reported by staff/event/changed instead
+            # (PPT-2375).
+            if !previously_visiting
               spawn do
                 sys = system
                 raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
@@ -822,30 +834,6 @@ class Events < Application
                   zones:          sys.zones,
                 })
               end
-            end
-          end
-        elsif changing_room
-          existing.each do |attend|
-            next unless attend.visit_expected
-            spawn do
-              sys = system
-              raise Error::NotFound.new("guest not found for attendee #{attend.id}") unless guest = attend.guest
-              raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
-
-              placeos_client.root.signal("staff/guest/attending", {
-                action:         :meeting_update,
-                system_id:      sys.id,
-                event_id:       event_id,
-                event_ical_uid: updated_event.ical_uid,
-                host:           host,
-                resource:       sys.email,
-                event_title:    updated_event.title,
-                event_summary:  updated_event.title,
-                event_starting: updated_event_start.to_unix,
-                attendee_name:  guest.name,
-                attendee_email: guest.email,
-                zones:          sys.zones,
-              })
             end
           end
         end
