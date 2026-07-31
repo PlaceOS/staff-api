@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **events**: hand a meeting to a new host (PPT-2640) ([#383](https://github.com/PlaceOS/staff-api/pull/383))
 - **controllers/bookings**: fix booking instance ext data semantics
 - **events**: skip notification on attendee only changes (PPT-2514) ([#377](https://github.com/PlaceOS/staff-api/pull/377))
 - **config.cr**: make OFFLOAD_WORKERS optional
@@ -119,6 +120,7 @@
 
 ### Fix
 
+- **events**: keep event metadata when a meeting changes room (PPT-2375) ([#382](https://github.com/PlaceOS/staff-api/pull/382))
 - **events**: suppress stale mirror echo in staff/event/changed signal (PPT-2375) ([#380](https://github.com/PlaceOS/staff-api/pull/380))
 - **bookings**: stop recurrence instances detaching from the series' ext data
 - **bookings**: change reset behaviour
