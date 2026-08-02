@@ -1655,14 +1655,20 @@ describe Events, tags: ["event"] do
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
         .to_return(body: "")
 
+      system_id = "sys-mirror-echo-test"
+
+      # Signals are emitted from spawned fibres, so one belonging to an earlier
+      # example can still be in flight when this one installs its stub and be
+      # captured here. This example asserts on exact counts, so it records only
+      # the signals it caused -- identified by its own dedicated system.
       captured_bodies = [] of String
       WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
         .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
+          body = request.body.try(&.gets_to_end) || ""
+          captured_bodies << body if JSON.parse(body)["system_id"]?.try(&.as_s?) == system_id
           HTTP::Client::Response.new(200, body: "")
         end
 
-      system_id = "sys-mirror-echo-test"
       PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
       test_system = PlaceOS::Model::Generator.control_system
       test_system.id = system_id
@@ -1706,6 +1712,12 @@ describe Events, tags: ["event"] do
       first = JSON.parse(captured_bodies.last)
       first["event_start"].as_i64.should eq thu
       first["previous_event_start"].as_i64.should eq wed
+
+      # A signal from an earlier example's spawned fibre can still be in flight
+      # and land here. Stand one in deliberately: the counts below are only
+      # meaningful if a signal for another system is not mistaken for ours.
+      HTTP::Client.post("#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed",
+        body: %({"system_id": "sys-unrelated-example", "event_id": "evt-unrelated"}))
 
       # 2) Room copy lags and reports the OLD time (Wed): the stale echo that must
       #    now be ignored.
