@@ -120,6 +120,7 @@
 
 ### Fix
 
+- **spec/events**: only count the signals this example caused ([#385](https://github.com/PlaceOS/staff-api/pull/385))
 - **events**: keep event metadata when a meeting changes room (PPT-2375) ([#382](https://github.com/PlaceOS/staff-api/pull/382))
 - **events**: suppress stale mirror echo in staff/event/changed signal (PPT-2375) ([#380](https://github.com/PlaceOS/staff-api/pull/380))
 - **bookings**: stop recurrence instances detaching from the series' ext data
