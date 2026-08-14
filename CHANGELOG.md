@@ -120,6 +120,7 @@
 
 ### Fix
 
+- **bookings**: recurring instance history saved
 - **deps**: pg-orm 2.2.4 to stop the connection pool being poisoned ([#386](https://github.com/PlaceOS/staff-api/pull/386))
 - **spec/events**: only count the signals this example caused ([#385](https://github.com/PlaceOS/staff-api/pull/385))
 - **events**: keep event metadata when a meeting changes room (PPT-2375) ([#382](https://github.com/PlaceOS/staff-api/pull/382))
