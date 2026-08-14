@@ -916,11 +916,19 @@ class Bookings < Application
     @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
+    # NOTE:: resolve this *before* touching `checked_in`. Both guards below ask what
+    # the booking was already doing, and a half applied mutation (`checked_in`
+    # flipped while `checked_in_at` / `checked_out_at` still hold their old values)
+    # matches no branch of the state machine -- it resolves to `Unknown` and logs an
+    # error on every check in and check out. The answer is the same either way, so
+    # this is purely about asking the question at a point where it is answerable.
+    already_checked_out = booking.booking_current_state.checked_out?
+
     booking.checked_in = state
 
     if booking.checked_in
       # check concurrent bookings don't exceed booking limits
-      raise Error::NotAllowed.new("a checked out booking cannot be checked back in") if booking.booking_current_state.checked_out?
+      raise Error::NotAllowed.new("a checked out booking cannot be checked back in") if already_checked_out
 
       time_now = Time.utc.to_unix
 
@@ -941,7 +949,7 @@ class Bookings < Application
       guest_checkin(attendees.first.email, true) if attendees.size == 1
     else
       # don't allow double checkouts, but might as well return a success response
-      return booking if booking.booking_current_state.checked_out?
+      return booking if already_checked_out
       booking.checked_out_at = Time.utc.to_unix
     end
 

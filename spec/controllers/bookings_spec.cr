@@ -1,4 +1,5 @@
 require "../spec_helper"
+require "log/spec"
 require "./helpers/booking_helper"
 require "./helpers/guest_helper"
 
@@ -1593,6 +1594,172 @@ describe Bookings do
     client.delete("#{BOOKINGS_BASE}/#{booking_id}/?utm_source=kiosk", headers: headers).status_code
     body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking_id}", headers: headers).body).as_h
     body["history"].as_a.last["source"].should eq("kiosk")
+  end
+
+  # `utm_source` is a transient (non-persisted) attribute. The only place it is
+  # durably recorded is the history entry that the `before_save` hook appends for
+  # the state transition it caused, so these check the re-fetched booking rather
+  # than trusting the response of the mutating request.
+  describe "#check_in utm_source history" do
+    before_each do
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
+        .to_return(body: "")
+      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
+        .to_return(body: "")
+    end
+
+    after_all do
+      WebMock.reset
+    end
+
+    it "records the utm_source against the checked_in history entry" do
+      tenant = get_tenant
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true&utm_source=mobile", headers: headers)
+      response.status_code.should eq(200)
+      JSON.parse(response.body).as_h["history"].as_a.last["source"].should eq("mobile")
+
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
+      body["current_state"].should eq("checked_in")
+
+      history = body["history"].as_a
+      history.size.should eq(2)
+      history.map(&.["state"].as_s).should eq(["reserved", "checked_in"])
+      history.last["source"].should eq("mobile")
+
+      # the source is recorded per transition, the reservation keeps its own
+      history.first["source"].should eq("desktop")
+    end
+
+    it "records a distinct utm_source for the check out" do
+      tenant = get_tenant
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true&utm_source=mobile", headers: headers)
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false&utm_source=kiosk", headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h
+      body["current_state"].should eq("checked_out")
+
+      history = body["history"].as_a
+      history.map(&.["state"].as_s).should eq(["reserved", "checked_in", "checked_out"])
+      history.map(&.["source"].as_s).should eq(["desktop", "mobile", "kiosk"])
+    end
+
+    it "records the utm_source via the /checkin route alias" do
+      tenant = get_tenant
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/checkin?state=true&utm_source=tablet", headers: headers)
+      response.status_code.should eq(200)
+
+      history = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h["history"].as_a
+      history.last["state"].should eq("checked_in")
+      history.last["source"].should eq("tablet")
+    end
+
+    it "leaves the history source null when no utm_source is provided" do
+      tenant = get_tenant
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true", headers: headers)
+      response.status_code.should eq(200)
+
+      history = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h["history"].as_a
+      history.last["state"].should eq("checked_in")
+      # `History#source` is a plain `JSON::Serializable` field, so a nil source is
+      # omitted from the payload rather than serialised as `null`
+      history.last.as_h["source"]?.should be_nil
+    end
+
+    # A recurrence occurrence keeps its own history: `Booking#save!` delegates to
+    # `as_instance.save!`, so `BookingInstance` runs its own `update_history` hook
+    # (placeos-models >= 9.107.5). Before that release an instance recorded no
+    # history at all and the `utm_source` was silently dropped.
+    it "records the utm_source against the checked in instance of a recurring booking" do
+      tenant = get_tenant
+      tenant.early_checkin = 99999999999_i64
+      tenant.save!
+
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
+        booking_start: 1.minutes.from_now.to_unix,
+        booking_end: 9.minutes.from_now.to_unix)
+
+      booking.recurrence_type = :daily
+      booking.recurrence_days = 0b1111111
+      booking.timezone = "Europe/Berlin"
+      booking.save!
+
+      instances = booking.calculate_daily(2.days.from_now, 5.days.from_now).instances
+      instance = instances.first.to_unix
+      other = instances.last.to_unix
+      other.should_not eq(instance)
+
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in/#{instance}?state=true&utm_source=mobile", headers: headers)
+      response.status_code.should eq(200)
+
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}/instance/#{instance}", headers: headers).body).as_h
+      body["checked_in"].should be_true
+      history = body["history"].as_a
+      history.last["state"].should eq("checked_in")
+      history.last["source"].should eq("mobile")
+
+      # the sibling instance is untouched
+      body = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}/instance/#{other}", headers: headers).body).as_h
+      body["checked_in"].should be_false
+      body["history"].as_a.map(&.["state"].as_s).should_not contain("checked_in")
+    end
+
+    it "does not record a utm_source when the check in is rejected" do
+      tenant = get_tenant
+
+      # a booking that has already ended cannot be checked into
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!,
+        booking_start: 20.minutes.ago.to_unix,
+        booking_end: 10.minutes.ago.to_unix)
+
+      response = client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true&utm_source=mobile", headers: headers)
+      response.status_code.should eq(405)
+
+      history = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h["history"].as_a
+      history.map(&.["state"].as_s).should_not contain("checked_in")
+      # `["source"]?` -- the key is omitted entirely when no source was recorded
+      history.map(&.as_h["source"]?).should_not contain("mobile")
+    end
+
+    # `#check_in` used to flip `checked_in` before asking the state machine whether
+    # the booking was already checked out. That half applied mutation matches no
+    # branch of the machine, so every check in and check out logged an ERROR and
+    # evaluated the guard against `Unknown`.
+    it "does not resolve an Unknown state while checking in or out" do
+      tenant = get_tenant
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+
+      backend = ::Log::MemoryBackend.new
+      begin
+        ::Log.builder.bind("*", :error, backend)
+
+        client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=true&utm_source=mobile", headers: headers)
+        client.post("#{BOOKINGS_BASE}/#{booking.id}/check_in?state=false&utm_source=kiosk", headers: headers)
+      ensure
+        # restore whatever the suite configured, see `spec_helper.cr`
+        {% if flag?(:quiet) %}
+          ::Log.setup(:warn)
+        {% else %}
+          ::Log.setup(:info)
+        {% end %}
+      end
+
+      backend.entries.map(&.message).select(&.includes?("Unknown state")).should be_empty
+
+      # and the transitions themselves still landed
+      history = JSON.parse(client.get("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).body).as_h["history"].as_a
+      history.map(&.["state"].as_s).should eq ["reserved", "checked_in", "checked_out"]
+    end
   end
 
   it "#guest_list should list guests for a booking" do
