@@ -262,20 +262,24 @@ class Bookings < Application
     total = query.count
     query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id") if auth_token_present?
 
-    query = query.order(:recurrence_type, :created)
+    # rows that are returned as-is (standard bookings and deleted / rejected recurring
+    # parents, see `Booking#recurring_booking?`) must sort before the recurring bookings
+    # that get expanded into instances: the next page offset is `offset + rows consumed`
+    # which is only correct when the consumed rows are a prefix of this page
+    query = query.order("(bookings.recurrence_type <> 'NONE' AND NOT bookings.deleted AND NOT bookings.rejected)", :created)
       .offset(offset)
       .limit(limit)
 
     result = query.to_a
-    num_standard = result.count(&.recurrence_type.none?)
+    num_unexpanded = result.count { |booking| !booking.recurring_booking? }
 
     result = Booking.hydrate_parents(result) if include_parent_bookings && !result.empty?
 
-    if starting && ending && num_standard < result.size
+    if starting && ending && num_unexpanded < result.size
       details = Booking.expand_bookings!(Time.unix(starting), Time.unix(ending), result, limit, recurrence, include_checked_out ? nil : checked_out_flag, deleted_flag)
 
       # Set link
-      range_end = offset + num_standard + details.complete
+      range_end = offset + num_unexpanded + details.complete
       if range_end < total
         params["offset"] = range_end.to_s
         params["limit"] = limit.to_s
@@ -291,6 +295,8 @@ class Bookings < Application
       if range_end < total
         params["offset"] = range_end.to_s
         params["limit"] = limit.to_s
+        # no partially expanded recurring booking on this page, so nothing to skip on the next
+        params.delete("recurrence") if params.has_key?("recurrence")
         response.headers["Link"] = %(<#{base_route}/#{link_ext}?#{params}>; rel="next")
       end
     end
