@@ -77,7 +77,7 @@ class Bookings < Application
   private def confirm_access
     return if is_support?
     if user = current_user
-      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
+      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email.to_s == user.email.downcase))
       return if check_access(user.groups, booking.zones || [] of String).can_manage?
       head :forbidden
     end
@@ -88,7 +88,7 @@ class Bookings < Application
     return if booking.permission.public?
     return if is_support?
     if user = current_user
-      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email == user.email.downcase))
+      return if booking && ({booking.user_id, booking.booked_by_id}.includes?(user.id) || (booking.user_email.to_s == user.email.downcase))
       return if check_access(user.groups, booking.zones || [] of String).can_manage?
       return if booking.permission.open? && (authority = user.authority) && (booking_tenant = booking.tenant) && (authority.domain == booking_tenant.domain)
       head :forbidden
@@ -477,6 +477,9 @@ class Bookings < Application
     booking.booked_by_email = PlaceOS::Model::Email.new(user.email)
     booking.booked_by_name = user.name
 
+    # only approvers can create a booking that is already approved or rejected
+    apply_approval_state(booking, booking.approved, booking.rejected) if booking.approved || booking.rejected
+
     attendees = booking.req_attendees
 
     if attendees && !attendees.empty?
@@ -604,6 +607,8 @@ class Bookings < Application
     original_end = existing_booking.booking_end
     original_assets = existing_booking.asset_ids
     original_zones = existing_booking.zones.dup
+    original_approved = existing_booking.approved
+    original_rejected = existing_booking.rejected
 
     {% for key in [:asset_id, :asset_ids, :zones, :booking_start, :booking_end, :all_day, :title, :description, :images, :induction, :recurrence_end, :recurrence_interval, :recurrence_nth_of_month, :recurrence_days, :recurrence_type, :permission, :user_email] %}
       begin
@@ -663,6 +668,14 @@ class Bookings < Application
       )
       existing_booking.history << Booking::History.new(state: :reserved, time: change_time, source: "updated by #{user.email}")
       existing_booking.history_will_change!
+    end
+
+    # approval state changes are restricted to approvers. compared against the
+    # stored state so a client echoing back the current values is a no-op
+    approved = changes.approved_present? ? changes.approved : original_approved
+    rejected = changes.rejected_present? ? changes.rejected : original_rejected
+    if approved != original_approved || rejected != original_rejected
+      apply_approval_state(existing_booking, approved, rejected)
     end
 
     # only check for clashes when the booked slot itself changed (time, asset or
@@ -1280,7 +1293,19 @@ class Bookings < Application
     booking
   end
 
+  # approval state can only be changed by admins, support or a manager of one
+  # of the booking's zones
+  private def check_approval_access(booking)
+    return if is_support?
+    return if check_access(current_user.groups, booking.zones).can_manage?
+    raise Error::Forbidden.new("approval permissions required for zones: #{booking.zones.join(", ")}")
+  end
+
+  # marks the booking approved or rejected by the current user.
+  # the caller is responsible for saving the booking
   private def set_approver(booking, approved : Bool)
+    check_approval_access(booking)
+
     # In case of rejections reset approver related information
     booking.assign_attributes(
       approver_id: user_token.id,
@@ -1300,7 +1325,27 @@ class Bookings < Application
       booking.rejected_at = Time.utc.to_unix
     end
 
-    booking.save!
     booking
+  end
+
+  # applies an approval state provided in a request body
+  private def apply_approval_state(booking, approved : Bool, rejected : Bool)
+    if rejected
+      set_approver(booking, false)
+    elsif approved
+      set_approver(booking, true)
+    else
+      # back to pending approval
+      check_approval_access(booking)
+      booking.assign_attributes(
+        approved: false,
+        approved_at: nil,
+        rejected: false,
+        rejected_at: nil,
+        approver_id: nil,
+        approver_email: nil,
+        approver_name: nil,
+      )
+    end
   end
 end
