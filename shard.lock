@@ -151,7 +151,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.110.3
+    version: 9.110.4
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
