@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **staff**: add additional_fields query param
 - **bookings**: restrict booking approval to concierge users [PPT-2767]
 - **events**: hand a meeting to a new host (PPT-2640) ([#383](https://github.com/PlaceOS/staff-api/pull/383))
 - **controllers/bookings**: fix booking instance ext data semantics
