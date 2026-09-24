@@ -1076,6 +1076,21 @@ class Bookings < Application
     attendee.checked_in = checkin
     attendee.save!
 
+    # checking a guest in also checks the booking in (`Attendee#sync_booking_checkin`).
+    # this is the reverse: once the last visitor on site leaves, the booking is
+    # checked out so it stops occupying the rest of its slot. `Attendee` only records
+    # `checked_in`, so a visitor yet to arrive does not keep the booking active, and
+    # checking out a visitor who never arrived releases it too.
+    # a booking that has already ended no longer blocks anything, and a
+    # `checked_out_at` past `booking_end` would leave it in an Unknown state.
+    if !checkin && booking.booking_end > Time.utc.to_unix &&
+       !booking.booking_current_state.checked_out? &&
+       !Attendee.by_tenant(tenant.id).where(booking_id: booking.id, checked_in: true).exists?
+      booking.checked_in = false
+      booking.checked_out_at = Time.utc.to_unix
+      update_booking(booking, "checked_in")
+    end
+
     spawn do
       get_placeos_client.root.signal("staff/guest/checkin", {
         action:         :checkin,
