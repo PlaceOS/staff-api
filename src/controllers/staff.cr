@@ -5,7 +5,7 @@ class Staff < Application
   # This function supports advanced filtering using Azure AD filter syntax.
   # For more information on Azure AD filter syntax, visit:
   # https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http
-  @[AC::Route::GET("/")]
+  @[AC::Route::GET("/", converters: {additional_fields: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
     query : String? = nil,
@@ -13,17 +13,21 @@ class Staff < Application
     filter : String? = nil,
     @[AC::Param::Info(description: "a google token or graph api URI representing the next page of results")]
     next_page : String? = nil,
+    @[AC::Param::Info(description: "a comma seperated list of additional user fields to return (Office365 only)", example: "employeeId,department")]
+    additional_fields : Array(String)? = nil,
   ) : Array(PlaceCalendar::User)
-    users = if filter
-              client.list_users(filter: filter, next_link: next_page)
+    search = filter ? nil : query
+    users = if additional_fields && client.client_id == :office365
+              client.list_users(search, filter: filter, next_link: next_page, additional_fields: additional_fields)
             else
-              client.list_users(query, next_link: next_page)
+              client.list_users(search, filter: filter, next_link: next_page)
             end
 
     if next_link = users.first?.try(&.next_link)
       params = URI::Params.build do |form|
         form.add("q", query.as(String).strip) if query.presence
         form.add("filter", filter) if filter
+        form.add("additional_fields", additional_fields.join(',')) if additional_fields
         form.add("next_page", next_link)
       end
       response.headers["Link"] = %(</api/staff/v1/people?#{params}>; rel="next")

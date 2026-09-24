@@ -24,6 +24,18 @@ describe Staff do
       body = JSON.parse(client.get("#{STAFF_BASE}?q=john", headers: headers).body).as_a
       body.size.should eq(1)
     end
+
+    it "should request and return additional user fields" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users?%24select=id%2CuserPrincipalName%2Csurname%2CpreferredLanguage%2CofficeLocation%2CmobilePhone%2Cmail%2CjobTitle%2CgivenName%2CdisplayName%2CbusinessPhones%2CaccountEnabled%2CmailNickname%2CemployeeId%2Cdepartment&%24filter=accountEnabled+eq+true")
+        .to_return(body: File.read("./spec/fixtures/staff/index_additional_fields.json"))
+
+      body = JSON.parse(client.get("#{STAFF_BASE}?additional_fields=employeeId,%20department,employeeId", headers: headers).body).as_a
+      body.size.should eq(2)
+      body[0]["unmapped"]["employeeId"].should eq("E123")
+      body[0]["unmapped"]["department"].should eq("Engineering")
+    end
   end
 
   it "#show should return a single user" do
