@@ -122,6 +122,7 @@
 
 ### Fix
 
+- **bookings**: guest checkout frees booking
 - **bookings**: pagination calculation
 - **bookings**: recurring instance history saved
 - **deps**: pg-orm 2.2.4 to stop the connection pool being poisoned ([#386](https://github.com/PlaceOS/staff-api/pull/386))
