@@ -122,6 +122,7 @@
 
 ### Fix
 
+- **tenants**: persist and return booking_range
 - **bookings**: guest checkout frees booking
 - **bookings**: pagination calculation
 - **bookings**: recurring instance history saved
