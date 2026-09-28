@@ -9,6 +9,16 @@ describe Tenants do
       body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body).as_a
       body.first["booking_limits"]?.should be_truthy
     end
+
+    it "includes the booking range" do
+      tenant = get_tenant
+      tenant.booking_range = {"desk" => 14_u32}
+      tenant.save!
+
+      body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body).as_a
+      found = body.find! { |t| t["id"].as_i64 == tenant.id }
+      found["booking_range"]["desk"].should eq(14)
+    end
   end
 
   describe "#update" do
@@ -32,6 +42,29 @@ describe Tenants do
       response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
       response.status_code.should eq(200)
       JSON.parse(response.body)["early_checkin"]?.should eq(3600)
+    end
+
+    it "should set the booking_range" do
+      tenant = get_tenant
+      tenant.booking_range = {"desk" => 7_u32}
+      tenant.save!
+
+      body = {booking_range: {desk: 20}}.to_json
+      response = client.put("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      response.status_code.should eq(200)
+      JSON.parse(response.body)["booking_range"]["desk"]?.should eq(20)
+      Tenant.find(tenant.id.not_nil!).booking_range.should eq({"desk" => 20_u32})
+    end
+
+    it "should not clear the booking_range when it is omitted" do
+      tenant = get_tenant
+      tenant.booking_range = {"desk" => 7_u32}
+      tenant.save!
+
+      body = {early_checkin: 3600}.to_json
+      response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      response.status_code.should eq(200)
+      Tenant.find(tenant.id.not_nil!).booking_range.should eq({"desk" => 7_u32})
     end
   end
 

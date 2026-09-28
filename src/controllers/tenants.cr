@@ -24,7 +24,7 @@ class Tenants < Application
   # lists the configured tenants
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :delegated, :service_account, :outlook_config, :early_checkin).to_a.map(&.as_json)
+    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :delegated, :service_account, :outlook_config, :early_checkin).to_a.map(&.as_json)
   end
 
   # creates a new tenant
@@ -47,6 +47,11 @@ class Tenants < Application
       rescue NilAssertionError
       end
     {% end %}
+
+    # booking_range defaults to {} on the model, so check the request body to avoid clearing it
+    if range = tenant_body.booking_range
+      tenant.booking_range = range
+    end
 
     tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
