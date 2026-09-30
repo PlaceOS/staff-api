@@ -635,17 +635,19 @@ class Events < Application
     update_attendees = !changes.attendees.nil?
     attendees = changes.attendees.try(&.map { |a| a.email.downcase }) || existing_attendees
 
-    # Ensure the host is configured to be attending the meeting and has accepted the meeting
-    unless host.in?(attendees)
+    # Handing the meeting to someone else means moving it to their calendar,
+    # which Office365 only allows by cancelling and re-sending it (PPT-2375).
+    new_organiser = requested_organiser(changes, organiser: host, requester: user_email)
+
+    # Ensure the host is configured to be attending the meeting and has accepted the meeting.
+    # A meeting moving to a new host is sent with the attendees as given, so the
+    # previous host is only invited when the request still lists them.
+    unless new_organiser || host.in?(attendees)
       host_attendee = PlaceCalendar::Event::Attendee.new(name: host, email: host, response_status: "accepted")
       host_attendee.visit_expected = true
       changes.attendees << host_attendee
       attendees << host
     end
-
-    # Handing the meeting to someone else means moving it to their calendar,
-    # which Office365 only allows by cancelling and re-sending it (PPT-2375).
-    new_organiser = requested_organiser(changes, organiser: host, requester: user_email)
 
     # Naming a host without moving the meeting is recorded against the event
     # metadata instead, for deployments where the organiser is a room or a
