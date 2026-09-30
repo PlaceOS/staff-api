@@ -122,6 +122,7 @@
 
 ### Fix
 
+- **bookings**: PPT-2436 list a cancelled series when include_deleted is set ([#388](https://github.com/PlaceOS/staff-api/pull/388))
 - **bookings**: PPT-2436 keep cancelled recurring occurrences when include_deleted is set ([#387](https://github.com/PlaceOS/staff-api/pull/387))
 - **bookings**: checkout guests when booking checked out
 - **tenants**: persist and return booking_range
