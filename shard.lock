@@ -149,9 +149,9 @@ shards:
     git: https://github.com/place-labs/log-backend.git
     version: 0.13.0
 
-  placeos-models:
+  placeos-models: # Overridden
     git: https://github.com/placeos/models.git
-    version: 9.117.0
+    version: 9.117.0+git.commit.1494d6729c74b5ffa14a7aaa80bc9f01cb0aaa1d
 
   promise:
     git: https://github.com/spider-gazelle/promise.git
