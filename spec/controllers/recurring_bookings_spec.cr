@@ -125,7 +125,11 @@ describe Bookings do
         route = "#{BOOKINGS_BASE}/?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zone}&include_deleted=true&limit=2"
         seen = follow_booking_pages(client, route, headers)
 
-        expected = deleted.map { |booking| {booking.id.not_nil!, nil.as(Int64?)} }
+        # each cancelled series comes back as its cancelled occurrences
+        expected = deleted.flat_map do |booking|
+          booking.calculate_daily(Time.unix(starting), Time.unix(ending)).instances.map { |time| {booking.id.not_nil!, time.to_unix.as(Int64?)} }
+        end
+        expected.size.should eq 15
         seen.size.should eq expected.size
         seen.to_set.should eq expected.to_set
       end
@@ -148,7 +152,7 @@ describe Bookings do
         seen.to_set.should eq expected.to_set
       end
 
-      it "should return every instance once when active and deleted recurring bookings share a page" do
+      it "should return every instance once when active, deleted and rejected recurring bookings share a page" do
         tenant_id = get_tenant.id.not_nil!
 
         # the active booking is created first so it sorts before the deleted one on `created`
@@ -159,6 +163,13 @@ describe Bookings do
         deleted.deleted_at = Time.utc.to_unix
         deleted.save!
 
+        # a rejected series is still returned as a single row, so the pages mix
+        # unexpanded rows with expanded ones
+        rejected = make_recurring.call(tenant_id)
+        rejected.rejected = true
+        rejected.rejected_at = Time.utc.to_unix
+        rejected.save!
+
         route = "#{BOOKINGS_BASE}/?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zone}&include_deleted=true&limit=2"
         seen = follow_booking_pages(client, route, headers)
 
@@ -166,13 +177,14 @@ describe Bookings do
         instances.size.should eq 5
 
         expected = instances.map { |time| {active.id.not_nil!, time.to_unix.as(Int64?)} }
-        expected << {deleted.id.not_nil!, nil.as(Int64?)}
+        expected.concat instances.map { |time| {deleted.id.not_nil!, time.to_unix.as(Int64?)} }
+        expected << {rejected.id.not_nil!, nil.as(Int64?)}
         seen.size.should eq expected.size
         seen.to_set.should eq expected.to_set
       end
     end
 
-    describe "listing a cancelled occurrence of a recurring booking" do
+    describe "listing cancelled occurrences of a recurring booking" do
       zone = "zone-recurring-cancelled"
       day_start = Time.local.at_beginning_of_day
       starting = day_start.to_unix
@@ -221,6 +233,36 @@ describe Bookings do
         bookings = JSON.parse(result.body).as_a
 
         bookings.map(&.["instance"].as_i64).sort!.should eq(instances - [cancelled])
+      end
+
+      it "should return every occurrence of a cancelled series, marked deleted, when include_deleted is set" do
+        booking = BookingsHelper.create_booking(get_tenant.id.not_nil!)
+        booking.zones = [zone]
+        booking.recurrence_type = :daily
+        booking.recurrence_days = 0b1111111
+        booking.timezone = "Europe/Berlin"
+        booking.booking_start = (day_start + 4.hours).to_unix
+        booking.booking_end = (day_start + 6.hours).to_unix
+        booking.save!
+        # a period after the first occurrence, so the series is only found as a recurrence
+        later = (day_start + 1.day).to_unix
+        instances = booking.calculate_daily(Time.unix(later), Time.unix(ending)).instances.map(&.to_unix)
+        instances.size.should eq 4
+
+        client.delete("#{BOOKINGS_BASE}/#{booking.id}", headers: headers).success?.should be_true
+
+        route = "#{BOOKINGS_BASE}/?period_start=#{later}&period_end=#{ending}&type=desk&zones=#{zone}&include_deleted=true"
+        result = client.get(route, headers: headers)
+        result.success?.should be_true
+        bookings = JSON.parse(result.body).as_a
+
+        bookings.map(&.["instance"].as_i64).sort!.should eq instances
+        bookings.all? { |item| item["id"].as_i64 == booking.id && item["deleted"].as_bool }.should be_true
+
+        route = "#{BOOKINGS_BASE}/?period_start=#{later}&period_end=#{ending}&type=desk&zones=#{zone}"
+        result = client.get(route, headers: headers)
+        result.success?.should be_true
+        JSON.parse(result.body).as_a.should be_empty
       end
     end
 
