@@ -974,6 +974,8 @@ class Bookings < Application
 
     booking.utm_source = utm_source
     update_booking(booking, "checked_in")
+    check_out_guests unless booking.checked_in
+    booking
   end
 
   # the current state of a booking, if a custom state machine is being used
@@ -1091,23 +1093,7 @@ class Bookings < Application
       update_booking(booking, "checked_in")
     end
 
-    spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
-        action:         :checkin,
-        id:             guest.id,
-        checkin:        checkin,
-        booking_id:     booking.id,
-        resource_id:    booking.asset_id,
-        resource_ids:   booking.asset_ids,
-        event_title:    booking.title,
-        event_summary:  booking.description.presence || booking.title,
-        event_starting: booking.booking_start,
-        attendee_name:  guest.name,
-        attendee_email: guest.email,
-        host:           booking.user_email,
-        zones:          booking.zones,
-      })
-    end
+    signal_guest_checkin(guest, checkin)
 
     guest.for_booking_to_h(attendee, booking.as_h(include_attendees: false))
   end
@@ -1257,6 +1243,39 @@ class Bookings < Application
           raise Error::BookingLimit.new(limit.as_i, concurrent_bookings) if concurrent_bookings.size >= limit.as_i
         end
       end
+    end
+  end
+
+  # visitors can't remain on site for a meeting the host has checked out of.
+  # only visitors who arrived are checked out, a no-show has nothing to leave
+  private def check_out_guests : Nil
+    Attendee.by_tenant(tenant.id).where(booking_id: booking.id, checked_in: true).each do |attendee|
+      guest = attendee.guest.not_nil!
+      attendee.booking = booking
+      attendee.guest = guest
+      attendee.checked_in = false
+      attendee.save!
+      signal_guest_checkin(guest, false)
+    end
+  end
+
+  private def signal_guest_checkin(guest : Guest, checkin : Bool) : Nil
+    spawn do
+      get_placeos_client.root.signal("staff/guest/checkin", {
+        action:         :checkin,
+        id:             guest.id,
+        checkin:        checkin,
+        booking_id:     booking.id,
+        resource_id:    booking.asset_id,
+        resource_ids:   booking.asset_ids,
+        event_title:    booking.title,
+        event_summary:  booking.description.presence || booking.title,
+        event_starting: booking.booking_start,
+        attendee_name:  guest.name,
+        attendee_email: guest.email,
+        host:           booking.user_email,
+        zones:          booking.zones,
+      })
     end
   end
 

@@ -175,5 +175,31 @@ describe Bookings do
       current_state.call(booking_id).should eq "checked_out"
       expect_created.call(next_visit.call("room", asset_id))
     end
+
+    it "checks every visitor out when the host checks out of the meeting" do
+      stub_engine.call
+      asset_id = "room-slot-host-checkout"
+      booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
+
+      set_checkin.call(:guest, booking_id, visitor_a, true)
+      set_checkin.call(:guest, booking_id, visitor_b, true)
+      set_checkin.call(:booking, booking_id, visitor_a, false)
+
+      current_state.call(booking_id).should eq "checked_out"
+      Attendee.where(booking_id: booking_id).to_a.map(&.checked_in).should eq [false, false]
+    end
+
+    it "does not check out a visitor who never arrived when the host checks out" do
+      stub_engine.call
+      asset_id = "room-slot-host-checkout-no-show"
+      booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
+
+      # visitor B never arrives, so there is nothing to check them out of
+      set_checkin.call(:guest, booking_id, visitor_a, true)
+      set_checkin.call(:booking, booking_id, visitor_a, false)
+
+      current_state.call(booking_id).should eq "checked_out"
+      Attendee.where(booking_id: booking_id).to_a.map(&.checked_in).should eq [false, false]
+    end
   end
 end
