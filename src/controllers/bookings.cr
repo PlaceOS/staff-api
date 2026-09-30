@@ -211,8 +211,9 @@ class Bookings < Application
     if event_ids.empty?
       raise AC::Route::Param::MissingError.new("missing required parameter 'type'", "type", "String") unless booking_type.presence
 
+      series_not_deleted = include_deleted ? "" : " AND deleted_at IS NULL"
       query = query.where(
-        %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ? AND rejected_at IS NULL AND deleted_at IS NULL) OR ("booking_start" < ? AND "booking_end" > ?))},
+        %{(((recurrence_end > ? OR recurrence_end IS NULL) AND recurrence_type <> 'NONE' AND "booking_start" < ? AND rejected_at IS NULL#{series_not_deleted}) OR ("booking_start" < ? AND "booking_end" > ?))},
         starting, ending, ending, starting
       )
 
@@ -262,16 +263,18 @@ class Bookings < Application
     total = query.count
     query = query.join(:left, Attendee, :booking_id).join(:left, Guest, "guests.id = attendees.guest_id") if auth_token_present?
 
-    # rows that are returned as-is (standard bookings and deleted / rejected recurring
-    # parents, see `Booking#recurring_booking?`) must sort before the recurring bookings
-    # that get expanded into instances: the next page offset is `offset + rows consumed`
-    # which is only correct when the consumed rows are a prefix of this page
-    query = query.order("(bookings.recurrence_type <> 'NONE' AND NOT bookings.deleted AND NOT bookings.rejected)", :created)
+    # rows that are returned as-is (standard bookings and rejected recurring parents,
+    # plus deleted ones unless `include_deleted`, see `Booking#recurring_booking?`) must
+    # sort before the recurring bookings that get expanded into instances: the next page
+    # offset is `offset + rows consumed` which is only correct when the consumed rows are
+    # a prefix of this page. This expression must match `recurring_booking?(include_deleted)`.
+    expanded_series = include_deleted ? "bookings.recurrence_type <> 'NONE' AND NOT bookings.rejected" : "bookings.recurrence_type <> 'NONE' AND NOT bookings.deleted AND NOT bookings.rejected"
+    query = query.order("(#{expanded_series})", :created)
       .offset(offset)
       .limit(limit)
 
     result = query.to_a
-    num_unexpanded = result.count { |booking| !booking.recurring_booking? }
+    num_unexpanded = result.count { |booking| !booking.recurring_booking?(include_deleted) }
 
     result = Booking.hydrate_parents(result) if include_parent_bookings && !result.empty?
 
