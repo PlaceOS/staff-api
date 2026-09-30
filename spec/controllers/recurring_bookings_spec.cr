@@ -172,6 +172,58 @@ describe Bookings do
       end
     end
 
+    describe "listing a cancelled occurrence of a recurring booking" do
+      zone = "zone-recurring-cancelled"
+      day_start = Time.local.at_beginning_of_day
+      starting = day_start.to_unix
+      ending = (day_start + 4.5.days).to_unix
+
+      # a daily recurring booking with one of its 5 occurrences in the period cancelled
+      make_cancelled = ->(tenant_id : Int64) do
+        booking = BookingsHelper.create_booking(tenant_id)
+        booking.zones = [zone]
+        booking.recurrence_type = :daily
+        booking.recurrence_days = 0b1111111
+        booking.timezone = "Europe/Berlin"
+        booking.booking_start = (day_start + 4.hours).to_unix
+        booking.booking_end = (day_start + 6.hours).to_unix
+        booking.save!
+
+        instances = booking.calculate_daily(Time.unix(starting), Time.unix(ending)).instances.map(&.to_unix)
+        instances.size.should eq 5
+        cancelled = instances[2]
+        client.delete("#{BOOKINGS_BASE}/#{booking.id}/instance/#{cancelled}", headers: headers).success?.should be_true
+
+        {booking, instances, cancelled}
+      end
+
+      it "should return the cancelled occurrence, marked deleted, when include_deleted is set" do
+        booking, instances, cancelled = make_cancelled.call(get_tenant.id.not_nil!)
+
+        route = "#{BOOKINGS_BASE}/?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zone}&include_deleted=true"
+        result = client.get(route, headers: headers)
+        result.success?.should be_true
+        bookings = JSON.parse(result.body).as_a
+
+        bookings.map(&.["instance"].as_i64).sort!.should eq instances
+        bookings.all? { |item| item["id"].as_i64 == booking.id }.should be_true
+        bookings.each do |item|
+          item["deleted"].as_bool.should eq(item["instance"].as_i64 == cancelled)
+        end
+      end
+
+      it "should leave the cancelled occurrence out when include_deleted is not set" do
+        _booking, instances, cancelled = make_cancelled.call(get_tenant.id.not_nil!)
+
+        route = "#{BOOKINGS_BASE}/?period_start=#{starting}&period_end=#{ending}&type=desk&zones=#{zone}"
+        result = client.get(route, headers: headers)
+        result.success?.should be_true
+        bookings = JSON.parse(result.body).as_a
+
+        bookings.map(&.["instance"].as_i64).sort!.should eq(instances - [cancelled])
+      end
+    end
+
     it "should delete a booking instance" do
       tenant = get_tenant
 
