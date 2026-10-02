@@ -122,6 +122,7 @@
 
 ### Fix
 
+- **events**: a meeting moved to a new host is sent with the attendees as given (PPT-2640) ([#389](https://github.com/PlaceOS/staff-api/pull/389))
 - **bookings**: PPT-2436 list a cancelled series when include_deleted is set ([#388](https://github.com/PlaceOS/staff-api/pull/388))
 - **bookings**: PPT-2436 keep cancelled recurring occurrences when include_deleted is set ([#387](https://github.com/PlaceOS/staff-api/pull/387))
 - **bookings**: checkout guests when booking checked out
