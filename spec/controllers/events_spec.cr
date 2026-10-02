@@ -1846,10 +1846,11 @@ describe Events, tags: ["event"] do
 
       cancelled.size.should eq 1
       resent.size.should eq 1
-      # the room is invited by the new meeting, and the old host stays involved
+      # the room is invited by the new meeting, and the previous host is not,
+      # as the attendees sent no longer list them
       invited = JSON.parse(resent.first)["attendees"].as_a.map { |attendee| attendee["emailAddress"]["address"].as_s.downcase }
       invited.should contain "room1@example.com"
-      invited.should contain organiser
+      invited.should_not contain organiser
 
       # the meeting keeps its identity in PlaceOS: same metadata record, so
       # visitors, check-in state and extension data survive the move
@@ -1863,6 +1864,29 @@ describe Events, tags: ["event"] do
       payload["host"].as_s.should eq new_host
       payload["organiser_email"].as_s.should eq new_host
       payload["previous_host_email"].as_s.should eq organiser
+    end
+
+    it "keeps the previous host in the moved meeting when the attendees sent still list them" do
+      event_id, _, _, _ = create_event.call(true)
+      new_host = "another-host@example.com"
+      EventsHelper.stub_calendar_write_access(new_host)
+      WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
+        .to_return(status: 204, body: "")
+      resent = [] of String
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(new_host)}/calendar/events")
+        .to_return do |request|
+          resent << (request.body.try(&.gets_to_end) || "")
+          HTTP::Client::Response.new(201, body: EventsHelper.mock_event_id("evt-moved-with-old-host", "ical-moved-002", recurring: false, organizer: new_host).to_json)
+        end
+
+      resp = client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
+        body: EventsHelper.reassign_host_input(host: new_host, extra_attendee: organiser))
+      resp.status_code.should eq(200)
+
+      resent.size.should eq 1
+      invited = JSON.parse(resent.first)["attendees"].as_a.map { |attendee| attendee["emailAddress"]["address"].as_s.downcase }
+      invited.should contain organiser
+      invited.should contain new_host
     end
 
     it "supersedes a reassignment when the meeting moves to the new host" do
