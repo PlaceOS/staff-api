@@ -12,7 +12,9 @@ class Tenants < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :create, :current_limits, :current_early_checkin])]
   private def find_tenant(id : Int64)
-    @tenant = Tenant.find(id)
+    found = Tenant.find(id)
+    ensure_domain_reach!(found.domain)
+    @tenant = found
   end
 
   getter! tenant : Tenant
@@ -24,13 +26,15 @@ class Tenants < Application
   # lists the configured tenants
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :delegated, :service_account, :outlook_config, :early_checkin).to_a.map(&.as_json)
+    tenants = Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :delegated, :service_account, :outlook_config, :early_checkin).to_a
+    scope_tenants(tenants).map(&.as_json)
   end
 
   # creates a new tenant
   @[AC::Route::POST("/", body: :tenant_body, status_code: HTTP::Status::CREATED)]
   def create(tenant_body : Tenant::Responder) : Tenant::Responder
     tenant = tenant_body.to_tenant
+    ensure_domain_reach!(tenant.domain, "domain")
     tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
   end
