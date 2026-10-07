@@ -1,5 +1,10 @@
 # NOTE:: here because of a shards ambiguous sources error
 dependencies:
+  # PPT-526: build against the multi-tenancy data layer until models #332 merges
+  placeos-models:
+    github: placeos/models
+    branch: PPT-526-partner-client
+
   http-params-serializable:
     github: place-labs/http-params-serializable
     branch: chore/0.36.0

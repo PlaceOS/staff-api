@@ -11,6 +11,7 @@ abstract class Application < ActionController::Base
   # =========================================
   include Utils::PlaceOSHelpers
   include Utils::CurrentUser
+  include Utils::Tenancy
   include Utils::MultiTenant
 
   # the number of requests to queue before responding with too many requests
