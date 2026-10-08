@@ -114,13 +114,6 @@ describe Bookings do
     end
 
     it "should update ext data in isolation" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
       guest_email = Faker::Internet.email
@@ -135,13 +128,6 @@ describe Bookings do
     end
 
     it "should filter by ext data" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
       guest_email = Faker::Internet.email
@@ -153,13 +139,6 @@ describe Bookings do
     end
 
     it "should filter by multiple ext data" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-
       guest_email = Faker::Internet.email
       ext_data = Faker::Lorem.word
       starting = 5.minutes.from_now.to_unix
@@ -210,15 +189,6 @@ describe Bookings do
 
     context "[zones/user]" do
       it "should return a list of bookings filtered by current user" do
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-          .to_return(body: "")
-
         # user-1, zone-1
         booking_one = BookingsHelper.http_create_booking(
           user_id: "user-1",
@@ -291,15 +261,6 @@ describe Bookings do
       end
 
       it "should return a list of bookings filtered by zones" do
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-          .to_return(body: "")
-
         # user-1, zone-1
         booking_one = BookingsHelper.http_create_booking(
           user_id: "user-1",
@@ -347,15 +308,6 @@ describe Bookings do
       end
 
       it "should return a list of bookings filtered by zones and user" do
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-          .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-          .to_return(body: "")
-        WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-          .to_return(body: "")
-
         # user-1, zone-1
         booking_one = BookingsHelper.http_create_booking(
           user_id: "user-1",
@@ -440,15 +392,6 @@ describe Bookings do
 
       context "[group-event]", tags: ["group-event"] do
         it "should return a list of bookings filtered by current user" do
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-            .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-            .to_return(body: "")
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-            .to_return(body: "")
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-            .to_return(body: "")
-
           # user-1, zone-1
           booking_one = BookingsHelper.http_create_booking(
             user_id: "user-1",
@@ -496,15 +439,6 @@ describe Bookings do
         end
 
         it "should return a list of bookings filtered by zones" do
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-            .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-            .to_return(body: "")
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-            .to_return(body: "")
-          WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-            .to_return(body: "")
-
           # user-1, zone-1
           booking_one = BookingsHelper.http_create_booking(
             user_id: "user-1",
@@ -1165,13 +1099,6 @@ describe Bookings do
 
   describe "current_state and history:" do
     before_each do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-
       Timecop.scale(600) # 1 second == 10 minutes
     end
 
@@ -1252,12 +1179,6 @@ describe Bookings do
     end
 
     it "check in early less than an hour before booking start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
       tenant = get_tenant
 
       booking = BookingsHelper.create_booking(tenant.id.not_nil!,
@@ -1328,12 +1249,6 @@ describe Bookings do
     end
 
     it "cannot check in early more than an hour before booking start" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
       tenant = get_tenant
       tenant.early_checkin = 3600
       tenant.save!
@@ -1356,12 +1271,6 @@ describe Bookings do
     it "cannot check in early when another booking is present" do
       Timecop.scale(1)
 
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
       tenant = get_tenant
 
       booking = BookingsHelper.create_booking(
@@ -1382,12 +1291,6 @@ describe Bookings do
     end
 
     it "cannot check in early on another day" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
       tenant = get_tenant
 
       booking = BookingsHelper.create_booking(tenant.id.not_nil!,
@@ -1488,15 +1391,6 @@ describe Bookings do
     end
 
     it "#create and #update should not allow setting the history" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       booking = BookingsHelper.http_create_booking(
         booking_start: 5.minutes.from_now.to_unix,
         booking_end: 15.minutes.from_now.to_unix,
@@ -1528,15 +1422,6 @@ describe Bookings do
   end
 
   it "?utm_source= should set booked_from if it is not set" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     body = BookingsHelper.http_create_booking(
       asset_id: "desk1",
       booking_type: "desk",
@@ -1547,15 +1432,6 @@ describe Bookings do
   end
 
   it "?utm_source= should set source in history" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     Timecop.scale(600) # 1 second == 10 minutes
 
     body = BookingsHelper.http_create_booking(
@@ -1601,15 +1477,6 @@ describe Bookings do
   # the state transition it caused, so these check the re-fetched booking rather
   # than trusting the response of the mutating request.
   describe "#check_in utm_source history" do
-    before_each do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-    end
-
     after_all do
       WebMock.reset
     end
@@ -1840,15 +1707,6 @@ describe Bookings do
 
   describe "permission", tags: ["auth", "group-event"] do
     it "#add_attendee should NOT allow adding public or same tenant users to PRIVATE bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -1886,15 +1744,6 @@ describe Bookings do
     end
 
     it "#add_attendee should allow adding same tenant users to OPEN bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -1933,15 +1782,6 @@ describe Bookings do
     end
 
     it "#add_attendee should allow adding anyone to PUBLIC bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -1980,15 +1820,6 @@ describe Bookings do
     end
 
     it "#index should return a list of PUBLIC bookings for unauthenticated users" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # private booking
       private_booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
@@ -2052,15 +1883,6 @@ describe Bookings do
     end
 
     pending "#index should return a list of OPEN and PUBLIC bookings for same tenant users" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # private booking
       private_booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
@@ -2124,15 +1946,6 @@ describe Bookings do
     end
 
     it "#index should return a list of PRIVATE, OPEN, and PUBLIC group-event bookings for the booking creator" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # private booking
       private_booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
@@ -2196,15 +2009,6 @@ describe Bookings do
     end
 
     pending "#index should NOT include attendee details for unauthenticated users" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       # public booking
       booking = BookingsHelper.http_create_booking(
         user_id: "user-three@example.com",
@@ -2251,15 +2055,6 @@ describe Bookings do
     end
 
     it "#destroy_attendee should allow same tenant users to remove attendees from OPEN bookings" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       booking = BookingsHelper.http_create_booking(
         user_id: "user-one@example.com",
         user_email: "user-one@example.com",
@@ -2324,12 +2119,6 @@ describe Bookings do
   end
 
   it "#destroy should delete a booking" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
     tenant = get_tenant
 
     user_email = Faker::Internet.email
@@ -2352,12 +2141,6 @@ describe Bookings do
   end
 
   it "#destroy should not change the state of a checked out booking" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
     tenant = get_tenant
 
     Timecop.scale(600) # 1 second == 10 minutes
@@ -2376,12 +2159,6 @@ describe Bookings do
   end
 
   it "#true query param should return deleted bookings" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
     tenant = get_tenant
     user_email = Faker::Internet.email
     booking1 = BookingsHelper.create_booking(tenant.id.not_nil!, user_email)
@@ -2414,15 +2191,6 @@ describe Bookings do
   end
 
   it "#create and #update" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
     starting = Random.new.rand(5..19).minutes.from_now.to_unix
@@ -2484,15 +2252,6 @@ describe Bookings do
   end
 
   it "#create and change start and end times" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
     starting = Random.new.rand(5..19).minutes.from_now.to_unix
@@ -2561,15 +2320,6 @@ describe Bookings do
   end
 
   it "#cannot double book the same asset" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
 
@@ -2599,15 +2349,6 @@ describe Bookings do
   end
 
   it "#cannot double book the same assets (multiple asset ids)" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
 
@@ -2638,15 +2379,6 @@ describe Bookings do
 
   describe "booking_limits" do
     before_all do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       Timecop.scale(600) # 1 second == 10 minutes
     end
 
@@ -2993,15 +2725,6 @@ describe Bookings do
   end
 
   it "#allows a booking once previous has been checked out" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id.not_nil!, 1.minutes.from_now.to_unix, 20.minutes.from_now.to_unix)
     booking.checked_out_at = 10.minutes.from_now.to_unix
@@ -3017,15 +2740,6 @@ describe Bookings do
 
   it "prevents checking back in once checked out" do
     Timecop.scale(1)
-
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
 
     tenant = get_tenant
     asset_id = "asset-#{Random.new.rand(500)}"
@@ -3043,13 +2757,6 @@ describe Bookings do
   end
 
   it "prevents checking in after a booking has ended" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-
     booking = BookingsHelper.http_create_booking(
       booking_start: 20.minutes.ago.to_unix,
       booking_end: 5.minutes.ago.to_unix,
@@ -3069,12 +2776,6 @@ describe Bookings do
   end
 
   it "#approve & #reject" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
     tenant = get_tenant
     booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
@@ -3097,12 +2798,6 @@ describe Bookings do
   end
 
   it "#check_in should set checked_in state of a booking" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
     tenant = Tenant.find_by(domain: "toby.staff-api.dev")
     booking = BookingsHelper.create_booking(tenant.id.not_nil!)
 
@@ -3114,15 +2809,6 @@ describe Bookings do
   end
 
   it "#create and #update parent child" do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
     starting = Random.new.rand(5..19).minutes.from_now.to_unix
@@ -3192,15 +2878,6 @@ describe Bookings do
 
   context "[visitor-kiosk]", tags: ["visitor-kiosk"] do
     it "checks in a visitor" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       tenant = get_tenant
 
       starting = Random.new.rand(5..19).minutes.from_now.to_unix
@@ -3235,15 +2912,6 @@ describe Bookings do
   end
 
   it "#update should correctly change all-day booking to non all-day booking", tags: ["all-day-booking"] do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
 
@@ -3292,12 +2960,6 @@ describe Bookings do
 
   describe "PPT-2457", tags: "PPT-2457" do
     it "#check_in should not allow a different user to check out another user's booking" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
       tenant = get_tenant
 
       Timecop.scale(600) # 1 second == 10 minutes
@@ -3328,50 +2990,22 @@ describe Bookings do
   end
 
   describe "signal payloads", tags: "PPT-2375" do
-    before_each do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    end
-
     it "#create emits staff/booking/changed with action create" do
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
 
-      client.post(BOOKINGS_BASE, headers: headers,
-        body: %({"asset_id":"desk-signal-1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"}))
+      created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
+        body: %({"asset_id":"desk-signal-1","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
 
-      sleep 50.milliseconds # let spawn fibres run
-
-      captured_bodies.size.should be >= 1
-      payload = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received("placeos/staff/booking/changed", &.["id"].==(created["id"]))
+      signals.size.should be >= 1
+      payload = signals.last.payload
       payload["action"].should eq "create"
       payload["booking_start"].should eq starting
       payload["booking_end"].should eq ending
     end
 
     it "#update with shrunk time window emits action metadata_changed with previous values" do
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 90.minutes.from_now.to_unix
 
@@ -3387,11 +3021,10 @@ describe Bookings do
       client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
         body: %({"booking_start":#{new_starting},"booking_end":#{new_ending}}))
 
-      sleep 50.milliseconds
-
-      # The last captured body should be from the update, not the create
-      captured_bodies.size.should be >= 2
-      update_payload = JSON.parse(captured_bodies.last)
+      # The last signal should be from the update, not the create
+      signals = SignalSpy.received("placeos/staff/booking/changed", 2, &.["id"].==(created["id"]))
+      signals.size.should be >= 2
+      update_payload = signals.last.payload
       update_payload["action"].should eq "metadata_changed"
       update_payload["booking_start"].should eq new_starting
       update_payload["booking_end"].should eq new_ending
@@ -3400,17 +3033,6 @@ describe Bookings do
     end
 
     it "#update with metadata-only change emits action metadata_changed" do
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
 
@@ -3423,24 +3045,14 @@ describe Bookings do
       client.patch("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers,
         body: %({"title":"just a title change"}))
 
-      sleep 50.milliseconds
-
-      captured_bodies.size.should be >= 2
-      update_payload = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received("placeos/staff/booking/changed", 2, &.["id"].==(created["id"]))
+      signals.size.should be >= 2
+      update_payload = signals.last.payload
       update_payload["action"].should eq "metadata_changed"
       update_payload["title"].should eq "just a title change"
     end
 
     it "#destroy emits staff/booking/changed with action cancelled" do
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-        .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-        .to_return(body: "")
-
       starting = 5.minutes.from_now.to_unix
       ending = 40.minutes.from_now.to_unix
 
@@ -3451,10 +3063,9 @@ describe Bookings do
 
       client.delete("#{BOOKINGS_BASE}/#{created["id"]}", headers: headers)
 
-      sleep 50.milliseconds
-
-      captured_bodies.size.should be >= 2
-      destroy_payload = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received("placeos/staff/booking/changed", 2, &.["id"].==(created["id"]))
+      signals.size.should be >= 2
+      destroy_payload = signals.last.payload
       destroy_payload["action"].should eq "cancelled"
     end
   end

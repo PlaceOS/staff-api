@@ -539,7 +539,7 @@ class Bookings < Application
         )
 
         spawn do
-          get_placeos_client.root.signal("staff/guest/attending", {
+          signal("staff/guest/attending", {
             action:         :booking_created,
             id:             guest.id,
             booking_id:     booking.id,
@@ -559,7 +559,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:          :create,
           id:              booking.id,
           booking_type:    booking.booking_type,
@@ -765,7 +765,7 @@ class Bookings < Application
 
             if !previously_visiting
               spawn do
-                get_placeos_client.root.signal("staff/guest/attending", {
+                signal("staff/guest/attending", {
                   action:         :booking_updated,
                   id:             guest.id,
                   booking_id:     existing_booking.id,
@@ -797,7 +797,7 @@ class Bookings < Application
     if original_host_email.to_s.downcase != existing_booking.user_email.to_s.downcase
       spawn do
         begin
-          get_placeos_client.root.signal("staff/booking/host_changed", {
+          signal("staff/booking/host_changed", {
             action:              :host_changed,
             booking_id:          existing_booking.id,
             resource_id:         existing_booking.asset_id,
@@ -868,7 +868,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:          :cancelled,
           id:              booking_local.id,
           instance:        booking_local.instance,
@@ -1013,7 +1013,7 @@ class Bookings < Application
                end
 
       spawn do
-        get_placeos_client.root.signal("staff/guest/#{action}", {
+        signal("staff/guest/#{action}", {
           action:         action,
           id:             guest.id,
           induction:      induction,
@@ -1156,7 +1156,7 @@ class Bookings < Application
 
     if !previously_visiting
       spawn do
-        get_placeos_client.root.signal("staff/guest/attending", {
+        signal("staff/guest/attending", {
           action:         :booking_updated,
           id:             guest.id,
           booking_id:     booking.id,
@@ -1264,7 +1264,7 @@ class Bookings < Application
 
   private def signal_guest_checkin(guest : Guest, checkin : Bool) : Nil
     spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
+      signal("staff/guest/checkin", {
         action:         :checkin,
         id:             guest.id,
         checkin:        checkin,
@@ -1293,7 +1293,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:                 signal,
           id:                     booking.id,
           instance:               booking.instance,

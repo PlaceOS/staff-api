@@ -12,6 +12,7 @@ require "uuid"
 # If you have a testing environment, replace this with a test config file
 require "../src/config"
 require "webmock"
+require "./controllers/helpers/placeos_helper"
 
 PgORM::Database.parse(ENV["PG_DATABASE_URL"])
 

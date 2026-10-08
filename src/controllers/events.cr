@@ -38,7 +38,7 @@ class Events < Application
 
     if system_id
       system = PlaceOS::Model::ControlSystem.find!(system_id)
-      return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+      return if check_access(current_user.groups, system.zones).can_manage?
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -47,7 +47,7 @@ class Events < Application
   private def confirm_access_for_add_attendee(
     event : PlaceCalendar::Event,
     metadata : EventMetadata,
-    system : PlaceOS::Client::API::Models::System? = nil,
+    system : PlaceOS::Model::ControlSystem? = nil,
   )
     return if metadata.permission.public?
     return if is_support?
@@ -55,7 +55,7 @@ class Events < Application
     if user = current_user
       return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
       if system
-        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+        return if check_access(current_user.groups, system.zones).can_manage?
       end
       return if metadata.permission.open? && (authority = user.authority) && (event_tenant = metadata.tenant) && (authority.domain == event_tenant.domain)
     end
@@ -67,7 +67,7 @@ class Events < Application
     email : String,
     cal_id : String,
     event_id : String,
-    system : PlaceOS::Client::API::Models::System? = nil,
+    system : PlaceOS::Model::ControlSystem? = nil,
   ) : PlaceCalendar::Event?
     return if is_support?
 
@@ -76,7 +76,7 @@ class Events < Application
       event = get_hosts_event_or_event(cal_id, event_id)
       return event if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
       if system
-        return event if check_access(current_user.groups, system.zones || [] of String).can_manage?
+        return event if check_access(current_user.groups, system.zones).can_manage?
       end
     end
 
@@ -163,7 +163,7 @@ class Events < Application
     calendar_rate_limit = [] of String
     calendar_other_error = [] of String
 
-    results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+    results = [] of Tuple(String, PlaceOS::Model::ControlSystem?, PlaceCalendar::Event)
     mappings.each do |(request, calendar_id, system)|
       begin
         results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
@@ -282,10 +282,10 @@ class Events < Application
     end
 
     # grab the system details for resource calendars, if they exist
-    system_emails = {} of String => PlaceOS::Client::API::Models::System
+    system_emails = {} of String => PlaceOS::Model::ControlSystem
     if !event_resources.empty?
-      systems = get_placeos_client.systems.with_emails event_resources.values.uniq!
-      systems.each { |sys| system_emails[sys.email.as(String).downcase] = sys }
+      systems = systems_with_emails(event_resources.values)
+      systems.each { |sys| system_emails[sys.email.to_s.downcase] = sys }
     end
 
     response_code = if errors > 0
@@ -412,8 +412,6 @@ class Events < Application
   # creates a new calendar event
   @[AC::Route::POST("/", body: :input_event, status_code: HTTP::Status::CREATED)]
   def create(input_event : PlaceCalendar::Event) : PlaceCalendar::Event
-    placeos_client = get_placeos_client
-
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
     host = input_event.host.try(&.downcase) || user_email
@@ -422,8 +420,8 @@ class Events < Application
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      raise Error::BadUpstreamResponse.new("email.presence must be present on system #{system_id}") unless system_email_presence = system.email.presence
+      system = find_system!(system_id)
+      raise Error::BadUpstreamResponse.new("email.presence must be present on system #{system_id}") unless system_email_presence = system.email.to_s.presence
       system_email = system_email_presence
       system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
@@ -521,13 +519,13 @@ class Events < Application
           )
 
           spawn do
-            placeos_client.root.signal("staff/guest/attending", {
+            signal("staff/guest/attending", {
               action:         :meeting_created,
               system_id:      sys.id,
               event_id:       created_event.id,
               event_ical_uid: created_event.ical_uid,
               host:           host,
-              resource:       sys.email,
+              resource:       sys.email.to_s,
               event_title:    created_event.title,
               event_summary:  created_event.title,
               event_starting: created_event_start.to_unix,
@@ -539,7 +537,7 @@ class Events < Application
         end
       end
 
-      return StaffApi::Event.augment(created_event, sys.email, sys, meta)
+      return StaffApi::Event.augment(created_event, sys.email.to_s, sys, meta)
     end
 
     Log.info { "no system provided for event #{created_event.id}" }
@@ -586,8 +584,6 @@ class Events < Application
     changes.id = event_id = original_id
     system_id = (associated_system || changes.system_id).presence
 
-    placeos_client = get_placeos_client
-
     user_cal = user_cal.try &.downcase
     if user_cal == user.email
       cal_id = user_cal
@@ -598,10 +594,10 @@ class Events < Application
     end
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -628,7 +624,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
     if !tenant.delegated && user_email != host && !user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id.as(String)] + system.zones).forbidden?)
     end
 
     # Check if attendees need updating
@@ -694,8 +690,8 @@ class Events < Application
     if changing_room
       raise Error::BadRequest.new("system_id must be present when changing room") unless new_system_id = changes.system_id
 
-      new_system = placeos_client.systems.fetch(new_system_id)
-      new_sys_cal = new_system.email.presence.try &.downcase
+      new_system = find_system!(new_system_id)
+      new_sys_cal = new_system.email.to_s.presence.try &.downcase
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
 
       previous_meta_for_signal = system_id ? get_event_metadata(event, system_id) : nil
@@ -889,13 +885,13 @@ class Events < Application
                 sys = system
                 raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
-                placeos_client.root.signal("staff/guest/attending", {
+                signal("staff/guest/attending", {
                   action:         :meeting_update,
                   system_id:      sys.id,
                   event_id:       event_id,
                   event_ical_uid: updated_event.ical_uid,
                   host:           signal_host,
-                  resource:       sys.email,
+                  resource:       sys.email.to_s,
                   event_title:    updated_event.title,
                   event_summary:  updated_event.title,
                   event_starting: updated_event_start.to_unix,
@@ -917,7 +913,7 @@ class Events < Application
       end
 
       if !resource_calendars.empty?
-        systems = placeos_client.systems.with_emails(resource_calendars)
+        systems = systems_with_emails(resource_calendars)
         if sys = systems.first?
           raise Error::BadUpstreamResponse.new("id must be present on system") unless sys_id = sys.id
 
@@ -943,16 +939,15 @@ class Events < Application
     @[AC::Param::Info(description: "(office365 only) when true, existing attendees are also emailed about the change, otherwise only the new attendee is notified", example: "false")]
     notify_existing_attendees : Bool = false,
   ) : Attendee | PlaceCalendar::Event::Attendee
-    placeos_client = get_placeos_client
     event_id = original_id
     email = attendee.email.strip.downcase
     cal_id = user_cal.try &.downcase
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -1056,13 +1051,13 @@ class Events < Application
           sys = system
           raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
-          placeos_client.root.signal("staff/guest/attending", {
+          signal("staff/guest/attending", {
             action:         :meeting_update,
             system_id:      sys.id,
             event_id:       event_id,
             event_ical_uid: updated_event.ical_uid,
             host:           host,
-            resource:       sys.email,
+            resource:       sys.email.to_s,
             event_title:    updated_event.title,
             event_summary:  updated_event.title,
             event_starting: updated_event_start.to_unix,
@@ -1088,16 +1083,15 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
     user_cal : String? = nil,
   ) : Nil
-    placeos_client = get_placeos_client
     event_id = original_id
     email = attendee_email.strip.downcase
     cal_id = user_cal.try &.downcase
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -1184,7 +1178,6 @@ class Events < Application
     ical_uid : String? = nil,
   ) : JSON::Any
     event_id = original_id
-    placeos_client = get_placeos_client
 
     # Guest access
     if user_token.guest_scope?
@@ -1193,8 +1186,8 @@ class Events < Application
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
     end
 
-    system = placeos_client.systems.fetch(system_id)
-    cal_id = system.email.presence.try &.downcase
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     # attempt to find the metadata
@@ -1271,7 +1264,6 @@ class Events < Application
 
   protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false, setup_time : Int64? = nil, breakdown_time : Int64? = nil, setup_event_id : String? = nil, breakdown_event_id : String? = nil) : JSON::Any
     event_id = original_id
-    placeos_client = get_placeos_client
 
     # Guest access
     if user_token.guest_scope?
@@ -1280,8 +1272,8 @@ class Events < Application
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
     end
 
-    system = placeos_client.systems.fetch(system_id)
-    cal_id = system.email.presence.try &.downcase
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
@@ -1335,7 +1327,7 @@ class Events < Application
              raise Error::BadUpstreamResponse.new("ical_uid must be present on event #{upstream_event_id}") unless event_ical_uid = event.ical_uid
              raise Error::BadUpstreamResponse.new("event_start must be present on event") unless event_start = event.event_start
              raise Error::BadUpstreamResponse.new("event_end must be present on event") unless event_end = event.event_end
-             raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email
+             raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email.to_s.presence
              raise Error::BadUpstreamResponse.new("host must be present on event") unless event_host = event.host
 
              is_host = event_host.downcase == cal_id.downcase
@@ -1371,14 +1363,14 @@ class Events < Application
     meta.save!
 
     spawn do
-      placeos_client.root.signal("staff/event/changed", {
+      signal("staff/event/changed", {
         action:          :update,
         system_id:       system.id,
         event_id:        original_id,
         event_ical_uid:  meta.ical_uid,
         host:            effective_host(meta),
         organiser_email: meta.host_email,
-        resource:        system.email,
+        resource:        system.email.to_s,
         event:           event,
         ext_data:        meta.ext_data,
       })
@@ -1468,7 +1460,6 @@ class Events < Application
     @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
     user_cal : String? = nil,
   ) : PlaceCalendar::Event
-    placeos_client = get_placeos_client
     event_id = original_id
 
     # Guest access
@@ -1480,8 +1471,8 @@ class Events < Application
 
     if system_id
       # Need to grab the calendar associated with this system
-      system = placeos_client.systems.fetch(system_id)
-      cal_id = system.email
+      system = find_system!(system_id)
+      cal_id = system.email.to_s.presence
       user_email = user_token.guest_scope? ? cal_id : user.email
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
@@ -1533,7 +1524,7 @@ class Events < Application
       end
 
       if !resource_calendars.empty?
-        systems = placeos_client.systems.with_emails(resource_calendars)
+        systems = systems_with_emails(resource_calendars)
         if system = systems.first?
           return StaffApi::Event.augment(event, user_cal, system, metadata)
         end
@@ -1581,8 +1572,6 @@ class Events < Application
   end
 
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
-    placeos_client = get_placeos_client
-
     user_cal = user_cal.try &.strip.downcase
     if user_cal == user.email
       cal_id = user_cal
@@ -1593,8 +1582,8 @@ class Events < Application
     end
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence.try(&.strip.downcase)
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence.try(&.strip.downcase)
       if cal_id.nil?
         cal_id = sys_cal
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
@@ -1621,7 +1610,7 @@ class Events < Application
       existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
       unless user_email == host || user_email.in?(existing_attendees)
         # may be able to delete on behalf of the user
-        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id.as(String)] + system.zones).forbidden?)
       end
     end
 
@@ -1674,8 +1663,8 @@ class Events < Application
     system_id : String,
   ) : Bool
     # Check this system has an associated resource
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
     client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
@@ -1758,8 +1747,8 @@ class Events < Application
     system_id : String,
   ) : Bool
     # Check this system has an associated resource
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
@@ -1786,7 +1775,7 @@ class Events < Application
       metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ical_uid, system_id: system_id).first?
       parent_meta = false
     else
-      cal_id = get_placeos_client.systems.fetch(system_id).email
+      cal_id = find_system!(system_id).email.to_s.presence
       return [] of Guest unless cal_id
 
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
@@ -1946,15 +1935,15 @@ class Events < Application
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
-    system = get_placeos_client.systems.fetch(system_id)
-    sys_cal = system.email.presence.try(&.strip.downcase)
+    system = find_system!(system_id)
+    sys_cal = system.email.to_s.presence.try(&.strip.downcase)
     if cal_id.nil?
       cal_id = sys_cal
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
     end
 
     # defaults to the room email
-    cal_id = cal_id.presence || system.email.as(String)
+    cal_id = cal_id.presence || system.email.to_s
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user_email}") unless event
@@ -2023,7 +2012,7 @@ class Events < Application
 
     # Update PlaceOS with an signal "staff/guest/checkin"
     spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
+      signal("staff/guest/checkin", {
         action:         :checkin,
         id:             guest.id,
         checkin:        checkin,
@@ -2193,7 +2182,7 @@ class Events < Application
     meta.host_email = event.host.as(String).downcase
     meta.event_start = starting
     meta.event_end = ending
-    meta.resource_calendar = system.email.to_s.as(String).downcase
+    meta.resource_calendar = system.email.to_s.downcase
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
     meta.save!
@@ -2213,7 +2202,7 @@ class Events < Application
     return if skip_signal
 
     spawn do
-      get_placeos_client.root.signal("staff/event/changed", {
+      signal("staff/event/changed", {
         action:               action,
         system_id:            system.id,
         event_id:             meta.event_id,
@@ -2261,13 +2250,13 @@ class Events < Application
       end
     end
 
-    get_placeos_client.root.signal("staff/event/changed", {
+    signal("staff/event/changed", {
       action:         :cancelled,
       reason:         reason,
       system_id:      system.id,
       event_id:       event_id,
       event_ical_uid: event_ical_uid,
-      resource:       system.email,
+      resource:       system.email.to_s,
       event:          event,
       ext_data:       meta.try &.ext_data,
     })

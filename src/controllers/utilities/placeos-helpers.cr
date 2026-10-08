@@ -1,34 +1,56 @@
-require "placeos"
-require "promise"
+require "redis-cluster"
 
-# Helper to interact with PlaceOS API
+# Helpers for interacting with PlaceOS resources
 module Utils::PlaceOSHelpers
-  # Base URL of the PlaceOS instance we are interacting with
-  PLACE_URI         = App::PLACE_URI
-  PLACE_HOST_HEADER = App::PLACE_HOST_HEADER
+  # The authority (PlaceOS domain) this request is being made against
+  getter current_authority : PlaceOS::Model::Authority? { PlaceOS::Model::Authority.find_by_domain(request.hostname.as(String)) }
 
-  @placeos_client : PlaceOS::Client? = nil
+  # Systems
+  # =======
 
-  def get_placeos_client : PlaceOS::Client
-    @placeos_client ||= if App.running_in_production?
-                          if key = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
-                            PlaceOS::Client.new(
-                              PLACE_URI,
-                              host_header: PLACE_HOST_HEADER || request.headers["Host"]?,
-                              insecure: ::App::SSL_VERIFY_NONE,
-                              x_api_key: key
-                            )
-                          else
-                            PlaceOS::Client.new(
-                              PLACE_URI,
-                              token: OAuth2::AccessToken::Bearer.new(acquire_token.not_nil!, nil),
-                              host_header: PLACE_HOST_HEADER || request.headers["Host"]?,
-                              insecure: ::App::SSL_VERIFY_NONE
-                            )
-                          end
-                        else
-                          PlaceOS::Client.from_environment_user
-                        end
+  # Guests can only access the systems they've been invited to.
+  # Some routes allow unauthenticated requests (i.e. adding an attendee to a public event)
+  def find_system!(id : String) : PlaceOS::Model::ControlSystem
+    if auth_token_present? && user_token.guest_scope? && !user_token.user.roles.includes?(id)
+      raise Error::Forbidden.new("guest #{user_token.id} cannot access system #{id}")
+    end
+    PlaceOS::Model::ControlSystem.find!(id)
+  end
+
+  def systems_with_emails(emails : Enumerable(String)) : Array(PlaceOS::Model::ControlSystem)
+    emails = emails.map(&.strip.downcase).uniq!
+    return [] of PlaceOS::Model::ControlSystem if emails.empty?
+    PlaceOS::Model::ControlSystem.where(email: emails).to_a
+  end
+
+  # Signals
+  # =======
+
+  @@redis : Redis::Client? = nil
+  @@redis_lock = Mutex.new
+
+  protected def self.with_redis(&)
+    @@redis_lock.synchronize do
+      redis = @@redis ||= Redis::Client.boot(App::REDIS_URL)
+      yield redis
+    end
+  end
+
+  # Publishes JSON data to drivers and frontends listening on the channel,
+  # both globally and scoped to this domain's authority.
+  # A failed signal is logged and doesn't fail the request.
+  def signal(channel : String, payload) : Nil
+    data = payload.to_json
+    paths = ["placeos/#{channel}"]
+    if authority_id = current_authority.try(&.id)
+      paths << "placeos/#{authority_id}/#{channel}"
+    end
+
+    Utils::PlaceOSHelpers.with_redis do |redis|
+      paths.each { |path| redis.publish(path, data) }
+    end
+  rescue error
+    ::App::Log.error(exception: error) { "failed to signal #{channel}" }
   end
 
   # Get the list of local calendars this user has access to
@@ -44,65 +66,51 @@ module Utils::PlaceOSHelpers
     capacity : Int32? = nil,
     bookable : Bool? = nil,
     allow_default = false,
-  )
-    calendars = Set.new((calendars || "").split(',').compact_map(&.strip.downcase.presence))
+  ) : Hash(String, PlaceOS::Model::ControlSystem?)
+    calendars = Set.new(split_list(calendars).map(&.downcase))
+    zones = split_list(zone_ids)
+    system_ids = split_list(system_ids)
 
     # Create a map of calendar ids to systems
     # only obtain events for calendars the user has access to
-    system_calendars = if calendars.size > 0
-                         if tenant.using_service_account? || tenant.delegated
-                           calendars.each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
-                         else
-                           user_calendars = Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
-                           (calendars & user_calendars).each_with_object({} of String => PlaceOS::Client::API::Models::System?) { |calendar, obj| obj[calendar] = nil }
-                         end
-                       else
-                         {} of String => PlaceOS::Client::API::Models::System?
-                       end
-
-    # Check if we want to grab systems from zones
-    zones = (zone_ids || "").split(',').compact_map(&.strip.presence).uniq!
-    if zones.size > 0
-      systems = get_placeos_client.systems
-
-      # perform requests in parallel (map-reduce)
-      Promise.all(zones.map { |zone_id|
-        Promise.defer {
-          systems.search(
-            zone_id: zone_id,
-            features: features,
-            capacity: capacity,
-            bookable: bookable
-          )
-        }
-      }).get.each do |results|
-        results.each do |system|
-          calendar = system.email.presence
-          next unless calendar
-          system_calendars[calendar.downcase] = system
-        end
+    system_calendars = {} of String => PlaceOS::Model::ControlSystem?
+    unless calendars.empty?
+      unless tenant.using_service_account? || tenant.delegated
+        calendars &= Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))
       end
+      calendars.each { |calendar| system_calendars[calendar] = nil }
     end
 
-    # Check if we want to grab individual systems
-    system_ids = (system_ids || "").split(',').compact_map(&.strip.presence).uniq!
-    if system_ids.size > 0
-      systems = get_placeos_client.systems
-
-      # perform requests in parallel (map-reduce)
-      Promise.all(system_ids.map { |system_id|
-        Promise.defer { systems.fetch(system_id) }
-      }).get.each do |system|
-        calendar = system.email.presence
-        next unless calendar
-        system_calendars[calendar.downcase] = system
-      end
+    # Grab systems from zones and individual systems
+    systems = zones.empty? ? [] of PlaceOS::Model::ControlSystem : Utils::PlaceOSHelpers.systems_in_zones(zones, split_list(features), capacity, bookable)
+    systems.concat system_ids.map { |system_id| find_system!(system_id) }
+    systems.each do |system|
+      calendar = system.email.to_s.downcase.presence
+      system_calendars[calendar] = system if calendar
     end
 
     # default to the current user if no params were passed
     system_calendars[user.email.downcase] = nil if allow_default && system_calendars.empty? && calendars.empty? && zones.empty? && system_ids.empty?
 
     system_calendars
+  end
+
+  # Systems that are in any of the zones and match all of the filters
+  def self.systems_in_zones(zones : Array(String), features : Array(String), capacity : Int32?, bookable : Bool?) : Array(PlaceOS::Model::ControlSystem)
+    query = PlaceOS::Model::ControlSystem.where("zones && #{sql_array(zones)}", zones)
+    query = query.where("features @> #{sql_array(features)}", features) unless features.empty?
+    query = query.where("capacity >= ?", capacity) if capacity
+    query = query.where(bookable: bookable) unless bookable.nil?
+    query.to_a
+  end
+
+  # placeholders for binding an array of values: "ARRAY[?, ?, ...]::text[]"
+  protected def self.sql_array(list : Array(String)) : String
+    "ARRAY[#{list.join(", ") { "?" }}]::text[]"
+  end
+
+  private def split_list(list : String?) : Array(String)
+    (list || "").split(',').compact_map(&.strip.presence).uniq!
   end
 
   enum Permission

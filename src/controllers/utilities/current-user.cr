@@ -20,9 +20,14 @@ module Utils::CurrentUser
     # check for X-API-Key use
     if token = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
       begin
-        @user_token = user_token = get_placeos_client.apikeys.inspect_jwt
+        api_key = ::PlaceOS::Model::ApiKey.find_key!(token)
+        raise Error::Unauthorized.new "API key has expired" if api_key.expired?
+        user_token = api_key.build_jwt
+        Log.context.set(api_key_id: api_key.id, api_key_name: api_key.name)
         @current_user = ::PlaceOS::Model::User.find(user_token.id)
-        return user_token
+        return @user_token = user_token
+      rescue e : Error::Unauthorized
+        raise e
       rescue e
         Log.warn(exception: e) { "bad or unknown X-API-Key" }
         raise Error::Unauthorized.new "unknown X-API-Key"
