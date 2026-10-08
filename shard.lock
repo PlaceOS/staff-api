@@ -7,7 +7,7 @@ shards:
 
   action-controller:
     git: https://github.com/spider-gazelle/action-controller.git
-    version: 8.15.0
+    version: 9.0.0
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
@@ -51,7 +51,7 @@ shards:
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.14.0
+    version: 0.15.0
 
   dns:
     git: https://github.com/spider-gazelle/dns.git
@@ -135,7 +135,7 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.30.0
+    version: 0.31.0
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
