@@ -264,6 +264,7 @@
 
 ### Refactor
 
+- remove rest-api client, access PlaceOS directly ([#391](https://github.com/PlaceOS/staff-api/pull/391))
 - **bookings**: clashing_assets to validate booking_start vs booking_end ([#373](https://github.com/PlaceOS/staff-api/pull/373))
 - **events**: [PPT-2358] classhing-assets to follow bookings signature ([#369](https://github.com/PlaceOS/staff-api/pull/369))
 - **calendars**: [PPT-2471] check_permission to call MS G get calendar instead ([#368](https://github.com/PlaceOS/staff-api/pull/368))
