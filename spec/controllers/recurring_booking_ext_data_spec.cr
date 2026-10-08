@@ -44,19 +44,6 @@ describe Bookings do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
-  # updating an instance saves the booking and spawns a signal to the placeos
-  # engine -- stub the outbound calls so the spawned fibers don't hit the network
-  stub_engine = -> do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-  end
-
   # create a daily recurring parking booking, carrying extension data, through
   # the REST API. Returns {id, booking_start, booking_end}
   create_recurring = ->(asset_id : String) do
@@ -116,8 +103,6 @@ describe Bookings do
 
   describe "recurring booking extension data" do
     it "returns the parent's extension data on every expanded occurrence" do
-      stub_engine.call
-
       booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
 
       listed = list_bookings.call
@@ -131,8 +116,6 @@ describe Bookings do
     end
 
     it "keeps the parent's extension data on an occurrence after its asset_id is changed" do
-      stub_engine.call
-
       booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
       instance = instances_of.call(booking_id).first
 
@@ -166,8 +149,6 @@ describe Bookings do
     end
 
     it "keeps the extension data on sibling occurrences after one asset_id is changed" do
-      stub_engine.call
-
       booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
       instance = instances_of.call(booking_id).first
 
@@ -201,8 +182,6 @@ describe Bookings do
       "an empty object" => JSON::Any.new({} of String => JSON::Any),
     }.each do |description, extension_data|
       it "keeps inheriting when an occurrence update sends #{description}" do
-        stub_engine.call
-
         booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
         instance = instances_of.call(booking_id).first
 
@@ -234,8 +213,6 @@ describe Bookings do
     end
 
     it "snapshots the effective extension data when an occurrence is updated" do
-      stub_engine.call
-
       booking_id, _start, _end = create_recurring.call("unallocated-Ez15vtMs")
       instance = instances_of.call(booking_id).first
 
@@ -350,8 +327,6 @@ describe Bookings do
     end
 
     it "returns the extension data on every occurrence of the series" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       listed = list_parking.call(first_day)
       listed.size.should be > 1
@@ -363,8 +338,6 @@ describe Bookings do
     end
 
     it "keeps the extension data when only asset_id is sent for one occurrence" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       instances = parking_instances.call(booking_id, first_day)
       instances.size.should be > 1
@@ -392,8 +365,6 @@ describe Bookings do
     end
 
     it "keeps the extension data when asset_id is sent with an empty asset_ids" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       instance = parking_instances.call(booking_id, first_day).first
 
@@ -417,8 +388,6 @@ describe Bookings do
     end
 
     it "still inherits later parent extension data changes on an occurrence whose asset changed" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       instance = parking_instances.call(booking_id, first_day).first
 
@@ -448,8 +417,6 @@ describe Bookings do
     end
 
     it "picks up the series' extension data on an occurrence re-allocated before any was set" do
-      stub_engine.call
-
       # a series created without extension data
       first_day = Time.local(perth).at_beginning_of_day + 1.day
       response = client.post(BOOKINGS_BASE, headers: headers, body: {
@@ -494,8 +461,6 @@ describe Bookings do
     end
 
     it "snapshots all effective data when an occurrence's extension data changes" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       instance = parking_instances.call(booking_id, first_day).first
 
@@ -532,8 +497,6 @@ describe Bookings do
     end
 
     it "keeps inheriting when the instance extension-data route receives an empty object" do
-      stub_engine.call
-
       booking_id, first_day = create_parking.call
       instance = parking_instances.call(booking_id, first_day).first
 

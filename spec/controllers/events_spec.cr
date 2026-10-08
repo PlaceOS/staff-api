@@ -19,8 +19,7 @@ describe Events, tags: ["event"] do
     it "#index should return a list of events with metadata" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      SystemsHelper.load_fixture("systems.json", zones: ["z1"])
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -36,8 +35,6 @@ describe Events, tags: ["event"] do
     end
 
     it "metadata extension endpoint should filter by extension data" do
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -57,10 +54,6 @@ describe Events, tags: ["event"] do
     it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-        .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_with_recurring_event.json"))
 
@@ -78,10 +71,6 @@ describe Events, tags: ["event"] do
     it "#index should skip events with missing ical_uid and return the rest" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-        .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index_missing_ical_uid.json"))
 
@@ -99,8 +88,7 @@ describe Events, tags: ["event"] do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
 
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      SystemsHelper.load_fixture("systems.json", zones: ["z1"])
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -266,7 +254,6 @@ describe Events, tags: ["event"] do
 
       req_body = EventsHelper.update_event_input
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
       updated_event = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body).body
       updated_event.includes?(%(some updated notes))
       # .should eq(EventsHelper.update_event_output)
@@ -359,7 +346,6 @@ describe Events, tags: ["event"] do
       # Update
       req_body = EventsHelper.update_event_input
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
       resp = client.patch("#{EVENTS_BASE}/#{created_event["id"]}?system_id=#{system_id}", headers: headers, body: req_body)
 
       updated_event = JSON.parse(resp.body)
@@ -395,7 +381,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
@@ -451,7 +436,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
@@ -510,7 +494,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # public user
       no_auth_headers = Mock::Headers.office365_no_auth
@@ -574,7 +557,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # Default: existing attendees are not notified, so only the attendees
       # property is sent upstream.
@@ -630,7 +612,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # public user should NOT be able to delete attendees
       no_auth_headers = Mock::Headers.office365_no_auth
@@ -681,7 +662,6 @@ describe Events, tags: ["event"] do
         .to_return(EventsHelper.event_query_response(event_id))
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # public user should NOT be able to delete attendees
       no_auth_headers = Mock::Headers.office365_no_auth
@@ -709,8 +689,7 @@ describe Events, tags: ["event"] do
     pending "#index should return a list of PUBLIC events for unauthenticated users" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      SystemsHelper.load_fixture("systems.json", zones: ["z1"])
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -757,8 +736,7 @@ describe Events, tags: ["event"] do
     pending "#index should return a list of OPEN and PUBLIC events for same tenant users" do
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=z1")
-        .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+      SystemsHelper.load_fixture("systems.json", zones: ["z1"])
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
 
@@ -840,11 +818,6 @@ describe Events, tags: ["event"] do
     end
 
     it "details for event with guest access and event is recurring instance" do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return(body: "")
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
@@ -1000,20 +973,6 @@ describe Events, tags: ["event"] do
 
     meta = metadata.not_nil!
 
-    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/sys-rJQQlR4Cn7?name=permissions")
-      .to_return(body: %({"permissions":
-      {"name":"permissions",
-        "parent_id": "22",
-        "description" : "grant access",
-      "details":{"admin": ["admin"]}}}))
-
-    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
-      .to_return(body: %({"permissions":
-         {"name":"permissions",
-           "parent_id": "22",
-           "description" : "grant access",
-         "details":{"admin": ["admin"]}}}))
-
     # delete
     resp = client.delete("#{EVENTS_BASE}/#{created_event_id}?system_id=#{meta.try &.system_id}", headers: headers)
     resp.success?.should be_true
@@ -1044,7 +1003,6 @@ describe Events, tags: ["event"] do
 
     # ensure the user has permissions to update the event
     system_id = "sys-rJQQlR4Cn7"
-    EventsHelper.stub_permissions_check(system_id)
 
     # approve
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D/accept")
@@ -1079,7 +1037,6 @@ describe Events, tags: ["event"] do
       .to_return(body: {success: true}.to_json)
 
     system_id = "sys-rJQQlR4Cn7"
-    EventsHelper.stub_permissions_check(system_id)
     resp = client.post("#{EVENTS_BASE}/#{created_event["id"]}/reject?system_id=#{system_id}", headers: headers)
     resp.success?.should eq true
   end
@@ -1090,9 +1047,6 @@ describe Events, tags: ["event"] do
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
-        .to_return(body: "")
 
       # Create event
 
@@ -1139,9 +1093,6 @@ describe Events, tags: ["event"] do
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_recurring.json"))
-
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin")
-        .to_return(body: "")
 
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/event_instance_of_recurrence_id")
         .to_return(body: File.read("./spec/fixtures/events/o365/show_instance_recurring.json"))
@@ -1278,7 +1229,6 @@ describe Events, tags: ["event"] do
 
       # ensure the user has permissions to update the event
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
 
       # approve
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/room1%40example.com/calendar/events/#{URI.encode_path(created_event_id)}/accept")
@@ -1569,28 +1519,7 @@ describe Events, tags: ["event"] do
   end
 
   describe "signal payloads", tags: "PPT-2375" do
-    before_each do
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    end
-
     it "#notify_change emits staff/event/changed signal when only the host changes" do
-      # Reset and re-register stubs so our capturing stub is registered first
-      # (WebMock uses the first matching stub, not the last)
-      WebMock.reset
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
-      # Capture the signal
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return do |request|
-          captured_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-
       # Create a ControlSystem in the database
       system_id = "sys-host-change-test"
       # Cleanup any leftover from a previous run
@@ -1638,36 +1567,24 @@ describe Events, tags: ["event"] do
       )
       resp.status_code.should eq(202)
 
-      sleep 100.milliseconds # let spawn fibres run
-
       # Signal MUST be emitted because the host changed
-      captured_bodies.size.should be >= 1
-      payload = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received("placeos/staff/event/changed", &.["system_id"]?.==(system_id))
+      signals.size.should be >= 1
+      payload = signals.last.payload
       payload["action"].as_s.should eq "update"
       payload["previous_host_email"].as_s.should eq initial_host
       payload["host"].as_s.should eq new_host
     end
 
     it "#notify_change ignores the stale room-mailbox echo but never the master copy" do
-      WebMock.reset
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return(body: "")
-
       system_id = "sys-mirror-echo-test"
 
       # Signals are emitted from spawned fibres, so one belonging to an earlier
-      # example can still be in flight when this one installs its stub and be
-      # captured here. This example asserts on exact counts, so it records only
-      # the signals it caused -- identified by its own dedicated system.
-      captured_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return do |request|
-          body = request.body.try(&.gets_to_end) || ""
-          captured_bodies << body if JSON.parse(body)["system_id"]?.try(&.as_s?) == system_id
-          HTTP::Client::Response.new(200, body: "")
-        end
+      # example can still be in flight when this one starts and be received
+      # here. This example asserts on exact counts, so it counts only the
+      # signals it caused -- identified by its own dedicated system.
+      channel = "placeos/staff/event/changed"
+      ours = ->(payload : JSON::Any) { payload["system_id"]? == system_id }
 
       PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
       test_system = PlaceOS::Model::Generator.control_system
@@ -1706,18 +1623,16 @@ describe Events, tags: ["event"] do
       # 1) Organizer/master copy moves the event Wed -> Thu: a real change.
       client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{master_event_id}",
         headers: headers, body: event_body.call(master_event_id, thu, thu_end)).status_code.should eq(202)
-      sleep 100.milliseconds
-
-      captured_bodies.size.should eq 1
-      first = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received(channel, &ours)
+      signals.size.should eq 1
+      first = signals.last.payload
       first["event_start"].as_i64.should eq thu
       first["previous_event_start"].as_i64.should eq wed
 
       # A signal from an earlier example's spawned fibre can still be in flight
       # and land here. Stand one in deliberately: the counts below are only
       # meaningful if a signal for another system is not mistaken for ours.
-      HTTP::Client.post("#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed",
-        body: %({"system_id": "sys-unrelated-example", "event_id": "evt-unrelated"}))
+      SignalSpy.publish(channel, {system_id: "sys-unrelated-example", event_id: "evt-unrelated"})
 
       # 2) Room copy lags and reports the OLD time (Wed): the stale echo that must
       #    now be ignored.
@@ -1725,17 +1640,16 @@ describe Events, tags: ["event"] do
         headers: headers, body: event_body.call(room_event_id, wed, wed_end)).status_code.should eq(202)
       sleep 100.milliseconds
 
-      captured_bodies.size.should eq 1                                    # no reversed signal emitted
-      EventMetadata.find_by(ical_uid: ical_uid).event_start.should eq thu # record not corrupted
+      SignalSpy.received(channel, 2, wait: 0.seconds, &ours).size.should eq 1 # no reversed signal emitted
+      EventMetadata.find_by(ical_uid: ical_uid).event_start.should eq thu     # record not corrupted
 
       # 3) A further master-copy change (Thu -> Fri) within the window is a real
       #    edit and must still emit — the guard only targets mirror copies.
       client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{master_event_id}",
         headers: headers, body: event_body.call(master_event_id, fri, fri_end)).status_code.should eq(202)
-      sleep 100.milliseconds
-
-      captured_bodies.size.should eq 2
-      last = JSON.parse(captured_bodies.last)
+      signals = SignalSpy.received(channel, 2, &ours)
+      signals.size.should eq 2
+      last = signals.last.payload
       last["event_start"].as_i64.should eq fri
       last["previous_event_start"].as_i64.should eq thu
     end
@@ -1751,25 +1665,15 @@ describe Events, tags: ["event"] do
     # an attendee of the event, used where the requester must not be the host
     requester = "jon@example.com"
 
-    # Creates an event and returns {event_id, staff/event/changed bodies,
-    # staff/guest/attending bodies, bodies PATCHed upstream}. Everything is
-    # captured from here on; WebMock matches the first stub registered, so these
-    # have to go in ahead of the shared ones.
+    changed = "placeos/staff/event/changed"
+    attending = "placeos/staff/guest/attending"
+
+    # Creates an event and returns {event_id, bodies PATCHed upstream}.
+    # Signals and PATCHes are captured from here on; WebMock matches the first
+    # stub registered, so the PATCH stub has to go in ahead of the shared ones.
     create_event = ->(one_off : Bool) do
       WebMock.reset
-      changed_bodies = [] of String
-      attending_bodies = [] of String
       patch_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return do |request|
-          changed_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return do |request|
-          attending_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
       WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA%3D")
         .to_return do |request|
           patch_bodies << (request.body.try(&.gets_to_end) || "")
@@ -1779,20 +1683,19 @@ describe Events, tags: ["event"] do
       EventsHelper.stub_one_off_event if one_off
       EventsHelper.stub_event_tokens
       EventsHelper.stub_update_endpoints
-      EventsHelper.stub_permissions_check(system_id)
 
       created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_event_input).body).as_h
       event_id = created["id"].to_s
       EventsHelper.stub_room_event_query(event_id)
 
-      changed_bodies.clear
-      attending_bodies.clear
+      sleep 100.milliseconds # the create's signals are not part of the example
+      SignalSpy.clear
       patch_bodies.clear
-      {event_id, changed_bodies, attending_bodies, patch_bodies}
+      {event_id, patch_bodies}
     end
 
     it "reports extension_data.host_override as the host" do
-      event_id, changed_bodies, _, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       new_host = "new-host@example.com"
       resp = client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
@@ -1800,25 +1703,25 @@ describe Events, tags: ["event"] do
       resp.status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq new_host
       payload["previous_host_email"].as_s.should eq organiser
       # the mailbox the event actually lives on is still reported
       payload["organiser_email"].as_s.should eq organiser
 
       # a later edit that does not touch the host is not a reassignment
-      changed_bodies.clear
+      SignalSpy.clear
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq new_host
       payload["previous_host_email"].as_s.should eq new_host
     end
 
     it "moves the meeting to the new host's calendar when the host field changes" do
-      event_id, changed_bodies, _, _ = create_event.call(true)
+      event_id, _ = create_event.call(true)
       new_host = "another-host@example.com"
       EventsHelper.stub_calendar_write_access(new_host)
 
@@ -1860,14 +1763,14 @@ describe Events, tags: ["event"] do
       after.ical_uid.should eq "ical-moved-001"
       after.attendees.to_a.size.should eq before.attendees.to_a.size
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq new_host
       payload["organiser_email"].as_s.should eq new_host
       payload["previous_host_email"].as_s.should eq organiser
     end
 
     it "keeps the previous host in the moved meeting when the attendees sent still list them" do
-      event_id, _, _, _ = create_event.call(true)
+      event_id, _ = create_event.call(true)
       new_host = "another-host@example.com"
       EventsHelper.stub_calendar_write_access(new_host)
       WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
@@ -1890,7 +1793,7 @@ describe Events, tags: ["event"] do
     end
 
     it "supersedes a reassignment when the meeting moves to the new host" do
-      event_id, changed_bodies, _, _ = create_event.call(true)
+      event_id, _ = create_event.call(true)
 
       # a meeting hosted by someone other than the mailbox that owns it
       stand_in = "stand-in-host@example.com"
@@ -1908,7 +1811,7 @@ describe Events, tags: ["event"] do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(new_host)}/calendar/events")
         .to_return(body: EventsHelper.mock_event_id(moved_event_id, "ical-superseded", recurring: false, organizer: new_host).to_json)
 
-      changed_bodies.clear
+      SignalSpy.clear
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host: new_host)).status_code.should eq(200)
       sleep 100.milliseconds
@@ -1919,13 +1822,13 @@ describe Events, tags: ["event"] do
       host_override_of.call(moved).should be_nil
 
       # and the person who was actually hosting is the one told they no longer are
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq new_host
       payload["previous_host_email"].as_s.should eq stand_in
     end
 
     it "does not move the meeting when the host field repeats the organiser" do
-      event_id, changed_bodies, _, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       WebMock.stub(:delete, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/#{URI.encode_path_segment(event_id)}")
         .to_return { raise "the meeting must not be cancelled" }
@@ -1934,7 +1837,7 @@ describe Events, tags: ["event"] do
         body: EventsHelper.reassign_host_input(host: organiser)).status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq organiser
       payload["previous_host_email"].as_s.should eq organiser
     end
@@ -1943,7 +1846,6 @@ describe Events, tags: ["event"] do
       WebMock.reset
       EventsHelper.stub_event_tokens
       EventsHelper.stub_update_endpoints
-      EventsHelper.stub_permissions_check(system_id)
 
       created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_recurring_event_input).body).as_h
       recurring_id = created["id"].to_s
@@ -1961,7 +1863,7 @@ describe Events, tags: ["event"] do
     end
 
     it "ignores a host field that has fallen back to the requesting user" do
-      event_id, changed_bodies, _, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       # an attendee edits the meeting; front ends fall back to the current user
       # when they cannot resolve the organiser, which must not steal the event
@@ -1970,31 +1872,31 @@ describe Events, tags: ["event"] do
         body: EventsHelper.reassign_host_input(host: requester)).status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq organiser
       payload["previous_host_email"].as_s.should eq organiser
     end
 
     it "clears the reassignment when the override is emptied" do
-      event_id, changed_bodies, _, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       new_host = "temporary-host@example.com"
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
       sleep 100.milliseconds
 
-      changed_bodies.clear
+      SignalSpy.clear
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host_override: "")).status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq organiser
       payload["previous_host_email"].as_s.should eq new_host
     end
 
     it "keeps the reassignment, and does not re-invite anyone, when the event changes room" do
-      event_id, changed_bodies, attending_bodies, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       new_host = "moved-host@example.com"
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
@@ -2002,19 +1904,15 @@ describe Events, tags: ["event"] do
       sleep 100.milliseconds
 
       # the room the event moves to
-      systems = Array(JSON::Any).from_json(File.read("./spec/fixtures/placeos/systems.json")).map &.to_json
+      SystemsHelper.load_fixture("systems.json")
       moved_system_id = "sys_id"
-      WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{moved_system_id}")
-        .to_return(body: systems[1])
-      EventsHelper.stub_permissions_check(moved_system_id)
 
-      changed_bodies.clear
-      attending_bodies.clear
+      SignalSpy.clear
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host_override: new_host, attendee: requester, system_id: moved_system_id)).status_code.should eq(200)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["previous_system_id"].as_s.should eq system_id
       payload["system_id"].as_s.should eq moved_system_id
       # a move must not read as a reassignment back to the organiser
@@ -2022,11 +1920,11 @@ describe Events, tags: ["event"] do
       payload["previous_host_email"].as_s.should eq new_host
 
       # the visitor was already attending — the move is a change, not an invite
-      attending_bodies.map { |body| JSON.parse(body)["attendee_email"].as_s }.should_not contain requester
+      SignalSpy.payloads(attending).map(&.["attendee_email"].as_s).should_not contain requester
     end
 
     it "puts the new host in the meeting so it reaches their calendar" do
-      event_id, _, _, patch_bodies = create_event.call(false)
+      event_id, patch_bodies = create_event.call(false)
 
       new_host = "not-invited@example.com"
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
@@ -2039,25 +1937,19 @@ describe Events, tags: ["event"] do
     end
 
     it "drops a reassignment when the calendar reports a different organiser" do
-      event_id, changed_bodies, _, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       new_host = "placeos-host@example.com"
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
         body: EventsHelper.reassign_host_input(host_override: new_host)).status_code.should eq(200)
       sleep 100.milliseconds
-      JSON.parse(changed_bodies.last)["host"].as_s.should eq new_host
+      SignalSpy.received(changed).last.payload["host"].as_s.should eq new_host
 
       # Office365 owns the organiser, so a change there wins: recreating the
       # meeting under someone else must not leave the old reassignment in place
-      changed_bodies.clear
+      SignalSpy.clear
       outlook_organiser = "outlook-organiser@example.com"
       meta = EventMetadata.find_by(event_id: event_id)
-
-      # the webhook route resolves the system from the database
-      PlaceOS::Model::ControlSystem.find?(system_id).try(&.delete)
-      webhook_system = PlaceOS::Model::Generator.control_system
-      webhook_system.id = system_id
-      webhook_system.save!
 
       client.post("#{EVENTS_BASE}/notify/updated/#{system_id}/#{event_id}", headers: headers, body: %({
         "event_start": #{meta.event_start},
@@ -2071,7 +1963,7 @@ describe Events, tags: ["event"] do
       })).status_code.should eq(202)
       sleep 100.milliseconds
 
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received(changed).last.payload
       payload["host"].as_s.should eq outlook_organiser
       payload["organiser_email"].as_s.should eq outlook_organiser
       # the person who was hosting is told they no longer are
@@ -2080,7 +1972,7 @@ describe Events, tags: ["event"] do
     end
 
     it "announces new visitors as attending the reassigned host" do
-      event_id, _, attending_bodies, _ = create_event.call(false)
+      event_id, _ = create_event.call(false)
 
       new_host = "new-host@example.com"
       client.patch("#{EVENTS_BASE}/#{event_id}?system_id=#{system_id}", headers: headers,
@@ -2089,9 +1981,9 @@ describe Events, tags: ["event"] do
 
       # the visitor mailer skips emailing the host their own invite, which only
       # works when the reassignment is reflected here too
-      guest = attending_bodies.map { |body| JSON.parse(body) }.find { |body| body["attendee_email"].as_s == "guest@external.com" }
+      guest = SignalSpy.received(attending, &.["attendee_email"].==("guest@external.com")).first?
       guest.should_not be_nil
-      guest.not_nil!["host"].as_s.should eq new_host
+      guest.not_nil!.payload["host"].as_s.should eq new_host
     end
   end
 
@@ -2100,38 +1992,22 @@ describe Events, tags: ["event"] do
   describe "room moves", tags: "PPT-2375" do
     it "keeps the meeting's metadata and does not re-invite anyone" do
       WebMock.reset
-      attending_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-        .to_return do |request|
-          attending_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
-      changed_bodies = [] of String
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-        .to_return do |request|
-          changed_bodies << (request.body.try(&.gets_to_end) || "")
-          HTTP::Client::Response.new(200, body: "")
-        end
       EventsHelper.stub_event_tokens
       EventsHelper.stub_update_endpoints
 
       system_id = "sys-rJQQlR4Cn7"
-      EventsHelper.stub_permissions_check(system_id)
       created = JSON.parse(client.post(EVENTS_BASE, headers: headers, body: EventsHelper.create_event_input).body).as_h
       event_id = created["id"].to_s
       EventsHelper.stub_room_event_query(event_id)
 
       # the room the event moves to
-      systems = Array(JSON::Any).from_json(File.read("./spec/fixtures/placeos/systems.json")).map &.to_json
+      SystemsHelper.load_fixture("systems.json")
       moved_system_id = "sys_id"
-      WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{moved_system_id}")
-        .to_return(body: systems[1])
-      EventsHelper.stub_permissions_check(moved_system_id)
 
       before = EventMetadata.find_by(event_id: event_id)
       before.system_id.should eq system_id
-      attending_bodies.clear
-      changed_bodies.clear
+      sleep 100.milliseconds # the create's signals are not part of the example
+      SignalSpy.clear
 
       # the same guest list as the meeting was created with, moved to another room
       body = EventsHelper.create_event_input.gsub(%("system_id": "#{system_id}"), %("system_id": "#{moved_system_id}"))
@@ -2146,10 +2022,10 @@ describe Events, tags: ["event"] do
       after.attendees.to_a.size.should eq before.attendees.to_a.size
 
       # the move is a change, not an invitation
-      payload = JSON.parse(changed_bodies.last)
+      payload = SignalSpy.received("placeos/staff/event/changed").last.payload
       payload["previous_system_id"].as_s.should eq system_id
       payload["system_id"].as_s.should eq moved_system_id
-      attending_bodies.map { |signal| JSON.parse(signal)["attendee_email"].as_s }.should_not contain "jon@example.com"
+      SignalSpy.payloads("placeos/staff/guest/attending").map(&.["attendee_email"].as_s).should_not contain "jon@example.com"
     end
   end
 end

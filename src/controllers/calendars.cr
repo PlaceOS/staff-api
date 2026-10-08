@@ -34,9 +34,9 @@ class Calendars < Application
     )
   end
 
-  getter! matching_calendars : Hash(String, PlaceOS::Client::API::Models::System?)
+  getter! matching_calendars : Hash(String, PlaceOS::Model::ControlSystem?)
 
-  record Availability, id : String, system : PlaceOS::Client::API::Models::System? = nil, availability : Array(PlaceCalendar::Availability)? = nil do
+  record Availability, id : String, system : PlaceOS::Model::ControlSystem? = nil, availability : Array(PlaceCalendar::Availability)? = nil do
     include JSON::Serializable
   end
 

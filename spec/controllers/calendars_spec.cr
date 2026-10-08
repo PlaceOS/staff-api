@@ -47,10 +47,7 @@ describe Calendars do
   it "#free_busy should return free busy data of calendars" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    SystemsHelper.load_fixture("systems.json", zones: ["zone-EzcsmWbvUG6"])
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
@@ -70,10 +67,7 @@ describe Calendars do
   it "#free_busy request with a duration < 30mins" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    SystemsHelper.load_fixture("systems.json", zones: ["zone-EzcsmWbvUG6"])
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
@@ -92,10 +86,7 @@ describe Calendars do
   it "#free_busy should not allow an interval of less than 5 minutes" do
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
+    SystemsHelper.load_fixture("systems.json", zones: ["zone-EzcsmWbvUG6"])
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
@@ -154,20 +145,25 @@ CALENDARS_BASE = Calendars.base_route
 module CalendarsHelper
   extend self
 
+  # how a system is serialised in a response
+  def system_json(id : String) : JSON::Any
+    JSON.parse(PlaceOS::Model::ControlSystem.find!(id).to_json)
+  end
+
   def calendar_list_output
     [{"id" => "dev@acaprojects.com"},
-     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}},
-     {"id" => "room2@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rHQQlR4Cn7", "name" => "Room 2", "zones" => ["zone-rGfCRp_aUD"], "modules" => ["mod-rJRCVFDVuB", "mod-rJRWE21pya", "mod-rJBGYsZExU"], "email" => "room2@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}}]
+     {"id" => "room1@example.com", "system" => system_json("sys-rJQQlR4Cn7")},
+     {"id" => "room2@example.com", "system" => system_json("sys-rHQQlR4Cn7")}]
   end
 
   def free_busy_output
     [{"id" => "jon@example.com", "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]},
-     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552680000, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]}]
+     {"id" => "room1@example.com", "system" => system_json("sys-rJQQlR4Cn7"), "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552680000, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]}]
   end
 
   def free_busy_output_15min
     [{"id" => "jon@example.com", "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}]},
-     {"id" => "room1@example.com", "system" => {"created_at" => 1562041110, "updated_at" => 1562041120, "id" => "sys-rJQQlR4Cn7", "name" => "Room 1", "zones" => ["zone-rGhCRp_aUD"], "modules" => ["mod-rJRCVYKVuB", "mod-rJRGK21pya", "mod-rJRHYsZExU"], "email" => "room1@example.com", "capacity" => 10, "features" => [] of String, "bookable" => true, "installed_ui_devices" => 0, "version" => 5}, "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}]}]
+     {"id" => "room1@example.com", "system" => system_json("sys-rJQQlR4Cn7"), "availability" => [{"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552683600, "timezone" => "America/Los_Angeles"}, {"status" => "busy", "starts_at" => 1552676400, "ends_at" => 1552680000, "timezone" => "America/Los_Angeles"}]}]
   end
 
   def stub_cal_endpoints
@@ -175,25 +171,14 @@ module CalendarsHelper
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendars")
       .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:get, "#{ENV["PLACE_URI"]}/api/engine/v2/systems?limit=1000&offset=0&zone_id=zone-EzcsmWbvUG6")
-      .to_return(body: File.read("./spec/fixtures/placeos/systems.json"))
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule_avail.json"))
 
-    WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rJQQlR4Cn7")
-      .to_return(body: File.read("./spec/fixtures/placeos/systemJ.json"))
-
-    WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rHQQlR4Cn7")
-      .to_return(body: File.read("./spec/fixtures/placeos/systemH.json"))
+    SystemsHelper.load_fixture("systemJ.json")
+    SystemsHelper.load_fixture("systemH.json")
 
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev@acaprojects.com/calendar/events/AAMkADE3YmQxMGQ2LTRmZDgtNDljYy1hNDg1LWM0NzFmMGI0ZTQ3YgBGAAAAAADFYQb3DJ_xSJHh14kbXHWhBwB08dwEuoS_QYSBDzuv558sAAAAAAENAAB08dwEuoS_QYSBDzuv558sAACGVOwUAAA=")
       .to_return(body: File.read("./spec/fixtures/events/o365/create.json"))
     WebMock.stub(:patch, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/events/")

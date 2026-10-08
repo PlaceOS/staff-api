@@ -80,13 +80,10 @@ class Staff < Application
     id : String,
   ) : Nil
     if client.client_id == :office365
-      # get current users token
-      # NOTE: we should move this rest-api function into models
-      # so we can access it from staff-api. This will improve performance
-      token = get_placeos_client.users.resource_token
+      token = current_user.resource_token
 
       # make request to the photo endpoint
-      HTTP::Client.get("https://graph.microsoft.com/v1.0/users/#{id}/photo/$value", headers: HTTP::Headers{
+      HTTP::Client.get("https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(id)}/photo/$value", headers: HTTP::Headers{
         "Authorization" => "Bearer #{token.token}",
       }) do |upstream_response|
         stream(upstream_response)

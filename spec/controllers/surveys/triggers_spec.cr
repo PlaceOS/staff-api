@@ -11,10 +11,6 @@ describe "Survey Triggers", tags: ["survey"] do
     Booking.truncate
     Survey.truncate
     Survey::Invitation.truncate
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
 
     Timecop.scale(600) # 1 second == 10 minutes
   end

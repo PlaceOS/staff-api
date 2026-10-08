@@ -81,7 +81,7 @@ class PlaceCalendar::Event
 
   # This is the resource calendar, it will be moved to one of the attendees
   property system_id : String?
-  property system : System? | PlaceOS::Client::API::Models::System?
+  property system : System? | PlaceOS::Model::ControlSystem?
 
   property extension_data : JSON::Any?
   property recurring_master_id : String?

@@ -3,3 +3,8 @@ dependencies:
   http-params-serializable:
     github: place-labs/http-params-serializable
     branch: chore/0.36.0
+
+  # TODO: remove once placeos/models#333 is released
+  placeos-models:
+    github: placeos/models
+    branch: feat/user-resource-token

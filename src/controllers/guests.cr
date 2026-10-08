@@ -1,3 +1,5 @@
+require "promise"
+
 class Guests < Application
   base "/api/staff/v1/guests"
 
@@ -99,7 +101,7 @@ class Guests < Application
 
       # Process the response (map requests back to responses)
       errors = 0
-      results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+      results = [] of Tuple(String, PlaceOS::Model::ControlSystem?, PlaceCalendar::Event)
       mappings.each do |(request, calendar_id, system)|
         begin
           results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
@@ -114,7 +116,7 @@ class Guests < Application
       ical_uids = Set(String).new
       metadata_ids = Set(String).new
       metadata_recurring_ids = Set(String).new
-      meeting_lookup = {} of String => Tuple(String, PlaceOS::Client::API::Models::System, PlaceCalendar::Event)
+      meeting_lookup = {} of String => Tuple(String, PlaceOS::Model::ControlSystem, PlaceCalendar::Event)
       results.each { |(calendar_id, system, event)|
         if system
           ical_uid = event.ical_uid.not_nil!
@@ -279,14 +281,13 @@ class Guests < Application
     limit : Int32 = 10,
   ) : Array(PlaceCalendar::Event)
     future_only = !include_past
-    placeos_client = get_placeos_client.systems
 
     events = Promise.all(guest.events(future_only, limit).map { |metadata|
       Promise.defer {
         begin
           cal_id = metadata.host_email.not_nil!
-          system = placeos_client.fetch(metadata.system_id.not_nil!)
-          sys_cal = system.email.presence
+          system = find_system!(metadata.system_id.not_nil!)
+          sys_cal = system.email.to_s.presence
           event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
           if event
             if sys_cal && client.client_id == :office365 && event.host != sys_cal

@@ -23,11 +23,8 @@ module App
   Log         = ::Log.for(NAME)
   LOG_BACKEND = ActionController.default_backend
 
-  PLACE_URI = ENV["PLACE_URI"]?.presence || abort("PLACE_URI not in environment")
-
-  PLACE_HOST_HEADER = ENV["PLACE_HOST_HEADER"]?.presence
-
-  SSL_VERIFY_NONE = !!ENV["SSL_VERIFY_NONE"]?.presence.try { |var| var.downcase.in?("1", "true") }
+  # Signals are published to redis
+  REDIS_URL = ENV["REDIS_URL"]?.presence || "redis://localhost:6379"
 
   PG_UNIQUE_CONSTRAINT_REGEX = /duplicate key value violates unique constraint/
 

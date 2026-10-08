@@ -174,7 +174,8 @@ abstract class Application < ActionController::Base
 
   # 511 if the user needs an access token via SSO
   @[AC::Route::Exception(Error::NeedsAuthentication, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
-  def action_not_implemented(error) : CommonError
+  @[AC::Route::Exception(PlaceOS::Model::Error::NoResourceToken, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
+  def needs_authentication(error) : CommonError
     Log.debug { error.message }
     render_error(error)
   end
@@ -250,7 +251,6 @@ abstract class Application < ActionController::Base
   # handler for a few different errors
   @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
   @[AC::Route::Exception(PgORM::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
-  @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]
   @[AC::Route::Exception(::Enumerable::EmptyError, status_code: HTTP::Status::NOT_FOUND)] # TODO: Should be caught where it's happening, or the code refactored.
   def handled_generic_error(error) : CommonError
