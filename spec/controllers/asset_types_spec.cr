@@ -1,0 +1,293 @@
+require "../spec_helper"
+require "./helpers/api_spec_helper"
+
+describe AssetTypes do
+  before_each { clear_group_tables }
+
+  ApiSpec.test_404(AssetTypes.base_route, model_name: PlaceOS::Model::AssetType.table_name, headers: ApiSpec::Authentication.headers, clz: Int64)
+
+  describe "index", tags: "search" do
+    it "should return an empty array when no matching asset types found" do
+      PlaceOS::Model::Asset.clear
+      PlaceOS::Model::AssetType.clear
+      params = HTTP::Params.encode({"zone_id" => "unknown-zone"})
+      path = "#{AssetTypes.base_route}?#{params}"
+      result = client.get(path, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq(200)
+      body = JSON.parse(result.body)
+      body.as_a?.should_not be_nil
+      body.as_a.size.should be >= 0
+    end
+
+    it "should return json when get request is invoked for matching asset-types" do
+      PlaceOS::Model::Asset.clear
+      PlaceOS::Model::AssetType.clear
+      asset = PlaceOS::Model::Generator.asset.save!
+      params = HTTP::Params.encode({"zone_id" => asset.zone_id.to_s})
+      path = "#{AssetTypes.base_route}?#{params}"
+      result = client.get(path, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq(200)
+      body = JSON.parse(result.body)
+      body.as_a?.should_not be_nil
+      body.as_a.size.should be >= 1
+      body.as_a.first["asset_count"].should eq(1)
+
+      params = HTTP::Params.encode({"zone_id" => "zone-000000"})
+      path = "#{AssetTypes.base_route}?#{params}"
+      result = client.get(path, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq(200)
+      body = JSON.parse(result.body)
+      body.as_a?.should_not be_nil
+      body.as_a.size.should be >= 1
+      body.as_a.first["asset_count"].should eq(0)
+    end
+
+    it "should filter by category_id" do
+      PlaceOS::Model::Asset.clear
+      PlaceOS::Model::AssetType.clear
+
+      # this will generate 2 categories so we can ensure only 1 is returned
+      asset1 = PlaceOS::Model::Generator.asset_type.save!
+      asset2 = PlaceOS::Model::Generator.asset_type.save!
+      category_id = asset2.category_id
+
+      params = HTTP::Params.encode({"category_id" => category_id.to_s})
+      path = "#{AssetTypes.base_route}?#{params}"
+      result = client.get(path, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq(200)
+
+      body = JSON.parse(result.body)
+      body.as_a?.should_not be_nil
+      body.as_a.size.should eq(1)
+      body.as_a.first["id"].as_s.should eq(asset2.id)
+
+      # check we can return both
+      asset1.category_id = category_id
+      asset1.save!
+      result = client.get(path, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq(200)
+      body = JSON.parse(result.body)
+      body.as_a?.should_not be_nil
+      body.as_a.size.should eq(2)
+    end
+  end
+
+  describe "CRUD operations", tags: "crud" do
+    ApiSpec.test_crd(PlaceOS::Model::AssetType, AssetTypes)
+    ApiSpec.test_crd(PlaceOS::Model::AssetType, AssetTypes, sys_admin: false, support: false, groups: ["management"])
+    ApiSpec.test_crd(PlaceOS::Model::AssetType, AssetTypes, sys_admin: false, support: false, groups: ["concierge"])
+
+    it "fails to create if a regular user" do
+      body = PlaceOS::Model::Generator.asset_type.to_json
+      result = client.post(
+        AssetTypes.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: false, support: false)
+      )
+      result.status_code.should eq 403
+    end
+  end
+
+  describe "scopes" do
+    ApiSpec.test_controller_scope(AssetTypes)
+  end
+
+  describe "support-subsystem permissions" do
+    it "allows POST for a support user with Create on the org zone (both sides)" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Create).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Create).save!
+
+      body = PlaceOS::Model::Generator.asset_type.to_json
+      result = client.post(AssetTypes.base_route, body: body, headers: headers)
+      result.status_code.should eq 201
+
+      PlaceOS::Model::AssetType.from_trusted_json(result.body).destroy
+    end
+
+    it "rejects POST when the support user only has Read on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Read).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Read).save!
+
+      body = PlaceOS::Model::Generator.asset_type.to_json
+      result = client.post(AssetTypes.base_route, body: body, headers: headers)
+      result.status_code.should eq 403
+    end
+
+    it "requires Update on both sides to PATCH an asset type" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      asset_type = PlaceOS::Model::Generator.asset_type.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Update).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Update).save!
+
+      result = client.patch(
+        path: "#{AssetTypes.base_route}/#{asset_type.id}",
+        body: {name: "renamed-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.success?.should be_true
+      asset_type.destroy
+    end
+
+    it "rejects PATCH when the support user only has Create on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      asset_type = PlaceOS::Model::Generator.asset_type.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Create).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Create).save!
+
+      result = client.patch(
+        path: "#{AssetTypes.base_route}/#{asset_type.id}",
+        body: {name: "renamed-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.status_code.should eq 403
+      asset_type.destroy
+    end
+
+    it "requires Delete on both sides to DELETE an asset type" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      asset_type = PlaceOS::Model::Generator.asset_type.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Delete).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Delete).save!
+
+      result = client.delete(path: "#{AssetTypes.base_route}/#{asset_type.id}", headers: headers)
+      result.success?.should be_true
+      PlaceOS::Model::AssetType.find?(asset_type.id).should be_nil
+    end
+
+    it "rejects DELETE when the support user only has Update on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      asset_type = PlaceOS::Model::Generator.asset_type.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Update).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Update).save!
+
+      result = client.delete(path: "#{AssetTypes.base_route}/#{asset_type.id}", headers: headers)
+      result.status_code.should eq 403
+      asset_type.destroy
+    end
+
+    it "excludes another authority's asset types from a non-admin index" do
+      _, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+
+      other_authority = PlaceOS::Model::Generator.authority(domain: "https://other-asset-types.example.com").save!
+      other_category = PlaceOS::Model::Generator.asset_category(other_authority).save!
+      other_type = PlaceOS::Model::Generator.asset_type(other_category).save!
+      local_type = PlaceOS::Model::Generator.asset_type.save!
+
+      result = client.get(AssetTypes.base_route, headers: headers)
+      result.status_code.should eq 200
+      ids = JSON.parse(result.body).as_a.map(&.["id"].as_s)
+      ids.should contain(local_type.id)
+      ids.should_not contain(other_type.id)
+
+      # admin and support users are held to their own authority too
+      result = client.get(AssetTypes.base_route, headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq 200
+      ids = JSON.parse(result.body).as_a.map(&.["id"].as_s)
+      ids.should contain(local_type.id)
+      ids.should_not contain(other_type.id)
+
+      local_type.destroy
+      other_type.destroy
+      other_category.destroy
+      other_authority.destroy
+    end
+
+    it "returns 404 for another authority's asset type even with org-zone grants" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      other_authority = PlaceOS::Model::Generator.authority(domain: "https://other-asset-types-404.example.com").save!
+      other_category = PlaceOS::Model::Generator.asset_category(other_authority).save!
+      other_type = PlaceOS::Model::Generator.asset_type(other_category).save!
+      local_type = PlaceOS::Model::Generator.asset_type.save!
+
+      # a full grant on the org zone doesn't reveal another authority's types
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Manage).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Manage).save!
+
+      result = client.get("#{AssetTypes.base_route}/#{other_type.id}", headers: headers)
+      result.status_code.should eq 404
+
+      result = client.patch(
+        path: "#{AssetTypes.base_route}/#{other_type.id}",
+        body: {name: "renamed-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.status_code.should eq 404
+
+      result = client.delete(path: "#{AssetTypes.base_route}/#{other_type.id}", headers: headers)
+      result.status_code.should eq 404
+      PlaceOS::Model::AssetType.find?(other_type.id).should_not be_nil
+
+      # the caller's own types remain reachable with the same grants
+      result = client.get("#{AssetTypes.base_route}/#{local_type.id}", headers: headers)
+      result.status_code.should eq 200
+
+      result = client.patch(
+        path: "#{AssetTypes.base_route}/#{local_type.id}",
+        body: {name: "renamed-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.success?.should be_true
+
+      # admin and support users are held to their own authority too
+      result = client.get("#{AssetTypes.base_route}/#{other_type.id}", headers: ApiSpec::Authentication.headers)
+      result.status_code.should eq 404
+
+      local_type.destroy
+      other_type.destroy
+      other_category.destroy
+      other_authority.destroy
+    end
+
+    it "allows a support-JWT user to POST regardless of group grants" do
+      body = PlaceOS::Model::Generator.asset_type.to_json
+      result = client.post(
+        AssetTypes.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: false, support: true),
+      )
+      result.status_code.should eq 201
+      PlaceOS::Model::AssetType.from_trusted_json(result.body).destroy
+    end
+
+    it "allows an admin-JWT user to POST regardless of group grants" do
+      body = PlaceOS::Model::Generator.asset_type.to_json
+      result = client.post(
+        AssetTypes.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: true, support: false),
+      )
+      result.status_code.should eq 201
+      PlaceOS::Model::AssetType.from_trusted_json(result.body).destroy
+    end
+  end
+end

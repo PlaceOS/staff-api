@@ -41,15 +41,13 @@ class Calendars < Application
     include JSON::Serializable
   end
 
-  # Lists the calendars available to the current user in the tenant's calendar provider.
+  # List the calendars available to the current user.
   @[AC::Route::GET("/")]
   def index : Array(PlaceCalendar::Calendar)
     client.list_calendars(user.email)
   end
 
-  # Checks whether the current user can edit (create or modify events in) another user's calendar.
-  # Always true for the user's own calendar. On Office365 this checks the calendar's permissions,
-  # on Google it always returns false. Returns 404 if the calendar can't be looked up.
+  # Check whether the current user can edit another user's calendar.
   @[AC::Route::GET("/:user_email/permission")]
   def check_permission(
     @[AC::Param::Info(description: "email or UPN of the calendar owner", example: "foo@domain.com")]
@@ -76,11 +74,7 @@ class Calendars < Application
     raise Error::NotFound.new(ex.message || {error: "Not Found"}.to_json)
   end
 
-  # Finds which rooms or people are free for the whole period, use it to find an available room to book.
-  # Specify candidates with `calendars`, `system_ids` and/or `zone_ids` (optionally filtered by `features`, `capacity`, `bookable`).
-  # Returns only the calendars with no busy time overlapping the period, including the room's system details where known.
-  # Returns 204 with an empty list if no candidate calendars were specified.
-  # Use `free_busy` instead to see the actual busy times of each calendar.
+  # Find the rooms or people that are free for a whole time period.
   @[AC::Route::GET("/availability")]
   def availability(
     @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]
@@ -126,10 +120,7 @@ class Calendars < Application
     }
   end
 
-  # Returns the free/busy schedule of each selected room or person over the period, use it to view schedules or find a common free time.
-  # Specify candidates with `calendars`, `system_ids` and/or `zone_ids` (optionally filtered by `features`, `capacity`, `bookable`).
-  # Every calendar is returned with its availability blocks (busy times outside the period are removed) and the room's system details where known.
-  # The period must be at least 5 minutes long. Use `availability` instead to get just the calendars that are completely free.
+  # Get the busy times of rooms or people in a time period.
   @[AC::Route::GET("/free_busy")]
   def free_busy(
     @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]

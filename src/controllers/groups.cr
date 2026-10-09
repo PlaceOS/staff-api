@@ -6,8 +6,7 @@ class Groups < Application
   @[AC::Route::Filter(:around_action)]
   Application.add_request_queue
 
-  # Lists the user groups in the organisation directory, optionally searching by name.
-  # Office365 only, returns 501 (not implemented) for Google.
+  # List the groups in the organisation directory.
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "q", description: "optional search query, matches groups whose display name starts with this text", example: "accounting")]
@@ -20,7 +19,7 @@ class Groups < Application
     end
   end
 
-  # Returns the details of a directory group. Office365 only, returns 501 (not implemented) for Google.
+  # Get a directory group.
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "the directory group id", example: "0b4ad8b6-4a4a-4bcd-9a1e-3b2f0b6b1c2d")]
@@ -33,7 +32,7 @@ class Groups < Application
     end
   end
 
-  # Returns the staff members of a directory group.
+  # List the members of a directory group.
   @[AC::Route::GET("/:id/members")]
   def members(
     @[AC::Param::Info(description: "the directory group id", example: "0b4ad8b6-4a4a-4bcd-9a1e-3b2f0b6b1c2d")]

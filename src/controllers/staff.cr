@@ -2,10 +2,7 @@
 class Staff < Application
   base "/api/staff/v1/people"
 
-  # Searches the organisation directory for staff members, use it to find a person's email, phone or user id.
-  # Use `q` for a simple name or email search, or `filter` for Azure AD filter syntax (takes precedence over `q`), see
-  # https://learn.microsoft.com/en-us/graph/filter-query-parameter
-  # Results are paginated, a `Link` header with rel="next" is returned when there are more results.
+  # Search the organisation directory for people.
   @[AC::Route::GET("/", converters: {additional_fields: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
@@ -52,8 +49,7 @@ class Staff < Application
     users
   end
 
-  # Returns the directory details of a single staff member (name, email, phone, department etc).
-  # Returns 404 if the user is not found.
+  # Get a person from the directory.
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -75,7 +71,7 @@ class Staff < Application
     user
   end
 
-  # Streams the user's profile photo image from the directory, returns 404 if not found.
+  # Get a person's photo.
   @[AC::MCP(hide: true)]
   @[AC::Route::GET("/:id/photo")]
   def photo(
@@ -122,7 +118,7 @@ class Staff < Application
     end
   end
 
-  # Returns the directory groups the user is a member of.
+  # List the directory groups a person is a member of.
   @[AC::Route::GET("/:id/groups")]
   def groups(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -131,7 +127,7 @@ class Staff < Application
     client.get_groups(id)
   end
 
-  # Returns the user's manager from the directory. Office365 only, returns 501 (not implemented) for Google.
+  # Get a person's manager.
   @[AC::Route::GET("/:id/manager")]
   def manager(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -145,7 +141,7 @@ class Staff < Application
     end
   end
 
-  # Returns the list of calendars belonging to the user.
+  # List a person's calendars.
   @[AC::Route::GET("/:id/calendars")]
   def calendars(
     @[AC::Param::Info(description: "the user's email address", example: "user@org.com")]

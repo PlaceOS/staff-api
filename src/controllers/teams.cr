@@ -20,8 +20,7 @@ class Teams < Application
   getter! team : String
   getter! channel : String
 
-  # Lists the messages (without their replies) in a Microsoft Teams channel.
-  # Office365 only, returns 501 (not implemented) for Google.
+  # List the messages in a Teams channel.
   @[AC::Route::GET("/:teams_id/:channel_id")]
   def index(
     @[AC::Param::Info(name: "top", description: "optional number of channel messages to return, graph defaults to 20", example: "20")]
@@ -31,8 +30,7 @@ class Teams < Application
     client.calendar.as(PlaceCalendar::Office365).client.list_channel_messages(team, channel, top: top)
   end
 
-  # Returns a single message from a Microsoft Teams channel.
-  # Office365 only, returns 501 (not implemented) for Google.
+  # Get a message from a Teams channel.
   @[AC::Route::GET("/:teams_id/:channel_id/:message_id")]
   def show(
     @[AC::Param::Info(description: "the id of the channel message", example: "1616965872395")]
@@ -42,8 +40,7 @@ class Teams < Application
     client.calendar.as(PlaceCalendar::Office365).client.get_channel_message(team, channel, message_id)
   end
 
-  # Posts a new message to a Microsoft Teams channel as the current user, the request body is the message content.
-  # Office365 only, returns 501 (not implemented) for Google.
+  # Post a message to a Teams channel.
   @[AC::Route::POST("/:teams_id/:channel_id", body: :message, status_code: HTTP::Status::CREATED)]
   def send_channel_message(message : String,
                            @[AC::Param::Info(name: "type", description: "the message content type, TEXT (default) or HTML", example: "HTML")]

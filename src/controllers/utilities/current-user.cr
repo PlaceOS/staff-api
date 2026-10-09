@@ -98,6 +98,15 @@ module Utils::CurrentUser
     user_token.is_admin?
   end
 
+  # rest-api naming, used by controllers ported from it
+  def user_admin?
+    is_admin?
+  end
+
+  def user_support?
+    is_support?
+  end
+
   def is_support?
     token = user_token
     token.is_support? || token.is_admin?

@@ -7,7 +7,7 @@ class HealthCheck < ActionController::Base
     include JSON::Serializable
   end
 
-  # returns the service build details
+  # Get the service build details.
   @[AC::Route::GET("/")]
   def index : BuildInfo
     BuildInfo.new(commit: App::BUILD_COMMIT, build_time: App::BUILD_TIME)

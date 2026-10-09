@@ -140,12 +140,7 @@ class Bookings < Application
 
   PARAMS = %w(booking_type checked_in created_before created_after approved rejected extension_data state department)
 
-  # Lists bookings overlapping a time period, with recurring bookings expanded into their individual occurrences.
-  # `type` is required unless event_id or ical_uid is provided, which instead returns the bookings linked to that calendar event.
-  # With no `user`, `email` or `zones` the signed in user's own bookings are returned; with `zones` every user's bookings in those zones are returned.
-  # Deleted, checked out bookings are excluded by default. Use `booked` instead if you only need the ids of assets in use.
-  # Unauthenticated requests are allowed (tenant resolved from the domain) and only return PUBLIC bookings.
-  # Paginated: follow the `Link` response header (rel="next") to fetch the next page.
+  # List bookings in a time period.
   @[AC::Route::GET("/", execution_context: "bookings")]
   def index(
     @[AC::Param::Info(name: "period_start", description: "start of the period to search, unix epoch in seconds. Defaults to now", example: "1661725146")]
@@ -312,10 +307,7 @@ class Bookings < Application
     result
   end
 
-  # Lists the unique ids of assets (desks, parking spaces, etc) booked during a time period, e.g. to find which assets are unavailable.
-  # Accepts the same filters as listing bookings; `type` is required unless event_id or ical_uid is provided.
-  # Deleted, rejected and checked out bookings are ignored. Unauthenticated requests only consider PUBLIC bookings.
-  # Use `clashing-assets` to check specific assets against a proposed booking time instead.
+  # List the ids of assets booked in a time period.
   @[AC::Route::GET("/booked")]
   def booked(
     @[AC::Param::Info(name: "period_start", description: "start of the period to search, unix epoch in seconds. Defaults to now", example: "1661725146")]
@@ -368,11 +360,7 @@ class Bookings < Application
     asset_ids.uniq!
   end
 
-  # Checks which assets are already booked for a proposed booking, without creating anything.
-  # The body is a booking that requires booking_start, booking_end (unix epoch seconds) and booking_type.
-  # Returns the ids of assets with a clashing booking; if asset_ids or asset_id is set only those assets are checked,
-  # otherwise every asset of that booking_type with a clash is returned.
-  # Set return_available (requires asset_ids) to get the free assets instead, or include_clash_time to get the clashing time ranges.
+  # List the assets already booked during a booking's time range.
   @[AC::MCP(behaviour: :read_only)]
   @[AC::Route::POST("/clashing-assets", body: :booking)]
   def clashing_assets(
@@ -435,12 +423,7 @@ class Bookings < Application
     end
   end
 
-  # Creates a booking of an asset (desk, parking space, locker, visitor, etc) for the signed in user or on behalf of another user.
-  # The body requires booking_start, booking_end (unix epoch seconds), booking_type and asset_id or asset_ids; set user_email/user_id to book for someone else.
-  # Any attendees in the body are created as guests (visitors) of the booking and a `staff/guest/attending` signal is sent for each, which typically triggers visitor invites.
-  # Only admins, support or managers of the booking's zones may create a booking that is already approved or rejected (403 otherwise).
-  # Fails with 409 if the asset is already booked for that time and 410 if the user's concurrent booking limit is reached.
-  # Returns the created booking and publishes a `staff/booking/changed` signal.
+  # Create a booking.
   @[AC::Route::POST("/", body: :booking, status_code: HTTP::Status::CREATED)]
   def create(
     booking : Booking,
@@ -604,12 +587,7 @@ class Bookings < Application
     booking
   end
 
-  # Updates a booking with the fields provided in the body, only fields present are changed.
-  # Use the `/instance/:instance` routes to change a single occurrence of a recurring booking. Times cannot be changed on a linked (child) booking (405).
-  # Moving to a different asset or outside the original time window resets the check-in and approval state and re-checks booking limits (410).
-  # Changing the time, asset or recurrence re-checks for clashes (409). Changing approved/rejected requires admin, support or zone manager access (403).
-  # Providing attendees replaces the attendee list, creating guests for new attendees. Changing user_email moves the booking to that user (404 if unknown) and signals `staff/booking/host_changed`.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may update it.
+  # Update a booking with the fields in the request body and return the saved booking.
   @[AC::Route::PUT("/:id", body: :changes)]
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id/instance/:instance", body: :changes)]
@@ -837,10 +815,7 @@ class Bookings < Application
     result
   end
 
-  # Merges the provided keys into the booking's extension data (custom fields), leaving other keys untouched.
-  # Use the `/:instance` route to update a single occurrence of a recurring booking.
-  # A `staff/booking/changed` signal is only published when signal_changes is true.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may update it. Returns the updated booking.
+  # Merge the keys in the request body into a booking's extension data.
   @[AC::Route::PATCH("/:id/ext_data", body: :changes)]
   @[AC::Route::PATCH("/:id/ext_data/:instance", body: :changes)]
   def patch_extdata(
@@ -868,18 +843,14 @@ class Bookings < Application
     book
   end
 
-  # Returns a single booking by id, including its attendees.
-  # Use the `/instance/:instance` route to get a specific occurrence of a recurring booking.
+  # Get a single booking.
   @[AC::Route::GET("/:id")]
   @[AC::Route::GET("/:id/instance/:instance")]
   def show : Booking
     booking
   end
 
-  # Cancels a booking by marking it as deleted (it remains visible with `include_deleted`).
-  # Use the `/instance/:instance` route to cancel a single occurrence of a recurring booking; without it the whole booking or series is cancelled.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may cancel it.
-  # Publishes a `staff/booking/changed` signal with action `cancelled`.
+  # Cancel a booking.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
@@ -925,10 +896,7 @@ class Bookings < Application
     end
   end
 
-  # Approves a booking that is pending approval, recording the current user as the approver.
-  # Use the `/:instance` route to approve a single occurrence of a recurring booking.
-  # Requires admin, support or manager access to one of the booking's zones (403). Fails with 409 if the booking now clashes with another, 405 if it was deleted.
-  # Publishes a `staff/booking/changed` signal with action `approved` and returns the booking.
+  # Approve a booking.
   @[AC::Route::POST("/:id/approve")]
   @[AC::Route::POST("/:id/approve/:instance")]
   def approve(
@@ -944,10 +912,7 @@ class Bookings < Application
     update_booking(booking, "approved")
   end
 
-  # Rejects (declines) a booking, recording the current user as the approver.
-  # Use the `/:instance` route to reject a single occurrence of a recurring booking.
-  # Requires admin, support or manager access to one of the booking's zones (403), 405 if the booking was deleted.
-  # Publishes a `staff/booking/changed` signal with action `rejected` and returns the booking.
+  # Reject a booking.
   @[AC::Route::POST("/:id/reject")]
   @[AC::Route::POST("/:id/reject/:instance")]
   def reject(
@@ -959,11 +924,7 @@ class Bookings < Application
     update_booking(booking, "rejected")
   end
 
-  # Checks a booking in (the user has arrived) or, with state=false, checks it out (releasing the asset).
-  # Check in fails with 405 if the booking has ended, was already checked out, or is too far before its start (tenant early check-in window),
-  # and 409 if another booking of the asset is still active before the start. A booking with a single attendee also checks that guest in.
-  # Checking out also checks out any guests on site. Use the `/:instance` routes for a single occurrence of a recurring booking.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may call this. Publishes a `staff/booking/changed` signal.
+  # Check a booking in, or out with state=false.
   @[AC::Route::POST("/:id/check_in")]
   @[AC::Route::POST("/:id/checkin")]
   @[AC::Route::POST("/:id/check_in/:instance")]
@@ -1017,10 +978,7 @@ class Bookings < Application
     booking
   end
 
-  # Sets the booking's process state, a free-form value used by custom workflows (e.g. pending_approval).
-  # Use the `/:instance` route for a single occurrence of a recurring booking.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may call this.
-  # Publishes a `staff/booking/changed` signal with action `process_state` and returns the booking.
+  # Set a booking's process state.
   @[AC::Route::POST("/:id/update_state")]
   @[AC::Route::POST("/:id/update_state/:instance")]
   def update_state(
@@ -1034,10 +992,7 @@ class Bookings < Application
     update_booking(booking, "process_state")
   end
 
-  # Sets the induction (site safety briefing) status of a booking, typically a visitor booking.
-  # Accepting or declining publishes a `staff/guest/induction_accepted` or `staff/guest/induction_declined` signal for the booking's first guest.
-  # Use the `/:instance` route for a single occurrence of a recurring booking.
-  # Only the booking owner, the person who booked it, admins/support or zone managers may call this. Publishes `staff/booking/changed` and returns the booking.
+  # Set a booking's induction status.
   @[AC::Route::POST("/:id/update_induction")]
   @[AC::Route::POST("/:id/update_induction/:instance")]
   def update_induction(
@@ -1078,8 +1033,7 @@ class Bookings < Application
     update_booking(booking, "induction")
   end
 
-  # Lists the guests (visitors) attending a booking, including their check-in state for this booking.
-  # Set include_linked to also include guests of linked (child) bookings, de-duplicated by email.
+  # List the guests attending a booking.
   @[AC::Route::GET("/:id/guests")]
   def guest_list(
     @[AC::Param::Info(description: "when true and this is a parent booking, also include guests from its linked (child) bookings. Defaults to false", example: "true")]
@@ -1107,9 +1061,7 @@ class Bookings < Application
     guests
   end
 
-  # Checks a guest (visitor) of a booking in or, with state=false, out.
-  # Checking in a guest also checks the booking in. Checking out the last guest on site checks the booking out if it has not ended.
-  # Publishes a `staff/guest/checkin` signal. Returns 404 if the guest is not an attendee of the booking, 405 if the booking was deleted.
+  # Check a guest of a booking in, or out with state=false.
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
@@ -1146,10 +1098,7 @@ class Bookings < Application
     guest.for_booking_to_h(attendee, booking.as_h(include_attendees: false))
   end
 
-  # Adds a single attendee (guest) to a booking without replacing the existing attendees, e.g. to join a group event.
-  # Creates the guest if their email is new and publishes a `staff/guest/attending` signal. Returns 400 if they already attend, 405 if the booking was deleted.
-  # Allowed unauthenticated for PUBLIC bookings; OPEN bookings allow any user of the tenant's domain;
-  # otherwise only the booking owner, the person who booked it, admins/support or zone managers.
+  # Add an attendee to a booking.
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
     attendee : PlaceCalendar::Event::Attendee,
@@ -1224,10 +1173,7 @@ class Bookings < Application
     attend
   end
 
-  # Removes an attendee from a booking by their email, e.g. to leave a group event.
-  # The guest record, and their attendance of other bookings and events, is kept. Returns 400 if they are not an attendee, 405 if the booking was deleted.
-  # Requires authentication. Allowed for any user on PUBLIC bookings, any user of the tenant's domain on OPEN bookings,
-  # otherwise only the booking owner, the person who booked it, admins/support or zone managers.
+  # Remove an attendee from a booking.
   @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
   def destroy_attendee(
     @[AC::Param::Info(name: "attendee_id", description: "the email address of the attendee to remove", example: "person@example.com")]

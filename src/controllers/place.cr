@@ -2,9 +2,7 @@
 class Place < Application
   base "/api/staff/v1/place"
 
-  # Lists the room resources defined in the Office365 directory (Microsoft Graph places API).
-  # Supports Azure AD filter syntax, see https://learn.microsoft.com/en-us/graph/filter-query-parameter
-  # Use `top` and `skip` to page through results. Office365 only, returns 501 (not implemented) for Google.
+  # List the rooms in the Office365 directory.
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "match", description: "optional comma separated list of room properties to return (maps to the graph `$select` parameter)", example: "id,displayName,emailAddress")]

@@ -110,11 +110,7 @@ class Events < Application
     All    # error on any failure (invalid calendar ids etc)
   end
 
-  # Lists calendar events in the period, merged with any PlaceOS metadata (room/system, extension data, setup/breakdown).
-  # Defaults to the current user's calendar when none of `calendars`, `zone_ids` or `system_ids` are given,
-  # otherwise events from all the calendars selected by those params are combined (`zone_ids` selects every room in the zones).
-  # Calendars the user can't access are dropped unless the tenant is delegated or uses a service account.
-  # If some calendars fail the response is 206 with X-Calendar-Errors, X-Calendar-Limit and X-Calendar-Issue headers (see `strict`).
+  # List calendar events in a time period.
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
@@ -329,10 +325,7 @@ class Events < Application
     }
   end
 
-  # Lists change history records (created, updated, deleted, etc) for events in the period.
-  # Only events with PlaceOS metadata, i.e. booked in a room (system), are covered.
-  # Narrow it with `system_ids`, `calendars`/`zone_ids` (room resource calendars) or `ical_uid`,
-  # otherwise history for all of the tenant's room events in the period is returned.
+  # List the change history of events in a time period.
   @[AC::Route::GET("/history")]
   def history(
     @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
@@ -417,13 +410,7 @@ class Events < Application
     true
   end
 
-  # Creates a calendar event (meeting) on the host's calendar and returns it; the calendar provider sends the invitations.
-  # `host` defaults to the current user. Booking for someone else requires write access to their calendar
-  # (or a delegated tenant), otherwise 403. The host is added as an accepted attendee.
-  # `event_start` and `event_end` are required (400); `timezone` defaults to the `timezone` query param or the server default.
-  # Set `system_id` to book a room: its resource calendar is invited as a resource, the PlaceOS metadata
-  # (`extension_data`, setup/breakdown, permission) is saved and `staff/event/changed` is signalled. With a room,
-  # attendees with `visit_expected: true` are saved as visitors (guests) and `staff/guest/attending` is signalled for each.
+  # Create a calendar event.
   @[AC::Route::POST("/", body: :input_event, status_code: HTTP::Status::CREATED)]
   def create(input_event : PlaceCalendar::Event) : PlaceCalendar::Event
     # get_user_calendars returns only calendars where the user has write access
@@ -558,33 +545,27 @@ class Events < Application
     StaffApi::Event.augment(created_event, host)
   end
 
-  # Updates an existing calendar event with the changes provided and returns the updated event (PATCH and PUT behave the same).
-  # The body is the event as it should be after the change, `event_start` and `event_end` are required.
-  # The user must be the host or an attendee, or hold a role permitted on the room (system), otherwise 403.
+  # NOTE:: by default the event is assumed to exist on the user's calendar. Provide the
+  # `calendar` param to override this, or `system_id` if the event exists on a resource calendar.
   #
-  # By default it assumes the event exists on the user's calendar.
-  # You can provide a `calendar` param to override this default,
-  # or a `system_id` if the event exists on a room's resource calendar.
+  # Event metadata is associated with a resource calendar, not the host's event, so to update
+  # an event and its metadata provide both the `calendar` and `system_id` params.
   #
-  # Note: event metadata is associated with a resource calendar, not the host's event,
-  # so to update an event and its metadata provide both the `calendar` and the `system_id` params.
-  # `extension_data` is merged into the existing metadata, `staff/event/changed` is signalled and newly
-  # expected visitors (`visit_expected: true`) are saved as guests with `staff/guest/attending` signalled.
+  # When moving a room from one system to another, the `system_id` param should be set to the
+  # current room's system, and the `system_id` field in the event body to the new system.
   #
-  # When moving the meeting from one room to another, the `system_id` param should be
-  # the current room's system and the `system_id` field in the event body the new system.
+  # Changing `host` hands the meeting to that person. Office365 cannot change a meeting's
+  # organiser, so this does what a person does in Outlook: the meeting is cancelled and sent
+  # again from the new host's calendar, which re-invites the attendees and gives the event a new
+  # id and ical uid. Recurring meetings are refused. A `host` matching the requesting user is
+  # ignored, as front ends fall back to the current user when they cannot resolve the organiser.
   #
-  # Changing `host` hands the meeting to that person. Office365 cannot change a
-  # meeting's organiser, so this does what a person does in Outlook: the meeting
-  # is cancelled and sent again from the new host's calendar, which re-invites
-  # the attendees and gives the event a new id and ical uid. Recurring meetings
-  # are refused. A `host` matching the requesting user is ignored, as front ends
-  # fall back to the current user when they cannot resolve the organiser.
-  #
-  # `extension_data.host_override` instead records who is hosting while leaving
-  # the meeting on the organiser's calendar, for deployments that book rooms as
-  # a service account. Send an empty string to clear it. Moving the meeting
-  # supersedes it, as the new host owns the meeting afterwards.
+  # `extension_data.host_override` instead records who is hosting while leaving the meeting on
+  # the organiser's calendar — for deployments that book rooms as a service account. Send an
+  # empty string to clear it. Moving the meeting supersedes it, as the new host owns the meeting
+  # afterwards.
+
+  # Update a calendar event with the changes in the request body and return the updated event.
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
@@ -943,12 +924,7 @@ class Events < Application
     end
   end
 
-  # Adds a single attendee to an existing event and returns the attendee.
-  # Use this rather than update to invite one person; it only works for events with PlaceOS metadata (404 otherwise).
-  # Can be called without authentication when the event's permission is `public` (the tenant is found from the domain).
-  # Otherwise allowed for support, the event creator, managers of the room's zones, or same-tenant users when the permission is `open` (403 otherwise).
-  # Requires `system_id` or `calendar`; authenticated users default to their own calendar. 400 if they're already an attendee.
-  # With `system_id` the attendee is also saved as an expected visitor (guest) and `staff/guest/attending` is signalled.
+  # Add an attendee to an event.
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1094,10 +1070,7 @@ class Events < Application
     attend || attendee
   end
 
-  # Removes a single attendee from an existing event, and their visitor record for the room when `system_id` is given.
-  # Attendees may remove themselves, otherwise allowed for support, the event creator or managers of the room's zones (403 otherwise).
-  # Requires `system_id` or `calendar`; authenticated users default to their own calendar.
-  # 404 if the event has no PlaceOS metadata, nothing changes if the email isn't an attendee.
+  # Remove an attendee from an event.
   @[AC::Route::DELETE("/:id/attendee/:email")]
   def delete_attendee(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1164,8 +1137,7 @@ class Events < Application
     nil
   end
 
-  # Links a room resource calendar's recurring master event id to the event's metadata (Office365 only).
-  # Support / admin only, used internally when processing calendar change notifications.
+  # Link the room's recurring master event id to its metadata.
   @[AC::MCP(hide: true)]
   @[AC::Route::POST("/:id/metadata/:system_id/link/:ical_uid", status_code: HTTP::Status::ACCEPTED)]
   def link_master_metadata(
@@ -1192,9 +1164,7 @@ class Events < Application
     end
   end
 
-  # Returns the PlaceOS extension data (ext_data) stored for an event booked in a room (system), e.g. catering orders.
-  # Looked up in the metadata by event id (or `ical_uid`) for the room, the calendar isn't queried; use show for the full event.
-  # Guests may only read the event their guest token was issued for. 404 if the event has no metadata.
+  # Get the PlaceOS metadata of an event booked in a room.
   @[AC::Route::GET("/:id/metadata/:system_id")]
   def get_metadata(
     @[AC::Param::Info(name: "id", description: "the event id, on the host's or the room's calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1235,12 +1205,7 @@ class Events < Application
     meta_ext_data
   end
 
-  # Merges the keys provided into an event's PlaceOS extension data (ext_data) without changing the calendar event,
-  # other keys are kept. Use this to record booking extras such as catering or approval state; use PUT to replace ext_data entirely.
-  # If the room has no metadata for the event yet, the event is looked up on the room's resource calendar
-  # (or `calendar` if given) and metadata is created.
-  # Allowed for the host, support or managers of the room's zones (attendees too when creating the metadata),
-  # and guests for the event their token was issued for. Signals `staff/event/changed` and returns the updated ext_data.
+  # Merge the keys in the request body into the PlaceOS metadata of an event booked in a room.
   @[AC::Route::PATCH("/:id/metadata/:system_id", body: :changes)]
   def patch_metadata(
     changes : Hash(String, JSON::Any),
@@ -1264,12 +1229,7 @@ class Events < Application
     update_metadata(changes, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
-  # Replaces an event's PlaceOS extension data (ext_data) with the body, without changing the calendar event.
-  # Keys not in the body are removed; use PATCH to merge changes instead.
-  # If the room has no metadata for the event yet, the event is looked up on the room's resource calendar
-  # (or `calendar` if given) and metadata is created.
-  # Allowed for the host, support or managers of the room's zones (attendees too when creating the metadata), not guests.
-  # Signals `staff/event/changed` and returns the new ext_data.
+  # Replace the PlaceOS metadata of an event booked in a room.
   @[AC::Route::PUT("/:id/metadata/:system_id", body: :changes)]
   def replace_metadata(
     changes : Hash(String, JSON::Any),
@@ -1417,8 +1377,7 @@ class Events < Application
     Deleted
   end
 
-  # Receives a room calendar change notification (created, updated or deleted) so PlaceOS metadata stays in sync,
-  # signals `staff/event/changed` and records event history. Support / admin only, used internally.
+  # Notify that a room's calendar event was created, updated or deleted.
   @[AC::MCP(hide: true)]
   @[AC::Route::POST("/notify/:change/:system_id/:event_id", body: :event, status_code: HTTP::Status::ACCEPTED)]
   def notify_change(
@@ -1481,10 +1440,7 @@ class Events < Application
     Log.error(exception: ex) { "failed to record event history for #{event_id}" }
   end
 
-  # Returns a single event merged with any PlaceOS metadata (room/system, extension data, setup/breakdown).
-  # By default it assumes the event exists on the user's calendar. Provide `calendar` for another calendar
-  # the user can access (403 otherwise), or `system_id` to look it up on a room's resource calendar.
-  # The id must be the event's id on the calendar searched. Guests may only view the event their token was issued for. 404 if not found.
+  # Get a single calendar event.
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1568,11 +1524,7 @@ class Events < Application
     end
   end
 
-  # Deletes the event from the calendar, it will not appear as cancelled, it will be gone.
-  # Use decline instead to cancel it while leaving it visible. Attendees are notified unless `notify=false`.
-  # By default it assumes the event exists on the user's calendar; use `calendar` for another calendar the user can write to,
-  # and provide `system_id` when the event is booked in a room so its metadata is marked cancelled and `staff/event/changed` is signalled.
-  # The user must be the host or an attendee, or hold a role permitted on the room, otherwise 403. 404 if not found.
+  # Delete a calendar event.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1587,11 +1539,7 @@ class Events < Application
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: true)
   end
 
-  # Cancels (declines) the meeting without deleting it, it remains on the calendar with a line through it.
-  # Use destroy to remove it entirely. Any plain text request body is sent as the decline message.
-  # By default it assumes the event exists on the user's calendar; use `calendar` for another calendar the user can write to,
-  # and provide `system_id` when the event is booked in a room so its metadata is marked cancelled and `staff/event/changed` is signalled.
-  # The user must be the host or an attendee, or hold a role permitted on the room, otherwise 403. 404 if not found.
+  # Decline (cancel) a calendar event, leaving it on the calendar.
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
   def decline(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1689,8 +1637,7 @@ class Events < Application
     end
   end
 
-  # Approves a room booking by accepting the meeting on behalf of the room (system), on its resource calendar.
-  # The id must be the event's id on the room's calendar. Returns true on success.
+  # Accept a meeting on behalf of a room.
   @[AC::Route::POST("/:id/approve")]
   def approve(
     @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1705,10 +1652,7 @@ class Events < Application
     client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
-  # Approves every room booking in the period by accepting all events on the selected rooms' resource calendars.
-  # Rooms are selected with `system_ids`, `zone_ids` and/or `calendars` (a `calendars` entry is
-  # only approved when it resolves to a room's resource calendar). Calendars that fail are
-  # skipped. Returns the ids of the events accepted.
+  # Accept every meeting in a time period on behalf of the selected rooms.
   @[AC::Route::POST("/approve_all")]
   def approve_all(
     @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
@@ -1778,8 +1722,7 @@ class Events < Application
     approved_event_ids
   end
 
-  # Rejects a room booking by declining the meeting on behalf of the room (system), on its resource calendar.
-  # Marks the event metadata cancelled and signals `staff/event/changed`. Returns true on success. 404 if the event isn't found.
+  # Decline a meeting on behalf of a room.
   @[AC::Route::POST("/:id/reject")]
   def reject(
     @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1802,9 +1745,7 @@ class Events < Application
     result
   end
 
-  # Lists the visitors (guests) expected at an event booked in a room, with their check-in state.
-  # The event is looked up on the room's resource calendar, or directly in the metadata when `ical_uid` is provided.
-  # Returns an empty list if the event has no PlaceOS metadata or visitors.
+  # List the visitors expected at an event booked in a room.
   @[AC::Route::GET("/:id/guests")]
   def guest_list(
     @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1843,10 +1784,7 @@ class Events < Application
     end
   end
 
-  # Searches stored event metadata, e.g. to find events in a state that requires action.
-  # Matches on an extension data field, e.g. `/extension_metadata?field_name=status&value=approved`, and/or a room, time period or event ids.
-  # At least one filter is required (400). Support / admin only, or managers of the room's zones when `system_id` is given.
-  # Returns up to 10,000 EventMetadata records.
+  # Search event metadata by an extension data field.
   @[AC::Route::GET("/extension_metadata/?:system_id", converters: {event_ref: ConvertStringArray})]
   def extension_metadata(
     @[AC::Param::Info(description: "only return metadata for this room (system)", example: "sys-1234")]
@@ -1876,11 +1814,7 @@ class Events < Application
     query.limit(10_000).to_a
   end
 
-  # Lists rooms (systems) already booked during the event's time range, based on PlaceOS event metadata (cancelled events ignored).
-  # The body is an event with `event_start` and `event_end`, and optionally `system_id`:
-  # with a `system_id` only that room is checked, otherwise every booked room in the tenant is returned.
-  # `return_available=true` instead returns the `system_id` if it is free (empty if booked).
-  # `include_clash_time=true` returns each clash with its system_id, event_start and event_end.
+  # List the rooms already booked during an event's time range.
   @[AC::MCP(behaviour: :read_only)]
   @[AC::Route::POST("/clashing-assets", body: :input_event)]
   def clashing_assets(
@@ -1936,11 +1870,7 @@ class Events < Application
     end
   end
 
-  # Checks a visitor (guest) in to, or out of, an event booked in a room, e.g. when they arrive in person, so hosts can be notified.
-  # The guest must be an attendee of the event (404 otherwise). `system_id` is required except for guest tokens,
-  # and the event is looked up on the room's resource calendar unless `calendar` is given.
-  # Creates the guest and attendee records if missing, signals `staff/guest/checkin` and returns the guest.
-  # Guests can only check themselves in to the event their token was issued for.
+  # Check a visitor in to, or out of, an event booked in a room.
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(

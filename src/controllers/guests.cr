@@ -38,11 +38,7 @@ class Guests < Application
   # Routes
   # =====================
 
-  # Searches known guests, OR lists the visitors expected in a time period.
-  # Without a period: returns up to 1500 guests ordered by name, matching `q` (prefix match on each word) if provided.
-  # With both `period_start` and `period_end`: returns the guests attending bookings in the period (optionally filtered by
-  # `zones`/`zone_ids`) and calendar events in the period on the rooms matching `zone_ids`, `system_ids` or `calendars`,
-  # each including their attendance details (checked in, visit expected) and the event or booking they are visiting.
+  # Search guests, or list the visitors expected in a time period.
   @[AC::Route::GET("/", converters: {zones: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "space separated search query matching guest name, email etc, ignored when a period is provided", example: "steve von")]
@@ -218,8 +214,7 @@ class Guests < Application
     end
   end
 
-  # Returns a guest's details, including the visit they are expected to attend for the remainder of today (if any).
-  # Guests (visitor access tokens) may only view their own record.
+  # Get a guest, including any visit expected today.
   @[AC::Route::GET("/:id")]
   def show : Guest
     if user_token.guest_scope? && (guest.email != user_token.id)
@@ -231,8 +226,7 @@ class Guests < Application
     (attendee && attendee.for_booking?) ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest).as(Guest)
   end
 
-  # Updates a guest's details with the fields provided (PUT and PATCH both merge the changes).
-  # Guests (visitor access tokens) may only update their own record. Returns 422 if validation fails.
+  # Update a guest with the fields in the request body and return the saved guest.
   @[AC::Route::PUT("/:id", body: :guest_req)]
   @[AC::Route::PATCH("/:id", body: :guest_req)]
   def update(guest_req : ::Guest) : Guest
@@ -254,8 +248,7 @@ class Guests < Application
     attending_guest(attendee, guest).as(Guest)
   end
 
-  # Creates a new guest (visitor) record. Returns 422 if validation fails.
-  # Note this does not invite them to anything, add them as an attendee of an event or booking to do that.
+  # Create a guest.
   @[AC::Route::POST("/", body: :guest, status_code: HTTP::Status::CREATED)]
   def create(guest : Guest) : Guest
     guest.tenant_id = tenant.id
@@ -274,15 +267,14 @@ class Guests < Application
     attending_guest(attendee, guest).as(Guest)
   end
 
-  # Permanently deletes a guest record.
+  # Delete a guest.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
     # TODO: Should we be allowing to delete guests that are associated with attendees?
     guest.delete
   end
 
-  # Returns the calendar events (meetings in PlaceOS rooms) the guest has been invited to, ordered by start time.
-  # By default only events that haven't finished yet, set `include_past` to include earlier events.
+  # List the meetings a guest is attending.
   @[AC::Route::GET("/:id/meetings")]
   def meetings(
     @[AC::Param::Info(description: "include events that have already finished, defaults to false", example: "true")]
@@ -318,9 +310,7 @@ class Guests < Application
     events
   end
 
-  # Returns the bookings (e.g. visitor or desk bookings) the guest is an attendee of, ordered by start time.
-  # By default only bookings that haven't finished yet, set `include_past` to include earlier bookings.
-  # Guests (visitor access tokens) may only view their own bookings.
+  # List the bookings a guest is attending.
   @[AC::Route::GET("/:id/bookings")]
   def bookings(
     @[AC::Param::Info(description: "include bookings that have already finished, defaults to false", example: "true")]
@@ -382,10 +372,7 @@ class Guests < Application
     end
   end
 
-  # Returns the catering menus available to a visitor, for self-service catering selection.
-  # Intended for visitors using a guest access token; the booking's asset must be the caller's email.
-  # Finds the building of the visitor's booking and returns each child zone (level) of that building
-  # with its `catering` metadata (same format as the metadata children API).
+  # List the catering menus available to a visitor.
   @[AC::Route::GET("/:id/catering/menu")]
   def catering_menu(
     @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
@@ -399,8 +386,7 @@ class Guests < Application
     end
   end
 
-  # Returns the catering item the visitor has selected for their booking.
-  # Returns 404 if the visitor has not made a selection or the catering order can't be found.
+  # Get a visitor's catering selection.
   @[AC::Route::GET("/:id/catering")]
   def catering(
     @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
@@ -422,10 +408,7 @@ class Guests < Application
     item.as_h
   end
 
-  # Sets the visitor's catering selection for their booking, replacing any previous selection.
-  # The selection (a catering item from the menu) is stored in the catering order linked to the booking,
-  # a new `catering-order` booking is created if none exists. The body is the catering item selected,
-  # as a JSON object (its `id` is overwritten). Returns the saved selection.
+  # Set a visitor's catering selection.
   @[AC::Route::PATCH("/:id/catering", body: :selection)]
   def catering_update(
     selection : Hash(String, JSON::Any),
@@ -491,8 +474,7 @@ class Guests < Application
     selection
   end
 
-  # Removes the visitor's catering selection from their booking's catering order.
-  # Returns 404 if the visitor has no catering selection.
+  # Remove a visitor's catering selection.
   @[AC::Route::DELETE("/:id/catering", status_code: HTTP::Status::ACCEPTED)]
   def catering_destroy(
     @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]

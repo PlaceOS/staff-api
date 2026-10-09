@@ -4,9 +4,7 @@ class Surveys::Answers < Application
 
   base "/api/staff/v1/surveys/answers"
 
-  # Lists the answers submitted to this domain's surveys, optionally filtered by survey and creation time.
-  # Each answer includes its question_id, survey_id, type and answer_json.
-  # When no time range is given, all answers up to now are returned. Any authenticated user can list answers.
+  # List survey answers.
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(description: "only return answers submitted for this survey id", example: "1234")]
@@ -19,10 +17,7 @@ class Surveys::Answers < Application
     Survey::Answer.list(survey_id, created_after, created_before, survey_authority_id)
   end
 
-  # Submits a set of answers to a survey, i.e. one person's response. Any authenticated user can submit answers.
-  # The body is an array of answers, each with survey_id, question_id, type and answer_json; all must share the same survey_id.
-  # Every required question in the survey must be answered, otherwise 400 is returned listing the missing question ids.
-  # Returns the saved answers, or 404 if the survey isn't one of this domain's.
+  # Submit a response to a survey, as a set of answers.
   @[AC::Route::POST("/", body: :answers, status_code: HTTP::Status::CREATED)]
   def create(answers : Array(Survey::Answer)) : Array(Survey::Answer)
     survey_id = answers.first?.try(&.survey_id)

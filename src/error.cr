@@ -41,6 +41,11 @@ class Error < Exception
     def initialize(@failures : Array(NamedTuple(field: String?, reason: String)), message : String)
       super(message)
     end
+
+    # from a model's validation errors
+    def self.new(errors : Array(ActiveModel::Error), message : String = "validation failed")
+      new(errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, message)
+    end
   end
 
   class BookingConflict < Error

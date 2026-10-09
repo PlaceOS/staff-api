@@ -17,9 +17,10 @@ Controller and route doc comments are published twice: as the OpenAPI docs and a
 MCP server's toolbox and tool descriptions (`src/mcp.cr`, served at `/api/staff/v1/mcp`).
 An LLM reads them to pick a tool, so when adding or changing a route:
 
-* give the controller class a one line description, and each route a comment whose
-  first line says what it does, followed by anything a caller must know: how params
-  interact, who may call it, side effects (emails, signals, guests created) and errors
+* keep them short, every line costs MCP tokens on every tool listing: a one line
+  description on the controller class and a one line summary on each route, e.g.
+  `# Update an asset with the fields in the request body and return the saved asset.`
+  Don't list permissions, status codes or side effects in route comments
 * describe every param with `@[AC::Param::Info(description:, example:)]`, with units
   (unix epoch seconds) and formats (comma separated lists)
 * hide routes that make no sense as tools (binary streams, driver callbacks) with

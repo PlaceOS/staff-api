@@ -5,29 +5,2723 @@ info:
   title: staff-api
   version: 1.2.0
 paths:
+  /api/staff/v1/asset_categories:
+    summary: Asset categories, a hierarchy (via `parent_category_id`) at the top of
+      categories > asset types > assets
+    get:
+      summary: List asset categories.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_index
+      parameters:
+      - name: hidden
+        in: query
+        description: true returns only hidden categories, false only non-hidden categories;
+          omit to return all categories
+        example: true
+        schema:
+          anyOf:
+          - type: boolean
+          - type: "null"
+      - name: q
+        in: query
+        description: 'filters results by the given text: a record matches when any
+          word matches its searchable fields as a whole word, and the last word also
+          matches as a prefix (search as you type)'
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: 10000
+        schema:
+          type: integer
+          format: UInt32
+      - name: offset
+        in: query
+        description: the starting offset of the result set, used to implement pagination
+        schema:
+          type: integer
+          format: UInt32
+      - name: ref
+        in: query
+        description: deprecated, ignored — pagination follows the `Link` header's
+          offset
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: fields
+        in: query
+        description: deprecated, ignored — search covers the resource's indexed fields
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    post:
+      summary: Create an asset category.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        required: true
+      parameters: []
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/asset_categories/{id}:
+    summary: Asset categories, a hierarchy (via `parent_category_id`) at the top of
+      categories > asset types > assets
+    get:
+      summary: Get a single asset category.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_show
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    put:
+      summary: Update an asset category with the fields in the request body and return
+        the saved category.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    delete:
+      summary: Delete an asset category.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_destroy
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    patch:
+      summary: Update an asset category with the fields in the request body and return
+        the saved category.
+      tags:
+      - AssetCategories
+      operationId: AssetCategories_update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetCategory'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/asset_purchase_orders:
+    summary: Asset purchase orders, recording how and when assets were acquired (order
+      and invoice numbers, supplier, price)
+    get:
+      summary: List asset purchase orders.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_index
+      parameters:
+      - name: q
+        in: query
+        description: 'filters results by the given text: a record matches when any
+          word matches its searchable fields as a whole word, and the last word also
+          matches as a prefix (search as you type)'
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: 10000
+        schema:
+          type: integer
+          format: UInt32
+      - name: offset
+        in: query
+        description: the starting offset of the result set, used to implement pagination
+        schema:
+          type: integer
+          format: UInt32
+      - name: ref
+        in: query
+        description: deprecated, ignored — pagination follows the `Link` header's
+          offset
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: fields
+        in: query
+        description: deprecated, ignored — search covers the resource's indexed fields
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    post:
+      summary: Create an asset purchase order.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        required: true
+      parameters: []
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/asset_purchase_orders/{id}:
+    summary: Asset purchase orders, recording how and when assets were acquired (order
+      and invoice numbers, supplier, price)
+    get:
+      summary: Get a single asset purchase order.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_show
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    put:
+      summary: Update an asset purchase order with the fields in the request body
+        and return the saved purchase order.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    delete:
+      summary: Delete an asset purchase order.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_destroy
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    patch:
+      summary: Update an asset purchase order with the fields in the request body
+        and return the saved purchase order.
+      tags:
+      - AssetPurchaseOrders
+      operationId: AssetPurchaseOrders_update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetPurchaseOrder'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/asset_types:
+    summary: Asset types, the makes and models of physical assets (grouped into asset
+      categories; assets are instances of a type)
+    get:
+      summary: List asset types, each with a count of its assets.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_index
+      parameters:
+      - name: brand
+        in: query
+        description: only return asset types with exactly this brand
+        example: Steelcase
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: model_number
+        in: query
+        description: only return asset types with exactly this model number
+        example: Series 2
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: category_id
+        in: query
+        description: only return asset types in this asset category id
+        example: asset_category-1234
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: zone_id
+        in: query
+        description: limits asset_count to assets whose zone_id is this zone id; does
+          not filter the asset types returned
+        example: zone-1234
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    post:
+      summary: Create an asset type.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        required: true
+      parameters: []
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/asset_types/{id}:
+    summary: Asset types, the makes and models of physical assets (grouped into asset
+      categories; assets are instances of a type)
+    get:
+      summary: Get a single asset type.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_show
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    put:
+      summary: Update an asset type with the fields in the request body and return
+        the saved asset type.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    delete:
+      summary: Delete an asset type.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_destroy
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    patch:
+      summary: Update an asset type with the fields in the request body and return
+        the saved asset type.
+      tags:
+      - AssetTypes
+      operationId: AssetTypes_update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.AssetType'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/assets:
+    summary: Assets, the individual physical items (each an instance of an asset type)
+      tracked by zone, barcode and serial number
+    get:
+      summary: List assets, filtered by the params provided.
+      tags:
+      - Assets
+      operationId: Assets_index
+      parameters:
+      - name: zone_id
+        in: query
+        description: only return assets whose zone_id field is this zone id
+        example: zone-1234
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: zones
+        in: query
+        description: comma separated zone ids; only return assets whose zones list
+          contains every one of them
+        example:
+        - zone-1234
+        - zone-4567
+        schema:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+      - name: type_id
+        in: query
+        description: only return assets of this asset type id
+        example: asset_type-1234
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: order_id
+        in: query
+        description: only return assets acquired on this asset purchase order id
+        example: asset_purchase_order-1234
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: barcode
+        in: query
+        description: only return assets with exactly this barcode
+        example: "1234567"
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: serial_number
+        in: query
+        description: only return assets with exactly this serial number
+        example: "1234567"
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: bookable
+        in: query
+        description: true returns only bookable assets, false only non-bookable assets;
+          omit for both
+        example: true
+        schema:
+          anyOf:
+          - type: boolean
+          - type: "null"
+      - name: accessible
+        in: query
+        description: true returns only accessible assets, false only non-accessible
+          assets; omit for both
+        example: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: "null"
+      - name: features
+        in: query
+        description: comma separated features; returns assets that have any of these
+          features
+        example:
+        - sit-to-stand
+        - whiteboard
+        schema:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+      - name: q
+        in: query
+        description: 'filters results by the given text: a record matches when any
+          word matches its searchable fields as a whole word, and the last word also
+          matches as a prefix (search as you type)'
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: 10000
+        schema:
+          type: integer
+          format: UInt32
+      - name: offset
+        in: query
+        description: the starting offset of the result set, used to implement pagination
+        schema:
+          type: integer
+          format: UInt32
+      - name: ref
+        in: query
+        description: deprecated, ignored — pagination follows the `Link` header's
+          offset
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: fields
+        in: query
+        description: deprecated, ignored — search covers the resource's indexed fields
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    post:
+      summary: Create an asset.
+      tags:
+      - Assets
+      operationId: Assets_create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        required: true
+      parameters: []
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/assets/{id}:
+    summary: Assets, the individual physical items (each an instance of an asset type)
+      tracked by zone, barcode and serial number
+    get:
+      summary: Get a single asset.
+      tags:
+      - Assets
+      operationId: Assets_show
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    put:
+      summary: Update an asset with the fields in the request body and return the
+        saved asset.
+      tags:
+      - Assets
+      operationId: Assets_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    delete:
+      summary: Delete an asset.
+      tags:
+      - Assets
+      operationId: Assets_destroy
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    patch:
+      summary: Update an asset with the fields in the request body and return the
+        saved asset.
+      tags:
+      - Assets
+      operationId: Assets_update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        required: true
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/assets/bulk:
+    summary: Assets, the individual physical items (each an instance of an asset type)
+      tracked by zone, barcode and serial number
+    put:
+      summary: Update several assets; the body is a JSON array of assets, each with
+        its `id`.
+      tags:
+      - Assets
+      operationId: Assets_bulk_update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Array-oPlaceOS.Model.Asset-c'
+        required: true
+      parameters: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    post:
+      summary: Create several assets; the body is a JSON array of assets.
+      tags:
+      - Assets
+      operationId: Assets_bulk_create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Array-oPlaceOS.Model.Asset-c'
+        required: true
+      parameters: []
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    delete:
+      summary: Delete several assets; the body is a JSON array of asset ids.
+      tags:
+      - Assets
+      operationId: Assets_bulk_destroy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Array-oString-c'
+        required: true
+      parameters: []
+      responses:
+        "202":
+          description: Accepted
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+    patch:
+      summary: Update several assets; the body is a JSON array of assets, each with
+        its `id`.
+      tags:
+      - Assets
+      operationId: Assets_bulk_update_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Array-oPlaceOS.Model.Asset-c'
+        required: true
+      parameters: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlaceOS.Model.Asset'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/bookings:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     get:
-      summary: Lists bookings overlapping a time period, with recurring bookings expanded
-        into their individual occurrences.
-      description: 'Lists bookings overlapping a time period, with recurring bookings
-        expanded into their individual occurrences.
-
-        `type` is required unless event_id or ical_uid is provided, which instead
-        returns the bookings linked to that calendar event.
-
-        With no `user`, `email` or `zones` the signed in user''s own bookings are
-        returned; with `zones` every user''s bookings in those zones are returned.
-
-        Deleted, checked out bookings are excluded by default. Use `booked` instead
-        if you only need the ids of assets in use.
-
-        Unauthenticated requests are allowed (tenant resolved from the domain) and
-        only return PUBLIC bookings.
-
-        Paginated: follow the `Link` response header (rel="next") to fetch the next
-        page.'
+      summary: List bookings in a time period.
       tags:
       - Bookings
       operationId: Bookings_index
@@ -355,25 +3049,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     post:
-      summary: Creates a booking of an asset (desk, parking space, locker, visitor,
-        etc) for the signed in user or on behalf of another user.
-      description: 'Creates a booking of an asset (desk, parking space, locker, visitor,
-        etc) for the signed in user or on behalf of another user.
-
-        The body requires booking_start, booking_end (unix epoch seconds), booking_type
-        and asset_id or asset_ids; set user_email/user_id to book for someone else.
-
-        Any attendees in the body are created as guests (visitors) of the booking
-        and a `staff/guest/attending` signal is sent for each, which typically triggers
-        visitor invites.
-
-        Only admins, support or managers of the booking''s zones may create a booking
-        that is already approved or rejected (403 otherwise).
-
-        Fails with 409 if the asset is already booked for that time and 410 if the
-        user''s concurrent booking limit is reached.
-
-        Returns the created booking and publishes a `staff/booking/changed` signal.'
+      summary: Create a booking.
       tags:
       - Bookings
       operationId: Bookings_create
@@ -513,19 +3189,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     get:
-      summary: Lists the unique ids of assets (desks, parking spaces, etc) booked
-        during a time period, e.g. to find which assets are unavailable.
-      description: 'Lists the unique ids of assets (desks, parking spaces, etc) booked
-        during a time period, e.g. to find which assets are unavailable.
-
-        Accepts the same filters as listing bookings; `type` is required unless event_id
-        or ical_uid is provided.
-
-        Deleted, rejected and checked out bookings are ignored. Unauthenticated requests
-        only consider PUBLIC bookings.
-
-        Use `clashing-assets` to check specific assets against a proposed booking
-        time instead.'
+      summary: List the ids of assets booked in a time period.
       tags:
       - Bookings
       operationId: Bookings_booked
@@ -794,21 +3458,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks which assets are already booked for a proposed booking, without
-        creating anything.
-      description: 'Checks which assets are already booked for a proposed booking,
-        without creating anything.
-
-        The body is a booking that requires booking_start, booking_end (unix epoch
-        seconds) and booking_type.
-
-        Returns the ids of assets with a clashing booking; if asset_ids or asset_id
-        is set only those assets are checked,
-
-        otherwise every asset of that booking_type with a clash is returned.
-
-        Set return_available (requires asset_ids) to get the free assets instead,
-        or include_clash_time to get the clashing time ranges.'
+      summary: List the assets already booked during a booking's time range.
       tags:
       - Bookings
       operationId: Bookings_clashing_assets
@@ -924,11 +3574,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     get:
-      summary: Returns a single booking by id, including its attendees.
-      description: 'Returns a single booking by id, including its attendees.
-
-        Use the `/instance/:instance` route to get a specific occurrence of a recurring
-        booking.'
+      summary: Get a single booking.
       tags:
       - Bookings
       operationId: Bookings_show
@@ -1038,26 +3684,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     put:
-      summary: Updates a booking with the fields provided in the body, only fields
-        present are changed.
-      description: 'Updates a booking with the fields provided in the body, only fields
-        present are changed.
-
-        Use the `/instance/:instance` routes to change a single occurrence of a recurring
-        booking. Times cannot be changed on a linked (child) booking (405).
-
-        Moving to a different asset or outside the original time window resets the
-        check-in and approval state and re-checks booking limits (410).
-
-        Changing the time, asset or recurrence re-checks for clashes (409). Changing
-        approved/rejected requires admin, support or zone manager access (403).
-
-        Providing attendees replaces the attendee list, creating guests for new attendees.
-        Changing user_email moves the booking to that user (404 if unknown) and signals
-        `staff/booking/host_changed`.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it.'
+      summary: Update a booking with the fields in the request body and return the
+        saved booking.
       tags:
       - Bookings
       operationId: Bookings_update
@@ -1184,18 +3812,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     delete:
-      summary: Cancels a booking by marking it as deleted (it remains visible with
-        `include_deleted`).
-      description: 'Cancels a booking by marking it as deleted (it remains visible
-        with `include_deleted`).
-
-        Use the `/instance/:instance` route to cancel a single occurrence of a recurring
-        booking; without it the whole booking or series is cancelled.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may cancel it.
-
-        Publishes a `staff/booking/changed` signal with action `cancelled`.'
+      summary: Cancel a booking.
       tags:
       - Bookings
       operationId: Bookings_destroy
@@ -1309,26 +3926,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     patch:
-      summary: Updates a booking with the fields provided in the body, only fields
-        present are changed.
-      description: 'Updates a booking with the fields provided in the body, only fields
-        present are changed.
-
-        Use the `/instance/:instance` routes to change a single occurrence of a recurring
-        booking. Times cannot be changed on a linked (child) booking (405).
-
-        Moving to a different asset or outside the original time window resets the
-        check-in and approval state and re-checks booking limits (410).
-
-        Changing the time, asset or recurrence re-checks for clashes (409). Changing
-        approved/rejected requires admin, support or zone manager access (403).
-
-        Providing attendees replaces the attendee list, creating guests for new attendees.
-        Changing user_email moves the booking to that user (404 if unknown) and signals
-        `staff/booking/host_changed`.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it.'
+      summary: Update a booking with the fields in the request body and return the
+        saved booking.
       tags:
       - Bookings
       operationId: Bookings_update_3
@@ -1458,11 +4057,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     get:
-      summary: Returns a single booking by id, including its attendees.
-      description: 'Returns a single booking by id, including its attendees.
-
-        Use the `/instance/:instance` route to get a specific occurrence of a recurring
-        booking.'
+      summary: Get a single booking.
       tags:
       - Bookings
       operationId: Bookings_show_2
@@ -1573,26 +4168,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     put:
-      summary: Updates a booking with the fields provided in the body, only fields
-        present are changed.
-      description: 'Updates a booking with the fields provided in the body, only fields
-        present are changed.
-
-        Use the `/instance/:instance` routes to change a single occurrence of a recurring
-        booking. Times cannot be changed on a linked (child) booking (405).
-
-        Moving to a different asset or outside the original time window resets the
-        check-in and approval state and re-checks booking limits (410).
-
-        Changing the time, asset or recurrence re-checks for clashes (409). Changing
-        approved/rejected requires admin, support or zone manager access (403).
-
-        Providing attendees replaces the attendee list, creating guests for new attendees.
-        Changing user_email moves the booking to that user (404 if unknown) and signals
-        `staff/booking/host_changed`.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it.'
+      summary: Update a booking with the fields in the request body and return the
+        saved booking.
       tags:
       - Bookings
       operationId: Bookings_update_2
@@ -1720,18 +4297,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     delete:
-      summary: Cancels a booking by marking it as deleted (it remains visible with
-        `include_deleted`).
-      description: 'Cancels a booking by marking it as deleted (it remains visible
-        with `include_deleted`).
-
-        Use the `/instance/:instance` route to cancel a single occurrence of a recurring
-        booking; without it the whole booking or series is cancelled.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may cancel it.
-
-        Publishes a `staff/booking/changed` signal with action `cancelled`.'
+      summary: Cancel a booking.
       tags:
       - Bookings
       operationId: Bookings_destroy_2
@@ -1846,26 +4412,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Bookings.BookingError'
     patch:
-      summary: Updates a booking with the fields provided in the body, only fields
-        present are changed.
-      description: 'Updates a booking with the fields provided in the body, only fields
-        present are changed.
-
-        Use the `/instance/:instance` routes to change a single occurrence of a recurring
-        booking. Times cannot be changed on a linked (child) booking (405).
-
-        Moving to a different asset or outside the original time window resets the
-        check-in and approval state and re-checks booking limits (410).
-
-        Changing the time, asset or recurrence re-checks for clashes (409). Changing
-        approved/rejected requires admin, support or zone manager access (403).
-
-        Providing attendees replaces the attendee list, creating guests for new attendees.
-        Changing user_email moves the booking to that user (404 if unknown) and signals
-        `staff/booking/host_changed`.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it.'
+      summary: Update a booking with the fields in the request body and return the
+        saved booking.
       tags:
       - Bookings
       operationId: Bookings_update_4
@@ -1996,18 +4544,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     patch:
-      summary: Merges the provided keys into the booking's extension data (custom
-        fields), leaving other keys untouched.
-      description: 'Merges the provided keys into the booking''s extension data (custom
-        fields), leaving other keys untouched.
-
-        Use the `/:instance` route to update a single occurrence of a recurring booking.
-
-        A `staff/booking/changed` signal is only published when signal_changes is
-        true.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it. Returns the updated booking.'
+      summary: Merge the keys in the request body into a booking's extension data.
       tags:
       - Bookings
       operationId: Bookings_patch_extdata
@@ -2133,18 +4670,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     patch:
-      summary: Merges the provided keys into the booking's extension data (custom
-        fields), leaving other keys untouched.
-      description: 'Merges the provided keys into the booking''s extension data (custom
-        fields), leaving other keys untouched.
-
-        Use the `/:instance` route to update a single occurrence of a recurring booking.
-
-        A `staff/booking/changed` signal is only published when signal_changes is
-        true.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may update it. Returns the updated booking.'
+      summary: Merge the keys in the request body into a booking's extension data.
       tags:
       - Bookings
       operationId: Bookings_patch_extdata_2
@@ -2271,18 +4797,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Approves a booking that is pending approval, recording the current
-        user as the approver.
-      description: 'Approves a booking that is pending approval, recording the current
-        user as the approver.
-
-        Use the `/:instance` route to approve a single occurrence of a recurring booking.
-
-        Requires admin, support or manager access to one of the booking''s zones (403).
-        Fails with 409 if the booking now clashes with another, 405 if it was deleted.
-
-        Publishes a `staff/booking/changed` signal with action `approved` and returns
-        the booking.'
+      summary: Approve a booking.
       tags:
       - Bookings
       operationId: Bookings_approve
@@ -2403,18 +4918,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Approves a booking that is pending approval, recording the current
-        user as the approver.
-      description: 'Approves a booking that is pending approval, recording the current
-        user as the approver.
-
-        Use the `/:instance` route to approve a single occurrence of a recurring booking.
-
-        Requires admin, support or manager access to one of the booking''s zones (403).
-        Fails with 409 if the booking now clashes with another, 405 if it was deleted.
-
-        Publishes a `staff/booking/changed` signal with action `approved` and returns
-        the booking.'
+      summary: Approve a booking.
       tags:
       - Bookings
       operationId: Bookings_approve_2
@@ -2536,17 +5040,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Rejects (declines) a booking, recording the current user as the approver.
-      description: 'Rejects (declines) a booking, recording the current user as the
-        approver.
-
-        Use the `/:instance` route to reject a single occurrence of a recurring booking.
-
-        Requires admin, support or manager access to one of the booking''s zones (403),
-        405 if the booking was deleted.
-
-        Publishes a `staff/booking/changed` signal with action `rejected` and returns
-        the booking.'
+      summary: Reject a booking.
       tags:
       - Bookings
       operationId: Bookings_reject
@@ -2667,17 +5161,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Rejects (declines) a booking, recording the current user as the approver.
-      description: 'Rejects (declines) a booking, recording the current user as the
-        approver.
-
-        Use the `/:instance` route to reject a single occurrence of a recurring booking.
-
-        Requires admin, support or manager access to one of the booking''s zones (403),
-        405 if the booking was deleted.
-
-        Publishes a `staff/booking/changed` signal with action `rejected` and returns
-        the booking.'
+      summary: Reject a booking.
       tags:
       - Bookings
       operationId: Bookings_reject_2
@@ -2799,22 +5283,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a booking in (the user has arrived) or, with state=false, checks
-        it out (releasing the asset).
-      description: 'Checks a booking in (the user has arrived) or, with state=false,
-        checks it out (releasing the asset).
-
-        Check in fails with 405 if the booking has ended, was already checked out,
-        or is too far before its start (tenant early check-in window),
-
-        and 409 if another booking of the asset is still active before the start.
-        A booking with a single attendee also checks that guest in.
-
-        Checking out also checks out any guests on site. Use the `/:instance` routes
-        for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes a `staff/booking/changed` signal.'
+      summary: Check a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_check_in
@@ -2941,22 +5410,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a booking in (the user has arrived) or, with state=false, checks
-        it out (releasing the asset).
-      description: 'Checks a booking in (the user has arrived) or, with state=false,
-        checks it out (releasing the asset).
-
-        Check in fails with 405 if the booking has ended, was already checked out,
-        or is too far before its start (tenant early check-in window),
-
-        and 409 if another booking of the asset is still active before the start.
-        A booking with a single attendee also checks that guest in.
-
-        Checking out also checks out any guests on site. Use the `/:instance` routes
-        for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes a `staff/booking/changed` signal.'
+      summary: Check a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_check_in_2
@@ -3083,22 +5537,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a booking in (the user has arrived) or, with state=false, checks
-        it out (releasing the asset).
-      description: 'Checks a booking in (the user has arrived) or, with state=false,
-        checks it out (releasing the asset).
-
-        Check in fails with 405 if the booking has ended, was already checked out,
-        or is too far before its start (tenant early check-in window),
-
-        and 409 if another booking of the asset is still active before the start.
-        A booking with a single attendee also checks that guest in.
-
-        Checking out also checks out any guests on site. Use the `/:instance` routes
-        for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes a `staff/booking/changed` signal.'
+      summary: Check a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_check_in_3
@@ -3226,22 +5665,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a booking in (the user has arrived) or, with state=false, checks
-        it out (releasing the asset).
-      description: 'Checks a booking in (the user has arrived) or, with state=false,
-        checks it out (releasing the asset).
-
-        Check in fails with 405 if the booking has ended, was already checked out,
-        or is too far before its start (tenant early check-in window),
-
-        and 409 if another booking of the asset is still active before the start.
-        A booking with a single attendee also checks that guest in.
-
-        Checking out also checks out any guests on site. Use the `/:instance` routes
-        for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes a `staff/booking/changed` signal.'
+      summary: Check a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_check_in_4
@@ -3369,18 +5793,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Sets the booking's process state, a free-form value used by custom
-        workflows (e.g. pending_approval).
-      description: 'Sets the booking''s process state, a free-form value used by custom
-        workflows (e.g. pending_approval).
-
-        Use the `/:instance` route for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this.
-
-        Publishes a `staff/booking/changed` signal with action `process_state` and
-        returns the booking.'
+      summary: Set a booking's process state.
       tags:
       - Bookings
       operationId: Bookings_update_state
@@ -3508,18 +5921,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Sets the booking's process state, a free-form value used by custom
-        workflows (e.g. pending_approval).
-      description: 'Sets the booking''s process state, a free-form value used by custom
-        workflows (e.g. pending_approval).
-
-        Use the `/:instance` route for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this.
-
-        Publishes a `staff/booking/changed` signal with action `process_state` and
-        returns the booking.'
+      summary: Set a booking's process state.
       tags:
       - Bookings
       operationId: Bookings_update_state_2
@@ -3648,18 +6050,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Sets the induction (site safety briefing) status of a booking, typically
-        a visitor booking.
-      description: 'Sets the induction (site safety briefing) status of a booking,
-        typically a visitor booking.
-
-        Accepting or declining publishes a `staff/guest/induction_accepted` or `staff/guest/induction_declined`
-        signal for the booking''s first guest.
-
-        Use the `/:instance` route for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes `staff/booking/changed` and returns the booking.'
+      summary: Set a booking's induction status.
       tags:
       - Bookings
       operationId: Bookings_update_induction
@@ -3787,18 +6178,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Sets the induction (site safety briefing) status of a booking, typically
-        a visitor booking.
-      description: 'Sets the induction (site safety briefing) status of a booking,
-        typically a visitor booking.
-
-        Accepting or declining publishes a `staff/guest/induction_accepted` or `staff/guest/induction_declined`
-        signal for the booking''s first guest.
-
-        Use the `/:instance` route for a single occurrence of a recurring booking.
-
-        Only the booking owner, the person who booked it, admins/support or zone managers
-        may call this. Publishes `staff/booking/changed` and returns the booking.'
+      summary: Set a booking's induction status.
       tags:
       - Bookings
       operationId: Bookings_update_induction_2
@@ -3927,13 +6307,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     get:
-      summary: Lists the guests (visitors) attending a booking, including their check-in
-        state for this booking.
-      description: 'Lists the guests (visitors) attending a booking, including their
-        check-in state for this booking.
-
-        Set include_linked to also include guests of linked (child) bookings, de-duplicated
-        by email.'
+      summary: List the guests attending a booking.
       tags:
       - Bookings
       operationId: Bookings_guest_list
@@ -4055,15 +6429,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a guest (visitor) of a booking in or, with state=false, out.
-      description: 'Checks a guest (visitor) of a booking in or, with state=false,
-        out.
-
-        Checking in a guest also checks the booking in. Checking out the last guest
-        on site checks the booking out if it has not ended.
-
-        Publishes a `staff/guest/checkin` signal. Returns 404 if the guest is not
-        an attendee of the booking, 405 if the booking was deleted.'
+      summary: Check a guest of a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_guest_checkin
@@ -4190,15 +6556,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Checks a guest (visitor) of a booking in or, with state=false, out.
-      description: 'Checks a guest (visitor) of a booking in or, with state=false,
-        out.
-
-        Checking in a guest also checks the booking in. Checking out the last guest
-        on site checks the booking out if it has not ended.
-
-        Publishes a `staff/guest/checkin` signal. Returns 404 if the guest is not
-        an attendee of the booking, 405 if the booking was deleted.'
+      summary: Check a guest of a booking in, or out with state=false.
       tags:
       - Bookings
       operationId: Bookings_guest_checkin_2
@@ -4325,19 +6683,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     post:
-      summary: Adds a single attendee (guest) to a booking without replacing the existing
-        attendees, e.g. to join a group event.
-      description: 'Adds a single attendee (guest) to a booking without replacing
-        the existing attendees, e.g. to join a group event.
-
-        Creates the guest if their email is new and publishes a `staff/guest/attending`
-        signal. Returns 400 if they already attend, 405 if the booking was deleted.
-
-        Allowed unauthenticated for PUBLIC bookings; OPEN bookings allow any user
-        of the tenant''s domain;
-
-        otherwise only the booking owner, the person who booked it, admins/support
-        or zone managers.'
+      summary: Add an attendee to a booking.
       tags:
       - Bookings
       operationId: Bookings_add_attendee
@@ -4456,19 +6802,7 @@ paths:
     summary: Bookings of desks, car parking spaces, lockers, visitors and other assets,
       with approval, check-in/out and attendee (guest) management
     delete:
-      summary: Removes an attendee from a booking by their email, e.g. to leave a
-        group event.
-      description: 'Removes an attendee from a booking by their email, e.g. to leave
-        a group event.
-
-        The guest record, and their attendance of other bookings and events, is kept.
-        Returns 400 if they are not an attendee, 405 if the booking was deleted.
-
-        Requires authentication. Allowed for any user on PUBLIC bookings, any user
-        of the tenant''s domain on OPEN bookings,
-
-        otherwise only the booking owner, the person who booked it, admins/support
-        or zone managers.'
+      summary: Remove an attendee from a booking.
       tags:
       - Bookings
       operationId: Bookings_destroy_attendee
@@ -4584,8 +6918,7 @@ paths:
     summary: Calendars, lists the user's calendars and checks room and people availability
       (free/busy) via the tenant's Office365 or Google calendar
     get:
-      summary: Lists the calendars available to the current user in the tenant's calendar
-        provider.
+      summary: List the calendars available to the current user.
       tags:
       - Calendars
       operationId: Calendars_index
@@ -4671,16 +7004,7 @@ paths:
     summary: Calendars, lists the user's calendars and checks room and people availability
       (free/busy) via the tenant's Office365 or Google calendar
     get:
-      summary: Checks whether the current user can edit (create or modify events in)
-        another user's calendar.
-      description: 'Checks whether the current user can edit (create or modify events
-        in) another user''s calendar.
-
-        Always true for the user''s own calendar. On Office365 this checks the calendar''s
-        permissions,
-
-        on Google it always returns false. Returns 404 if the calendar can''t be looked
-        up.'
+      summary: Check whether the current user can edit another user's calendar.
       tags:
       - Calendars
       operationId: Calendars_check_permission
@@ -4771,20 +7095,7 @@ paths:
     summary: Calendars, lists the user's calendars and checks room and people availability
       (free/busy) via the tenant's Office365 or Google calendar
     get:
-      summary: Finds which rooms or people are free for the whole period, use it to
-        find an available room to book.
-      description: 'Finds which rooms or people are free for the whole period, use
-        it to find an available room to book.
-
-        Specify candidates with `calendars`, `system_ids` and/or `zone_ids` (optionally
-        filtered by `features`, `capacity`, `bookable`).
-
-        Returns only the calendars with no busy time overlapping the period, including
-        the room''s system details where known.
-
-        Returns 204 with an empty list if no candidate calendars were specified.
-
-        Use `free_busy` instead to see the actual busy times of each calendar.'
+      summary: Find the rooms or people that are free for a whole time period.
       tags:
       - Calendars
       operationId: Calendars_availability
@@ -4938,19 +7249,7 @@ paths:
     summary: Calendars, lists the user's calendars and checks room and people availability
       (free/busy) via the tenant's Office365 or Google calendar
     get:
-      summary: Returns the free/busy schedule of each selected room or person over
-        the period, use it to view schedules or find a common free time.
-      description: 'Returns the free/busy schedule of each selected room or person
-        over the period, use it to view schedules or find a common free time.
-
-        Specify candidates with `calendars`, `system_ids` and/or `zone_ids` (optionally
-        filtered by `features`, `capacity`, `bookable`).
-
-        Every calendar is returned with its availability blocks (busy times outside
-        the period are removed) and the room''s system details where known.
-
-        The period must be at least 5 minutes long. Use `availability` instead to
-        get just the calendars that are completely free.'
+      summary: Get the busy times of rooms or people in a time period.
       tags:
       - Calendars
       operationId: Calendars_free_busy
@@ -5105,22 +7404,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Lists calendar events in the period, merged with any PlaceOS metadata
-        (room/system, extension data, setup/breakdown).
-      description: 'Lists calendar events in the period, merged with any PlaceOS metadata
-        (room/system, extension data, setup/breakdown).
-
-        Defaults to the current user''s calendar when none of `calendars`, `zone_ids`
-        or `system_ids` are given,
-
-        otherwise events from all the calendars selected by those params are combined
-        (`zone_ids` selects every room in the zones).
-
-        Calendars the user can''t access are dropped unless the tenant is delegated
-        or uses a service account.
-
-        If some calendars fail the response is 206 with X-Calendar-Errors, X-Calendar-Limit
-        and X-Calendar-Issue headers (see `strict`).'
+      summary: List calendar events in a time period.
       tags:
       - Events
       operationId: Events_index
@@ -5277,27 +7561,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates a calendar event (meeting) on the host's calendar and returns
-        it; the calendar provider sends the invitations.
-      description: 'Creates a calendar event (meeting) on the host''s calendar and
-        returns it; the calendar provider sends the invitations.
-
-        `host` defaults to the current user. Booking for someone else requires write
-        access to their calendar
-
-        (or a delegated tenant), otherwise 403. The host is added as an accepted attendee.
-
-        `event_start` and `event_end` are required (400); `timezone` defaults to the
-        `timezone` query param or the server default.
-
-        Set `system_id` to book a room: its resource calendar is invited as a resource,
-        the PlaceOS metadata
-
-        (`extension_data`, setup/breakdown, permission) is saved and `staff/event/changed`
-        is signalled. With a room,
-
-        attendees with `visit_expected: true` are saved as visitors (guests) and `staff/guest/attending`
-        is signalled for each.'
+      summary: Create a calendar event.
       tags:
       - Events
       operationId: Events_create
@@ -5387,17 +7651,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Lists change history records (created, updated, deleted, etc) for events
-        in the period.
-      description: 'Lists change history records (created, updated, deleted, etc)
-        for events in the period.
-
-        Only events with PlaceOS metadata, i.e. booked in a room (system), are covered.
-
-        Narrow it with `system_ids`, `calendars`/`zone_ids` (room resource calendars)
-        or `ical_uid`,
-
-        otherwise history for all of the tenant''s room events in the period is returned.'
+      summary: List the change history of events in a time period.
       tags:
       - Events
       operationId: Events_history
@@ -5533,19 +7787,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Returns a single event merged with any PlaceOS metadata (room/system,
-        extension data, setup/breakdown).
-      description: 'Returns a single event merged with any PlaceOS metadata (room/system,
-        extension data, setup/breakdown).
-
-        By default it assumes the event exists on the user''s calendar. Provide `calendar`
-        for another calendar
-
-        the user can access (403 otherwise), or `system_id` to look it up on a room''s
-        resource calendar.
-
-        The id must be the event''s id on the calendar searched. Guests may only view
-        the event their token was issued for. 404 if not found.'
+      summary: Get a single calendar event.
       tags:
       - Events
       operationId: Events_show
@@ -5650,67 +7892,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Updates an existing calendar event with the changes provided and returns
-        the updated event (PATCH and PUT behave the same).
-      description: 'Updates an existing calendar event with the changes provided and
-        returns the updated event (PATCH and PUT behave the same).
-
-        The body is the event as it should be after the change, `event_start` and
-        `event_end` are required.
-
-        The user must be the host or an attendee, or hold a role permitted on the
-        room (system), otherwise 403.
-
-
-        By default it assumes the event exists on the user''s calendar.
-
-        You can provide a `calendar` param to override this default,
-
-        or a `system_id` if the event exists on a room''s resource calendar.
-
-
-        Note: event metadata is associated with a resource calendar, not the host''s
-        event,
-
-        so to update an event and its metadata provide both the `calendar` and the
-        `system_id` params.
-
-        `extension_data` is merged into the existing metadata, `staff/event/changed`
-        is signalled and newly
-
-        expected visitors (`visit_expected: true`) are saved as guests with `staff/guest/attending`
-        signalled.
-
-
-        When moving the meeting from one room to another, the `system_id` param should
-        be
-
-        the current room''s system and the `system_id` field in the event body the
-        new system.
-
-
-        Changing `host` hands the meeting to that person. Office365 cannot change
-        a
-
-        meeting''s organiser, so this does what a person does in Outlook: the meeting
-
-        is cancelled and sent again from the new host''s calendar, which re-invites
-
-        the attendees and gives the event a new id and ical uid. Recurring meetings
-
-        are refused. A `host` matching the requesting user is ignored, as front ends
-
-        fall back to the current user when they cannot resolve the organiser.
-
-
-        `extension_data.host_override` instead records who is hosting while leaving
-
-        the meeting on the organiser''s calendar, for deployments that book rooms
-        as
-
-        a service account. Send an empty string to clear it. Moving the meeting
-
-        supersedes it, as the new host owns the meeting afterwards.'
+      summary: Update a calendar event with the changes in the request body and return
+        the updated event.
       tags:
       - Events
       operationId: Events_update
@@ -5832,22 +8015,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Deletes the event from the calendar, it will not appear as cancelled,
-        it will be gone.
-      description: 'Deletes the event from the calendar, it will not appear as cancelled,
-        it will be gone.
-
-        Use decline instead to cancel it while leaving it visible. Attendees are notified
-        unless `notify=false`.
-
-        By default it assumes the event exists on the user''s calendar; use `calendar`
-        for another calendar the user can write to,
-
-        and provide `system_id` when the event is booked in a room so its metadata
-        is marked cancelled and `staff/event/changed` is signalled.
-
-        The user must be the host or an attendee, or hold a role permitted on the
-        room, otherwise 403. 404 if not found.'
+      summary: Delete a calendar event.
       tags:
       - Events
       operationId: Events_destroy
@@ -5956,67 +8124,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates an existing calendar event with the changes provided and returns
-        the updated event (PATCH and PUT behave the same).
-      description: 'Updates an existing calendar event with the changes provided and
-        returns the updated event (PATCH and PUT behave the same).
-
-        The body is the event as it should be after the change, `event_start` and
-        `event_end` are required.
-
-        The user must be the host or an attendee, or hold a role permitted on the
-        room (system), otherwise 403.
-
-
-        By default it assumes the event exists on the user''s calendar.
-
-        You can provide a `calendar` param to override this default,
-
-        or a `system_id` if the event exists on a room''s resource calendar.
-
-
-        Note: event metadata is associated with a resource calendar, not the host''s
-        event,
-
-        so to update an event and its metadata provide both the `calendar` and the
-        `system_id` params.
-
-        `extension_data` is merged into the existing metadata, `staff/event/changed`
-        is signalled and newly
-
-        expected visitors (`visit_expected: true`) are saved as guests with `staff/guest/attending`
-        signalled.
-
-
-        When moving the meeting from one room to another, the `system_id` param should
-        be
-
-        the current room''s system and the `system_id` field in the event body the
-        new system.
-
-
-        Changing `host` hands the meeting to that person. Office365 cannot change
-        a
-
-        meeting''s organiser, so this does what a person does in Outlook: the meeting
-
-        is cancelled and sent again from the new host''s calendar, which re-invites
-
-        the attendees and gives the event a new id and ical uid. Recurring meetings
-
-        are refused. A `host` matching the requesting user is ignored, as front ends
-
-        fall back to the current user when they cannot resolve the organiser.
-
-
-        `extension_data.host_override` instead records who is hosting while leaving
-
-        the meeting on the organiser''s calendar, for deployments that book rooms
-        as
-
-        a service account. Send an empty string to clear it. Moving the meeting
-
-        supersedes it, as the new host owns the meeting afterwards.'
+      summary: Update a calendar event with the changes in the request body and return
+        the updated event.
       tags:
       - Events
       operationId: Events_update_2
@@ -6141,23 +8250,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Adds a single attendee to an existing event and returns the attendee.
-      description: 'Adds a single attendee to an existing event and returns the attendee.
-
-        Use this rather than update to invite one person; it only works for events
-        with PlaceOS metadata (404 otherwise).
-
-        Can be called without authentication when the event''s permission is `public`
-        (the tenant is found from the domain).
-
-        Otherwise allowed for support, the event creator, managers of the room''s
-        zones, or same-tenant users when the permission is `open` (403 otherwise).
-
-        Requires `system_id` or `calendar`; authenticated users default to their own
-        calendar. 400 if they''re already an attendee.
-
-        With `system_id` the attendee is also saved as an expected visitor (guest)
-        and `staff/guest/attending` is signalled.'
+      summary: Add an attendee to an event.
       tags:
       - Events
       operationId: Events_add_attendee
@@ -6278,19 +8371,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     delete:
-      summary: Removes a single attendee from an existing event, and their visitor
-        record for the room when `system_id` is given.
-      description: 'Removes a single attendee from an existing event, and their visitor
-        record for the room when `system_id` is given.
-
-        Attendees may remove themselves, otherwise allowed for support, the event
-        creator or managers of the room''s zones (403 otherwise).
-
-        Requires `system_id` or `calendar`; authenticated users default to their own
-        calendar.
-
-        404 if the event has no PlaceOS metadata, nothing changes if the email isn''t
-        an attendee.'
+      summary: Remove an attendee from an event.
       tags:
       - Events
       operationId: Events_delete_attendee
@@ -6401,12 +8482,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Links a room resource calendar's recurring master event id to the event's
-        metadata (Office365 only).
-      description: 'Links a room resource calendar''s recurring master event id to
-        the event''s metadata (Office365 only).
-
-        Support / admin only, used internally when processing calendar change notifications.'
+      summary: Link the room's recurring master event id to its metadata.
       tags:
       - Events
       operationId: Events_link_master_metadata
@@ -6507,16 +8583,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Returns the PlaceOS extension data (ext_data) stored for an event booked
-        in a room (system), e.g. catering orders.
-      description: 'Returns the PlaceOS extension data (ext_data) stored for an event
-        booked in a room (system), e.g. catering orders.
-
-        Looked up in the metadata by event id (or `ical_uid`) for the room, the calendar
-        isn''t queried; use show for the full event.
-
-        Guests may only read the event their guest token was issued for. 404 if the
-        event has no metadata.'
+      summary: Get the PlaceOS metadata of an event booked in a room.
       tags:
       - Events
       operationId: Events_get_metadata
@@ -6620,22 +8687,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Replaces an event's PlaceOS extension data (ext_data) with the body,
-        without changing the calendar event.
-      description: 'Replaces an event''s PlaceOS extension data (ext_data) with the
-        body, without changing the calendar event.
-
-        Keys not in the body are removed; use PATCH to merge changes instead.
-
-        If the room has no metadata for the event yet, the event is looked up on the
-        room''s resource calendar
-
-        (or `calendar` if given) and metadata is created.
-
-        Allowed for the host, support or managers of the room''s zones (attendees
-        too when creating the metadata), not guests.
-
-        Signals `staff/event/changed` and returns the new ext_data.'
+      summary: Replace the PlaceOS metadata of an event booked in a room.
       tags:
       - Events
       operationId: Events_replace_metadata
@@ -6788,24 +8840,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Merges the keys provided into an event's PlaceOS extension data (ext_data)
-        without changing the calendar event,
-      description: 'Merges the keys provided into an event''s PlaceOS extension data
-        (ext_data) without changing the calendar event,
-
-        other keys are kept. Use this to record booking extras such as catering or
-        approval state; use PUT to replace ext_data entirely.
-
-        If the room has no metadata for the event yet, the event is looked up on the
-        room''s resource calendar
-
-        (or `calendar` if given) and metadata is created.
-
-        Allowed for the host, support or managers of the room''s zones (attendees
-        too when creating the metadata),
-
-        and guests for the event their token was issued for. Signals `staff/event/changed`
-        and returns the updated ext_data.'
+      summary: Merge the keys in the request body into the PlaceOS metadata of an
+        event booked in a room.
       tags:
       - Events
       operationId: Events_patch_metadata
@@ -6961,13 +8997,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Receives a room calendar change notification (created, updated or deleted)
-        so PlaceOS metadata stays in sync,
-      description: 'Receives a room calendar change notification (created, updated
-        or deleted) so PlaceOS metadata stays in sync,
-
-        signals `staff/event/changed` and records event history. Support / admin only,
-        used internally.'
+      summary: Notify that a room's calendar event was created, updated or deleted.
       tags:
       - Events
       operationId: Events_notify_change
@@ -7074,22 +9104,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Cancels (declines) the meeting without deleting it, it remains on the
-        calendar with a line through it.
-      description: 'Cancels (declines) the meeting without deleting it, it remains
-        on the calendar with a line through it.
-
-        Use destroy to remove it entirely. Any plain text request body is sent as
-        the decline message.
-
-        By default it assumes the event exists on the user''s calendar; use `calendar`
-        for another calendar the user can write to,
-
-        and provide `system_id` when the event is booked in a room so its metadata
-        is marked cancelled and `staff/event/changed` is signalled.
-
-        The user must be the host or an attendee, or hold a role permitted on the
-        room, otherwise 403. 404 if not found.'
+      summary: Decline (cancel) a calendar event, leaving it on the calendar.
       tags:
       - Events
       operationId: Events_decline
@@ -7201,12 +9216,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Approves a room booking by accepting the meeting on behalf of the room
-        (system), on its resource calendar.
-      description: 'Approves a room booking by accepting the meeting on behalf of
-        the room (system), on its resource calendar.
-
-        The id must be the event''s id on the room''s calendar. Returns true on success.'
+      summary: Accept a meeting on behalf of a room.
       tags:
       - Events
       operationId: Events_approve
@@ -7304,18 +9314,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Approves every room booking in the period by accepting all events on
-        the selected rooms' resource calendars.
-      description: 'Approves every room booking in the period by accepting all events
-        on the selected rooms'' resource calendars.
-
-        Rooms are selected with `system_ids`, `zone_ids` and/or `calendars` (a `calendars`
-        entry is
-
-        only approved when it resolves to a room''s resource calendar). Calendars
-        that fail are
-
-        skipped. Returns the ids of the events accepted.'
+      summary: Accept every meeting in a time period on behalf of the selected rooms.
       tags:
       - Events
       operationId: Events_approve_all
@@ -7451,13 +9450,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Rejects a room booking by declining the meeting on behalf of the room
-        (system), on its resource calendar.
-      description: 'Rejects a room booking by declining the meeting on behalf of the
-        room (system), on its resource calendar.
-
-        Marks the event metadata cancelled and signals `staff/event/changed`. Returns
-        true on success. 404 if the event isn''t found.'
+      summary: Decline a meeting on behalf of a room.
       tags:
       - Events
       operationId: Events_reject
@@ -7555,15 +9548,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Lists the visitors (guests) expected at an event booked in a room,
-        with their check-in state.
-      description: 'Lists the visitors (guests) expected at an event booked in a room,
-        with their check-in state.
-
-        The event is looked up on the room''s resource calendar, or directly in the
-        metadata when `ical_uid` is provided.
-
-        Returns an empty list if the event has no PlaceOS metadata or visitors.'
+      summary: List the visitors expected at an event booked in a room.
       tags:
       - Events
       operationId: Events_guest_list
@@ -7672,18 +9657,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Searches stored event metadata, e.g. to find events in a state that
-        requires action.
-      description: 'Searches stored event metadata, e.g. to find events in a state
-        that requires action.
-
-        Matches on an extension data field, e.g. `/extension_metadata?field_name=status&value=approved`,
-        and/or a room, time period or event ids.
-
-        At least one filter is required (400). Support / admin only, or managers of
-        the room''s zones when `system_id` is given.
-
-        Returns up to 10,000 EventMetadata records.'
+      summary: Search event metadata by an extension data field.
       tags: &1
       - Events
       operationId: Events_extension_metadata
@@ -7831,18 +9805,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     get:
-      summary: Searches stored event metadata, e.g. to find events in a state that
-        requires action.
-      description: 'Searches stored event metadata, e.g. to find events in a state
-        that requires action.
-
-        Matches on an extension data field, e.g. `/extension_metadata?field_name=status&value=approved`,
-        and/or a room, time period or event ids.
-
-        At least one filter is required (400). Support / admin only, or managers of
-        the room''s zones when `system_id` is given.
-
-        Returns up to 10,000 EventMetadata records.'
+      summary: Search event metadata by an extension data field.
       tags: *1
       operationId: Events_extension_metadata_without_system_id
       parameters:
@@ -7861,21 +9824,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Lists rooms (systems) already booked during the event's time range,
-        based on PlaceOS event metadata (cancelled events ignored).
-      description: 'Lists rooms (systems) already booked during the event''s time
-        range, based on PlaceOS event metadata (cancelled events ignored).
-
-        The body is an event with `event_start` and `event_end`, and optionally `system_id`:
-
-        with a `system_id` only that room is checked, otherwise every booked room
-        in the tenant is returned.
-
-        `return_available=true` instead returns the `system_id` if it is free (empty
-        if booked).
-
-        `include_clash_time=true` returns each clash with its system_id, event_start
-        and event_end.'
+      summary: List the rooms already booked during an event's time range.
       tags:
       - Events
       operationId: Events_clashing_assets
@@ -7979,21 +9928,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Checks a visitor (guest) in to, or out of, an event booked in a room,
-        e.g. when they arrive in person, so hosts can be notified.
-      description: 'Checks a visitor (guest) in to, or out of, an event booked in
-        a room, e.g. when they arrive in person, so hosts can be notified.
-
-        The guest must be an attendee of the event (404 otherwise). `system_id` is
-        required except for guest tokens,
-
-        and the event is looked up on the room''s resource calendar unless `calendar`
-        is given.
-
-        Creates the guest and attendee records if missing, signals `staff/guest/checkin`
-        and returns the guest.
-
-        Guests can only check themselves in to the event their token was issued for.'
+      summary: Check a visitor in to, or out of, an event booked in a room.
       tags:
       - Events
       operationId: Events_guest_checkin
@@ -8115,21 +10050,7 @@ paths:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
     post:
-      summary: Checks a visitor (guest) in to, or out of, an event booked in a room,
-        e.g. when they arrive in person, so hosts can be notified.
-      description: 'Checks a visitor (guest) in to, or out of, an event booked in
-        a room, e.g. when they arrive in person, so hosts can be notified.
-
-        The guest must be an attendee of the event (404 otherwise). `system_id` is
-        required except for guest tokens,
-
-        and the event is looked up on the room''s resource calendar unless `calendar`
-        is given.
-
-        Creates the guest and attendee records if missing, signals `staff/guest/checkin`
-        and returns the guest.
-
-        Guests can only check themselves in to the event their token was issued for.'
+      summary: Check a visitor in to, or out of, an event booked in a room.
       tags:
       - Events
       operationId: Events_guest_checkin_2
@@ -8251,12 +10172,7 @@ paths:
     summary: Groups, the user groups in the tenant's Office365 or Google directory
       and their members
     get:
-      summary: Lists the user groups in the organisation directory, optionally searching
-        by name.
-      description: 'Lists the user groups in the organisation directory, optionally
-        searching by name.
-
-        Office365 only, returns 501 (not implemented) for Google.'
+      summary: List the groups in the organisation directory.
       tags:
       - Groups
       operationId: Groups_index
@@ -8351,8 +10267,7 @@ paths:
     summary: Groups, the user groups in the tenant's Office365 or Google directory
       and their members
     get:
-      summary: Returns the details of a directory group. Office365 only, returns 501
-        (not implemented) for Google.
+      summary: Get a directory group.
       tags:
       - Groups
       operationId: Groups_show
@@ -8443,7 +10358,7 @@ paths:
     summary: Groups, the user groups in the tenant's Office365 or Google directory
       and their members
     get:
-      summary: Returns the staff members of a directory group.
+      summary: List the members of a directory group.
       tags:
       - Groups
       operationId: Groups_members
@@ -8536,21 +10451,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Searches known guests, OR lists the visitors expected in a time period.
-      description: 'Searches known guests, OR lists the visitors expected in a time
-        period.
-
-        Without a period: returns up to 1500 guests ordered by name, matching `q`
-        (prefix match on each word) if provided.
-
-        With both `period_start` and `period_end`: returns the guests attending bookings
-        in the period (optionally filtered by
-
-        `zones`/`zone_ids`) and calendar events in the period on the rooms matching
-        `zone_ids`, `system_ids` or `calendars`,
-
-        each including their attendance details (checked in, visit expected) and the
-        event or booking they are visiting.'
+      summary: Search guests, or list the visitors expected in a time period.
       tags:
       - Guests
       operationId: Guests_index
@@ -8698,12 +10599,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates a new guest (visitor) record. Returns 422 if validation fails.
-      description: 'Creates a new guest (visitor) record. Returns 422 if validation
-        fails.
-
-        Note this does not invite them to anything, add them as an attendee of an
-        event or booking to do that.'
+      summary: Create a guest.
       tags:
       - Guests
       operationId: Guests_create
@@ -8793,12 +10689,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Returns a guest's details, including the visit they are expected to
-        attend for the remainder of today (if any).
-      description: 'Returns a guest''s details, including the visit they are expected
-        to attend for the remainder of today (if any).
-
-        Guests (visitor access tokens) may only view their own record.'
+      summary: Get a guest, including any visit expected today.
       tags:
       - Guests
       operationId: Guests_show
@@ -8889,13 +10780,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Updates a guest's details with the fields provided (PUT and PATCH both
-        merge the changes).
-      description: 'Updates a guest''s details with the fields provided (PUT and PATCH
-        both merge the changes).
-
-        Guests (visitor access tokens) may only update their own record. Returns 422
-        if validation fails.'
+      summary: Update a guest with the fields in the request body and return the saved
+        guest.
       tags:
       - Guests
       operationId: Guests_update
@@ -8992,7 +10878,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Permanently deletes a guest record.
+      summary: Delete a guest.
       tags:
       - Guests
       operationId: Guests_destroy
@@ -9079,13 +10965,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates a guest's details with the fields provided (PUT and PATCH both
-        merge the changes).
-      description: 'Updates a guest''s details with the fields provided (PUT and PATCH
-        both merge the changes).
-
-        Guests (visitor access tokens) may only update their own record. Returns 422
-        if validation fails.'
+      summary: Update a guest with the fields in the request body and return the saved
+        guest.
       tags:
       - Guests
       operationId: Guests_update_2
@@ -9185,13 +11066,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Returns the calendar events (meetings in PlaceOS rooms) the guest has
-        been invited to, ordered by start time.
-      description: 'Returns the calendar events (meetings in PlaceOS rooms) the guest
-        has been invited to, ordered by start time.
-
-        By default only events that haven''t finished yet, set `include_past` to include
-        earlier events.'
+      summary: List the meetings a guest is attending.
       tags:
       - Guests
       operationId: Guests_meetings
@@ -9300,15 +11175,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Returns the bookings (e.g. visitor or desk bookings) the guest is an
-        attendee of, ordered by start time.
-      description: 'Returns the bookings (e.g. visitor or desk bookings) the guest
-        is an attendee of, ordered by start time.
-
-        By default only bookings that haven''t finished yet, set `include_past` to
-        include earlier bookings.
-
-        Guests (visitor access tokens) may only view their own bookings.'
+      summary: List the bookings a guest is attending.
       tags:
       - Guests
       operationId: Guests_bookings
@@ -9417,18 +11284,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Returns the catering menus available to a visitor, for self-service
-        catering selection.
-      description: 'Returns the catering menus available to a visitor, for self-service
-        catering selection.
-
-        Intended for visitors using a guest access token; the booking''s asset must
-        be the caller''s email.
-
-        Finds the building of the visitor''s booking and returns each child zone (level)
-        of that building
-
-        with its `catering` metadata (same format as the metadata children API).'
+      summary: List the catering menus available to a visitor.
       tags:
       - Guests
       operationId: Guests_catering_menu
@@ -9534,11 +11390,7 @@ paths:
     summary: Guests, visitors (people external to the organisation) stored in PlaceOS
       that are invited to meetings and bookings as attendees
     get:
-      summary: Returns the catering item the visitor has selected for their booking.
-      description: 'Returns the catering item the visitor has selected for their booking.
-
-        Returns 404 if the visitor has not made a selection or the catering order
-        can''t be found.'
+      summary: Get a visitor's catering selection.
       tags:
       - Guests
       operationId: Guests_catering
@@ -9639,12 +11491,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Removes the visitor's catering selection from their booking's catering
-        order.
-      description: 'Removes the visitor''s catering selection from their booking''s
-        catering order.
-
-        Returns 404 if the visitor has no catering selection.'
+      summary: Remove a visitor's catering selection.
       tags:
       - Guests
       operationId: Guests_catering_destroy
@@ -9741,18 +11588,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Sets the visitor's catering selection for their booking, replacing
-        any previous selection.
-      description: 'Sets the visitor''s catering selection for their booking, replacing
-        any previous selection.
-
-        The selection (a catering item from the menu) is stored in the catering order
-        linked to the booking,
-
-        a new `catering-order` booking is created if none exists. The body is the
-        catering item selected,
-
-        as a JSON object (its `id` is overwritten). Returns the saved selection.'
+      summary: Set a visitor's catering selection.
       tags:
       - Guests
       operationId: Guests_catering_update
@@ -9862,15 +11698,7 @@ paths:
     summary: Place, the room resources (room mailboxes) defined in the tenant's Office365
       directory. Use systems for PlaceOS rooms
     get:
-      summary: Lists the room resources defined in the Office365 directory (Microsoft
-        Graph places API).
-      description: 'Lists the room resources defined in the Office365 directory (Microsoft
-        Graph places API).
-
-        Supports Azure AD filter syntax, see https://learn.microsoft.com/en-us/graph/filter-query-parameter
-
-        Use `top` and `skip` to page through results. Office365 only, returns 501
-        (not implemented) for Google.'
+      summary: List the rooms in the Office365 directory.
       tags:
       - Place
       operationId: Place_index
@@ -9994,18 +11822,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Searches the organisation directory for staff members, use it to find
-        a person's email, phone or user id.
-      description: 'Searches the organisation directory for staff members, use it
-        to find a person''s email, phone or user id.
-
-        Use `q` for a simple name or email search, or `filter` for Azure AD filter
-        syntax (takes precedence over `q`), see
-
-        https://learn.microsoft.com/en-us/graph/filter-query-parameter
-
-        Results are paginated, a `Link` header with rel="next" is returned when there
-        are more results.'
+      summary: Search the organisation directory for people.
       tags:
       - Staff
       operationId: Staff_index
@@ -10131,12 +11948,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Returns the directory details of a single staff member (name, email,
-        phone, department etc).
-      description: 'Returns the directory details of a single staff member (name,
-        email, phone, department etc).
-
-        Returns 404 if the user is not found.'
+      summary: Get a person from the directory.
       tags:
       - Staff
       operationId: Staff_show
@@ -10227,8 +12039,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Streams the user's profile photo image from the directory, returns
-        404 if not found.
+      summary: Get a person's photo.
       tags:
       - Staff
       operationId: Staff_photo
@@ -10315,7 +12126,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Returns the directory groups the user is a member of.
+      summary: List the directory groups a person is a member of.
       tags:
       - Staff
       operationId: Staff_groups
@@ -10408,8 +12219,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Returns the user's manager from the directory. Office365 only, returns
-        501 (not implemented) for Google.
+      summary: Get a person's manager.
       tags:
       - Staff
       operationId: Staff_manager
@@ -10500,7 +12310,7 @@ paths:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
     get:
-      summary: Returns the list of calendars belonging to the user.
+      summary: List a person's calendars.
       tags:
       - Staff
       operationId: Staff_calendars
@@ -10594,15 +12404,7 @@ paths:
       question bank) and can be sent to people via invitations, with responses recorded
       as answers
     get:
-      summary: Lists the surveys of this domain's authority, optionally filtered by
-        zone and/or building.
-      description: 'Lists the surveys of this domain''s authority, optionally filtered
-        by zone and/or building.
-
-        Each survey includes its trigger, zone_id, building_id and its pages, where
-        each page lists question ids in display order.
-
-        Any authenticated user can list surveys.'
+      summary: List surveys.
       tags:
       - Surveys
       operationId: Surveys_index
@@ -10702,24 +12504,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates a new survey for this domain's authority.
-      description: 'Creates a new survey for this domain''s authority.
-
-        title, pages and a zone_id and/or building_id are required; each page has
-        a title, optional description and question_order (an array of question ids).
-
-        zone_id can be a level, area or the organisation. trigger optionally links
-        the survey to a booking state (e.g. CHECKEDIN, CHECKEDOUT, VISITOR_CHECKEDIN),
-        defaults to NONE:
-
-        a triggered survey invites people whose booking zones include the survey''s
-        zone_id and/or building_id (both must match when both are set).
-
-        Create the questions first, then reference their ids in the pages (they must
-        be this domain''s questions). Admins, support or managers of the survey''s
-        zones only.
-
-        Returns the created survey, 403 if not permitted, or 422 if validation fails.'
+      summary: Create a survey.
       tags:
       - Surveys
       operationId: Surveys_create
@@ -10810,12 +12595,7 @@ paths:
       question bank) and can be sent to people via invitations, with responses recorded
       as answers
     get:
-      summary: Returns a single survey of this domain's authority, including its pages
-        and the question ids on each page.
-      description: 'Returns a single survey of this domain''s authority, including
-        its pages and the question ids on each page.
-
-        Any authenticated user can view surveys. 404 if it belongs to another domain.'
+      summary: Get a survey.
       tags:
       - Surveys
       operationId: Surveys_show
@@ -10904,19 +12684,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Updates a survey with the fields provided (title, description, trigger,
-        zone_id, building_id, pages).
-      description: 'Updates a survey with the fields provided (title, description,
-        trigger, zone_id, building_id, pages).
-
-        Omitted fields are left unchanged; pages, if provided, replaces all pages.
-        The authority can''t be changed.
-
-        Admins, support or managers of the survey''s zones only; moving it to other
-        zones requires managing those too.
-
-        Returns the updated survey, 403 if not permitted, 404 if it belongs to another
-        domain, or 422 if validation fails.'
+      summary: Update a survey with the fields in the request body and return the
+        saved survey.
       tags:
       - Surveys
       operationId: Surveys_update
@@ -11009,13 +12778,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Permanently deletes a survey, with its answers and invitations.
-      description: 'Permanently deletes a survey, with its answers and invitations.
-
-        The questions it references are not deleted; use the questions routes to remove
-        those.
-
-        Admins, support or managers of the survey''s zones only, 403 otherwise.'
+      summary: Delete a survey.
       tags:
       - Surveys
       operationId: Surveys_destroy
@@ -11098,19 +12861,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates a survey with the fields provided (title, description, trigger,
-        zone_id, building_id, pages).
-      description: 'Updates a survey with the fields provided (title, description,
-        trigger, zone_id, building_id, pages).
-
-        Omitted fields are left unchanged; pages, if provided, replaces all pages.
-        The authority can''t be changed.
-
-        Admins, support or managers of the survey''s zones only; moving it to other
-        zones requires managing those too.
-
-        Returns the updated survey, 403 if not permitted, 404 if it belongs to another
-        domain, or 422 if validation fails.'
+      summary: Update a survey with the fields in the request body and return the
+        saved survey.
       tags:
       - Surveys
       operationId: Surveys_update_2
@@ -11206,15 +12958,7 @@ paths:
     summary: Survey answers, the responses submitted for a survey, one answer per
       question
     get:
-      summary: Lists the answers submitted to this domain's surveys, optionally filtered
-        by survey and creation time.
-      description: 'Lists the answers submitted to this domain''s surveys, optionally
-        filtered by survey and creation time.
-
-        Each answer includes its question_id, survey_id, type and answer_json.
-
-        When no time range is given, all answers up to now are returned. Any authenticated
-        user can list answers.'
+      summary: List survey answers.
       tags:
       - Answers
       operationId: Surveys::Answers_index
@@ -11326,18 +13070,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Submits a set of answers to a survey, i.e. one person's response. Any
-        authenticated user can submit answers.
-      description: 'Submits a set of answers to a survey, i.e. one person''s response.
-        Any authenticated user can submit answers.
-
-        The body is an array of answers, each with survey_id, question_id, type and
-        answer_json; all must share the same survey_id.
-
-        Every required question in the survey must be answered, otherwise 400 is returned
-        listing the missing question ids.
-
-        Returns the saved answers, or 404 if the survey isn''t one of this domain''s.'
+      summary: Submit a response to a survey, as a set of answers.
       tags:
       - Answers
       operationId: Surveys::Answers_create
@@ -11429,13 +13162,7 @@ paths:
     summary: Survey invitations, a unique token issued to an email address that invites
       that person to respond to a survey
     get:
-      summary: Lists the invitations to this domain's surveys, optionally filtered
-        by survey and whether they have been sent.
-      description: 'Lists the invitations to this domain''s surveys, optionally filtered
-        by survey and whether they have been sent.
-
-        Each invitation includes its survey_id, email, token and sent flag. Any authenticated
-        user can list invitations.'
+      summary: List survey invitations.
       tags:
       - Invitations
       operationId: Surveys::Invitations_index
@@ -11536,16 +13263,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates an invitation for an email address to respond to a survey.
-      description: 'Creates an invitation for an email address to respond to a survey.
-
-        survey_id and email are required; a unique token is generated automatically
-        and returned.
-
-        Admins, support or managers of the survey''s zones only.
-
-        Returns the created invitation, 403 if not permitted, 404 if the survey isn''t
-        found, or 422 if validation fails.'
+      summary: Invite an email address to respond to a survey.
       tags:
       - Invitations
       operationId: Surveys::Invitations_create
@@ -11635,8 +13353,7 @@ paths:
     summary: Survey invitations, a unique token issued to an email address that invites
       that person to respond to a survey
     get:
-      summary: Returns the invitation identified by its token, including the survey_id
-        it is for. 404 if it belongs to another domain.
+      summary: Get a survey invitation by its token.
       tags:
       - Invitations
       operationId: Surveys::Invitations_show
@@ -11724,16 +13441,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Updates the invitation identified by its token with the fields provided
-        (survey_id, email, sent).
-      description: 'Updates the invitation identified by its token with the fields
-        provided (survey_id, email, sent).
-
-        Typically used to mark an invitation as sent. Omitted fields are left unchanged;
-        the token cannot be changed.
-
-        Admins, support or managers of the survey''s zones only; moving it to another
-        survey requires editing that survey too.'
+      summary: Update a survey invitation.
       tags:
       - Invitations
       operationId: Surveys::Invitations_update
@@ -11825,8 +13533,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Permanently deletes the invitation identified by its token. Admins,
-        support or managers of the survey's zones only.
+      summary: Delete a survey invitation.
       tags:
       - Invitations
       operationId: Surveys::Invitations_destroy
@@ -11910,16 +13617,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates the invitation identified by its token with the fields provided
-        (survey_id, email, sent).
-      description: 'Updates the invitation identified by its token with the fields
-        provided (survey_id, email, sent).
-
-        Typically used to mark an invitation as sent. Omitted fields are left unchanged;
-        the token cannot be changed.
-
-        Admins, support or managers of the survey''s zones only; moving it to another
-        survey requires editing that survey too.'
+      summary: Update a survey invitation.
       tags:
       - Invitations
       operationId: Surveys::Invitations_update_2
@@ -12014,16 +13712,7 @@ paths:
     summary: Survey questions, this domain's reusable bank of questions that surveys
       reference by id in their pages and that answers respond to
     get:
-      summary: Lists this domain's survey questions, optionally limited to those used
-        by a survey and/or by soft-deleted status.
-      description: 'Lists this domain''s survey questions, optionally limited to those
-        used by a survey and/or by soft-deleted status.
-
-        Each question includes title, description, type, options, required, choices,
-        max_rating, tags, a deleted flag and,
-
-        for a new version of an answered question, the previous_question_id it replaced.
-        Any authenticated user can list questions.'
+      summary: List survey questions.
       tags:
       - Questions
       operationId: Surveys::Questions_index
@@ -12124,14 +13813,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates a new question in the question bank.
-      description: 'Creates a new question in the question bank.
-
-        title and type are required; options, choices, max_rating, tags and required
-        (defaults to false) are optional.
-
-        Add the returned id to a survey page''s question_order to include it in a
-        survey. Admins and support only, 403 otherwise.'
+      summary: Create a survey question.
       tags:
       - Questions
       operationId: Surveys::Questions_create
@@ -12221,8 +13903,7 @@ paths:
     summary: Survey questions, this domain's reusable bank of questions that surveys
       reference by id in their pages and that answers respond to
     get:
-      summary: Returns a single question of this domain, including soft-deleted questions.
-        404 if it belongs to another domain.
+      summary: Get a survey question.
       tags:
       - Questions
       operationId: Surveys::Questions_show
@@ -12311,24 +13992,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     put:
-      summary: Updates a question with the fields provided; omitted fields are left
-        unchanged. Admins and support only.
-      description: 'Updates a question with the fields provided; omitted fields are
-        left unchanged. Admins and support only.
-
-        Changes to the title, description, options or tags are made in place. Changing
-        the type, choices, max_rating or
-
-        required flag of a question that already has answers saves it as a new version
-        instead, so existing answers keep
-
-        the question they were given against: the old version is soft deleted, the
-        new one (with a new id) records it in
-
-        previous_question_id, and this domain''s surveys are updated to use the new
-        version. Check the returned id.
-
-        Set migrate_answers to also move the old version''s answers to the new version.'
+      summary: Update a survey question and return it; changing an answered question
+        creates a new version with a new id.
       tags:
       - Questions
       operationId: Surveys::Questions_update
@@ -12428,14 +14093,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Deletes a question. Admins and support only.
-      description: 'Deletes a question. Admins and support only.
-
-        It is soft deleted (kept, with deleted_at set) if it has answers or is referenced
-        by any survey page,
-
-        otherwise it is permanently removed (a newer version keeps its own id, its
-        previous_question_id is cleared).'
+      summary: Delete a survey question.
       tags:
       - Questions
       operationId: Surveys::Questions_destroy
@@ -12518,24 +14176,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates a question with the fields provided; omitted fields are left
-        unchanged. Admins and support only.
-      description: 'Updates a question with the fields provided; omitted fields are
-        left unchanged. Admins and support only.
-
-        Changes to the title, description, options or tags are made in place. Changing
-        the type, choices, max_rating or
-
-        required flag of a question that already has answers saves it as a new version
-        instead, so existing answers keep
-
-        the question they were given against: the old version is soft deleted, the
-        new one (with a new id) records it in
-
-        previous_question_id, and this domain''s surveys are updated to use the new
-        version. Check the returned id.
-
-        Set migrate_answers to also move the old version''s answers to the new version.'
+      summary: Update a survey question and return it; changing an answered question
+        creates a new version with a new id.
       tags:
       - Questions
       operationId: Surveys::Questions_update_2
@@ -12638,11 +14280,7 @@ paths:
     summary: Teams, read and post messages in Microsoft Teams channels (Office365
       only)
     get:
-      summary: Lists the messages (without their replies) in a Microsoft Teams channel.
-      description: 'Lists the messages (without their replies) in a Microsoft Teams
-        channel.
-
-        Office365 only, returns 501 (not implemented) for Google.'
+      summary: List the messages in a Teams channel.
       tags:
       - Teams
       operationId: Teams_index
@@ -12747,12 +14385,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Posts a new message to a Microsoft Teams channel as the current user,
-        the request body is the message content.
-      description: 'Posts a new message to a Microsoft Teams channel as the current
-        user, the request body is the message content.
-
-        Office365 only, returns 501 (not implemented) for Google.'
+      summary: Post a message to a Teams channel.
       tags:
       - Teams
       operationId: Teams_send_channel_message
@@ -12858,10 +14491,7 @@ paths:
     summary: Teams, read and post messages in Microsoft Teams channels (Office365
       only)
     get:
-      summary: Returns a single message from a Microsoft Teams channel.
-      description: 'Returns a single message from a Microsoft Teams channel.
-
-        Office365 only, returns 501 (not implemented) for Google.'
+      summary: Get a message from a Teams channel.
       tags:
       - Teams
       operationId: Teams_show
@@ -12966,13 +14596,7 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     get:
-      summary: Lists every configured tenant (admin only).
-      description: 'Lists every configured tenant (admin only).
-
-        Returns id, name, domain, email_domain, platform, delegated, service_account,
-        outlook_config,
-
-        booking_limits, booking_range and early_checkin. Credentials are never returned.'
+      summary: List the tenants.
       tags:
       - Tenants
       operationId: Tenants_index
@@ -13055,16 +14679,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Creates a new tenant (admin only).
-      description: 'Creates a new tenant (admin only).
-
-        domain and platform (office365 or google) are required; credentials is the
-        platform''s JSON config and must parse
-
-        for that platform (delegated or service account variant). The domain and email_domain
-        pair must be unique.
-
-        Returns the created tenant (without credentials), or 422 if validation fails.'
+      summary: Create a tenant.
       tags:
       - Tenants
       operationId: Tenants_create
@@ -13154,15 +14769,8 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     put:
-      summary: Updates an existing tenant's configuration with the fields provided
-        (admin only).
-      description: 'Updates an existing tenant''s configuration with the fields provided
-        (admin only).
-
-        Omitted fields are left unchanged; an empty credentials or booking_limits
-        object is ignored rather than clearing it.
-
-        Returns the updated tenant (without credentials), or 422 if validation fails.'
+      summary: Update a tenant with the fields in the request body and return the
+        saved tenant.
       tags:
       - Tenants
       operationId: Tenants_update
@@ -13255,10 +14863,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     delete:
-      summary: Permanently deletes a tenant (admin only).
-      description: 'Permanently deletes a tenant (admin only).
-
-        Requests on its domain will no longer resolve to this tenant''s configuration.'
+      summary: Delete a tenant.
       tags:
       - Tenants
       operationId: Tenants_destroy
@@ -13341,15 +14946,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     patch:
-      summary: Updates an existing tenant's configuration with the fields provided
-        (admin only).
-      description: 'Updates an existing tenant''s configuration with the fields provided
-        (admin only).
-
-        Omitted fields are left unchanged; an empty credentials or booking_limits
-        object is ignored rather than clearing it.
-
-        Returns the updated tenant (without credentials), or 422 if validation fails.'
+      summary: Update a tenant with the fields in the request body and return the
+        saved tenant.
       tags:
       - Tenants
       operationId: Tenants_update_2
@@ -13445,19 +15043,7 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     get:
-      summary: Returns the booking limits of the tenant serving the current request
-        (resolved from the Host header and the user's email domain).
-      description: 'Returns the booking limits of the tenant serving the current request
-        (resolved from the Host header and the user''s email domain).
-
-        Limits map a booking type (e.g. desk, parking) to the maximum number of concurrent
-        bookings a user may hold.
-
-        Available to any user; use this rather than the :id/limits route when you
-        don''t know the tenant id.
-
-        The X-Delegated response header indicates whether the tenant uses delegated
-        calendar access.'
+      summary: Get the booking limits of the current tenant.
       tags:
       - Tenants
       operationId: Tenants_current_limits
@@ -13541,13 +15127,7 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     get:
-      summary: Returns the booking limits of the specified tenant, a map of booking
-        type to the maximum number of concurrent bookings a user may hold.
-      description: 'Returns the booking limits of the specified tenant, a map of booking
-        type to the maximum number of concurrent bookings a user may hold.
-
-        Use current_limits instead to get the limits for the current user''s tenant
-        without knowing its id.'
+      summary: Get the booking limits of a tenant.
       tags:
       - Tenants
       operationId: Tenants_show_limits
@@ -13634,14 +15214,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Replaces the booking limits of the specified tenant (admin only).
-      description: 'Replaces the booking limits of the specified tenant (admin only).
-
-        The body is the complete map of booking type to maximum concurrent bookings
-        per user, e.g. {"desk": 1, "parking": 1};
-
-        booking types omitted from the map are no longer limited. Returns the saved
-        limits.'
+      summary: Set the booking limits of a tenant.
       tags:
       - Tenants
       operationId: Tenants_update_limits
@@ -13737,19 +15310,7 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     get:
-      summary: Returns the early check-in window, in seconds, of the tenant serving
-        the current request (resolved from the Host header and the user's email domain).
-      description: 'Returns the early check-in window, in seconds, of the tenant serving
-        the current request (resolved from the Host header and the user''s email domain).
-
-        This is how long before a booking starts that it may be checked in (defaults
-        to 3600).
-
-        Available to any user; use this rather than the :id/early_checkin route when
-        you don''t know the tenant id.
-
-        The X-Delegated response header indicates whether the tenant uses delegated
-        calendar access.'
+      summary: Get the early check-in window of the current tenant.
       tags:
       - Tenants
       operationId: Tenants_current_early_checkin
@@ -13833,13 +15394,7 @@ paths:
     summary: Tenants, the calendar platform configuration (office365 or google) for
       a domain, along with its booking limits, booking range and early check-in window
     get:
-      summary: 'Returns the early check-in window, in seconds, of the specified tenant:
-        how long before a booking starts that it may be checked in.'
-      description: 'Returns the early check-in window, in seconds, of the specified
-        tenant: how long before a booking starts that it may be checked in.
-
-        Use current_early_checkin instead to get the value for the current user''s
-        tenant without knowing its id.'
+      summary: Get the early check-in window of a tenant.
       tags:
       - Tenants
       operationId: Tenants_show_early_checkin
@@ -13926,14 +15481,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
     post:
-      summary: Sets the early check-in window of the specified tenant (admin only).
-      description: 'Sets the early check-in window of the specified tenant (admin
-        only).
-
-        The body is a number of seconds before a booking starts that it may be checked
-        in, e.g. 3600 for one hour.
-
-        Returns the saved value.'
+      summary: Set the early check-in window of a tenant.
       tags:
       - Tenants
       operationId: Tenants_update_early_checkin
@@ -14029,16 +15577,7 @@ paths:
     summary: Users, the signed in user's PlaceOS profile. Use `staff` to look up other
       people in the directory
     get:
-      summary: 'Returns the signed in user''s PlaceOS profile: id, name, email, department,
-        groups and'
-      description: 'Returns the signed in user''s PlaceOS profile: id, name, email,
-        department, groups and
-
-        work preferences. Use it to find out who you''re acting for, i.e. their email
-        for bookings.
-
-        Accepts bearer tokens and API keys for the current domain, guests are refused
-        with 403.'
+      summary: Get the signed in user's profile.
       tags:
       - Users
       operationId: Users_current
@@ -14122,7 +15661,7 @@ paths:
     summary: Health check, reports the build commit and build time of the running
       service
     get:
-      summary: returns the service build details
+      summary: Get the service build details.
       tags:
       - HealthCheck
       operationId: HealthCheck_index
@@ -14136,6 +15675,250 @@ paths:
                 $ref: '#/components/schemas/HealthCheck.BuildInfo'
 components:
   schemas:
+    PlaceOS.Model.AssetCategory:
+      type: object
+      properties:
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        name:
+          anyOf:
+          - type: "null"
+          - type: string
+        description:
+          anyOf:
+          - type: "null"
+          - type: string
+        hidden:
+          anyOf:
+          - type: boolean
+          - type: "null"
+        authority_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        parent_category_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        id:
+          anyOf:
+          - type: "null"
+          - type: string
+    PlaceOS.Model.AssetPurchaseOrder:
+      type: object
+      properties:
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        purchase_order_number:
+          anyOf:
+          - type: "null"
+          - type: string
+        invoice_number:
+          anyOf:
+          - type: "null"
+          - type: string
+        supplier_details:
+          anyOf:
+          - type: object
+          - type: "null"
+        purchase_date:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+        unit_price:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+        expected_service_start_date:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+        expected_service_end_date:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+        authority_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        id:
+          anyOf:
+          - type: "null"
+          - type: string
+    PlaceOS.Model.AssetType:
+      type: object
+      properties:
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        name:
+          anyOf:
+          - type: "null"
+          - type: string
+        brand:
+          anyOf:
+          - type: "null"
+          - type: string
+        description:
+          anyOf:
+          - type: "null"
+          - type: string
+        model_number:
+          anyOf:
+          - type: "null"
+          - type: string
+        images:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        category_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        id:
+          anyOf:
+          - type: "null"
+          - type: string
+    PlaceOS.Model.Asset:
+      type: object
+      properties:
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
+        identifier:
+          anyOf:
+          - type: "null"
+          - type: string
+        serial_number:
+          anyOf:
+          - type: "null"
+          - type: string
+        other_data:
+          anyOf:
+          - type: object
+          - type: "null"
+        barcode:
+          anyOf:
+          - type: "null"
+          - type: string
+        name:
+          anyOf:
+          - type: "null"
+          - type: string
+        client_ids:
+          anyOf:
+          - type: object
+          - type: "null"
+        map_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        bookable:
+          anyOf:
+          - type: boolean
+          - type: "null"
+        accessible:
+          anyOf:
+          - type: boolean
+          - type: "null"
+        zones:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        place_groups:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        assigned_to:
+          anyOf:
+          - type: "null"
+          - type: string
+        assigned_name:
+          anyOf:
+          - type: "null"
+          - type: string
+        features:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        images:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        notes:
+          anyOf:
+          - type: "null"
+          - type: string
+        security_system_groups:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+        parent_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        asset_type_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        purchase_order_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        zone_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        id:
+          anyOf:
+          - type: "null"
+          - type: string
     PlaceOS.Model.Booking:
       type: object
       properties:
@@ -16652,6 +18435,14 @@ components:
           anyOf:
           - type: "null"
           - type: string
+    Array-oPlaceOS.Model.Asset-c:
+      type: array
+      items:
+        $ref: '#/components/schemas/PlaceOS.Model.Asset'
+    Array-oString-c:
+      type: array
+      items:
+        type: string
     String:
       type: string
     ? -oArray-oNamedTuple-oasset_id-u00003A-u000020String-nbooking_start-u00003A-u000020Int64-nbooking_end-u00003A-u000020Int64-c-c-pArray-oString-c-c

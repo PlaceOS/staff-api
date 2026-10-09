@@ -25,9 +25,7 @@ class Surveys::Questions < Application
   # Routes
   # =====================
 
-  # Lists this domain's survey questions, optionally limited to those used by a survey and/or by soft-deleted status.
-  # Each question includes title, description, type, options, required, choices, max_rating, tags, a deleted flag and,
-  # for a new version of an answered question, the previous_question_id it replaced. Any authenticated user can list questions.
+  # List survey questions.
   @[AC::Route::GET("/")]
   def index(
     @[AC::Param::Info(description: "only return questions referenced by this survey's pages", example: "1234")]
@@ -39,9 +37,7 @@ class Surveys::Questions < Application
     Survey::Question.list(survey_id, deleted, survey_authority_id)
   end
 
-  # Creates a new question in the question bank.
-  # title and type are required; options, choices, max_rating, tags and required (defaults to false) are optional.
-  # Add the returned id to a survey page's question_order to include it in a survey. Admins and support only, 403 otherwise.
+  # Create a survey question.
   @[AC::Route::POST("/", body: :question, status_code: HTTP::Status::CREATED)]
   def create(question : Survey::Question) : Survey::Question
     question.authority_id = survey_authority_id
@@ -54,12 +50,7 @@ class Surveys::Questions < Application
     end
   end
 
-  # Updates a question with the fields provided; omitted fields are left unchanged. Admins and support only.
-  # Changes to the title, description, options or tags are made in place. Changing the type, choices, max_rating or
-  # required flag of a question that already has answers saves it as a new version instead, so existing answers keep
-  # the question they were given against: the old version is soft deleted, the new one (with a new id) records it in
-  # previous_question_id, and this domain's surveys are updated to use the new version. Check the returned id.
-  # Set migrate_answers to also move the old version's answers to the new version.
+  # Update a survey question and return it; changing an answered question creates a new version with a new id.
   @[AC::Route::PUT("/:id", body: :question_body)]
   @[AC::Route::PATCH("/:id", body: :question_body)]
   def update(
@@ -81,7 +72,7 @@ class Surveys::Questions < Application
     end
   end
 
-  # Returns a single question of this domain, including soft-deleted questions. 404 if it belongs to another domain.
+  # Get a survey question.
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the numeric id of the question", example: "1234")]
@@ -90,9 +81,7 @@ class Surveys::Questions < Application
     question
   end
 
-  # Deletes a question. Admins and support only.
-  # It is soft deleted (kept, with deleted_at set) if it has answers or is referenced by any survey page,
-  # otherwise it is permanently removed (a newer version keeps its own id, its previous_question_id is cleared).
+  # Delete a survey question.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
     question.maybe_soft_delete
