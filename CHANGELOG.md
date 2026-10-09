@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **assets**: add asset controllers ported from rest-api
 - **MCP**: add MCP support and clean up tech debt
 - **staff**: add additional_fields query param
 - **bookings**: restrict booking approval to concierge users [PPT-2767]
