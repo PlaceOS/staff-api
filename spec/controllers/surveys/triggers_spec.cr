@@ -20,6 +20,31 @@ describe "Survey Triggers", tags: ["survey"] do
     Timecop.scale(1)
   end
 
+  it "should not invite for a booking without zones" do
+    SurveyHelper.create_survey(zone_id: "zone-1", trigger: Survey::TriggerType::RESERVED)
+
+    tenant = Tenant.find_by(domain: "toby.staff-api.dev")
+    BookingsHelper.create_booking(
+      tenant_id: tenant.id.not_nil!,
+      user_email: "user@example.com",
+      zones: [] of String,
+    )
+    Survey::Invitation.select("id").to_a.size.should eq(0)
+  end
+
+  it "should match a survey with only a zone_id on that zone" do
+    SurveyHelper.create_survey(zone_id: "zone-2", trigger: Survey::TriggerType::RESERVED)
+    SurveyHelper.create_survey(zone_id: "zone-3", trigger: Survey::TriggerType::RESERVED)
+
+    tenant = Tenant.find_by(domain: "toby.staff-api.dev")
+    BookingsHelper.create_booking(
+      tenant_id: tenant.id.not_nil!,
+      user_email: "user@example.com",
+      zones: ["zone-1", "zone-2"],
+    )
+    Survey::Invitation.select("id").to_a.size.should eq(1)
+  end
+
   it "should create an invitation on RESERVED trigger" do
     SurveyHelper.create_survey(
       zone_id: "zone-2",

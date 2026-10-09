@@ -34,11 +34,34 @@ module SurveyHelper
     ]
   end
 
-  def create_questions : Array(Survey::Question)
-    question_responders.map { |q| q.save!.reload! }
+  def create_questions(authority_id : String = self.authority_id) : Array(Survey::Question)
+    question_responders.map do |question|
+      question.authority_id = authority_id
+      question.save!.reload!
+    end
   end
 
+  # the authority surveys belong to in specs, that of the mock tenant's domain
+  def authority_id : String
+    Mock::Token.generate_auth_user(false, false)
+    PlaceOS::Model::Authority.find_by_domain("toby.staff-api.dev").not_nil!.id.as(String)
+  end
+
+  # ensures a zone with this id exists, surveys reference zones by foreign key
+  def zone(id : String = "zone-survey-#{Random::Secure.hex(4)}") : String
+    unless PlaceOS::Model::Zone.find?(id)
+      zone = PlaceOS::Model::Zone.new(name: id)
+      zone.id = id
+      zone.save!
+    end
+    id
+  end
+
+  # a survey needs a zone_id or building_id, a new zone is used when neither is given
   def survey_responder(question_order = [] of Int64, zone_id = nil, building_id = nil, trigger = nil)
+    zone_id = zone if zone_id.nil? && building_id.nil?
+    zone_id.try { |id| zone(id) }
+    building_id.try { |id| zone(id) }
     Survey.from_json({
       title:       "New Survey",
       description: "This is a new survey",
@@ -53,8 +76,10 @@ module SurveyHelper
     }.to_json)
   end
 
-  def create_survey(question_order = [] of Int64, zone_id = nil, building_id = nil, trigger = nil)
-    survey_responder(question_order, zone_id, building_id, trigger).save!
+  def create_survey(question_order = [] of Int64, zone_id = nil, building_id = nil, trigger = nil, authority_id : String = self.authority_id)
+    survey = survey_responder(question_order, zone_id, building_id, trigger)
+    survey.authority_id = authority_id
+    survey.save!
   end
 
   def answer_responders(survey = create_survey, questions = create_questions)

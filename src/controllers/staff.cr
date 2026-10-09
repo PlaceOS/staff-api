@@ -1,19 +1,20 @@
+# People, the staff directory of the tenant's Office365 or Google organisation (search users, user details, managers, group memberships)
 class Staff < Application
   base "/api/staff/v1/people"
 
-  # Retrieves a list of users from the organization directory
-  # This function supports advanced filtering using Azure AD filter syntax.
-  # For more information on Azure AD filter syntax, visit:
-  # https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http
+  # Searches the organisation directory for staff members, use it to find a person's email, phone or user id.
+  # Use `q` for a simple name or email search, or `filter` for Azure AD filter syntax (takes precedence over `q`), see
+  # https://learn.microsoft.com/en-us/graph/filter-query-parameter
+  # Results are paginated, a `Link` header with rel="next" is returned when there are more results.
   @[AC::Route::GET("/", converters: {additional_fields: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
     query : String? = nil,
     @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax. Provides more control over the search criteria and takes precedence over the 'q' parameter. Supports both Azure AD and Google providers.", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
     filter : String? = nil,
-    @[AC::Param::Info(description: "a google token or graph api URI representing the next page of results")]
+    @[AC::Param::Info(description: "the next page of results, a google page token or graph api URI. Normally taken from the `Link` header of the previous response")]
     next_page : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of additional user fields to return (Office365 only)", example: "employeeId,department")]
+    @[AC::Param::Info(description: "a comma separated list of additional user fields to return (Office365 only)", example: "employeeId,department")]
     additional_fields : Array(String)? = nil,
   ) : Array(PlaceCalendar::User)
     search = filter ? nil : query
@@ -51,7 +52,8 @@ class Staff < Application
     users
   end
 
-  # returns user details for the id provided
+  # Returns the directory details of a single staff member (name, email, phone, department etc).
+  # Returns 404 if the user is not found.
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -73,7 +75,8 @@ class Staff < Application
     user
   end
 
-  # returns user photo
+  # Streams the user's profile photo image from the directory, returns 404 if not found.
+  @[AC::MCP(hide: true)]
   @[AC::Route::GET("/:id/photo")]
   def photo(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -119,15 +122,21 @@ class Staff < Application
     end
   end
 
-  # returns the list of groups the user is a member
+  # Returns the directory groups the user is a member of.
   @[AC::Route::GET("/:id/groups")]
-  def groups(id : String) : Array(PlaceCalendar::Group)
+  def groups(
+    @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
+    id : String,
+  ) : Array(PlaceCalendar::Group)
     client.get_groups(id)
   end
 
-  # returns the users manager
+  # Returns the user's manager from the directory. Office365 only, returns 501 (not implemented) for Google.
   @[AC::Route::GET("/:id/manager")]
-  def manager(id : String) : PlaceCalendar::User
+  def manager(
+    @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
+    id : String,
+  ) : PlaceCalendar::User
     case client.client_id
     when :office365
       client.calendar.as(PlaceCalendar::Office365).client.get_user_manager(id).to_place_calendar
@@ -136,9 +145,12 @@ class Staff < Application
     end
   end
 
-  # returns the list of public calendars
+  # Returns the list of calendars belonging to the user.
   @[AC::Route::GET("/:id/calendars")]
-  def calendars(id : String) : Array(PlaceCalendar::Calendar)
+  def calendars(
+    @[AC::Param::Info(description: "the user's email address", example: "user@org.com")]
+    id : String,
+  ) : Array(PlaceCalendar::Calendar)
     client.list_calendars(id)
   end
 end

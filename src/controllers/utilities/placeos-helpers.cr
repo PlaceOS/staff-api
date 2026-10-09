@@ -72,8 +72,21 @@ module Utils::PlaceOSHelpers
     system_ids = split_list(system_ids)
 
     # Create a map of calendar ids to systems
-    # only obtain events for calendars the user has access to
     system_calendars = {} of String => PlaceOS::Model::ControlSystem?
+
+    # a passed calendar may itself be a room's resource calendar: resolve those against our own
+    # system registry so a registered room is recognised without a calendar-provider request
+    unless calendars.empty?
+      systems_with_emails(calendars).each do |system|
+        if calendar = system.email.to_s.downcase.presence
+          system_calendars[calendar] = system
+          calendars.delete(calendar)
+        end
+      end
+    end
+
+    # existing behaviour for the remaining (non-room) calendars: only obtain events for
+    # calendars the user has access to
     unless calendars.empty?
       unless tenant.using_service_account? || tenant.delegated
         calendars &= Set.new(client.list_calendars(user.email).compact_map(&.id.try &.downcase.presence))

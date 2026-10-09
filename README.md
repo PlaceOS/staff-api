@@ -37,6 +37,29 @@ LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
 ```
 
+## MCP Server
+
+The API is also available to LLM clients (Claude Code, Claude Desktop, VS Code,
+Cursor, ...) as an [MCP](https://modelcontextprotocol.io) server at
+`/api/staff/v1/mcp`, using the Streamable HTTP transport.
+
+```shell
+claude mcp add --transport http placeos-staff https://<your-placeos-domain>/api/staff/v1/mcp
+```
+
+* **Signing in:** the client signs the user in through PlaceOS (OAuth with PKCE and
+  a consent screen, served by auth). Tokens are refreshed automatically. Headless
+  agents can send an API key instead, e.g. `--header "X-API-Key: <key>"`.
+* **Tools:** each API resource (bookings, events, guests, calendars, ...) is a toolbox.
+  The model opens the toolboxes it needs, which keeps its context small. Calls run as
+  the signed in user, with their permissions.
+* **Exposure:** the health check, user photos and the event change notifications used
+  by drivers are not exposed (`@[AC::MCP(hide: true)]`).
+* **Tool descriptions:** they come from the source code comments on the controllers
+  and routes, so keep them accurate. The Docker build generates `mcp.yml` and ships
+  it with the binary (`staff-api --mcp=mcp.yml`; override the location with
+  `MCP_DESCRIPTION_PATH`). The model's instructions are in `src/mcp.cr`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md).

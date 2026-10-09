@@ -15,6 +15,27 @@ describe Calendars do
   end
 
   describe "#availability" do
+    # a room's resource calendar passed via `calendars` (not `system_ids`) resolves to its
+    # system from our own registry -- WITHOUT a calendar-provider round trip. The calendars
+    # list endpoint is deliberately not stubbed: if it were called, WebMock would raise.
+    it "resolves a room passed via calendars to its system without calling the provider" do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+      WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
+        .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule_avail.json"))
+      SystemsHelper.load_fixture("systemJ.json") # sys-rJQQlR4Cn7 => room1@example.com
+
+      # period 12:00-13:00 UTC does not overlap the room's only busy slot (10:00-10:30)
+      time = Time.utc(2019, 3, 15, 12).to_unix
+      time2 = Time.utc(2019, 3, 15, 13).to_unix
+      route = "#{CALENDARS_BASE}/availability?calendars=room1@example.com&period_start=#{time}&period_end=#{time2}"
+
+      body = JSON.parse(client.get(route, headers: headers).body).as_a
+      body.size.should eq(1)
+      body.first["id"].should eq("room1@example.com")
+      body.first["system"]["id"].should eq("sys-rJQQlR4Cn7")
+    end
+
     it "should not return a calendar if it is busy at given time" do
       CalendarsHelper.stub_cal_endpoints
       time = Time.utc(2019, 3, 15, 10).to_unix

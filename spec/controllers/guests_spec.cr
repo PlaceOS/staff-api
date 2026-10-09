@@ -84,6 +84,18 @@ describe Guests do
       body.map(&.["email"]).should eq([guest.email])
     end
 
+    # names are indexed without stemming ('simple'), so the query must not be stemmed either:
+    # the english stemmer turns "kennedy" into "kennedi", which no longer prefix-matches "kennedy"
+    it "query matches whole names the english stemmer would change" do
+      tenant = get_tenant
+      kennedy = GuestsHelper.create_guest(tenant.id, "Harry Kennedy", "harry.kennedy@example.com")
+      jovany = GuestsHelper.create_guest(tenant.id, "Jovany Fay", "jovany.fay@example.com")
+
+      JSON.parse(client.get("#{GUESTS_BASE}?q=kennedy", headers: headers).body).as_a.map(&.["id"]).should eq([kennedy.id])
+      JSON.parse(client.get("#{GUESTS_BASE}?q=Jovany", headers: headers).body).as_a.map(&.["id"]).should eq([jovany.id])
+      JSON.parse(client.get("#{GUESTS_BASE}?q=jovany%20fay", headers: headers).body).as_a.map(&.["id"]).should eq([jovany.id])
+    end
+
     pending "should return guests visiting today in a subset of rooms and bookings" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))

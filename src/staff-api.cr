@@ -48,6 +48,11 @@ OptionParser.parse(ARGV.dup) do |parser|
     exit 0
   end
 
+  parser.on("--mcp=FILE", "Writes the MCP tool descriptions (mcp.yml) for this service") do |file|
+    ActionController::MCPServer.write_description(file)
+    exit 0
+  end
+
   parser.on("-h", "--help", "Show this help") do
     puts parser
     exit 0
@@ -77,6 +82,9 @@ PgORM::Database.parse_read(ENV["PG_DATABASE_READ_URL"]?)
 PgORM::Settings.to_uri
 
 server = ActionController::Server.new(port, host)
+
+# MCP (Model Context Protocol) endpoint for LLM clients
+App::MCP.mount(server)
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate
 # Clustering using processes, there is no forking once crystal threads drop

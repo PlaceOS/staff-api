@@ -10,6 +10,7 @@ require "./controllers/application"
 require "./models/*"
 require "./controllers/*"
 require "./logging"
+require "./mcp"
 require "placeos-models"
 
 alias Tenant = PlaceOS::Model::Tenant

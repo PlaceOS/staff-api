@@ -2377,6 +2377,31 @@ describe Bookings do
     ).status.should eq HTTP::Status::CONFLICT
   end
 
+  describe "#destroy_attendee" do
+    it "removes the attendee from the booking only, keeping the guest and their other visits" do
+      tenant = get_tenant
+      guest = GuestsHelper.create_guest(tenant.id, "Shared Visitor", "shared-visitor@example.com")
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+      other_booking = BookingsHelper.create_booking(tenant.id.not_nil!)
+      {booking, other_booking}.each do |visit|
+        Attendee.create!(
+          booking_id: visit.id.not_nil!,
+          guest_id: guest.id,
+          tenant_id: guest.tenant_id,
+          checked_in: false,
+          visit_expected: true,
+        )
+      end
+
+      response = client.delete("#{BOOKINGS_BASE}/#{booking.id}/attendee/shared-visitor@example.com", headers: headers)
+      response.status_code.should eq(202)
+
+      Attendee.where(booking_id: booking.id).count.should eq(0)
+      Guest.find?(guest.id).should_not be_nil
+      Attendee.where(booking_id: other_booking.id, guest_id: guest.id).count.should eq(1)
+    end
+  end
+
   describe "booking_limits" do
     before_all do
       Timecop.scale(600) # 1 second == 10 minutes

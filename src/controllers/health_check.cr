@@ -1,3 +1,5 @@
+# Health check, reports the build commit and build time of the running service
+@[AC::MCP(hide: true)]
 class HealthCheck < ActionController::Base
   base "/api/staff/v1"
 
