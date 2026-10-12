@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Person</title>
+<!--
+  The staff card (MCP Apps), rendered for staff_show. Shows a person with their photo
+  (staff_photo), email and phone links and books a meeting with them via events_book.
+  Talks to the host with JSON-RPC over postMessage (ui/initialize, ui/notifications/tool-result,
+  tools/call). Tool results are the {status, headers, body} envelope as structuredContent.
+-->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d1f23; --muted: #6b7079; --line: #e3e5e9; --chip: #f1f3f6;
+    --accent: #2f6fde; --accent-fg: #ffffff; --danger: #b42318; --ok: #1e6b3a; --error: #b42318;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c; --chip: #2a2d33;
+      --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c; --chip: #2a2d33;
+    --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.4; }
+  h1 { font-size: 18px; margin: 0; overflow-wrap: anywhere; }
+  .muted { color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .between { justify-content: space-between; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 12px 0 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  section { margin-top: 16px; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  label.wide { grid-column: 1 / -1; }
+  input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+  textarea { resize: vertical; min-height: 56px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  button { font: inherit; border-radius: 6px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--danger); border-color: var(--danger); }
+  button:disabled { opacity: 0.6; cursor: default; }
+  form .actions { grid-column: 1 / -1; margin-top: 4px; }
+  .status { margin-top: 8px; min-height: 1.4em; }
+  .status.error { color: var(--error); }
+  .status.ok { color: var(--ok); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main id="app"><p class="muted">Loading…</p></main>
+<script>
+(() => {
+  // ---- host bridge: JSON-RPC over postMessage (MCP Apps) ----
+  const app = document.getElementById("app");
+  let nextId = 1;
+  const pending = new Map();
+  let toolInput = {};
+
+  function send(message) { window.parent.postMessage(message, "*"); }
+  function request(method, params) {
+    const id = nextId++;
+    send({ jsonrpc: "2.0", id, method, params });
+    return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  }
+  function notify(method, params) { send({ jsonrpc: "2.0", method, params }); }
+
+  window.addEventListener("message", (event) => {
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+    if (msg.id !== undefined && pending.has(msg.id) && !msg.method) {
+      const { resolve, reject } = pending.get(msg.id);
+      pending.delete(msg.id);
+      msg.error ? reject(new Error(msg.error.message || "request failed")) : resolve(msg.result);
+      return;
+    }
+    switch (msg.method) {
+      case "ui/notifications/tool-input": toolInput = (msg.params && msg.params.arguments) || {}; break;
+      case "ui/notifications/tool-result": showResult(msg.params); break;
+      case "ui/notifications/host-context-changed": applyContext(msg.params); break;
+      case "ui/resource-teardown": send({ jsonrpc: "2.0", id: msg.id, result: {} }); break;
+      default:
+        if (msg.id !== undefined && msg.method) send({ jsonrpc: "2.0", id: msg.id, error: { code: -32601, message: "method not found" } });
+    }
+  });
+
+  function applyContext(context) {
+    if (context && context.theme) document.documentElement.dataset.theme = context.theme;
+  }
+
+  // a tool result's {status, headers, body} envelope
+  function envelope(result) {
+    const content = result && result.structuredContent;
+    if (content && typeof content.status === "number") return content;
+    const text = result && result.content && result.content.find((item) => item.type === "text");
+    try { return text ? JSON.parse(text.text) : null; } catch { return null; }
+  }
+
+  function errorText(response, fallback) {
+    const body = response && response.body;
+    const detail = body && (typeof body === "string" ? body : body.message || body.error);
+    return detail ? `${fallback}: ${detail}` : fallback;
+  }
+
+  // calls a tool, returning the response body or throwing the error
+  async function callTool(name, args, failure) {
+    const result = await request("tools/call", { name, arguments: args });
+    const response = envelope(result);
+    if ((result && result.isError) || !response || response.status >= 400) throw new Error(errorText(response, failure));
+    return response.body;
+  }
+
+  // the signed in user, for deciding which actions to offer
+  let me = null;
+  function currentUser() {
+    me = me || callTool("users_current", {}, "Unable to load your profile").catch(() => ({}));
+    return me;
+  }
+
+  function openLink(url) {
+    request("ui/open-link", { url }).catch(() => window.open(url, "_blank", "noopener"));
+  }
+
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of children.flat()) if (child !== null && child !== undefined && child !== false) node.append(child);
+    return node;
+  }
+
+  function setStatus(text, kind = "") {
+    const status = document.getElementById("status");
+    if (status) { status.textContent = text; status.className = `status ${kind}`; }
+  }
+
+  // ---- time: epochs shown and entered in an IANA timezone ----
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  function zoneOf(tz) { try { new Intl.DateTimeFormat(undefined, { timeZone: tz }); return tz; } catch { return localZone; } }
+  const fmtTime = (epoch, tz) => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: zoneOf(tz) }).format(new Date(epoch * 1000));
+  const fmtDay = (epoch, tz) => new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: zoneOf(tz) }).format(new Date(epoch * 1000));
+  // {date: "YYYY-MM-DD", time: "HH:MM"} of an epoch in a timezone
+  function wallClock(epoch, tz) {
+    const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: zoneOf(tz) }).formatToParts(new Date(epoch * 1000));
+    const part = (type) => parts.find((item) => item.type === type).value;
+    return { date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}` };
+  }
+  // the epoch of a date and time in a timezone
+  function zonedEpoch(date, time, tz) {
+    const [y, m, d] = date.split("-").map(Number);
+    const [h, mi] = time.split(":").map(Number);
+    const target = Date.UTC(y, m - 1, d, h, mi) / 1000;
+    let epoch = target;
+    for (let i = 0; i < 2; i++) {
+      const wall = wallClock(epoch, tz);
+      const [wy, wm, wd] = wall.date.split("-").map(Number);
+      const [wh, wmi] = wall.time.split(":").map(Number);
+      epoch += target - Date.UTC(wy, wm - 1, wd, wh, wmi) / 1000;
+    }
+    return epoch;
+  }
+  const nextQuarterHour = () => Math.ceil(Date.now() / 900000) * 900;
+
+  // keep the host's frame the size of the content
+  new ResizeObserver(() => {
+    notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
+  }).observe(document.body);
+
+  function start(name) {
+    request("ui/initialize", {
+      protocolVersion: "2026-01-26",
+      appInfo: { name, version: "1.0.0" },
+      appCapabilities: {},
+    }).then((result) => {
+      applyContext(result && result.hostContext);
+      notify("ui/notifications/initialized", {});
+    }).catch(() => notify("ui/notifications/initialized", {}));
+  }
+
+  // ---- the staff card: a person's details, with links and a meeting booking form ----
+  let person = null;
+  let photo = null;
+  let busy = false;
+
+  function showResult(result) {
+    const response = envelope(result);
+    if (!response || response.status >= 400 || !response.body || !(response.body.email || response.body.name)) {
+      app.replaceChildren(el("p", { class: "status error" }, errorText(response, "Unable to load this person")));
+      return;
+    }
+    person = response.body;
+    render();
+    loadPhoto();
+  }
+
+  // the photo comes back as an image content block
+  async function loadPhoto() {
+    try {
+      const result = await request("tools/call", { name: "staff_photo", arguments: { id: person.email || person.id } });
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      if (image) {
+        photo = `data:${image.mimeType};base64,${image.data}`;
+        const avatar = document.getElementById("avatar");
+        if (avatar) avatar.replaceWith(avatarView());
+      }
+    } catch { /* no photo, keep the initials */ }
+  }
+
+  function initials() {
+    const words = String(person.name || person.email || "?").split(/[\s@.]+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word[0].toUpperCase()).join("");
+  }
+
+  function avatarView() {
+    const style = "width:64px;height:64px;border-radius:50%;flex:none;object-fit:cover;";
+    if (photo) return el("img", { id: "avatar", src: photo, alt: "", style });
+    return el("div", { id: "avatar", style: `${style}display:grid;place-items:center;background:var(--chip);font-weight:600;font-size:20px;` }, initials());
+  }
+
+  function link(label, url) {
+    return el("a", { href: url, onclick: (event) => { event.preventDefault(); openLink(url); } }, label);
+  }
+
+  function render() {
+    const first = String(person.name || "").split(" ")[0] || "them";
+    const at = nextQuarterHour();
+    const starting = wallClock(at, localZone);
+    const subtitle = [person.title, person.department].filter(Boolean).join(" · ");
+
+    app.replaceChildren(
+      el("div", { class: "row", style: "gap:12px;flex-wrap:nowrap" },
+        avatarView(),
+        el("div", {},
+          el("h1", {}, person.name || person.email),
+          subtitle ? el("div", { class: "muted" }, subtitle) : null,
+          person.office_location ? el("div", { class: "muted" }, person.office_location) : null)),
+      el("dl", {},
+        person.email ? [el("dt", {}, "Email"), el("dd", {}, link(person.email, `mailto:${person.email}`))] : null,
+        person.phone ? [el("dt", {}, "Phone"), el("dd", {}, link(person.phone, `tel:${person.phone.replace(/[^\d+]/g, "")}`))] : null),
+      person.email ? el("section", {},
+        el("strong", {}, `Book a meeting with ${first}`),
+        el("form", { onsubmit: book },
+          el("label", { class: "wide" }, "Title", el("input", { name: "title", required: true, value: `Meeting with ${first}`, maxlength: "200" })),
+          el("label", { class: "wide" }, "Date", el("input", { name: "date", type: "date", required: true, value: starting.date })),
+          el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: starting.time, step: "300" })),
+          el("label", {}, "Duration", el("select", { name: "duration" },
+            [15, 30, 45, 60, 90, 120].map((minutes) => el("option", { value: minutes, selected: minutes === 30 }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`)))),
+          el("div", { class: "actions" }, el("button", { type: "submit", class: "primary", disabled: busy }, busy ? "Booking…" : "Book meeting")))) : null,
+      el("div", { id: "status", class: "status", role: "status" }),
+    );
+  }
+
+  async function book(submitted) {
+    submitted.preventDefault();
+    const form = submitted.target;
+    const start = zonedEpoch(form.date.value, form.start.value, localZone);
+    const end = start + Number(form.duration.value) * 60;
+    if (end <= Date.now() / 1000) return setStatus("That time has already passed", "error");
+
+    busy = true;
+    form.querySelector("button[type=submit]").disabled = true;
+    setStatus("Booking…");
+    try {
+      const title = form.title.value.trim();
+      await callTool("events_book", { title, event_start: start, event_end: end, attendees: [person.email], timezone: localZone }, "The meeting couldn't be booked");
+      const summary = `Booked "${title}" with ${person.name || person.email}, ${fmtDay(start, localZone)} ${fmtTime(start, localZone)} – ${fmtTime(end, localZone)}.`;
+      request("ui/update-model-context", { content: [{ type: "text", text: summary }] }).catch(() => {});
+      setStatus(summary, "ok");
+    } catch (error) {
+      setStatus(error.message, "error");
+    }
+    busy = false;
+    form.querySelector("button[type=submit]").disabled = false;
+  }
+
+  start("placeos-staff-card");
+})();
+</script>
+</body>
+</html>

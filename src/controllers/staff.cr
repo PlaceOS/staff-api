@@ -50,6 +50,7 @@ class Staff < Application
   end
 
   # Get a person from the directory.
+  @[AC::MCP(ui: "staff/card.html")]
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -72,7 +73,7 @@ class Staff < Application
   end
 
   # Get a person's photo.
-  @[AC::MCP(hide: true)]
+  @[AC::MCP(visibility: :card)]
   @[AC::Route::GET("/:id/photo")]
   def photo(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]

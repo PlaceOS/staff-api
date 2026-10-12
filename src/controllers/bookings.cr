@@ -12,7 +12,7 @@ class Bookings < Application
   # retried a few times with jittered backoff before giving up.
   SERIALIZE_RETRY_CODES = {"40001", "40P01"}
 
-  @[AC::Route::Filter(:around_action, only: [:create, :update])]
+  @[AC::Route::Filter(:around_action, only: [:create, :update, :edit])]
   def wrap_in_transaction(&)
     attempt = 0
     loop do
@@ -74,7 +74,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata, :check_in])]
+  @[AC::Route::Filter(:before_action, only: [:update, :edit, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata, :check_in])]
   private def confirm_access
     return if is_support?
     if user = current_user
@@ -843,7 +843,31 @@ class Bookings < Application
     book
   end
 
+  # Change a booking's title, description or times.
+  @[AC::MCP(root: true)]
+  @[AC::Route::PATCH("/:id/edit")]
+  def edit(
+    @[AC::Param::Info(description: "the new title", example: "Focus time")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "the new description", example: "near the window")]
+    description : String? = nil,
+    @[AC::Param::Info(description: "the new start as a unix epoch in seconds", example: "1661725146")]
+    booking_start : Int64? = nil,
+    @[AC::Param::Info(description: "the new end as a unix epoch in seconds", example: "1661743123")]
+    booking_end : Int64? = nil,
+  ) : Booking
+    changes = {} of String => JSON::Any
+    changes["title"] = JSON::Any.new(title) if title
+    changes["description"] = JSON::Any.new(description) if description
+    changes["booking_start"] = JSON::Any.new(booking_start) if booking_start
+    changes["booking_end"] = JSON::Any.new(booking_end) if booking_end
+    raise Error::BadRequest.new("nothing to change") if changes.empty?
+
+    update(Booking.from_json(changes.to_json))
+  end
+
   # Get a single booking.
+  @[AC::MCP(ui: "bookings/card.html")]
   @[AC::Route::GET("/:id")]
   @[AC::Route::GET("/:id/instance/:instance")]
   def show : Booking
@@ -851,6 +875,7 @@ class Bookings < Application
   end
 
   # Cancel a booking.
+  @[AC::MCP(root: true)]
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(

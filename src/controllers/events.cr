@@ -85,7 +85,7 @@ class Events < Application
   end
 
   # update includes a bunch of moving parts so we want to roll back if something fails
-  @[AC::Route::Filter(:around_action, only: [:update])]
+  @[AC::Route::Filter(:around_action, only: [:update, :edit])]
   def wrap_in_transaction(&)
     PgORM::Database.transaction do
       yield
@@ -408,6 +408,73 @@ class Events < Application
     # If we can't check permissions due to an error (network, API timeout, etc.), log it and allow operation.
     Log.warn(exception: ex) { "failed to check calendar permission for #{host_email}, allowing operation" }
     true
+  end
+
+  # Book a meeting in the user's calendar, optionally in a room (system).
+  @[AC::MCP(root: true)]
+  @[AC::Route::POST("/book", converters: {attendees: ConvertStringArray}, status_code: HTTP::Status::CREATED)]
+  def book(
+    @[AC::Param::Info(description: "the meeting title", example: "Project catch up")]
+    title : String,
+    @[AC::Param::Info(description: "start as a unix epoch in seconds", example: "1661725146")]
+    event_start : Int64,
+    @[AC::Param::Info(description: "end as a unix epoch in seconds", example: "1661728746")]
+    event_end : Int64,
+    @[AC::Param::Info(description: "comma separated attendee emails, the user is added as the host", example: "jane@org.com,bob@org.com")]
+    attendees : Array(String)? = nil,
+    @[AC::Param::Info(description: "the room (system) id to book", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(description: "the meeting's IANA timezone, defaults to the room's", example: "Australia/Sydney")]
+    timezone : String? = nil,
+    @[AC::Param::Info(description: "the meeting description", example: "agenda: budget")]
+    body : String? = nil,
+  ) : PlaceCalendar::Event
+    event = PlaceCalendar::Event.new(
+      title: title,
+      body: body,
+      event_start: Time.unix(event_start),
+      event_end: Time.unix(event_end),
+      timezone: timezone.presence || system_id.try { |id| find_system!(id).timezone.try(&.name) },
+      attendees: (attendees || [] of String).map(&.downcase).uniq!.map { |email| PlaceCalendar::Event::Attendee.new(name: email, email: email) },
+    )
+    event.system_id = system_id
+    create(event)
+  end
+
+  # Change a calendar event's title, times or attendees.
+  @[AC::MCP(root: true)]
+  @[AC::Route::PATCH("/:id/edit", converters: {attendees: ConvertStringArray})]
+  def edit(
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "calendar the event is on, defaults to the user's calendar", example: "user@org.com")]
+    user_cal : String? = nil,
+    @[AC::Param::Info(description: "the new title", example: "Project catch up")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "the new start as a unix epoch in seconds", example: "1661725146")]
+    event_start : Int64? = nil,
+    @[AC::Param::Info(description: "the new end as a unix epoch in seconds", example: "1661728746")]
+    event_end : Int64? = nil,
+    @[AC::Param::Info(description: "comma separated attendee emails, replaces the people invited (rooms are kept)", example: "jane@org.com,bob@org.com")]
+    attendees : Array(String)? = nil,
+  ) : PlaceCalendar::Event
+    cal_id = user_cal.presence.try(&.downcase) || system_id.try { |id| find_system!(id).email.to_s.presence } || user.email
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
+
+    event.title = title if title
+    event.event_start = Time.unix(event_start) if event_start
+    event.event_end = Time.unix(event_end) if event_end
+    if attendees
+      emails = attendees.map(&.downcase).uniq!
+      existing = event.attendees.index_by(&.email.downcase)
+      people = emails.map { |email| existing[email]? || PlaceCalendar::Event::Attendee.new(name: email, email: email) }
+      event.attendees = event.attendees.select(&.resource) + people
+    end
+
+    update(event, event_id, system_id, user_cal)
   end
 
   # Create a calendar event.
@@ -1441,6 +1508,7 @@ class Events < Application
   end
 
   # Get a single calendar event.
+  @[AC::MCP(ui: "events/card.html")]
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1525,6 +1593,7 @@ class Events < Application
   end
 
   # Delete a calendar event.
+  @[AC::MCP(root: true)]
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
     @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]

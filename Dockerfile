@@ -77,6 +77,8 @@ COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 COPY --from=build /app/deps /
 COPY --from=build /app/bin /
 COPY --from=build /app/mcp.yml /mcp.yml
+# MCP Apps cards rendered by tools, i.e. the space card
+COPY ./cards /cards
 
 # Use an unprivileged user.
 USER appuser:appuser

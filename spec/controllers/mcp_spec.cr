@@ -92,7 +92,9 @@ describe App::MCP do
     toolboxes.should contain "events"
     toolboxes.should contain "guests"
     toolboxes.should contain "surveys_questions"
-    toolboxes.should contain "users"
+    toolboxes.should contain "spaces"
+    # users only has the root current user tool, so it isn't a toolbox
+    toolboxes.should_not contain "users"
 
     description = ActionController::MCPServer.description
     controllers = description.toolboxes.map(&.controller)
@@ -100,7 +102,9 @@ describe App::MCP do
       controllers.should_not contain hidden.name
     end
 
-    description.tool?("staff_photo").should be_nil
+    # the photo is a binary stream, only the staff card loads it
+    _toolbox, photo = description.tool?("staff_photo").not_nil!
+    photo.visibility.should eq ["card"]
     description.tool?("events_notify_change").should be_nil
     description.tool?("events_link_master_metadata").should be_nil
     description.tool?("staff_show").should_not be_nil
@@ -114,6 +118,26 @@ describe App::MCP do
     end
     _toolbox, create = description.tool?("bookings_create").not_nil!
     create.read_only?.should be_false
+  end
+
+  it "lists the space card and booking tools without opening a toolbox" do
+    headers = open_session.call(bearer.call)
+    tools = JSON.parse(rpc.call(headers, "tools/list", no_params).body)["result"]["tools"].as_a
+    names = tools.map(&.["name"].as_s)
+    {"events_book", "events_edit", "events_destroy", "bookings_edit", "bookings_destroy", "users_current"}.each { |name| names.should contain name }
+    # the full create and update tools stay in their toolboxes, their schemas are large
+    {"events_create", "events_update", "bookings_update"}.each { |name| names.should_not contain name }
+    {"bookings_show" => "bookings", "events_show" => "events", "staff_show" => "staff"}.each do |name, folder|
+      tools.find!(&.["name"].==(name))["_meta"]["ui"]["resourceUri"].as_s.should start_with "ui://#{folder}/card.html?v="
+    end
+
+    show = tools.find!(&.["name"].==("spaces_show"))
+    uri = show["_meta"]["ui"]["resourceUri"].as_s
+    uri.should start_with "ui://spaces/card.html?v="
+
+    contents = JSON.parse(rpc.call(headers, "resources/read", {"uri" => JSON::Any.new(uri)}).body)["result"]["contents"][0]
+    contents["mimeType"].should eq "text/html;profile=mcp-app"
+    contents["text"].as_s.should contain "events_book"
   end
 
   it "calls routes as the authenticated user" do

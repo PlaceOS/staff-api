@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Space</title>
+<!--
+  The space card (MCP Apps), rendered for the spaces_show tool. It shows a space's
+  meetings for a day and books it with events_book. Talks to the host with JSON-RPC
+  over postMessage: ui/initialize, ui/notifications/tool-result and tools/call.
+  Tool results are the {status, headers, body} envelope as structuredContent.
+-->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d1f23; --muted: #6b7079; --line: #e3e5e9;
+    --chip: #f1f3f6; --busy: #fde8e8; --busy-fg: #9b1c1c; --free: #e7f6ec; --free-fg: #1e6b3a;
+    --accent: #2f6fde; --accent-fg: #ffffff; --error: #b42318;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c;
+      --chip: #2a2d33; --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3;
+      --accent: #5b8ff0; --error: #f97066; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c;
+    --chip: #2a2d33; --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3;
+    --accent: #5b8ff0; --error: #f97066; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.4; }
+  h1 { font-size: 18px; margin: 0; }
+  .muted { color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .between { justify-content: space-between; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+  section { margin-top: 16px; }
+  .day button { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; }
+  .day strong { min-width: 150px; text-align: center; }
+  ol.slots { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .slot { border-radius: 8px; padding: 8px 10px; display: flex; gap: 12px; }
+  .slot time { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; }
+  .slot.busy { background: var(--busy); color: var(--busy-fg); }
+  .slot.free { background: var(--free); color: var(--free-fg); cursor: pointer; border: 0; text-align: left; font: inherit; width: 100%; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  label.wide { grid-column: 1 / -1; }
+  input, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  button.primary { grid-column: 1 / -1; background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: 0.6; cursor: default; }
+  .status { margin-top: 8px; min-height: 1.4em; }
+  .status.error { color: var(--error); }
+  img.hero { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<main id="app"><p class="muted">Loading space…</p></main>
+<script>
+(() => {
+  const app = document.getElementById("app");
+  let nextId = 1;
+  const pending = new Map();
+  let schedule = null;   // the spaces_show body
+  let busy = false;
+
+  // JSON-RPC over postMessage with the host
+  function send(message) { window.parent.postMessage(message, "*"); }
+  function request(method, params) {
+    const id = nextId++;
+    send({ jsonrpc: "2.0", id, method, params });
+    return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  }
+  function notify(method, params) { send({ jsonrpc: "2.0", method, params }); }
+
+  window.addEventListener("message", (event) => {
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+    if (msg.id !== undefined && pending.has(msg.id) && !msg.method) {
+      const { resolve, reject } = pending.get(msg.id);
+      pending.delete(msg.id);
+      msg.error ? reject(new Error(msg.error.message || "request failed")) : resolve(msg.result);
+      return;
+    }
+    switch (msg.method) {
+      case "ui/notifications/tool-result": showResult(msg.params); break;
+      case "ui/notifications/host-context-changed": applyContext(msg.params); break;
+      case "ui/resource-teardown": send({ jsonrpc: "2.0", id: msg.id, result: {} }); break;
+      default:
+        // answer unknown requests so the host isn't left waiting
+        if (msg.id !== undefined && msg.method) send({ jsonrpc: "2.0", id: msg.id, error: { code: -32601, message: "method not found" } });
+    }
+  });
+
+  function applyContext(context) {
+    if (context && context.theme) document.documentElement.dataset.theme = context.theme;
+  }
+
+  // the tool result envelope: {status, headers, body}
+  function envelope(result) {
+    const content = result && result.structuredContent;
+    if (content && typeof content.status === "number") return content;
+    const text = result && result.content && result.content.find((item) => item.type === "text");
+    try { return text ? JSON.parse(text.text) : null; } catch { return null; }
+  }
+
+  function showResult(result) {
+    const response = envelope(result);
+    if (!response || response.status >= 400 || !response.body || !response.body.space) {
+      app.innerHTML = "";
+      app.append(el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
+      return;
+    }
+    schedule = response.body;
+    render();
+  }
+
+  function errorText(response, fallback) {
+    const body = response && response.body;
+    const detail = body && (body.message || body.error || (typeof body === "string" ? body : null));
+    return detail ? `${fallback}: ${detail}` : fallback;
+  }
+
+  // tiny DOM helper
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of children.flat()) if (child !== null && child !== undefined) node.append(child);
+    return node;
+  }
+
+  const timeFormat = () => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: schedule.timezone });
+  const dayFormat = () => new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: schedule.timezone });
+  const time = (epoch) => timeFormat().format(new Date(epoch * 1000));
+
+  // busy and free slots across the period
+  function slots() {
+    const events = (schedule.events || []).filter((event) => !event.all_day);
+    const result = [];
+    let cursor = schedule.period_start;
+    for (const event of events) {
+      const end = event.event_end || event.event_start + 3600;
+      if (event.event_start > cursor) result.push({ free: true, start: cursor, end: event.event_start });
+      result.push({ free: false, start: event.event_start, end, event });
+      cursor = Math.max(cursor, end);
+    }
+    if (cursor < schedule.period_end) result.push({ free: true, start: cursor, end: schedule.period_end });
+    return result;
+  }
+
+  function render() {
+    const { space, zones } = schedule;
+    const place = zones.filter((zone) => !zone.tags.includes("org")).map((zone) => zone.display_name || zone.name);
+    const allDay = (schedule.events || []).filter((event) => event.all_day);
+
+    app.innerHTML = "";
+    app.append(
+      space.images && space.images[0] && /^https:/.test(space.images[0]) ? el("img", { class: "hero", src: space.images[0], alt: "" }) : null,
+      el("div", { class: "row between" },
+        el("h1", {}, space.display_name || space.name),
+        space.capacity ? el("span", { class: "chip" }, `Seats ${space.capacity}`) : null),
+      place.length ? el("div", { class: "muted" }, place.join(" · ")) : null,
+      space.features.length ? el("ul", { class: "chips" }, space.features.map((feature) => el("li", { class: "chip" }, feature))) : null,
+      space.approval ? el("p", { class: "muted" }, "Bookings need to be approved.") : null,
+      el("section", {},
+        el("div", { class: "row day" },
+          el("button", { type: "button", title: "Previous day", onclick: () => changeDay(-1) }, "‹"),
+          el("strong", {}, dayFormat().format(new Date(schedule.period_start * 1000))),
+          el("button", { type: "button", title: "Next day", onclick: () => changeDay(1) }, "›")),
+        schedule.events ? null : el("p", { class: "status error" }, schedule.events_error || "The calendar is unavailable"),
+        allDay.map((event) => el("p", { class: "muted" }, `All day: ${event.title || "Private meeting"}`)),
+        schedule.events ? el("ol", { class: "slots" }, slots().map(slotView)) : null),
+      space.email ? bookingForm() : el("p", { class: "muted" }, "This space has no calendar, so it can't be booked here."),
+    );
+  }
+
+  function slotView(slot) {
+    const range = el("time", {}, `${time(slot.start)} – ${time(slot.end)}`);
+    if (!slot.free) {
+      const event = slot.event;
+      return el("li", { class: "slot busy" }, range, el("span", {}, event.title || "Private meeting", event.host ? el("span", { class: "muted" }, ` · ${event.host}`) : null));
+    }
+    return el("li", {}, el("button", { type: "button", class: "slot free", title: "Book from this time", onclick: () => pickStart(slot.start) }, range, el("span", {}, "Available")));
+  }
+
+  // the local "HH:MM" of an epoch in the space's timezone
+  function clock(epoch) {
+    const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: schedule.timezone }).formatToParts(new Date(epoch * 1000));
+    const part = (type) => parts.find((item) => item.type === type).value;
+    return `${part("hour")}:${part("minute")}`;
+  }
+
+  function defaultStart() {
+    const now = Math.floor(Date.now() / 1000);
+    const from = Math.max(schedule.period_start, now);
+    return Math.ceil(from / 900) * 900; // next quarter hour
+  }
+
+  function bookingForm() {
+    const start = clock(Math.min(defaultStart(), schedule.period_end - 900));
+    return el("section", {},
+      el("strong", {}, "Book this space"),
+      el("form", { id: "book", onsubmit: book },
+        el("label", { class: "wide" }, "Title", el("input", { name: "title", required: true, value: "Meeting", maxlength: "200" })),
+        el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: start, step: "300" })),
+        el("label", {}, "Duration", el("select", { name: "duration" },
+          [15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => el("option", { value: minutes, selected: minutes === 30 }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`)))),
+        el("button", { class: "primary", type: "submit", disabled: busy }, busy ? "Booking…" : "Book")),
+      el("div", { id: "status", class: "status", role: "status" }));
+  }
+
+  function pickStart(epoch) {
+    const input = document.querySelector("#book input[name=start]");
+    if (input) { input.value = clock(Math.max(epoch, defaultStart())); input.focus(); }
+  }
+
+  function setStatus(text, error = false) {
+    const status = document.getElementById("status");
+    if (status) { status.textContent = text; status.className = error ? "status error" : "status"; }
+  }
+
+  async function book(event) {
+    event.preventDefault();
+    const form = event.target;
+    const [hours, minutes] = form.start.value.split(":").map(Number);
+    const start = midnightOf(schedule.period_start) + hours * 3600 + minutes * 60;
+    const end = start + Number(form.duration.value) * 60;
+    const title = form.title.value.trim() || "Meeting";
+
+    const clash = (schedule.events || []).find((item) => !item.all_day && item.event_start < end && (item.event_end || item.event_start + 3600) > start);
+    if (clash) return setStatus(`That time overlaps ${clash.title || "a private meeting"} (${time(clash.event_start)} – ${time(clash.event_end)})`, true);
+    if (end <= Math.floor(Date.now() / 1000)) return setStatus("That time has already passed", true);
+
+    busy = true;
+    form.querySelector("button.primary").disabled = true;
+    setStatus("Booking…");
+    try {
+      const result = await request("tools/call", {
+        name: "events_book",
+        arguments: { title, event_start: start, event_end: end, timezone: schedule.timezone, system_id: schedule.space.id },
+      });
+      const response = envelope(result);
+      if (result.isError || !response || response.status >= 400) throw new Error(errorText(response, "The booking failed"));
+
+      const summary = `Booked "${title}" in ${schedule.space.display_name || schedule.space.name}, ${dayFormat().format(new Date(start * 1000))} ${time(start)} – ${time(end)}.`;
+      // let the model know, hosts that don't support it reject the request
+      request("ui/update-model-context", { content: [{ type: "text", text: summary }] }).catch(() => {});
+      busy = false;
+      await reload();
+      setStatus(summary);
+    } catch (error) {
+      busy = false;
+      form.querySelector("button.primary").disabled = false;
+      setStatus(error.message, true);
+    }
+  }
+
+  async function load(periodStart) {
+    const result = await request("tools/call", { name: "spaces_show", arguments: { id: schedule.space.id, period_start: periodStart } });
+    showResult(result);
+  }
+
+  function reload() { return load(schedule.period_start); }
+
+  // midnight, in the space's timezone, of the day an epoch falls on
+  function midnightOf(epoch) {
+    const [hours, minutes] = clock(epoch).split(":").map(Number);
+    return epoch - (epoch % 60) - hours * 3600 - minutes * 60;
+  }
+
+  function changeDay(offset) {
+    // aim for 2am so daylight saving changes don't skip or repeat a day
+    const target = midnightOf(schedule.period_start) + offset * 86400 + 7200;
+    app.querySelectorAll(".day button").forEach((button) => (button.disabled = true));
+    load(midnightOf(target)).catch((error) => setStatus(error.message, true));
+  }
+
+  // keep the host's frame the size of the content
+  new ResizeObserver(() => {
+    notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
+  }).observe(document.body);
+
+  request("ui/initialize", {
+    protocolVersion: "2026-01-26",
+    appInfo: { name: "placeos-space-card", version: "1.0.0" },
+    appCapabilities: {},
+  }).then((result) => {
+    applyContext(result && result.hostContext);
+    notify("ui/notifications/initialized", {});
+  }).catch(() => notify("ui/notifications/initialized", {}));
+})();
+</script>
+</body>
+</html>

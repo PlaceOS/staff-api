@@ -25,9 +25,11 @@ module App::MCP
     - bookings are PlaceOS records for desks, parking spaces, lockers, visitors and other
       assets, identified by `booking_type` and `asset_id`. events are meetings in the
       user's Office365 or Google calendar, where rooms are attendees (resource calendars)
-    - a room is a PlaceOS system (`sys-...`) with a resource calendar email. Buildings,
-      levels and areas are zones (`zone-...`). Find their ids with the PlaceOS (engine)
-      API; this API takes them as filters (`zones`, `zone_ids`, `system_ids`)
+    - a room is a space, a PlaceOS system (`sys-...`) with a resource calendar email.
+      Campuses, buildings, levels and areas are zones (`zone-...`). The spaces toolbox
+      lists spaces, zones and room features; spaces_show shows a room's meetings with a
+      card for booking it. Other tools take these ids as filters (`zones`, `zone_ids`,
+      `system_ids`). Book meetings and rooms with events_book
     - times are unix epochs in seconds (`period_start`, `period_end`, `booking_start`,
       `event_start`...). Work them out in the user's time zone, a booking's `timezone`
       field says which zone it was made in
@@ -55,6 +57,8 @@ module App::MCP
       mcp.server_version = App::VERSION
       mcp.instructions = "#{INSTRUCTIONS}\n\n#{mcp.toolbox_instructions}"
       mcp.description_path = ENV["MCP_DESCRIPTION_PATH"]? || "mcp.yml"
+      mcp.ui_base = ENV["MCP_UI_PATH"]? || "cards"
+      mcp.ui_meta = ActionController::MCPServer::UIMeta.new(prefers_border: true)
       mcp.auth_probe = AUTH_PROBE
       mcp.resource_metadata = ->(request : HTTP::Request) do
         ActionController::MCPServer::ResourceMetadata.new(
