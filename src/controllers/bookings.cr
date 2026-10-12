@@ -12,7 +12,7 @@ class Bookings < Application
   # retried a few times with jittered backoff before giving up.
   SERIALIZE_RETRY_CODES = {"40001", "40P01"}
 
-  @[AC::Route::Filter(:around_action, only: [:create, :update, :edit])]
+  @[AC::Route::Filter(:around_action, only: [:create, :book, :update, :edit])]
   def wrap_in_transaction(&)
     attempt = 0
     loop do
@@ -55,7 +55,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :booked, :clashing_assets])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :book, :booked, :clashing_assets])]
   private def find_booking(
     id : Int64,
     @[AC::Param::Info(description: "the occurrence of a recurring booking to act on, the instance id (the occurrence start time as a unix epoch in seconds) as returned in the booking `instance` field. Omit to act on the booking or whole series", example: "1661725146")]
@@ -841,6 +841,53 @@ class Bookings < Application
     end
 
     book
+  end
+
+  # Book a desk or other asset for yourself, the zones (level, building) are taken from the asset.
+  @[AC::MCP(root: true)]
+  @[AC::Route::POST("/book", status_code: HTTP::Status::CREATED, converters: {zones: ConvertStringArray})]
+  def book(
+    @[AC::Param::Info(description: "the asset id to book, i.e. a desk id from desks_nearby", example: "asset-1234")]
+    asset_id : String,
+    @[AC::Param::Info(description: "start as a unix epoch in seconds", example: "1661725146")]
+    booking_start : Int64,
+    @[AC::Param::Info(description: "end as a unix epoch in seconds", example: "1661743123")]
+    booking_end : Int64,
+    @[AC::Param::Info(description: "the kind of asset, such as desk, parking or locker", example: "desk")]
+    booking_type : String = "desk",
+    @[AC::Param::Info(description: "a title for the booking", example: "Desk near the team")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "comma separated zone ids to file the booking under, added to the asset's zones", example: "zone-building,zone-level")]
+    zones : Array(String)? = nil,
+    @[AC::Param::Info(description: "IANA timezone of the booking, defaults to the asset's level or building timezone", example: "Australia/Sydney")]
+    timezone : String? = nil,
+  ) : Booking
+    booking_zones = zones || [] of String
+    authority_id = current_authority.as(::PlaceOS::Model::Authority).id
+    if asset = ::PlaceOS::Model::Asset.where(id: asset_id).where(Desks::AUTHORITY_SCOPE, authority_id).to_a.first?
+      # the asset's level and its parents, i.e. the building and organisation
+      zone_id = asset.zone_id
+      5.times do
+        break unless zone_id && (zone = ::PlaceOS::Model::Zone.find?(zone_id))
+        booking_zones << zone_id
+        timezone ||= zone.timezone.try(&.name)
+        zone_id = zone.parent_id.presence
+      end
+      booking_zones.concat asset.zones
+    end
+
+    changes = {
+      "booking_type"  => JSON::Any.new(booking_type),
+      "asset_id"      => JSON::Any.new(asset_id),
+      "asset_ids"     => JSON::Any.new([JSON::Any.new(asset_id)]),
+      "booking_start" => JSON::Any.new(booking_start),
+      "booking_end"   => JSON::Any.new(booking_end),
+      "zones"         => JSON::Any.new(booking_zones.uniq.map { |zone| JSON::Any.new(zone) }),
+    }
+    changes["title"] = JSON::Any.new(title) if title
+    changes["timezone"] = JSON::Any.new(timezone) if timezone
+
+    create(Booking.from_json(changes.to_json), event_id: nil.as(String?), ical_uid: nil.as(String?))
   end
 
   # Change a booking's title, description or times.

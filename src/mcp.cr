@@ -20,8 +20,8 @@ module App::MCP
     workplace surveys. Every call is made as the signed in user, with their permissions.
 
     Key concepts:
-    - the users toolbox's current user tool says who the signed in user is (name, email,
-      department, work preferences). The staff toolbox searches the wider directory
+    - users_current says who the signed in user is (name, email, department, work
+      preferences). The staff toolbox searches the wider directory
     - bookings are PlaceOS records for desks, parking spaces, lockers, visitors and other
       assets, identified by `booking_type` and `asset_id`. events are meetings in the
       user's Office365 or Google calendar, where rooms are attendees (resource calendars)
@@ -30,6 +30,8 @@ module App::MCP
       lists spaces, zones and room features; spaces_show shows a room's meetings with a
       card for booking it. Other tools take these ids as filters (`zones`, `zone_ids`,
       `system_ids`). Book meetings and rooms with events_book
+    - desks are assets drawn on their level's map. desks_nearby lists the free desks
+      closest to a desk, or to the desk a colleague has booked; book one with bookings_book
     - times are unix epochs in seconds (`period_start`, `period_end`, `booking_start`,
       `event_start`...). Work them out in the user's time zone, a booking's `timezone`
       field says which zone it was made in

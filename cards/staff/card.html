@@ -7,6 +7,7 @@
 <!--
   The staff card (MCP Apps), rendered for staff_show. Shows a person with their photo
   (staff_photo), email and phone links and books a meeting with them via events_book.
+  When they've booked a desk, offers the free desks nearest to them (desks_nearby, bookings_book).
   Talks to the host with JSON-RPC over postMessage (ui/initialize, ui/notifications/tool-result,
   tools/call). Tool results are the {status, headers, body} envelope as structuredContent.
 -->
@@ -52,6 +53,9 @@
   .status { margin-top: 8px; min-height: 1.4em; }
   .status.error { color: var(--error); }
   .status.ok { color: var(--ok); }
+  section:empty { display: none; }
+  ul.desks { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  ul.desks li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   a { color: var(--accent); }
 </style>
 </head>
@@ -192,6 +196,8 @@
   let person = null;
   let photo = null;
   let busy = false;
+  // the free desks near the person's desk booking, from desks_nearby
+  let nearby = null;
 
   function showResult(result) {
     const response = envelope(result);
@@ -202,6 +208,55 @@
     person = response.body;
     render();
     loadPhoto();
+    loadDesks();
+  }
+
+  // only shown when the person has booked a desk and it isn't the signed in user
+  async function loadDesks() {
+    if (!person.email) return;
+    const user = await currentUser();
+    if (user.email && user.email.toLowerCase() === person.email.toLowerCase()) return;
+    try {
+      nearby = await callTool("desks_nearby", { email: person.email, limit: 5 }, "No desks nearby");
+      if (nearby && nearby.desks && nearby.desks.length) renderDesks();
+    } catch { /* they haven't booked a desk */ }
+  }
+
+  function deskName(desk) { return desk.name || desk.map_id || desk.id; }
+
+  function renderDesks() {
+    const section = document.getElementById("desks");
+    if (!section || !nearby) return;
+    const first = String(person.name || "").split(" ")[0] || "them";
+    const tz = nearby.timezone;
+    const level = nearby.level.display_name || nearby.level.name;
+    section.replaceChildren(
+      el("strong", {}, `Sit near ${first}`),
+      el("div", { class: "muted" }, `${first} is at ${deskName(nearby.origin)}, ${level}, ${fmtDay(nearby.period_start, tz)} ${fmtTime(nearby.period_start, tz)} – ${fmtTime(nearby.period_end, tz)}`),
+      el("ul", { class: "desks" }, nearby.desks.map((desk) => el("li", {},
+        el("span", {}, deskName(desk), desk.features && desk.features.length ? el("span", { class: "muted" }, ` · ${desk.features.join(", ")}`) : null),
+        el("button", { type: "button", onclick: (event) => bookDesk(desk, event.target) }, "Book")))),
+    );
+  }
+
+  async function bookDesk(desk, button) {
+    if (busy) return;
+    busy = true;
+    button.disabled = true;
+    setStatus("Booking…");
+    try {
+      const first = String(person.name || "").split(" ")[0] || person.email;
+      await callTool("bookings_book", { asset_id: desk.id, booking_type: "desk", booking_start: nearby.period_start, booking_end: nearby.period_end, title: `Desk near ${first}`, timezone: nearby.timezone }, "The desk couldn't be booked");
+      const summary = `Booked ${deskName(desk)} near ${person.name || person.email}, ${fmtDay(nearby.period_start, nearby.timezone)} ${fmtTime(nearby.period_start, nearby.timezone)} – ${fmtTime(nearby.period_end, nearby.timezone)}.`;
+      request("ui/update-model-context", { content: [{ type: "text", text: summary }] }).catch(() => {});
+      nearby.desks = [];
+      document.getElementById("desks").replaceChildren();
+      setStatus(summary, "ok");
+    } catch (error) {
+      button.disabled = false;
+      setStatus(error.message, "error");
+    }
+    busy = false;
   }
 
   // the photo comes back as an image content block
@@ -257,8 +312,10 @@
           el("label", {}, "Duration", el("select", { name: "duration" },
             [15, 30, 45, 60, 90, 120].map((minutes) => el("option", { value: minutes, selected: minutes === 30 }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`)))),
           el("div", { class: "actions" }, el("button", { type: "submit", class: "primary", disabled: busy }, busy ? "Booking…" : "Book meeting")))) : null,
+      el("section", { id: "desks" }),
       el("div", { id: "status", class: "status", role: "status" }),
     );
+    renderDesks();
   }
 
   async function book(submitted) {
