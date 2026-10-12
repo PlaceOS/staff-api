@@ -2836,8 +2836,10 @@ describe Bookings do
   it "#create and #update parent child" do
     user_name = Faker::Internet.user_name
     user_email = Faker::Internet.email
-    starting = Random.new.rand(5..19).minutes.from_now.to_unix
-    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+    # each step uses different times: a change to the same times is a no-op that succeeds
+    now = Time.utc
+    starting = (now + 10.minutes).to_unix
+    ending = (now + 30.minutes).to_unix
 
     created = JSON.parse(client.post(BOOKINGS_BASE, headers: headers,
       body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk","attendees": [
@@ -2871,8 +2873,8 @@ describe Bookings do
     child_id = child["id"]
 
     # Changing start/end time should be cascaded to children
-    starting = Random.new.rand(5..19).minutes.from_now.to_unix
-    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+    starting = (now + 15.minutes).to_unix
+    ending = (now + 35.minutes).to_unix
 
     updated = JSON.parse(client.patch("#{BOOKINGS_BASE}/#{parent_id}", headers: headers,
       body: %({"asset_id":"some_desk","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).body)
@@ -2883,8 +2885,8 @@ describe Bookings do
     updated["linked_bookings"][0]["booking_end"].should eq(ending)
 
     # Updating start/end on child should fail
-    starting = Random.new.rand(5..19).minutes.from_now.to_unix
-    ending = Random.new.rand(25..39).minutes.from_now.to_unix
+    starting = (now + 20.minutes).to_unix
+    ending = (now + 40.minutes).to_unix
 
     updated = client.patch("#{BOOKINGS_BASE}/#{child_id}", headers: headers,
       body: %({"asset_id":"some_locker","booking_start":#{starting},"booking_end":#{ending},"booking_type":"desk"})).status_code
