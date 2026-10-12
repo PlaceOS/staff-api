@@ -177,8 +177,8 @@ class Assets < Application
   @[AC::Route::GET("/:id/map")]
   def map : Nil
     asset = current_asset
-    element_id = asset.map_id.presence
-    raise Error::NotFound.new("asset #{asset.id} isn't on a map") unless element_id
+    # as the workplace apps do, an asset without a map_id is drawn under its id
+    element_id = Desks.map_id_of(asset)
     level = asset.zone_id.try { |zone_id| ::PlaceOS::Model::Zone.find?(zone_id) }
     url = level.try(&.map_id.presence)
     raise Error::NotFound.new("the level of asset #{asset.id} doesn't have a map") unless level && url

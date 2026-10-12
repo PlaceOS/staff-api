@@ -95,7 +95,7 @@ describe App::MCP do
     toolboxes.should contain "spaces"
     # users only has the root current user tool, so it isn't a toolbox
     toolboxes.should_not contain "users"
-    toolboxes.should_not contain "desks"
+    toolboxes.should contain "desks"
 
     description = ActionController::MCPServer.description
     controllers = description.toolboxes.map(&.controller)
@@ -114,6 +114,18 @@ describe App::MCP do
     description.tool?("staff_show").should_not be_nil
   end
 
+  it "lists the desk booking prompt without opening a toolbox" do
+    headers = open_session.call(bearer.call)
+    prompts = JSON.parse(rpc.call(headers, "prompts/list", no_params).body)["result"]["prompts"].as_a
+    prompts.map(&.["name"].as_s).should contain "desks_book"
+
+    params = {"name" => JSON::Any.new("desks_book"), "arguments" => JSON::Any.new({"date" => JSON::Any.new("tomorrow"), "near" => JSON::Any.new("Jane")})}
+    result = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]
+    text = result["messages"][0]["content"]["text"].as_s
+    text.should start_with "Book me a desk for tomorrow near Jane."
+    {"desks_index", "desks_nearby", "bookings_book", "spaces_zones"}.each { |tool| text.should contain tool }
+  end
+
   it "marks the clash checks as read only, although they're POST requests" do
     description = ActionController::MCPServer.description
     {"bookings_clashing_assets", "events_clashing_assets"}.each do |name|
@@ -128,7 +140,7 @@ describe App::MCP do
     headers = open_session.call(bearer.call)
     tools = JSON.parse(rpc.call(headers, "tools/list", no_params).body)["result"]["tools"].as_a
     names = tools.map(&.["name"].as_s)
-    {"events_book", "events_edit", "events_destroy", "bookings_book", "bookings_edit", "bookings_destroy", "users_current", "desks_nearby"}.each { |name| names.should contain name }
+    {"events_book", "events_edit", "events_destroy", "bookings_book", "bookings_edit", "bookings_destroy", "users_current", "desks_nearby", "desks_index"}.each { |name| names.should contain name }
     # the full create and update tools stay in their toolboxes, their schemas are large
     {"events_create", "events_update", "bookings_update"}.each { |name| names.should_not contain name }
     {"bookings_show" => "bookings", "events_show" => "events", "staff_show" => "staff"}.each do |name, folder|

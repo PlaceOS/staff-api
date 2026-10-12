@@ -4891,27 +4891,31 @@ paths:
       parameters:
       - name: asset_id
         in: query
-        description: the asset id to book, i.e. a desk id from desks_nearby
+        description: the asset id to book, i.e. a desk id from desks_index
         example: asset-1234
         required: true
         schema:
           type: string
       - name: booking_start
         in: query
-        description: start as a unix epoch in seconds
+        description: start as a unix epoch in seconds, defaults to now; a start earlier
+          today moves to now
         example: 1661725146
-        required: true
         schema:
-          type: integer
-          format: Int64
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
       - name: booking_end
         in: query
-        description: end as a unix epoch in seconds
+        description: end as a unix epoch in seconds, defaults to the end of the start's
+          day
         example: 1661743123
-        required: true
         schema:
-          type: integer
-          format: Int64
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
       - name: booking_type
         in: query
         description: the kind of asset, such as desk, parking or locker
@@ -4920,7 +4924,7 @@ paths:
           type: string
       - name: title
         in: query
-        description: a title for the booking
+        description: a title for the booking, defaults to the asset's name
         example: Desk near the team
         schema:
           anyOf:
@@ -7789,12 +7793,266 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
-  /api/staff/v1/desks/nearby:
-    summary: Desks, the bookable desk assets on each level, ranked by how close they
-      are to a desk or a colleague
+  /api/staff/v1/desks:
+    summary: 'Desks, the bookable desk assets on each level: find free ones, or the
+      ones nearest a desk or a colleague'
     get:
-      summary: List the available desks nearest to a desk, or to the desk a colleague
-        has booked.
+      summary: List the free desks on a level for a period, with your own desk bookings
+        in that period.
+      tags:
+      - Desks
+      operationId: Desks_index
+      parameters:
+      - name: zone_id
+        in: query
+        description: the level zone id
+        example: zone-level
+        required: true
+        schema:
+          type: string
+      - name: features
+        in: query
+        description: comma separated features, desks must have every feature
+        example:
+        - standing
+        - dual-monitor
+        schema:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+      - name: period_start
+        in: query
+        description: period start as a unix epoch in seconds, defaults to now
+        example: 1661725146
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+      - name: period_end
+        in: query
+        description: period end as a unix epoch in seconds, defaults to the end of
+          the period start's day
+        example: 1661743123
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+      - name: q
+        in: query
+        description: 'filters results by the given text: a record matches when any
+          word matches its searchable fields as a whole word, and the last word also
+          matches as a prefix (search as you type)'
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: the maximum number of results to return
+        example: 10000
+        schema:
+          type: integer
+          format: UInt32
+      - name: offset
+        in: query
+        description: the starting offset of the result set, used to implement pagination
+        schema:
+          type: integer
+          format: UInt32
+      - name: ref
+        in: query
+        description: deprecated, ignored — pagination follows the `Link` header's
+          offset
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: fields
+        in: query
+        description: deprecated, ignored — search covers the resource's indexed fields
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Desks.FreeDesks'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/desks/features:
+    summary: 'Desks, the bookable desk assets on each level: find free ones, or the
+      ones nearest a desk or a colleague'
+    get:
+      summary: List the features of the bookable desks, i.e. standing or dual-monitor.
+      tags:
+      - Desks
+      operationId: Desks_features
+      parameters:
+      - name: zone_id
+        in: query
+        description: only desks in this zone, a building or level
+        example: zone-building
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/String'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/desks/nearby:
+    summary: 'Desks, the bookable desk assets on each level: find free ones, or the
+      ones nearest a desk or a colleague'
+    get:
+      summary: List the free desks nearest to a desk, or to the desk a colleague has
+        booked.
       tags:
       - Desks
       operationId: Desks_nearby
@@ -7838,7 +8096,7 @@ paths:
           - type: "null"
       - name: limit
         in: query
-        description: the maximum number of desks to return, up to 50
+        description: the maximum number of desks to return, up to 100
         example: 10
         schema:
           type: integer
@@ -17711,6 +17969,44 @@ components:
               $ref: '#/components/schemas/PlaceCalendar.Availability'
       required:
       - id
+    Desks.FreeDesks:
+      type: object
+      properties:
+        level:
+          $ref: '#/components/schemas/Desks.Level'
+        timezone:
+          type: string
+        period_start:
+          type: integer
+          format: Int64
+        period_end:
+          type: integer
+          format: Int64
+        features:
+          type: array
+          items:
+            type: string
+        total:
+          type: integer
+          format: Int32
+        desks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Desks.Desk'
+        your_bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Desks.YourBooking'
+      required:
+      - level
+      - timezone
+      - period_start
+      - period_end
+      - features
+      - total
+      - desks
+      - your_bookings
+      description: the free desks on a level
     Desks.NearbyDesks:
       type: object
       properties:
@@ -17741,7 +18037,7 @@ components:
       - period_start
       - period_end
       - desks
-      description: the available desks closest to the origin desk
+      description: the free desks closest to the origin desk
     PlaceCalendar.Event:
       type: object
       properties:
@@ -19188,44 +19484,6 @@ components:
       - starts_at
       - ends_at
       - timezone
-    Desks.Desk:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          anyOf:
-          - type: "null"
-          - type: string
-        map_id:
-          anyOf:
-          - type: "null"
-          - type: string
-        zone_id:
-          anyOf:
-          - type: "null"
-          - type: string
-        zones:
-          type: array
-          items:
-            type: string
-        features:
-          type: array
-          items:
-            type: string
-        accessible:
-          type: boolean
-        distance:
-          anyOf:
-          - type: number
-            format: Float64
-          - type: "null"
-      required:
-      - id
-      - zones
-      - features
-      - accessible
-      description: a desk asset
     Desks.Level:
       type: object
       properties:
@@ -19245,6 +19503,74 @@ components:
       - id
       - name
       description: the level the desks are on
+    Desks.Desk:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        map_id:
+          type: string
+        zone_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        features:
+          type: array
+          items:
+            type: string
+        accessible:
+          type: boolean
+        assigned_to:
+          anyOf:
+          - type: "null"
+          - type: string
+        distance:
+          anyOf:
+          - type: number
+            format: Float64
+          - type: "null"
+      required:
+      - id
+      - name
+      - map_id
+      - features
+      - accessible
+      description: a desk asset
+    Desks.YourBooking:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: Int64
+        asset_id:
+          type: string
+        title:
+          anyOf:
+          - type: "null"
+          - type: string
+        zones:
+          type: array
+          items:
+            type: string
+        booking_start:
+          type: integer
+          format: Int64
+        booking_end:
+          type: integer
+          format: Int64
+        timezone:
+          anyOf:
+          - type: "null"
+          - type: string
+      required:
+      - id
+      - asset_id
+      - zones
+      - booking_start
+      - booking_end
+      description: one of the signed in user's desk bookings
     PlaceCalendar.Attachment:
       type: object
       properties:

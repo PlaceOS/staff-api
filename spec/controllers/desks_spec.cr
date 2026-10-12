@@ -36,9 +36,11 @@ module DesksSpecHelper
     zone.save!
   end
 
-  def asset(name : String, map_id : String?, type : PlaceOS::Model::AssetType, order : PlaceOS::Model::AssetPurchaseOrder, bookable = true, groups = [] of String) : PlaceOS::Model::Asset
+  def asset(name : String, map_id : String?, type : PlaceOS::Model::AssetType, order : PlaceOS::Model::AssetPurchaseOrder, bookable = true, groups = [] of String, features = [] of String, identifier : String? = nil) : PlaceOS::Model::Asset
     asset = PlaceOS::Model::Generator.asset(type, order)
     asset.name = name
+    asset.identifier = identifier
+    asset.features = features
     asset.map_id = map_id
     asset.zone_id = LEVEL
     asset.zones = ["zone-perm-org", BUILDING, LEVEL]
@@ -56,19 +58,27 @@ module DesksSpecHelper
     zone(LEVEL, BUILDING, "/api/engine/v2/uploads/upload-desks/url")
 
     order = PlaceOS::Model::Generator.asset_purchase_order(authority).save!
-    desks = PlaceOS::Model::Generator.asset_type(PlaceOS::Model::Generator.asset_category(authority).save!).save!
+    desks = desk_type(authority)
     lockers = PlaceOS::Model::Generator.asset_type(PlaceOS::Model::Generator.asset_category(authority).save!).save!
 
     {
       "origin"   => asset("Desk 1", "desk.1", desks, order),
-      "near"     => asset("Desk 2", "desk.2", desks, order),
+      "near"     => asset("Desk 2", "desk.2", desks, order, features: ["standing"], identifier: "D-02"),
       "far"      => asset("Desk 3", "desk.3", desks, order),
-      "mid"      => asset("Desk 4", "desk.4", desks, order),
+      "mid"      => asset("Desk 4", "desk.4", desks, order, features: ["Standing", "dual-monitor"]),
       "closed"   => asset("Desk 5", "desk.5", desks, order, bookable: false),
       "secret"   => asset("Desk 6", "desk.6", desks, order, groups: ["secret"]),
       "unmapped" => asset("Desk 99", "desk.99", desks, order),
       "locker"   => asset("Locker 1", "locker.1", lockers, order),
     }
+  end
+
+  # the `_DESKS_` asset type, in the `_DESKS_` category, as the workplace apps create it
+  def desk_type(authority : PlaceOS::Model::Authority) : PlaceOS::Model::AssetType
+    category = PlaceOS::Model::AssetCategory.where(name: "_DESKS_", authority_id: authority.id).to_a.first? ||
+               PlaceOS::Model::Generator.asset_category(authority).tap { |created| created.name = "_DESKS_"; created.hidden = true }.save!
+    PlaceOS::Model::AssetType.where(name: "_DESKS_", category_id: category.id).to_a.first? ||
+      PlaceOS::Model::Generator.asset_type(category).tap(&.name=("_DESKS_")).save!
   end
 
   # the map is a rest-api upload: it redirects to storage, which must not see the token
@@ -101,6 +111,89 @@ describe Desks do
   before_each do
     StaffApi::LevelMap.clear_cache
     Booking.clear
+  end
+
+  describe "#index" do
+    it "lists the free desks on a level" do
+      assets = DesksSpecHelper.setup
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&#{DesksSpecHelper.period}", headers: headers)
+      response.status_code.should eq 200
+      body = JSON.parse(response.body)
+      body["level"]["id"].should eq DesksSpecHelper::LEVEL
+      body["timezone"].should eq "Europe/London"
+      # sorted by name; not the locker (not a desk), the unbookable desk or the group restricted desk
+      body["desks"].as_a.map(&.["id"].as_s).should eq ["near", "origin", "far", "mid", "unmapped"].map { |key| assets[key].id }
+      body["total"].should eq 5
+      body["features"].as_a.map(&.as_s).should eq ["Standing", "dual-monitor", "standing"]
+      near = body["desks"].as_a.find!(&.["id"].==(assets["near"].id))
+      near["name"].should eq "D-02"
+      near["map_id"].should eq "desk.2"
+    end
+
+    it "filters by every feature, ignoring case" do
+      assets = DesksSpecHelper.setup
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&features=standing&#{DesksSpecHelper.period}", headers: headers)
+      JSON.parse(response.body)["desks"].as_a.map(&.["id"].as_s).should eq [assets["near"].id, assets["mid"].id]
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&features=standing,dual-monitor&#{DesksSpecHelper.period}", headers: headers)
+      JSON.parse(response.body)["desks"].as_a.map(&.["id"].as_s).should eq [assets["mid"].id]
+    end
+
+    it "leaves out booked desks and lists your own desk bookings" do
+      assets = DesksSpecHelper.setup
+      BookingsHelper.create_booking(get_tenant.id.not_nil!, "someone@example.com", asset_id: assets["near"].id.not_nil!)
+      mine = BookingsHelper.create_booking(get_tenant.id.not_nil!, "dev@acaprojects.onmicrosoft.com", asset_id: "asset-elsewhere")
+
+      body = JSON.parse(client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&#{DesksSpecHelper.period}", headers: headers).body)
+      body["desks"].as_a.map(&.["id"].as_s).should_not contain assets["near"].id
+      body["your_bookings"].as_a.map(&.["id"].as_i64).should eq [mine.id]
+    end
+
+    it "defaults to the rest of today, from the next 10 minutes" do
+      DesksSpecHelper.setup
+      now = Time.utc.to_unix
+      body = JSON.parse(client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}", headers: headers).body)
+      starting = body["period_start"].as_i64
+      (starting % 600).should eq 0
+      starting.should be >= now
+      (starting - now).should be < 600
+      body["period_end"].should eq Time.unix(starting).in(Time::Location.load("Europe/London")).at_end_of_day.to_unix
+    end
+
+    it "limits the desks returned" do
+      DesksSpecHelper.setup
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&limit=2&#{DesksSpecHelper.period}", headers: headers)
+      body = JSON.parse(response.body)
+      body["desks"].as_a.size.should eq 2
+      body["total"].should eq 5
+      response.headers["X-Total-Count"].should eq "5"
+      link = response.headers["Link"]
+      link.should contain "offset=2"
+      link.should contain "zone_id=#{DesksSpecHelper::LEVEL}"
+
+      # the last page has no next link
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&limit=2&offset=4&#{DesksSpecHelper.period}", headers: headers)
+      JSON.parse(response.body)["desks"].as_a.size.should eq 1
+      response.headers["Link"]?.should be_nil
+    end
+
+    it "searches desks by name" do
+      assets = DesksSpecHelper.setup
+      response = client.get("#{DESKS_BASE}?zone_id=#{DesksSpecHelper::LEVEL}&q=D-02&#{DesksSpecHelper.period}", headers: headers)
+      JSON.parse(response.body)["desks"].as_a.map(&.["id"].as_s).should eq [assets["near"].id]
+    end
+
+    it "is not found for an unknown level" do
+      DesksSpecHelper.setup
+      client.get("#{DESKS_BASE}?zone_id=zone-desks-missing", headers: headers).status_code.should eq 404
+    end
+  end
+
+  describe "#features" do
+    it "lists the features of the bookable desks, optionally in a zone" do
+      DesksSpecHelper.setup
+      client.get("#{DESKS_BASE}/features?zone_id=#{DesksSpecHelper::BUILDING}", headers: headers).body.should eq %(["Standing","dual-monitor","standing"])
+      client.get("#{DESKS_BASE}/features?zone_id=zone-desks-elsewhere", headers: headers).body.should eq "[]"
+    end
   end
 
   describe "#nearby" do
@@ -242,6 +335,31 @@ describe "Bookings#book" do
     booking.user_email.to_s.should eq booking.booked_by_email.to_s
   end
 
+  it "books the rest of today from the next 10 minutes, as the workplace apps would" do
+    assets = DesksSpecHelper.setup
+    now = Time.utc.to_unix
+
+    response = client.post("#{Bookings.base_route}/book?asset_id=#{assets["near"].id}", headers: headers)
+    response.status_code.should eq 201
+    body = JSON.parse(response.body)
+    starting = body["booking_start"].as_i64
+    (starting % 600).should eq 0
+    starting.should be >= now
+    body["booking_end"].should eq Time.unix(starting).in(Time::Location.load("Europe/London")).at_end_of_day.to_unix
+    body["title"].should eq "D-02"
+    body["extension_data"].should eq JSON.parse({
+      assigned_asset_id: assets["near"].id, assigned_asset_name: "D-02", name: "D-02", map_id: "desk.2", app_name: "MCP",
+    }.to_json)
+  end
+
+  it "moves a start earlier today to now" do
+    assets = DesksSpecHelper.setup
+    now = Time.utc.to_unix
+    response = client.post("#{Bookings.base_route}/book?asset_id=#{assets["near"].id}&booking_start=#{now - 60}", headers: headers)
+    response.status_code.should eq 201
+    JSON.parse(response.body)["booking_start"].as_i64.should be >= now
+  end
+
   it "rejects a desk that's already booked" do
     assets = DesksSpecHelper.setup
     taken = BookingsHelper.create_booking(get_tenant.id.not_nil!, "someone@example.com", asset_id: assets["near"].id.not_nil!)
@@ -284,6 +402,18 @@ describe "Assets#map" do
     response = client.get("#{Assets.base_route}/#{assets["near"].id}/map", headers: headers)
     response.status_code.should eq 200
     response.headers["X-Map-View-Box"].should eq "0 0 800.0 80.0"
+  end
+
+  it "finds assets without a map_id by their id, as the workplace apps do" do
+    assets = DesksSpecHelper.setup
+    asset = assets["unmapped"]
+    asset.map_id = nil
+    asset.save!
+    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub("</svg>", %(<rect id="#{asset.id}" x="400" y="0" width="10" height="10"/></svg>)))
+
+    response = client.get("#{Assets.base_route}/#{asset.id}/map", headers: headers)
+    response.status_code.should eq 200
+    response.headers["X-Map-Pin"].should eq "405.0,5.0"
   end
 
   it "is not found when the asset isn't drawn on the map" do

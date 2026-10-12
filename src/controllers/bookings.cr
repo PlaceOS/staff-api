@@ -847,15 +847,15 @@ class Bookings < Application
   @[AC::MCP(root: true)]
   @[AC::Route::POST("/book", status_code: HTTP::Status::CREATED, converters: {zones: ConvertStringArray})]
   def book(
-    @[AC::Param::Info(description: "the asset id to book, i.e. a desk id from desks_nearby", example: "asset-1234")]
+    @[AC::Param::Info(description: "the asset id to book, i.e. a desk id from desks_index", example: "asset-1234")]
     asset_id : String,
-    @[AC::Param::Info(description: "start as a unix epoch in seconds", example: "1661725146")]
-    booking_start : Int64,
-    @[AC::Param::Info(description: "end as a unix epoch in seconds", example: "1661743123")]
-    booking_end : Int64,
+    @[AC::Param::Info(description: "start as a unix epoch in seconds, defaults to now; a start earlier today moves to now", example: "1661725146")]
+    booking_start : Int64? = nil,
+    @[AC::Param::Info(description: "end as a unix epoch in seconds, defaults to the end of the start's day", example: "1661743123")]
+    booking_end : Int64? = nil,
     @[AC::Param::Info(description: "the kind of asset, such as desk, parking or locker", example: "desk")]
     booking_type : String = "desk",
-    @[AC::Param::Info(description: "a title for the booking", example: "Desk near the team")]
+    @[AC::Param::Info(description: "a title for the booking, defaults to the asset's name", example: "Desk near the team")]
     title : String? = nil,
     @[AC::Param::Info(description: "comma separated zone ids to file the booking under, added to the asset's zones", example: "zone-building,zone-level")]
     zones : Array(String)? = nil,
@@ -864,12 +864,20 @@ class Bookings < Application
   ) : Booking
     booking_zones = zones || [] of String
     authority_id = current_authority.as(::PlaceOS::Model::Authority).id
-    if asset = ::PlaceOS::Model::Asset.where(id: asset_id).where(Desks::AUTHORITY_SCOPE, authority_id).to_a.first?
+    asset = ::PlaceOS::Model::Asset.where(id: asset_id).where(Desks::AUTHORITY_SCOPE, authority_id).to_a.first?
+    if asset
       # zones is the asset's zone tree (org, building, level...) and zone_id its level
       tree = (asset.zones + [asset.zone_id].compact).uniq
       booking_zones.concat tree
       timezone ||= timezone_of(asset.zone_id, tree)
     end
+    location = timezone.try { |name| Time::Location.load(name) rescue nil } || DEFAULT_TIME_ZONE
+
+    # now, rounded up to the next 10 minutes, so a booking for today never starts in the past
+    now = (Time.utc.to_unix / 600.0).ceil.to_i64 * 600
+    today = Time.utc.in(location).at_beginning_of_day.to_unix
+    booking_start = now if booking_start.nil? || (today <= booking_start < now)
+    booking_end ||= Time.unix(booking_start).in(location).at_end_of_day.to_unix
 
     changes = {
       "booking_type"  => JSON::Any.new(booking_type),
@@ -878,11 +886,23 @@ class Bookings < Application
       "booking_start" => JSON::Any.new(booking_start),
       "booking_end"   => JSON::Any.new(booking_end),
       "zones"         => JSON::Any.new(booking_zones.uniq.map { |zone| JSON::Any.new(zone) }),
+      "timezone"      => JSON::Any.new(location.name),
     }
+    name = asset.try { |found| Desks.name_of(found) }
+    title ||= name
     changes["title"] = JSON::Any.new(title) if title
-    changes["timezone"] = JSON::Any.new(timezone) if timezone
+    if asset
+      # what the workplace apps set, so the booking shows on their maps
+      changes["extension_data"] = JSON::Any.new({
+        "assigned_asset_id"   => JSON::Any.new(asset_id),
+        "assigned_asset_name" => JSON::Any.new(name.as(String)),
+        "name"                => JSON::Any.new(name.as(String)),
+        "map_id"              => JSON::Any.new(Desks.map_id_of(asset)),
+        "app_name"            => JSON::Any.new("MCP"),
+      })
+    end
 
-    create(Booking.from_json(changes.to_json), event_id: nil.as(String?), ical_uid: nil.as(String?))
+    create(Booking.from_json(changes.to_json), utm_source: "mcp", event_id: nil.as(String?), ical_uid: nil.as(String?))
   end
 
   # Change a booking's title, description or times.
