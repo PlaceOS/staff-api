@@ -291,4 +291,62 @@ class Spaces < Application
     raise Error::NotFound.new("space #{system.id} isn't on a level with a map") unless level
     render_level_map(level, system.map_id.presence || system.id.as(String))
   end
+
+  # Book a meeting room: find rooms that fit, check they and the people invited are free, and book it.
+  @[AC::MCP(prompt: true, root: true, title: "Book a meeting room")]
+  def book(
+    @[AC::Param::Info(description: "when and for how long, i.e. tomorrow at 2pm for an hour", example: "tomorrow 2pm, 1 hour")]
+    time : String? = nil,
+    @[AC::Param::Info(description: "the people to invite, by name or email", example: "Jane Smith, bob@org.com")]
+    attendees : String? = nil,
+    @[AC::Param::Info(description: "how many people the room needs to seat", example: "6")]
+    size : String? = nil,
+    @[AC::Param::Info(description: "room features wanted, i.e. a whiteboard or video conferencing", example: "vidconf")]
+    needs : String? = nil,
+    @[AC::Param::Info(description: "the meeting title", example: "Project catch up")]
+    title : String? = nil,
+  ) : String
+    ask = String.build do |str|
+      str << "Book me a meeting room"
+      str << " for " << time if time.presence
+      str << " with " << attendees if attendees.presence
+      str << " for " << size << " people" if size.presence
+      str << " with " << needs if needs.presence
+      str << ", titled \"" << title << '"' if title.presence
+      str << '.'
+    end
+    room_features = self.features(nil).first(50)
+    unless room_features.empty?
+      ask += " Room features in use: #{room_features.join(", ")} (spaces_features lists them for a building or level)."
+    end
+
+    <<-PROMPT
+      #{ask}
+
+      How to book a meeting room:
+      1. Call users_current to see who I am. Work out times in the building's timezone, as unix
+         epochs in seconds. Ask me for anything missing (when, how long, the title) before booking.
+      2. If you only have people's names, find their emails with the staff toolbox; confirm with
+         me when several people match, don't guess. Check the people I work with are free with
+         calendars_free_busy (calendars toolbox), passing their emails, and suggest other times
+         if they're busy.
+      3. Find the building and level with the spaces toolbox's spaces_zones. If there are several
+         buildings and I haven't said which, ask me. Unless I name a level, book a room as close as
+         possible to my desk that day: find my desk booking with bookings_index (bookings toolbox,
+         type desk, its zones give the level) and prefer rooms on that level, then the nearest
+         levels to it in the same building. Match levels loosely: "first floor" is "level 1".
+      4. Find rooms that are free for the whole meeting with calendars_availability (calendars
+         toolbox): the period, the level's zone id in zone_ids, capacity for everyone including me,
+         the features I need and bookable true. Widen to the building when the level has none free.
+      5. Pick the smallest room that fits and has the features, on the closest level. If none are
+         free, offer the nearest free times (calendars_free_busy with the rooms' system_ids) or
+         another level.
+      6. Book with events_book: the title, event_start, event_end, the people's emails as
+         attendees (I'm added as the host, the room comes from system_id) and the room's
+         system_id. If the room needs approval, tell me the booking is pending approval.
+      7. Once you have enough information, book it without asking me to confirm, then tell me the
+         room, level, time and who's invited. spaces_show (spaces toolbox) shows the room's day
+         with a card.
+      PROMPT
+  end
 end

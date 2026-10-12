@@ -131,6 +131,42 @@ describe App::MCP do
     {"desks_index", "desks_nearby", "bookings_book", "spaces_zones"}.each { |tool| text.should contain tool }
   end
 
+  it "lists the meeting room booking prompt without opening a toolbox" do
+    headers = open_session.call(bearer.call)
+    prompts = JSON.parse(rpc.call(headers, "prompts/list", no_params).body)["result"]["prompts"].as_a
+    prompts.map(&.["name"].as_s).should contain "spaces_book"
+
+    arguments = {"time" => "tomorrow 2pm, 1 hour", "attendees" => "Jane", "size" => "4", "needs" => "vidconf"}
+    params = {"name" => JSON::Any.new("spaces_book"), "arguments" => JSON::Any.new(arguments.transform_values { |value| JSON::Any.new(value) })}
+    text = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]["messages"][0]["content"]["text"].as_s
+    text.should start_with "Book me a meeting room for tomorrow 2pm, 1 hour with Jane for 4 people with vidconf."
+    {"calendars_availability", "calendars_free_busy", "events_book", "spaces_zones", "users_current"}.each { |tool| text.should contain tool }
+  end
+
+  it "lists the prompts for checking my bookings and meetings without opening a toolbox" do
+    headers = open_session.call(bearer.call)
+    prompts = JSON.parse(rpc.call(headers, "prompts/list", no_params).body)["result"]["prompts"].as_a.map(&.["name"].as_s)
+    {"bookings_mine", "events_mine"}.each { |name| prompts.should contain name }
+
+    render = ->(name : String, arguments : Hash(String, String)) {
+      params = {"name" => JSON::Any.new(name), "arguments" => JSON::Any.new(arguments.transform_values { |value| JSON::Any.new(value) })}
+      JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]["messages"][0]["content"]["text"].as_s
+    }
+
+    bookings = render.call("bookings_mine", {"period" => "this week", "type" => "desk"})
+    bookings.should start_with "What desk bookings do I have this week?"
+    {"bookings_index", "bookings_show", "bookings_destroy"}.each { |tool| bookings.should contain tool }
+    render.call("bookings_mine", {} of String => String).should start_with "What bookings do I have today?"
+
+    events = render.call("events_mine", {"period" => "tomorrow"})
+    events.should start_with "What meetings do I have tomorrow?"
+    {"events_index", "events_show", "calendars_free_busy"}.each { |tool| events.should contain tool }
+
+    # desks go near my meetings and rooms near my desk
+    render.call("desks_book", {} of String => String).should contain "events_index"
+    render.call("spaces_book", {} of String => String).should contain "type desk"
+  end
+
   it "marks the clash checks as read only, although they're POST requests" do
     description = ActionController::MCPServer.description
     {"bookings_clashing_assets", "events_clashing_assets"}.each do |name|

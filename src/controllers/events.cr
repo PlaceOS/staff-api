@@ -325,6 +325,34 @@ class Events < Application
     }
   end
 
+  # Check my meetings: my calendar for a period, with the rooms, and how to change or cancel them.
+  @[AC::MCP(prompt: true, root: true, title: "My meetings")]
+  def mine(
+    @[AC::Param::Info(description: "the period to look at, i.e. today, tomorrow or this week", example: "this week")]
+    period : String? = nil,
+  ) : String
+    <<-PROMPT
+      What meetings do I have #{period.presence || "today"}?
+
+      How to check my meetings:
+      1. Call users_current to see who I am. Work out the period in my timezone, as unix epochs
+         in seconds, from the start of the first day to the end of the last.
+      2. List my calendar with events_index (events toolbox) for the period, without calendars,
+         zone_ids or system_ids. Rooms are the attendees marked as resources; an event's system
+         is the room booked through PlaceOS, its zones give the building and level.
+      3. Give me a short summary by day, in time order: the time (all day events may have no
+         end), the title, the room and level, the host when it isn't me, my response (accepted,
+         tentative, declined, not responded) and the online meeting link if there is one.
+         Private meetings I'm not hosting have no details.
+      4. Say if I have no meetings. Mention clashes, meetings I haven't responded to and any
+         that need a room but don't have one.
+      5. events_show shows one meeting with a card where I can change or cancel it;
+         events_edit changes the title, times or people and events_destroy cancels it. Before
+         moving a meeting, check the people and room are free with calendars_free_busy
+         (calendars toolbox). To book a room for a meeting, use the spaces_book prompt's steps.
+      PROMPT
+  end
+
   # List the change history of events in a time period.
   @[AC::Route::GET("/history")]
   def history(

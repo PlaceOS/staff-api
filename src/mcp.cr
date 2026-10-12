@@ -33,6 +33,7 @@ module App::MCP
     - desks are assets drawn on their level's map. desks_index lists a level's free desks,
       desks_nearby the free desks closest to a desk or a colleague's desk, and
       desks_near_colleagues the free desks near several colleagues; book with bookings_book
+    - the spaces_book and desks_book prompts walk through booking a meeting room or a desk
     - times are unix epochs in seconds (`period_start`, `period_end`, `booking_start`,
       `event_start`...). Work them out in the user's time zone, a booking's `timezone`
       field says which zone it was made in

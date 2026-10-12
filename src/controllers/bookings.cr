@@ -55,7 +55,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :book, :booked, :clashing_assets])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :book, :booked, :clashing_assets, :mine])]
   private def find_booking(
     id : Int64,
     @[AC::Param::Info(description: "the occurrence of a recurring booking to act on, the instance id (the occurrence start time as a unix epoch in seconds) as returned in the booking `instance` field. Omit to act on the booking or whole series", example: "1661725146")]
@@ -903,6 +903,41 @@ class Bookings < Application
     end
 
     create(Booking.from_json(changes.to_json), utm_source: "mcp", event_id: nil.as(String?), ical_uid: nil.as(String?))
+  end
+
+  # Check my bookings: desks, car parking, lockers and visitors, with how to change or cancel them.
+  @[AC::MCP(prompt: true, root: true, title: "My bookings")]
+  def mine(
+    @[AC::Param::Info(description: "the period to look at, i.e. today, tomorrow or this week", example: "this week")]
+    period : String? = nil,
+    @[AC::Param::Info(description: "only this kind of booking, i.e. desk, parking, locker or visitor", example: "desk")]
+    type : String? = nil,
+  ) : String
+    ask = String.build do |str|
+      str << "What " << (type.presence.try { |kind| "#{kind} " } || "") << "bookings do I have"
+      str << ' ' << (period.presence || "today") << '?'
+    end
+
+    <<-PROMPT
+      #{ask}
+
+      How to check my bookings:
+      1. Call users_current to see who I am. Work out the period in my timezone, as unix epochs
+         in seconds, from the start of the first day to the end of the last.
+      2. List them with bookings_index (bookings toolbox), once per type: desk, parking, locker and
+         visitor (or just the type I asked about). Without user, email or zones it returns my own
+         bookings; include_booked_by true adds the ones I made for other people. Follow the Link
+         header when there are more.
+      3. Give me a short summary by day: the type, what was booked (the title or
+         extension_data.name, otherwise the asset_id), the building and level (the booking's
+         zones, spaces_zones in the spaces toolbox has their names), the times in the booking's
+         timezone and anything notable: pending approval, rejected, checked in. Visitor bookings
+         list who is visiting.
+      4. Say if I have no bookings. Don't list cancelled (deleted) or rejected ones unless I ask.
+      5. bookings_show shows one booking with a card where I can change or cancel it;
+         bookings_edit changes the title or times and bookings_destroy cancels it (pass instance
+         for one occurrence of a recurring booking).
+      PROMPT
   end
 
   # Change a booking's title, description or times.

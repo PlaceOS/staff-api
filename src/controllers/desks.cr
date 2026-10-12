@@ -539,6 +539,10 @@ class Desks < Application
       2. Find the building and level with the spaces toolbox's spaces_zones (tags building,
          then level with the building as parent_id). If there are several buildings and I
          haven't said which, ask me, don't guess. Match levels loosely: "first floor" is "level 1".
+         Unless I name a level, sit me as close as possible to where I'll be that day: check my
+         meetings with events_index (events toolbox, an event's system is its room and the
+         room's zones its level) and prefer the level with the most of them, otherwise the
+         nearest level to it in the same building.
       3. To sit near a colleague, find their email with the staff toolbox if you only have a
          name, then desks_nearby with their email gives the free desks closest to theirs,
          on their level and for their booking's times. To sit near several colleagues or my
