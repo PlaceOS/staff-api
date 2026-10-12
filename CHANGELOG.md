@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **MCP**: show a booking's asset on its level map
 - **MCP**: nearby desks and a lean desk booking tool
 - **MCP**: spaces, cards and lean booking tools
 - **assets**: add asset controllers ported from rest-api
