@@ -54,6 +54,21 @@
   .status.error { color: var(--error); }
   .status.ok { color: var(--ok); }
   a { color: var(--accent); }
+  .carousel { position: relative; margin: 0 0 12px; border-radius: 8px; overflow: hidden; background: var(--chip); }
+  .carousel img, .carousel .placeholder { display: block; width: 100%; height: 180px; object-fit: cover; }
+  .carousel .placeholder { display: grid; place-items: center; }
+  .carousel .nav { position: absolute; top: 50%; transform: translateY(-50%); border: 0; border-radius: 50%; width: 32px; height: 32px; padding: 0; background: rgba(0, 0, 0, 0.45); color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
+  .carousel .prev { left: 8px; }
+  .carousel .next { right: 8px; }
+  .carousel .dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .carousel .dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.6); cursor: pointer; }
+  .carousel .dot.active { background: #ffffff; }
+  details.map { margin-top: 12px; }
+  details.map summary { cursor: pointer; color: var(--accent); }
+  .map-frame { margin-top: 8px; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: #ffffff; }
+  .map-canvas { position: relative; width: 250%; }
+  .map-canvas img { display: block; width: 100%; height: auto; }
+  .map-pin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #e5484d; border: 3px solid #ffffff; box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4); }
 </style>
 </head>
 <body>
@@ -205,7 +220,93 @@
     }
     event = response.body;
     mode = "view";
+    resetMedia();
     render();
+  }
+
+  // ---- the room's photos and level map, from the spaces card's card only tools ----
+  // they're updated in place, so a half filled edit form isn't lost
+  let media = { room: null, images: {}, index: 0, map: null };
+  const room = () => event.system || null;
+  const roomName = () => room() ? room().display_name || room().name : "";
+
+  function resetMedia() {
+    const id = room() && room().id;
+    if (media.room === id) return;
+    media = { room: id, images: {}, index: 0, map: null };
+    if (id) loadMap();
+  }
+
+  function refresh(id, view) {
+    const node = document.getElementById(id);
+    if (node) node.replaceWith(view());
+  }
+
+  async function loadImage(index) {
+    if (media.images[index] !== undefined) return;
+    const id = media.room;
+    media.images[index] = null; // loading
+    let src = "error";
+    try {
+      const result = await request("tools/call", { name: "spaces_image", arguments: { id, index } });
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      if (image) src = `data:${image.mimeType};base64,${image.data}`;
+    } catch { /* shown as unavailable */ }
+    if (media.room !== id) return;
+    media.images[index] = src;
+    refresh("room-images", carousel);
+  }
+
+  function carousel() {
+    const count = ((room() && room().images) || []).length;
+    if (!count) return el("div", { id: "room-images" });
+    const index = Math.min(media.index, count - 1);
+    const src = media.images[index];
+    if (src === undefined) loadImage(index);
+    const show = (target) => { media.index = (target + count) % count; refresh("room-images", carousel); };
+    return el("figure", { id: "room-images", class: "carousel" },
+      src && src !== "error"
+        ? el("img", { src, alt: `${roomName()}, photo ${index + 1} of ${count}` })
+        : el("div", { class: "placeholder muted" }, src === "error" ? "Photo unavailable" : "Loading photo…"),
+      count > 1 ? [
+        el("button", { type: "button", class: "nav prev", title: "Previous photo", onclick: () => show(index - 1) }, "‹"),
+        el("button", { type: "button", class: "nav next", title: "Next photo", onclick: () => show(index + 1) }, "›"),
+        el("div", { class: "dots" }, Array.from({ length: count }, (_, dot) =>
+          el("button", { type: "button", class: dot === index ? "dot active" : "dot", title: `Photo ${dot + 1}`, onclick: () => show(dot) }))),
+      ] : null);
+  }
+
+  // the level map with a pin on the room, from spaces_map: {src, x, y, box}
+  async function loadMap() {
+    const id = media.room;
+    try {
+      const result = await request("tools/call", { name: "spaces_map", arguments: { id } });
+      const response = envelope(result);
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      const headers = Object.fromEntries(Object.entries((response && response.headers) || {}).map(([key, value]) => [key.toLowerCase(), value]));
+      const pin = String(headers["x-map-pin"] || "").split(",").map(Number);
+      const box = String(headers["x-map-view-box"] || "").split(/[\s,]+/).map(Number);
+      if (!image || pin.length !== 2 || box.length !== 4 || !(box[2] > 0 && box[3] > 0) || media.room !== id) return;
+      media.map = { src: `data:${image.mimeType};base64,${image.data}`, x: pin[0], y: pin[1], box };
+      refresh("room-map", mapView);
+    } catch { /* not on a map */ }
+  }
+
+  function mapView() {
+    const map = media.map;
+    if (!map) return el("div", { id: "room-map" });
+    const [minX, minY, width, height] = map.box;
+    const pin = el("div", { class: "map-pin", style: `left:${((map.x - minX) / width) * 100}%;top:${((map.y - minY) / height) * 100}%`, title: roomName() });
+    const frame = el("div", { class: "map-frame" });
+    // centre the pin once the map has its size
+    const centre = () => {
+      frame.scrollLeft = pin.offsetLeft - frame.clientWidth / 2;
+      frame.scrollTop = pin.offsetTop - frame.clientHeight / 2;
+    };
+    // the SVG is shown as an image, so nothing in it can run
+    frame.append(el("div", { class: "map-canvas" }, el("img", { src: map.src, alt: "Level map", onload: centre }), pin));
+    return el("details", { id: "room-map", class: "map", ontoggle: (toggled) => { if (toggled.target.open) requestAnimationFrame(centre); } },
+      el("summary", {}, "Show on map"), frame);
   }
 
   // the room the meeting is in, and where it was read from
@@ -232,28 +333,30 @@
     const user = await currentUser();
     const tz = event.timezone || localZone;
     const end = event.event_end || event.event_start + 3600;
-    const room = event.system ? event.system.display_name || event.system.name : null;
     const when = event.all_day
       ? `${fmtDay(event.event_start, tz)}, all day`
       : `${fmtDay(event.event_start, tz)}, ${fmtTime(event.event_start, tz)} – ${fmtTime(end, tz)}`;
     const editable = isHost(user) && end > Date.now() / 1000 && lower(event.status) !== "cancelled";
 
-    app.replaceChildren(
+    // replaceChildren, unlike el(), would show a null child as the text "null"
+    app.replaceChildren(...[
+      carousel(),
       el("div", { class: "row between" },
         el("h1", {}, event.title || (event.private ? "Private meeting" : "Untitled meeting")),
         lower(event.status) === "cancelled" ? el("span", { class: "chip" }, "Cancelled") : null),
       el("dl", {},
         el("dt", {}, "When"), el("dd", {}, when, tz !== localZone ? el("span", { class: "muted" }, ` (${tz})`) : null),
-        room || event.location ? [el("dt", {}, "Where"), el("dd", {}, room || event.location)] : null,
+        roomName() || event.location ? [el("dt", {}, "Where"), el("dd", {}, roomName() || event.location)] : null,
         event.host ? [el("dt", {}, "Host"), el("dd", {}, event.host)] : null,
         people().length ? [el("dt", {}, "Attendees"), el("dd", {}, people().map((attendee) =>
           el("div", {}, attendee.name && attendee.name !== attendee.email ? `${attendee.name} ` : "", el("span", { class: "muted" }, attendee.email),
             RESPONSES[lower(attendee.response_status)] ? ` ${RESPONSES[lower(attendee.response_status)]}` : "")))] : null),
+      mapView(),
       event.online_meeting_url ? el("div", { class: "actions" },
         el("button", { type: "button", onclick: () => openLink(event.online_meeting_url) }, "Join online")) : null,
       editable ? actions(tz) : null,
       el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || ""),
-    );
+    ].filter(Boolean));
   }
 
   function actions(tz) {

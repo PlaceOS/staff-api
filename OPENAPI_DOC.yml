@@ -13389,6 +13389,124 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/spaces/free:
+    summary: Spaces, the bookable rooms in the organisation's buildings, with the
+      zones and room features to filter them by
+    get:
+      summary: Find the rooms in a building or level that are free for a whole meeting.
+      tags:
+      - Spaces
+      operationId: Spaces_free
+      parameters:
+      - name: period_start
+        in: query
+        description: meeting start as a unix epoch in seconds
+        example: 1661725146
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: meeting end as a unix epoch in seconds, at most a day after the
+          start
+        example: 1661728746
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: zone_id
+        in: query
+        description: the building or level to look in, defaults to the only building
+        example: zone-building
+        schema:
+          anyOf:
+          - type: "null"
+          - type: string
+      - name: capacity
+        in: query
+        description: minimum number of people the room seats
+        example: 2
+        schema:
+          anyOf:
+          - type: integer
+            format: Int32
+          - type: "null"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spaces.FreeSpaces'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/spaces/{id}:
     summary: Spaces, the bookable rooms in the organisation's buildings, with the
       zones and room features to filter them by
@@ -13827,6 +13945,117 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlaceCalendar.User'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/people/{id}/free_busy:
+    summary: People, the staff directory of the tenant's Office365 or Google organisation
+      (search users, user details, managers, group memberships)
+    get:
+      summary: Get the busy times of a person and the signed in user, for picking
+        a meeting time.
+      tags:
+      - Staff
+      operationId: Staff_free_busy
+      parameters:
+      - name: id
+        in: path
+        description: the person's email address
+        example: user@org.com
+        required: true
+        schema:
+          type: string
+      - name: period_start
+        in: query
+        description: period start as a unix epoch in seconds
+        example: 1661725146
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      - name: period_end
+        in: query
+        description: period end as a unix epoch in seconds, at most a week after the
+          start
+        example: 1661743123
+        required: true
+        schema:
+          type: integer
+          format: Int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Staff.Busy'
         "429":
           description: Too Many Requests
           content:
@@ -18908,6 +19137,25 @@ components:
       - name
       - tags
       description: a campus, building, level or area
+    Spaces.FreeSpaces:
+      type: object
+      properties:
+        buildings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Spaces.SpaceZone'
+        zone_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        spaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/Spaces.Space'
+      required:
+      - buildings
+      - spaces
+      description: the rooms free for a meeting, in a building or level
     Spaces.SpaceSchedule:
       type: object
       properties:
@@ -18991,6 +19239,29 @@ components:
           - type: object
             additionalProperties:
               type: object
+    Staff.Busy:
+      type: object
+      properties:
+        email:
+          type: string
+        busy:
+          type: array
+          items:
+            type: object
+            properties:
+              start:
+                type: integer
+                format: Int64
+              end:
+                type: integer
+                format: Int64
+            required:
+            - start
+            - end
+      required:
+      - email
+      - busy
+      description: someone's busy times in a period, as unix epochs
     PlaceOS.Model.Survey:
       type: object
       properties:

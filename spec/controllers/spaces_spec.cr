@@ -1,5 +1,6 @@
 require "../spec_helper"
 require "./helpers/event_helper"
+require "./helpers/schedule_helper"
 
 SPACES_BASE = Spaces.base_route
 
@@ -113,6 +114,60 @@ describe Spaces do
     it "filters by every zone" do
       response = client.get("#{SPACES_BASE}/features?zone_ids=zone-spaces-bld,zone-spaces-l2", headers: headers)
       JSON.parse(response.body).as_a.map(&.as_s).should eq ["display"]
+    end
+  end
+
+  describe "#free" do
+    starting = Time.utc(2026, 10, 14, 9)
+    ending = starting + 1.hour
+    period = "period_start=#{starting.to_unix}&period_end=#{ending.to_unix}"
+
+    it "lists the rooms in the only building that are free for the whole meeting" do
+      requested = ScheduleHelper.stub({"spaces-alpine@example.com" => [{starting + 30.minutes, ending + 1.hour}]})
+      body = JSON.parse(client.get("#{SPACES_BASE}/free?#{period}", headers: headers).body)
+      body["buildings"].as_a.map(&.["id"].as_s).should eq [SpacesSpecHelper::BUILDING]
+      body["zone_id"].should eq SpacesSpecHelper::BUILDING
+      body["spaces"].as_a.map(&.["id"].as_s).should eq ["sys-spaces-2"]
+      requested.map(&.sort).should eq [["spaces-alpine@example.com", "spaces-bondi@example.com"]]
+    end
+
+    it "lists the smallest free room first" do
+      ScheduleHelper.stub({} of String => Array(Tuple(Time, Time)))
+      body = JSON.parse(client.get("#{SPACES_BASE}/free?#{period}", headers: headers).body)
+      body["spaces"].as_a.map(&.["id"].as_s).should eq ["sys-spaces-2", "sys-spaces-1"]
+    end
+
+    it "filters by level and capacity before checking calendars" do
+      requested = ScheduleHelper.stub({} of String => Array(Tuple(Time, Time)))
+      body = JSON.parse(client.get("#{SPACES_BASE}/free?#{period}&zone_id=#{SpacesSpecHelper::LEVEL_2}", headers: headers).body)
+      body["spaces"].as_a.map(&.["id"].as_s).should eq ["sys-spaces-2"]
+      body = JSON.parse(client.get("#{SPACES_BASE}/free?#{period}&capacity=6", headers: headers).body)
+      body["spaces"].as_a.map(&.["id"].as_s).should eq ["sys-spaces-1"]
+      requested.should eq [["spaces-bondi@example.com"], ["spaces-alpine@example.com"]]
+    end
+
+    it "waits for a building to be picked when there are several" do
+      other = SpacesSpecHelper.zone("zone-spaces-bld2", ["building"], SpacesSpecHelper::ORG, "Another Building")
+      begin
+        requested = ScheduleHelper.stub({} of String => Array(Tuple(Time, Time)))
+        body = JSON.parse(client.get("#{SPACES_BASE}/free?#{period}", headers: headers).body)
+        body["buildings"].as_a.map(&.["id"].as_s).sort!.should eq ["zone-spaces-bld", "zone-spaces-bld2"]
+        body["zone_id"].raw.should be_nil
+        body["spaces"].as_a.should be_empty
+        requested.should be_empty
+      ensure
+        other.delete
+      end
+    end
+
+    it "rejects periods that are empty or longer than a day" do
+      client.get("#{SPACES_BASE}/free?period_start=#{ending.to_unix}&period_end=#{starting.to_unix}", headers: headers).status_code.should eq 400
+      client.get("#{SPACES_BASE}/free?period_start=#{starting.to_unix}&period_end=#{(starting + 25.hours).to_unix}", headers: headers).status_code.should eq 400
+    end
+
+    it "is a card only tool" do
+      _toolbox, tool = ActionController::MCPServer.description.tool?("spaces_free").not_nil!
+      tool.visibility.should eq ["card"]
     end
   end
 
@@ -234,8 +289,36 @@ describe Spaces do
       response.body.should eq "PNG-DATA"
     end
 
+    it "returns photos stored as downloads, by what's in them" do
+      png = "\x89PNG\r\n\x1A\nPNG-DATA"
+      WebMock.stub(:get, public_photo).to_return(body: png, headers: HTTP::Headers{
+        "Content-Type"        => "application/octet-stream",
+        "Content-Disposition" => %(attachment; filename="bondi.png"),
+      })
+      response = client.get("#{SPACES_BASE}/sys-spaces-1/images/1", headers: headers)
+      response.status_code.should eq 200
+      response.headers["Content-Type"].should start_with "image/png"
+      response.body.should eq png
+    end
+
+    it "returns photos stored as downloads, by their file name" do
+      WebMock.stub(:get, public_photo).to_return(body: "JPEG-DATA", headers: HTTP::Headers{
+        "Content-Type"        => "binary/octet-stream",
+        "Content-Disposition" => %(attachment; filename="bondi.JPG"),
+      })
+      response = client.get("#{SPACES_BASE}/sys-spaces-1/images/1", headers: headers)
+      response.status_code.should eq 200
+      response.headers["Content-Type"].should start_with "image/jpeg"
+    end
+
     it "only returns images" do
       WebMock.stub(:get, "https://cdn.example.com/notes.txt").to_return(body: "hello", headers: HTTP::Headers{"Content-Type" => "text/plain"})
+      client.get("#{SPACES_BASE}/sys-spaces-1/images/2", headers: headers).status_code.should eq 500
+
+      WebMock.stub(:get, "https://cdn.example.com/notes.txt").to_return(body: "hello", headers: HTTP::Headers{
+        "Content-Type"        => "application/octet-stream",
+        "Content-Disposition" => %(attachment; filename="notes.txt"),
+      })
       client.get("#{SPACES_BASE}/sys-spaces-1/images/2", headers: headers).status_code.should eq 500
     end
 

@@ -72,6 +72,41 @@ class Staff < Application
     user
   end
 
+  # someone's busy times in a period, as unix epochs
+  record Busy, email : String, busy : Array(NamedTuple(start: Int64, end: Int64)) do
+    include JSON::Serializable
+  end
+
+  # Get the busy times of a person and the signed in user, for picking a meeting time.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/:id/free_busy")]
+  def free_busy(
+    @[AC::Param::Info(description: "the person's email address", example: "user@org.com")]
+    id : String,
+    @[AC::Param::Info(description: "period start as a unix epoch in seconds", example: "1661725146")]
+    period_start : Int64,
+    @[AC::Param::Info(description: "period end as a unix epoch in seconds, at most a week after the start", example: "1661743123")]
+    period_end : Int64,
+  ) : Array(Busy)
+    raise AC::Route::Param::ValueError.new("must be an email address", "id") unless id.includes?('@')
+    starting = Time.unix(period_start)
+    ending = Time.unix(period_end)
+    unless starting < ending && ending - starting <= 7.days
+      raise AC::Route::Param::ValueError.new("must be after period_start and at most a week after it", "period_end")
+    end
+
+    emails = [id.strip.downcase, user.email.downcase].uniq!
+    schedules = client.get_availability(tenant.which_account(user.email), emails, starting, ending)
+    emails.map do |email|
+      availability = schedules.find(&.calendar.downcase.==(email)).try(&.availability) || [] of PlaceCalendar::Availability
+      busy = availability
+        .select { |avail| avail.status.busy? && avail.starts_at < ending && avail.ends_at > starting }
+        .map { |avail| {start: {avail.starts_at, starting}.max.to_unix, end: {avail.ends_at, ending}.min.to_unix} }
+        .sort_by!(&.[:start])
+      Busy.new(email, busy)
+    end
+  end
+
   # Get a person's photo.
   @[AC::MCP(visibility: :card)]
   @[AC::Route::GET("/:id/photo")]

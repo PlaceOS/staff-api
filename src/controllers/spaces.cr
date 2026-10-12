@@ -61,6 +61,22 @@ class Spaces < Application
     end
   end
 
+  # the rooms free for a meeting, in a building or level
+  struct FreeSpaces
+    include JSON::Serializable
+
+    # the buildings to choose from
+    getter buildings : Array(SpaceZone)
+    # where the rooms were looked for, null until a building is picked
+    @[JSON::Field(emit_null: true)]
+    getter zone_id : String?
+    # smallest first
+    getter spaces : Array(Space)
+
+    def initialize(@buildings, @zone_id, @spaces)
+    end
+  end
+
   # a meeting in the space's calendar
   struct SpaceEvent
     include JSON::Serializable
@@ -124,6 +140,24 @@ class Spaces < Application
   # the authority's organisation zone, spaces and zones are limited to it when configured
   private def org_zone_id : String?
     current_authority.try(&.config["org_zone"]?.try(&.as_s?))
+  end
+
+  # the zones in the organisation's tree, every zone when there's no org zone
+  private def org_zones
+    zones = ::PlaceOS::Model::Zone.all
+    if org = org_zone_id
+      zones = zones.where(<<-SQL, org)
+        id IN (
+          WITH RECURSIVE tree(id) AS (
+            SELECT ?::text
+            UNION
+            SELECT z.id FROM "zone" z INNER JOIN tree t ON z.parent_id = t.id
+          )
+          SELECT id FROM tree
+        )
+        SQL
+    end
+    zones
   end
 
   # SQL limiting systems to bookable ones in every zone listed and the org zone
@@ -190,26 +224,50 @@ class Spaces < Application
     offset : UInt32 = 0_u32,
   ) : Array(SpaceZone)
     build_search_params(query, limit, offset)
-    zones = ::PlaceOS::Model::Zone.all
-
-    if org = org_zone_id
-      zones = zones.where(<<-SQL, org)
-        id IN (
-          WITH RECURSIVE tree(id) AS (
-            SELECT ?::text
-            UNION
-            SELECT z.id FROM "zone" z INNER JOIN tree t ON z.parent_id = t.id
-          )
-          SELECT id FROM tree
-        )
-        SQL
-    end
+    zones = org_zones
     zones = zones.where(parent_id: parent_id) if parent_id
     if tags && !tags.empty?
       zones = zones.where("tags @> #{sql_array(tags)}", tags)
     end
 
     paginate_search(zones, ::PlaceOS::Model::Zone.table_name).map { |zone| SpaceZone.new(zone) }
+  end
+
+  # Find the rooms in a building or level that are free for a whole meeting.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/free")]
+  def free(
+    @[AC::Param::Info(description: "meeting start as a unix epoch in seconds", example: "1661725146")]
+    period_start : Int64,
+    @[AC::Param::Info(description: "meeting end as a unix epoch in seconds, at most a day after the start", example: "1661728746")]
+    period_end : Int64,
+    @[AC::Param::Info(description: "the building or level to look in, defaults to the only building", example: "zone-building")]
+    zone_id : String? = nil,
+    @[AC::Param::Info(description: "minimum number of people the room seats", example: "2")]
+    capacity : Int32? = nil,
+  ) : FreeSpaces
+    starting = Time.unix(period_start)
+    ending = Time.unix(period_end)
+    unless starting < ending && ending - starting <= 1.day
+      raise AC::Route::Param::ValueError.new("must be after period_start and at most a day after it", "period_end")
+    end
+
+    buildings = org_zones.where("tags @> #{sql_array(["building"])}", ["building"]).to_a
+      .sort_by! { |zone| (zone.display_name.presence || zone.name).downcase }
+      .map { |zone| SpaceZone.new(zone) }
+    zone_id ||= buildings.first.id if buildings.size == 1
+    return FreeSpaces.new(buildings, nil, [] of Space) unless zone_id
+
+    clause, args = space_scope([zone_id])
+    query = ::PlaceOS::Model::ControlSystem.where(clause, args).where("email IS NOT NULL AND email <> ?", "")
+    query = query.where("capacity >= ?", capacity) if capacity
+    systems = query.to_a
+    free = free_calendars(systems.compact_map(&.email.try(&.to_s.presence)), starting, ending).to_set
+    spaces = systems
+      .select { |system| system.email.to_s.downcase.in?(free) }
+      .sort_by! { |system| {system.capacity, system.name} }
+      .map { |system| Space.new(system) }
+    FreeSpaces.new(buildings, zone_id, spaces)
   end
 
   # Show a space and its meetings, defaulting to today, with a card for booking it.
@@ -263,10 +321,8 @@ class Spaces < Application
     raise Error::NotFound.new("space #{current_space.id} has no image #{index}") unless url
 
     file = fetch_upload(url, "image/*", MAX_CARD_FILE_BYTES, "space image")
-    media_type = file.media_type
-    unless media_type && media_type.starts_with?("image/")
-      raise Error::BadUpstreamResponse.new("the space image #{url} isn't an image (#{media_type})")
-    end
+    media_type = StaffApi::Upload.image_type(file, url)
+    raise Error::BadUpstreamResponse.new("the space image #{url} isn't an image (#{file.media_type})") unless media_type
 
     @__render_called__ = true
     if file.truncated
@@ -344,9 +400,8 @@ class Spaces < Application
       6. Book with events_book: the title, event_start, event_end, the people's emails as
          attendees (I'm added as the host, the room comes from system_id) and the room's
          system_id. If the room needs approval, tell me the booking is pending approval.
-      7. Once you have enough information, book it without asking me to confirm, then tell me the
-         room, level, time and who's invited. spaces_show (spaces toolbox) shows the room's day
-         with a card.
+      7. Once you have enough information, book it without asking me to confirm, then call
+         events_show with the event's id to show me the meeting.
       PROMPT
   end
 end

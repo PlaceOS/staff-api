@@ -487,6 +487,19 @@ describe "Assets#map" do
     response.headers["X-Map-Pin"].should eq "405.0,5.0"
   end
 
+  it "finds assets imported from desk metadata by their other_data map_id" do
+    assets = DesksSpecHelper.setup
+    asset = assets["unmapped"]
+    asset.map_id = nil
+    asset.other_data = JSON.parse(%({"map_id": "desk_001-01"}))
+    asset.save!
+    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub("</svg>", %(<rect id="desk_001-01" x="400" y="0" width="10" height="10"/></svg>)))
+
+    response = client.get("#{Assets.base_route}/#{asset.id}/map", headers: headers)
+    response.status_code.should eq 200
+    response.headers["X-Map-Pin"].should eq "405.0,5.0"
+  end
+
   it "is not found when the asset isn't drawn on the map" do
     assets = DesksSpecHelper.setup
     DesksSpecHelper.stub_map

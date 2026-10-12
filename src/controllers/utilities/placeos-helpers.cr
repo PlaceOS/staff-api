@@ -105,6 +105,18 @@ module Utils::PlaceOSHelpers
     ::App::Log.error(exception: error) { "failed to signal #{channel}" }
   end
 
+  # The calendars with nothing booked overlapping the period, from one free/busy request
+  def free_calendars(calendars : Array(String), starting : Time, ending : Time) : Array(String)
+    calendars = calendars.map(&.downcase).uniq!
+    return calendars if calendars.empty?
+
+    client.get_availability(tenant.which_account(user.email), calendars, starting, ending).each do |status|
+      busy = status.availability.any? { |avail| avail.status.busy? && starting < avail.ends_at && ending > avail.starts_at }
+      calendars.delete(status.calendar.downcase) if busy
+    end
+    calendars
+  end
+
   # Get the list of local calendars this user has access to
   def get_user_calendars
     client.list_calendars(user.email, only_writable: true)

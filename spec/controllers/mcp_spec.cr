@@ -57,6 +57,14 @@ describe App::MCP do
     mcp_client.get(App::MCP::AUTH_PROBE, headers: HTTP::Headers{"Host" => domain}.merge!(bearer.call)).status_code.should eq 200
   end
 
+  it "asks the model to show the card after booking or finding someone" do
+    headers = mcp_headers.call(bearer.call)
+    instructions = JSON.parse(rpc.call(headers, "initialize", initialize_params).body)["result"]["instructions"].as_s
+    {"after bookings_book call bookings_show", "after events_book call events_show", "call staff_show"}.each do |text|
+      instructions.gsub(/\s+/, " ").should contain text.gsub(/\s+/, " ")
+    end
+  end
+
   it "rejects invalid credentials" do
     headers = mcp_headers.call(HTTP::Headers{"Authorization" => "Bearer not-a-token"})
     response = rpc.call(headers, "initialize", initialize_params)
@@ -128,7 +136,8 @@ describe App::MCP do
     result = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]
     text = result["messages"][0]["content"]["text"].as_s
     text.should start_with "Book me a desk for tomorrow near Jane."
-    {"desks_index", "desks_nearby", "bookings_book", "spaces_zones"}.each { |tool| text.should contain tool }
+    # bookings_show displays the booking's card
+    {"desks_index", "desks_nearby", "bookings_book", "spaces_zones", "bookings_show"}.each { |tool| text.should contain tool }
   end
 
   it "lists the meeting room booking prompt without opening a toolbox" do
@@ -140,7 +149,7 @@ describe App::MCP do
     params = {"name" => JSON::Any.new("spaces_book"), "arguments" => JSON::Any.new(arguments.transform_values { |value| JSON::Any.new(value) })}
     text = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]["messages"][0]["content"]["text"].as_s
     text.should start_with "Book me a meeting room for tomorrow 2pm, 1 hour with Jane for 4 people with vidconf."
-    {"calendars_availability", "calendars_free_busy", "events_book", "spaces_zones", "users_current"}.each { |tool| text.should contain tool }
+    {"calendars_availability", "calendars_free_busy", "events_book", "spaces_zones", "users_current", "events_show"}.each { |tool| text.should contain tool }
   end
 
   it "lists the prompts for checking my bookings and meetings without opening a toolbox" do
@@ -175,6 +184,18 @@ describe App::MCP do
     end
     _toolbox, create = description.tool?("bookings_create").not_nil!
     create.read_only?.should be_false
+  end
+
+  it "lists every tool the cards call without opening a toolbox" do
+    # hosts only let cards call tools in their tool list
+    called = Dir.glob("./cards/*/card.html").flat_map do |card|
+      File.read(card).scan(/name: "(\w+)", arguments|callTool\("(\w+)"/).map { |match| match[1]? || match[2] }
+    end.uniq!
+    called.size.should be > 10
+
+    headers = open_session.call(bearer.call)
+    listed = JSON.parse(rpc.call(headers, "tools/list", no_params).body)["result"]["tools"].as_a.map(&.["name"].as_s)
+    (called - listed).should be_empty
   end
 
   it "lists the space card and booking tools without opening a toolbox" do

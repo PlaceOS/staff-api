@@ -255,7 +255,7 @@
     const [minX, minY, width, height] = map.box;
     const left = ((map.x - minX) / width) * 100;
     const top = ((map.y - minY) / height) * 100;
-    const pin = el("div", { class: "map-pin", style: `left:${left}%;top:${top}%`, title: booking.asset_name || booking.asset_id });
+    const pin = el("div", { class: "map-pin", style: `left:${left}%;top:${top}%`, title: booking.asset_name || booking.title || "" });
     const frame = el("div", { class: "map-frame" });
     // centre the pin once the map has its size
     const centre = () => {
@@ -286,14 +286,15 @@
     const host = booking.user_name || booking.user_email;
     const bookedBy = lower(booking.booked_by_email) !== lower(booking.user_email) ? booking.booked_by_name || booking.booked_by_email : null;
 
-    app.replaceChildren(
+    // replaceChildren, unlike el(), would show a null child as the text "null"
+    app.replaceChildren(...[
       el("div", { class: "row between" },
         el("h1", {}, booking.title || kindLabel.replace(/^./, (c) => c.toUpperCase())),
         el("span", { class: "chip" }, booking.deleted ? "Cancelled" : STATES[state] || state || "Booked")),
       el("dl", {},
         el("dt", {}, "When"), el("dd", {}, when, tz !== localZone ? el("span", { class: "muted" }, ` (${tz})`) : null),
         el("dt", {}, "Type"), el("dd", {}, kindLabel),
-        booking.asset_name || booking.asset_id ? [el("dt", {}, "Asset"), el("dd", {}, booking.asset_name || booking.asset_id)] : null,
+        booking.asset_name && booking.asset_name !== booking.title ? [el("dt", {}, "Asset"), el("dd", {}, booking.asset_name)] : null,
         host ? [el("dt", {}, "For"), el("dd", {}, host)] : null,
         bookedBy ? [el("dt", {}, "Booked by"), el("dd", {}, bookedBy)] : null,
         booking.approved ? [el("dt", {}, "Approval"), el("dd", {}, "Approved")] : null,
@@ -301,7 +302,7 @@
       mapView(),
       canChange(user) ? actions(tz) : null,
       el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || ""),
-    );
+    ].filter(Boolean));
   }
 
   function actions(tz) {
@@ -321,7 +322,6 @@
     const starting = wallClock(booking.booking_start, tz);
     const ending = wallClock(booking.booking_end, tz);
     return el("form", { onsubmit: save },
-      el("label", { class: "wide" }, "Title", el("input", { name: "title", value: booking.title || "", maxlength: "200" })),
       el("label", { class: "wide" }, "Date", el("input", { name: "date", type: "date", required: true, value: starting.date })),
       el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: starting.time, step: "300" })),
       el("label", {}, "End", el("input", { name: "end", type: "time", required: true, value: ending.time, step: "300" })),
@@ -341,7 +341,6 @@
 
     // only send what changed, so unchanged times don't trigger a clash check
     const args = target();
-    if (form.title.value.trim() !== (booking.title || "")) args.title = form.title.value.trim();
     if (form.description.value !== (booking.description || "")) args.description = form.description.value;
     if (start !== booking.booking_start) args.booking_start = start;
     if (end !== booking.booking_end) args.booking_end = end;

@@ -95,22 +95,8 @@ class Calendars < Application
     calendars = all_calendars.to_a
 
     render :no_content, json: [] of Availability if calendars.empty?
-    # perform availability request
-    period_start = Time.unix(period_start)
-    period_end = Time.unix(period_end)
-    user_email = tenant.which_account(user.email)
-    busy = client.get_availability(user_email, calendars, period_start, period_end)
+    calendars = free_calendars(calendars, Time.unix(period_start), Time.unix(period_end))
 
-    # Remove any rooms that have overlapping bookings
-    busy.each do |status|
-      status.availability.each do |avail|
-        if avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start < avail.ends_at) && (period_end > avail.starts_at)
-          calendars.delete(status.calendar.downcase)
-        end
-      end
-    end
-
-    # Return the results
     calendars.map { |email|
       if system = candidates[email]?
         Availability.new(id: email, system: system)

@@ -5,11 +5,49 @@ require "http/client"
 module StaffApi::Upload
   MAX_REDIRECTS = 5
 
+  IMAGE_EXTENSIONS = {
+    ".jpg" => "image/jpeg", ".jpeg" => "image/jpeg", ".png" => "image/png", ".gif" => "image/gif",
+    ".webp" => "image/webp", ".avif" => "image/avif", ".svg" => "image/svg+xml",
+  }
+
+  # `filename="x.png"` or `filename*=UTF-8''x.png` in a Content-Disposition header
+  FILENAME = /filename\*?=(?:UTF-8\x27\x27)?\x22?([^\x22;]+)\x22?/i
+
   # the file's body, read up to the size limit
-  record File, body : String, content_type : String?, truncated : Bool = false do
+  record File, body : String, content_type : String?, truncated : Bool = false, disposition : String? = nil do
     def media_type : String?
       content_type.try { |type| type.split(';').first.strip.downcase }
     end
+  end
+
+  # The file's image media type, nil when it isn't an image. Storage often serves uploads as
+  # `application/octet-stream` downloads, so then it's worked out from the bytes or file name
+  def self.image_type(file : File, url : String) : String?
+    type = file.media_type
+    return type if type && type.starts_with?("image/")
+    return unless type.nil? || type.ends_with?("octet-stream")
+    sniff_image(file.body) ||
+      extension_type(file.disposition.try(&.match(FILENAME)).try(&.[1])) ||
+      extension_type(URI.parse(url).path)
+  end
+
+  protected def self.sniff_image(body : String) : String?
+    bytes = body.to_slice
+    if bytes.size >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF
+      "image/jpeg"
+    elsif body.starts_with?("\x89PNG\r\n\x1A\n")
+      "image/png"
+    elsif body.starts_with?("GIF87a") || body.starts_with?("GIF89a")
+      "image/gif"
+    elsif body.starts_with?("RIFF") && body.byte_slice(8, 4) == "WEBP"
+      "image/webp"
+    elsif (head = body.byte_slice(0, 1024)).lstrip.starts_with?('<') && head.includes?("<svg")
+      "image/svg+xml"
+    end
+  end
+
+  protected def self.extension_type(name : String?) : String?
+    name.try { |file| IMAGE_EXTENSIONS[::File.extname(file).downcase]? }
   end
 
   # the absolute url, relative urls are on the `origin`
@@ -47,7 +85,7 @@ module StaffApi::Upload
                    else
                      response.body
                    end
-            File.new(data.byte_slice(0, max_bytes), response.headers["Content-Type"]?, data.bytesize > max_bytes)
+            File.new(data.byte_slice(0, max_bytes), response.headers["Content-Type"]?, data.bytesize > max_bytes, response.headers["Content-Disposition"]?)
           else
             raise ::Error::BadUpstreamResponse.new("the #{label} #{location} responded with #{response.status_code}")
           end

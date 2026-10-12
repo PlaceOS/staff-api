@@ -15,18 +15,21 @@
   :root {
     --bg: #ffffff; --fg: #1d1f23; --muted: #6b7079; --line: #e3e5e9; --chip: #f1f3f6;
     --accent: #2f6fde; --accent-fg: #ffffff; --danger: #b42318; --ok: #1e6b3a; --error: #b42318;
+    --busy: #fde8e8; --busy-fg: #9b1c1c; --free: #e7f6ec; --free-fg: #1e6b3a; --warn: #9a5b00;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c; --chip: #2a2d33;
-      --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066; color-scheme: dark;
+      --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066;
+      --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3; --warn: #f5c26b; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c; --chip: #2a2d33;
-    --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066; color-scheme: dark;
+    --accent: #5b8ff0; --danger: #f97066; --ok: #9fdcb3; --error: #f97066;
+      --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3; --warn: #f5c26b; color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.4; }
@@ -57,6 +60,17 @@
   ul.desks { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
   ul.desks li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   a { color: var(--accent); }
+  .slots-title { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+  ol.slots { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+  .slot { border-radius: 6px; padding: 5px 10px; display: flex; gap: 12px; font-size: 13px; }
+  .slot time { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; }
+  .slot.busy { background: var(--busy); color: var(--busy-fg); }
+  .slot.free { background: var(--free); color: var(--free-fg); cursor: pointer; border: 0; text-align: left; font: inherit; font-size: 13px; width: 100%; }
+  .note { grid-column: 1 / -1; font-size: 12px; color: var(--warn); min-height: 1.2em; }
+  label.check { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--fg); font-size: 14px; }
+  label.check input { width: auto; }
+  #rooms { grid-column: 1 / -1; display: grid; gap: 8px; }
+  #rooms:empty { display: none; }
 </style>
 </head>
 <body>
@@ -206,9 +220,189 @@
       return;
     }
     person = response.body;
+    schedule = null;
+    rooms = null;
     render();
     loadPhoto();
     loadDesks();
+    loadSchedule();
+  }
+
+  // ---- when we're both free: staff_free_busy for the form's date, shown as slots ----
+  // {date, people: [{email, busy: [{start, end}]}]} or {date, error}
+  let schedule = null;
+  const DAY_FROM = "07:00";
+  const DAY_TO = "19:00";
+
+  const form = () => document.querySelector("#meeting");
+  const lower = (value) => String(value || "").toLowerCase();
+  let myEmail = null; // from users_current
+  const isMe = (email) => !!myEmail && myEmail === lower(email);
+  const nextDay = (date) => {
+    const [y, m, d] = date.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  };
+
+  // the meeting's {start, end} epochs, from the form
+  function meetingTime() {
+    const meeting = form();
+    if (!meeting || !meeting.elements.date.value || !meeting.elements.start.value) return null;
+    const start = zonedEpoch(meeting.elements.date.value, meeting.elements.start.value, localZone);
+    return { start, end: start + Number(meeting.elements.duration.value) * 60 };
+  }
+
+  async function loadSchedule() {
+    const meeting = form();
+    if (!meeting || !meeting.elements.date.value) return;
+    const date = meeting.elements.date.value;
+    if (schedule && schedule.date === date) return;
+    schedule = { date, loading: true };
+    refresh("availability", availabilityView);
+    myEmail = lower((await currentUser()).email) || null;
+    try {
+      const people = await callTool("staff_free_busy", {
+        id: person.email,
+        period_start: zonedEpoch(date, "00:00", localZone),
+        period_end: zonedEpoch(nextDay(date), "00:00", localZone),
+      }, "Unable to check calendars");
+      if (schedule.date === date) schedule = { date, people };
+    } catch (error) {
+      if (schedule.date === date) schedule = { date, error: error.message };
+    }
+    refresh("availability", availabilityView);
+    checkTime();
+  }
+
+  // who's busy at an epoch: ["Jane", "You"]
+  function busyAt(from, to) {
+    const first = String(person.name || "").split(" ")[0] || person.email;
+    return ((schedule && schedule.people) || [])
+      .filter((entry) => entry.busy.some((period) => period.start < to && period.end > from))
+      .map((entry) => isMe(entry.email) ? "You" : first);
+  }
+
+  // the day between DAY_FROM and DAY_TO split where anyone's busy times start or end
+  function slots() {
+    const from = zonedEpoch(schedule.date, DAY_FROM, localZone);
+    const to = zonedEpoch(schedule.date, DAY_TO, localZone);
+    const edges = new Set([from, to]);
+    for (const entry of schedule.people) {
+      for (const period of entry.busy) {
+        if (period.start > from && period.start < to) edges.add(period.start);
+        if (period.end > from && period.end < to) edges.add(period.end);
+      }
+    }
+    const times = [...edges].sort((a, b) => a - b);
+    const result = [];
+    for (let i = 0; i < times.length - 1; i++) {
+      const who = busyAt(times[i], times[i + 1]).join(" & ");
+      const last = result[result.length - 1];
+      if (last && last.who === who) last.end = times[i + 1];
+      else result.push({ start: times[i], end: times[i + 1], who });
+    }
+    return result;
+  }
+
+  function availabilityView() {
+    if (!schedule) return el("div", { id: "availability", class: "wide" });
+    let body;
+    if (schedule.loading) body = el("p", { class: "muted" }, "Checking calendars…");
+    else if (schedule.error) body = el("p", { class: "status error" }, schedule.error);
+    else {
+      body = el("ol", { class: "slots" }, slots().map((slot) => {
+        const range = el("time", {}, `${fmtTime(slot.start, localZone)} – ${fmtTime(slot.end, localZone)}`);
+        if (slot.who) return el("li", { class: "slot busy" }, range, el("span", {}, `${slot.who} busy`));
+        return el("li", {}, el("button", { type: "button", class: "slot free", title: "Start the meeting at this time", onclick: () => pickStart(slot.start) }, range, el("span", {}, "Both free")));
+      }));
+    }
+    return el("div", { id: "availability", class: "wide", style: "display:grid;gap:4px" }, el("span", { class: "slots-title" }, "Availability"), body);
+  }
+
+  function pickStart(epoch) {
+    const meeting = form();
+    const now = nextQuarterHour();
+    meeting.elements.start.value = wallClock(Math.max(epoch, now), localZone).time;
+    timeChanged();
+  }
+
+  // warns, without blocking, when someone's busy at the chosen time
+  function checkTime() {
+    const note = document.getElementById("time-note");
+    const time = meetingTime();
+    if (!note) return;
+    const who = time && schedule && schedule.people ? busyAt(time.start, time.end) : [];
+    note.textContent = who.length ? `${who.join(" & ")} ${who.length > 1 || who[0] === "You" ? "are" : "is"} busy then` : "";
+  }
+
+  function timeChanged() {
+    checkTime();
+    scheduleRooms();
+  }
+
+  // ---- an optional room: spaces_free lists the rooms free for the meeting ----
+  // {key, buildings, zone_id, spaces} or {key, loading} or {key, error}
+  let rooms = null;
+  let roomTimer = null;
+  const BUILDING_KEY = "placeos-staff-card-building";
+  const savedBuilding = () => { try { return localStorage.getItem(BUILDING_KEY) || undefined; } catch { return undefined; } };
+  const saveBuilding = (id) => { try { localStorage.setItem(BUILDING_KEY, id); } catch { /* not kept */ } };
+  const roomWanted = () => form() && form().elements.room_wanted.checked;
+
+  function scheduleRooms() {
+    clearTimeout(roomTimer);
+    if (roomWanted()) roomTimer = setTimeout(loadRooms, 400);
+  }
+
+  async function loadRooms(zoneId) {
+    const time = meetingTime();
+    if (!roomWanted() || !time) return;
+    const zone = zoneId || (rooms && rooms.zone_id) || savedBuilding();
+    const key = `${time.start}-${time.end}-${zone || ""}`;
+    if (rooms && rooms.key === key && !rooms.error) return;
+    const buildings = rooms && rooms.buildings;
+    rooms = { key, loading: true, buildings, zone_id: zone };
+    refresh("rooms", roomsView);
+    try {
+      const args = { period_start: time.start, period_end: time.end, capacity: 2 };
+      if (zone) args.zone_id = zone;
+      const found = await callTool("spaces_free", args, "Unable to find free rooms");
+      if (rooms.key === key) rooms = { key, ...found };
+    } catch (error) {
+      if (rooms.key !== key) return;
+      // a remembered building that's gone, look again without it
+      if (zone && zone === savedBuilding() && !zoneId) {
+        try { localStorage.removeItem(BUILDING_KEY); } catch { /* not kept */ }
+        rooms = { buildings, zone_id: undefined };
+        return loadRooms();
+      }
+      rooms = { key, buildings, zone_id: zone, error: error.message };
+    }
+    refresh("rooms", roomsView);
+  }
+
+  function roomsView() {
+    if (!roomWanted() || !rooms) return el("div", { id: "rooms" });
+    const buildings = rooms.buildings || [];
+    const picker = buildings.length > 1 ? el("label", { class: "wide" }, "Building", el("select", {
+      name: "building",
+      onchange: (event) => { if (event.target.value) { saveBuilding(event.target.value); loadRooms(event.target.value); } },
+    }, el("option", { value: "", selected: !rooms.zone_id }, "Choose a building"),
+      buildings.map((zone) => el("option", { value: zone.id, selected: zone.id === rooms.zone_id }, zone.display_name || zone.name)))) : null;
+
+    let body = null;
+    if (rooms.loading) body = el("p", { class: "muted" }, "Finding free rooms…");
+    else if (rooms.error) body = el("p", { class: "status error" }, rooms.error);
+    else if (rooms.zone_id && !(rooms.spaces || []).length) body = el("p", { class: "muted" }, "No rooms are free then, try another time.");
+    else if (rooms.zone_id) {
+      body = el("label", { class: "wide" }, "Room", el("select", { name: "system_id" },
+        rooms.spaces.map((space) => el("option", { value: space.id }, `${space.display_name || space.name} · seats ${space.capacity}${space.approval ? " · needs approval" : ""}`))));
+    }
+    return el("div", { id: "rooms" }, picker, body);
+  }
+
+  function refresh(id, view) {
+    const node = document.getElementById(id);
+    if (node) node.replaceWith(view());
   }
 
   // only shown when the person has booked a desk and it isn't the signed in user
@@ -293,7 +487,8 @@
     const starting = wallClock(at, localZone);
     const subtitle = [person.title, person.department].filter(Boolean).join(" · ");
 
-    app.replaceChildren(
+    // replaceChildren, unlike el(), would show a null child as the text "null"
+    app.replaceChildren(...[
       el("div", { class: "row", style: "gap:12px;flex-wrap:nowrap" },
         avatarView(),
         el("div", {},
@@ -305,35 +500,54 @@
         person.phone ? [el("dt", {}, "Phone"), el("dd", {}, link(person.phone, `tel:${person.phone.replace(/[^\d+]/g, "")}`))] : null),
       person.email ? el("section", {},
         el("strong", {}, `Book a meeting with ${first}`),
-        el("form", { onsubmit: book },
+        el("form", { id: "meeting", onsubmit: book },
           el("label", { class: "wide" }, "Title", el("input", { name: "title", required: true, value: `Meeting with ${first}`, maxlength: "200" })),
-          el("label", { class: "wide" }, "Date", el("input", { name: "date", type: "date", required: true, value: starting.date })),
-          el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: starting.time, step: "300" })),
-          el("label", {}, "Duration", el("select", { name: "duration" },
+          el("label", { class: "wide" }, "Date", el("input", { name: "date", type: "date", required: true, value: starting.date, onchange: () => { loadSchedule(); timeChanged(); } })),
+          availabilityView(),
+          el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: starting.time, step: "300", onchange: timeChanged })),
+          el("label", {}, "Duration", el("select", { name: "duration", onchange: timeChanged },
             [15, 30, 45, 60, 90, 120].map((minutes) => el("option", { value: minutes, selected: minutes === 30 }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`)))),
+          el("div", { id: "time-note", class: "note", role: "status" }),
+          el("label", { class: "check" }, el("input", { name: "room_wanted", type: "checkbox", onchange: () => { refresh("rooms", roomsView); loadRooms(); } }), "Add a room"),
+          roomsView(),
           el("div", { class: "actions" }, el("button", { type: "submit", class: "primary", disabled: busy }, busy ? "Booking…" : "Book meeting")))) : null,
       el("section", { id: "desks" }),
       el("div", { id: "status", class: "status", role: "status" }),
-    );
+    ].filter(Boolean));
     renderDesks();
   }
 
   async function book(submitted) {
     submitted.preventDefault();
     const form = submitted.target;
-    const start = zonedEpoch(form.date.value, form.start.value, localZone);
-    const end = start + Number(form.duration.value) * 60;
+    const { start, end } = meetingTime();
     if (end <= Date.now() / 1000) return setStatus("That time has already passed", "error");
+
+    // the room must be one found for this time
+    const time = `${start}-${end}-`;
+    const room = form.elements.room_wanted.checked ? form.elements.system_id && form.elements.system_id.value : null;
+    if (form.elements.room_wanted.checked && (!room || !rooms || !rooms.key.startsWith(time))) {
+      return setStatus("Pick a free room, or untick Add a room", "error");
+    }
+    const space = room ? rooms.spaces.find((item) => item.id === room) : null;
 
     busy = true;
     form.querySelector("button[type=submit]").disabled = true;
     setStatus("Booking…");
     try {
-      const title = form.title.value.trim();
-      await callTool("events_book", { title, event_start: start, event_end: end, attendees: [person.email], timezone: localZone }, "The meeting couldn't be booked");
-      const summary = `Booked "${title}" with ${person.name || person.email}, ${fmtDay(start, localZone)} ${fmtTime(start, localZone)} – ${fmtTime(end, localZone)}.`;
+      const title = form.elements.title.value.trim();
+      const args = { title, event_start: start, event_end: end, attendees: [person.email], timezone: localZone };
+      if (room) args.system_id = room;
+      await callTool("events_book", args, "The meeting couldn't be booked");
+      const where = space ? ` in ${space.display_name || space.name}${space.approval ? " (pending approval)" : ""}` : "";
+      const summary = `Booked "${title}" with ${person.name || person.email}${where}, ${fmtDay(start, localZone)} ${fmtTime(start, localZone)} – ${fmtTime(end, localZone)}.`;
       request("ui/update-model-context", { content: [{ type: "text", text: summary }] }).catch(() => {});
       setStatus(summary, "ok");
+      // the calendars changed: show it
+      schedule = null;
+      rooms = null;
+      loadSchedule();
+      if (room) loadRooms();
     } catch (error) {
       setStatus(error.message, "error");
     }

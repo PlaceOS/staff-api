@@ -125,8 +125,7 @@
   function showResult(result) {
     const response = envelope(result);
     if (!response || response.status >= 400 || !response.body || !response.body.space) {
-      app.innerHTML = "";
-      app.append(el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
+      app.replaceChildren(el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
       return;
     }
     schedule = response.body;
@@ -259,8 +258,8 @@
     const place = zones.filter((zone) => !zone.tags.includes("org")).map((zone) => zone.display_name || zone.name);
     const allDay = (schedule.events || []).filter((event) => event.all_day);
 
-    app.innerHTML = "";
-    app.append(
+    // replaceChildren, unlike el(), would show a null child as the text "null"
+    app.replaceChildren(...[
       carousel(),
       el("div", { class: "row between" },
         el("h1", {}, space.display_name || space.name),
@@ -278,7 +277,7 @@
         allDay.map((event) => el("p", { class: "muted" }, `All day: ${event.title || "Private meeting"}`)),
         schedule.events ? el("ol", { class: "slots" }, slots().map(slotView)) : null),
       space.email ? bookingForm() : el("p", { class: "muted" }, "This space has no calendar, so it can't be booked here."),
-    );
+    ].filter(Boolean));
   }
 
   function slotView(slot) {
