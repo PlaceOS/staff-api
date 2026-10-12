@@ -8176,6 +8176,129 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/desks/near_colleagues:
+    summary: 'Desks, the bookable desk assets on each level: find free ones, or the
+      ones nearest a desk or a colleague'
+    get:
+      summary: Rank the free desks near where your colleagues are sitting, by level,
+        defaulting to your contacts.
+      tags:
+      - Desks
+      operationId: Desks_near_colleagues
+      parameters:
+      - name: emails
+        in: query
+        description: comma separated colleague emails, defaults to your saved contacts
+        example:
+        - jane@org.com
+        - sam@org.com
+        schema:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              type: string
+      - name: period_start
+        in: query
+        description: period start as a unix epoch in seconds, defaults to now
+        example: 1661725146
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+      - name: period_end
+        in: query
+        description: period end as a unix epoch in seconds, defaults to the end of
+          the period start's day
+        example: 1661743123
+        schema:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+      - name: limit
+        in: query
+        description: the maximum number of desks to return per level, up to 100
+        example: 10
+        schema:
+          type: integer
+          format: Int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Desks.NearColleagues'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/events:
     summary: Calendar events (meetings) on user and room resource calendars (Office365
       / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
@@ -13376,6 +13499,185 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/spaces/{id}/images/{index}:
+    summary: Spaces, the bookable rooms in the organisation's buildings, with the
+      zones and room features to filter them by
+    get:
+      summary: Get one of the space's images.
+      tags:
+      - Spaces
+      operationId: Spaces_image
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: index
+        in: path
+        description: the image's position in the space's images, from 0
+        example: 0
+        required: true
+        schema:
+          type: integer
+          format: Int32
+      responses:
+        "200":
+          description: OK
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+  /api/staff/v1/spaces/{id}/map:
+    summary: Spaces, the bookable rooms in the organisation's buildings, with the
+      zones and room features to filter them by
+    get:
+      summary: Get the space's level map, an SVG, with the space's position in the
+        X-Map-Pin header.
+      tags:
+      - Spaces
+      operationId: Spaces_map
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "501":
+          description: Not Implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "511":
+          description: Network Authentication Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "406":
+          description: Not Acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "415":
+          description: Unsupported Media Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ContentError'
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.ValidationError'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
+        "405":
+          description: Method Not Allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/people:
     summary: People, the staff directory of the tenant's Office365 or Google organisation
       (search users, user details, managers, group memberships)
@@ -18038,6 +18340,34 @@ components:
       - period_end
       - desks
       description: the free desks closest to the origin desk
+    Desks.NearColleagues:
+      type: object
+      properties:
+        period_start:
+          type: integer
+          format: Int64
+        period_end:
+          type: integer
+          format: Int64
+        levels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Desks.ColleagueLevel'
+        not_seated:
+          type: array
+          items:
+            type: string
+        unranked:
+          type: array
+          items:
+            type: string
+      required:
+      - period_start
+      - period_end
+      - levels
+      - not_seated
+      - unranked
+      description: where colleagues are sitting and the free desks near them
     PlaceCalendar.Event:
       type: object
       properties:
@@ -19571,6 +19901,27 @@ components:
       - booking_start
       - booking_end
       description: one of the signed in user's desk bookings
+    Desks.ColleagueLevel:
+      type: object
+      properties:
+        level:
+          $ref: '#/components/schemas/Desks.Level'
+        timezone:
+          type: string
+        colleagues:
+          type: array
+          items:
+            $ref: '#/components/schemas/Desks.Colleague'
+        desks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Desks.Desk'
+      required:
+      - level
+      - timezone
+      - colleagues
+      - desks
+      description: the colleagues sitting on a level and the free desks near them
     PlaceCalendar.Attachment:
       type: object
       properties:
@@ -20119,6 +20470,29 @@ components:
       enum:
       - busy
       - free
+    Desks.Colleague:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          anyOf:
+          - type: "null"
+          - type: string
+        desk:
+          $ref: '#/components/schemas/Desks.Desk'
+        booking_start:
+          type: integer
+          format: Int64
+        booking_end:
+          type: integer
+          format: Int64
+      required:
+      - email
+      - desk
+      - booking_start
+      - booking_end
+      description: a colleague and the desk they've booked
     Office365.Identity:
       type: object
       properties:

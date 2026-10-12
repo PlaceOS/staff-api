@@ -117,6 +117,54 @@ class Desks < Application
     end
   end
 
+  # a colleague and the desk they've booked
+  struct Colleague
+    include JSON::Serializable
+
+    getter email : String
+    getter name : String?
+    getter desk : Desk
+    getter booking_start : Int64
+    getter booking_end : Int64
+
+    def initialize(@email, @name, @desk, booking : Booking)
+      @booking_start = booking.booking_start
+      @booking_end = booking.booking_end
+    end
+  end
+
+  # the colleagues sitting on a level and the free desks near them
+  struct ColleagueLevel
+    include JSON::Serializable
+
+    getter level : Level
+    getter timezone : String
+    getter colleagues : Array(Colleague)
+    # free desks, best first: ranked by every colleague, so a desk near most of them wins.
+    # The distance is the average distance to the colleagues, in level map units
+    getter desks : Array(Desk)
+
+    def initialize(@level, @timezone, @colleagues, @desks)
+    end
+  end
+
+  # where colleagues are sitting and the free desks near them
+  struct NearColleagues
+    include JSON::Serializable
+
+    getter period_start : Int64
+    getter period_end : Int64
+    # levels with the most colleagues first
+    getter levels : Array(ColleagueLevel)
+    # colleagues who haven't booked a desk in the period
+    getter not_seated : Array(String)
+    # colleagues whose desk couldn't be placed on a level map
+    getter unranked : Array(String)
+
+    def initialize(@period_start, @period_end, @levels, @not_seated, @unranked)
+    end
+  end
+
   # a desk's name, as the workplace apps show it
   def self.name_of(asset : ::PlaceOS::Model::Asset) : String
     asset.identifier.presence || asset.name.presence || asset.id.to_s
@@ -342,6 +390,122 @@ class Desks < Application
     NearbyDesks.new(Desk.new(origin), seated, Level.new(level), location.name, period_start, period_end, desks)
   end
 
+  # Rank the free desks near where your colleagues are sitting, by level, defaulting to your contacts.
+  @[AC::MCP(root: true)]
+  @[AC::Route::GET("/near_colleagues", converters: {emails: ConvertStringArray})]
+  def near_colleagues(
+    @[AC::Param::Info(description: "comma separated colleague emails, defaults to your saved contacts", example: "jane@org.com,sam@org.com")]
+    emails : Array(String)? = nil,
+    @[AC::Param::Info(description: "period start as a unix epoch in seconds, defaults to now", example: "1661725146")]
+    period_start : Int64? = nil,
+    @[AC::Param::Info(description: "period end as a unix epoch in seconds, defaults to the end of the period start's day", example: "1661743123")]
+    period_end : Int64? = nil,
+    @[AC::Param::Info(description: "the maximum number of desks to return per level, up to 100", example: "10")]
+    limit : Int32 = 10,
+  ) : NearColleagues
+    names = {} of String => String
+    if emails.nil? || emails.empty?
+      contacts = ::PlaceOS::Model::Metadata.where(parent_id: user_token.id, name: "contacts").to_a.first?
+      contacts.try(&.details.as_a?).try &.each do |contact|
+        next unless email = contact["email"]?.try(&.as_s?).try(&.strip.downcase).presence
+        names[email] = contact["name"]?.try(&.as_s?) || email
+      end
+      emails = names.keys
+    else
+      emails = emails.map(&.strip.downcase).uniq!
+    end
+    raise Error::BadRequest.new("no colleagues: provide their emails or save them as contacts") if emails.empty?
+    emails = emails.first(MAX_RESULTS)
+
+    location = org_timezone
+    period_start ||= bookable_now
+    period_end ||= Time.unix(period_start).in(location).at_end_of_day.to_unix
+    raise Error::BadRequest.new("period_end must be after period_start") unless period_end > period_start
+
+    # each colleague's earliest desk booking in the period
+    digests = emails.map { |email| ::PlaceOS::Model::Email.new(email).digest }
+    args = digests.map(&.as(::PgORM::Value))
+    args << period_end << period_start
+    seated = {} of String => Booking
+    Booking.by_tenant(tenant.id)
+      .where(
+        "booking_type = 'desk' AND email_digest = ANY(#{sql_array(digests)}) AND booking_start < ? AND booking_end > ? AND rejected <> TRUE AND deleted <> TRUE AND checked_out_at IS NULL",
+        args
+      )
+      .order(:booking_start).to_a
+      .each { |booking| seated[booking.user_email.to_s.downcase] ||= booking }
+
+    desk_ids = seated.values.map { |booking| booking.asset_ids.first? || booking.asset_id }.uniq!
+    desk_args = desk_ids.map(&.as(::PgORM::Value))
+    desk_args << authority_id
+    assets = desk_ids.empty? ? {} of String => ::PlaceOS::Model::Asset : ::PlaceOS::Model::Asset
+      .where("id = ANY(#{sql_array(desk_ids)}) AND #{AUTHORITY_SCOPE}", desk_args)
+      .to_a.index_by(&.id.to_s)
+
+    unranked = [] of String
+    by_level = Hash(String, Array(Colleague)).new { |hash, key| hash[key] = [] of Colleague }
+    seated.each do |email, booking|
+      asset = assets[booking.asset_ids.first? || booking.asset_id]?
+      unless asset && (level_id = asset.zone_id)
+        unranked << email
+        next
+      end
+      by_level[level_id] << Colleague.new(email, names[email]? || booking.user_name.presence, Desk.new(asset), booking)
+    end
+
+    levels = by_level.compact_map do |level_id, colleagues|
+      ranked = rank_near(level_id, colleagues, period_start, period_end, limit.clamp(1, MAX_RESULTS))
+      unless ranked
+        unranked.concat colleagues.map(&.email)
+        next
+      end
+      ranked
+    end
+    levels.sort_by! { |level| -level.colleagues.size }
+
+    NearColleagues.new(period_start, period_end, levels, emails - seated.keys, unranked)
+  end
+
+  # Borda count: every colleague ranks the free desks by distance and awards points in that
+  # order, so a desk a fair walk from several colleagues beats one next to a single colleague.
+  # nil when the level can't be ranked, i.e. it has no map
+  private def rank_near(level_id : String, colleagues : Array(Colleague), starting : Int64, ending : Int64, limit : Int32) : ColleagueLevel?
+    level = ::PlaceOS::Model::Zone.find?(level_id)
+    return nil unless level && (url = level.map_id.presence)
+    map = begin
+      level_map(url)
+    rescue error : Error::BadUpstreamResponse
+      Log.warn(exception: error) { "unable to rank desks on level #{level_id}" }
+      return nil
+    end
+
+    origins = colleagues.compact_map { |colleague| colleague.desk.map_id if map.centers.has_key?(colleague.desk.map_id) }
+    return nil if origins.empty?
+
+    candidates = free!(level_desks(level_id).select! { |asset| map.centers.has_key?(Desks.map_id_of(asset)) }, starting, ending)
+    scores = Hash(String, Int32).new(0)
+    distances = Hash(String, Float64).new(0.0)
+    origins.each do |origin|
+      ranked = candidates.map { |asset| {asset, map.distance(origin, Desks.map_id_of(asset)) || Float64::MAX} }.sort_by!(&.[1])
+      ranked.each_with_index do |(asset, distance), index|
+        scores[asset.id.to_s] += ranked.size - index
+        distances[asset.id.to_s] += distance / origins.size
+      end
+    end
+
+    desks = candidates
+      .sort_by { |asset| {-scores[asset.id.to_s], Desks.name_of(asset)} }
+      .first(limit)
+      .map { |asset| Desk.new(asset, distances[asset.id.to_s]) }
+    ColleagueLevel.new(Level.new(level), timezone_of(level).name, colleagues, desks)
+  end
+
+  # the organisation zone's timezone
+  private def org_timezone : Time::Location
+    org_zone = current_authority.try(&.config["org_zone"]?.try(&.as_s?))
+    org_zone.try { |zone_id| ::PlaceOS::Model::Zone.find?(zone_id).try(&.timezone) } || DEFAULT_TIME_ZONE
+  end
+
   # Book a desk: find a free desk on the right level, or near a colleague, and book it.
   @[AC::MCP(prompt: true, root: true, title: "Book a desk")]
   def book(
@@ -377,7 +541,9 @@ class Desks < Application
          haven't said which, ask me, don't guess. Match levels loosely: "first floor" is "level 1".
       3. To sit near a colleague, find their email with the staff toolbox if you only have a
          name, then desks_nearby with their email gives the free desks closest to theirs,
-         on their level and for their booking's times.
+         on their level and for their booking's times. To sit near several colleagues or my
+         team, desks_near_colleagues ranks the free desks on each level by how close they are
+         to all of them (it defaults to my saved contacts).
       4. Otherwise desks_index with the level's zone id and the period lists the free desks
          and their features. Prefer desks with the features I asked for.
       5. I can only hold one desk booking a day. desks_index lists mine as your_bookings: if I

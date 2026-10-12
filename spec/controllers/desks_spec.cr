@@ -99,6 +99,16 @@ module DesksSpecHelper
     seen
   end
 
+  # the signed in user's saved contacts, as the workplace apps store them
+  def contacts(people : Array(String)) : Nil
+    user = Mock::Token.generate_auth_user(false, false, ["manage", "admin"])
+    PlaceOS::Model::Metadata.where(parent_id: user.id, name: "contacts").to_a.each(&.delete)
+    return if people.empty?
+    meta = PlaceOS::Model::Generator.metadata("contacts", user.id.as(String))
+    meta.details = JSON.parse(people.map { |email| {name: email.split('@').first.capitalize, email: email, groups: [] of String} }.to_json)
+    meta.save!
+  end
+
   def period : String
     "period_start=#{Time.utc.to_unix}&period_end=#{2.hours.from_now.to_unix}"
   end
@@ -311,6 +321,67 @@ describe Desks do
   end
 end
 
+describe "Desks#near_colleagues" do
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
+  before_each do
+    StaffApi::LevelMap.clear_cache
+    Booking.clear
+  end
+
+  it "ranks the free desks by how close they are to all the colleagues on a level" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map
+    DesksSpecHelper.contacts(["ann@example.com", "bob@example.com", "cat@example.com"])
+    tenant_id = get_tenant.id.not_nil!
+    BookingsHelper.create_booking(tenant_id, "ann@example.com", asset_id: assets["far"].id.not_nil!)
+    BookingsHelper.create_booking(tenant_id, "bob@example.com", asset_id: assets["origin"].id.not_nil!)
+
+    response = client.get("#{DESKS_BASE}/near_colleagues?#{DesksSpecHelper.period}", headers: headers)
+    response.status_code.should eq 200
+    body = JSON.parse(response.body)
+    levels = body["levels"].as_a
+    levels.size.should eq 1
+    levels[0]["level"]["id"].should eq DesksSpecHelper::LEVEL
+    levels[0]["colleagues"].as_a.map(&.["email"].as_s).sort!.should eq ["ann@example.com", "bob@example.com"]
+    levels[0]["colleagues"].as_a.find!(&.["email"].==("ann@example.com"))["name"].should eq "Ann"
+    # ann (desk.3) ranks desk.4 then desk.2, bob (desk.1) desk.2 then desk.4: a tie, broken by name
+    desks = levels[0]["desks"].as_a
+    desks.map(&.["id"].as_s).should eq [assets["near"].id, assets["mid"].id]
+    # desk.2 is 80 from ann and 20 from bob
+    desks[0]["distance"].as_f.should eq 50.0
+    body["not_seated"].as_a.map(&.as_s).should eq ["cat@example.com"]
+    body["unranked"].as_a.should be_empty
+  end
+
+  it "ranks near the colleagues provided" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map
+    BookingsHelper.create_booking(get_tenant.id.not_nil!, "ann@example.com", asset_id: assets["far"].id.not_nil!)
+
+    response = client.get("#{DESKS_BASE}/near_colleagues?emails=Ann@example.com&#{DesksSpecHelper.period}", headers: headers)
+    response.status_code.should eq 200
+    # desk.3 is at (105, 5): desk.4 is 50 away, desk.2 80 and desk.1 100
+    JSON.parse(response.body)["levels"][0]["desks"].as_a.map(&.["id"].as_s).should eq [assets["mid"].id, assets["near"].id, assets["origin"].id]
+  end
+
+  it "reports colleagues whose desks can't be placed on a map" do
+    DesksSpecHelper.setup
+    BookingsHelper.create_booking(get_tenant.id.not_nil!, "ann@example.com", asset_id: "asset-not-a-desk")
+
+    body = JSON.parse(client.get("#{DESKS_BASE}/near_colleagues?emails=ann@example.com&#{DesksSpecHelper.period}", headers: headers).body)
+    body["levels"].as_a.should be_empty
+    body["unranked"].as_a.map(&.as_s).should eq ["ann@example.com"]
+  end
+
+  it "needs colleagues" do
+    DesksSpecHelper.setup
+    DesksSpecHelper.contacts([] of String)
+    client.get("#{DESKS_BASE}/near_colleagues", headers: headers).status_code.should eq 400
+  end
+end
+
 describe "Bookings#book" do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
@@ -441,7 +512,7 @@ describe "Assets#map" do
 
   it "refuses maps too large to relay" do
     assets = DesksSpecHelper.setup
-    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub("</svg>", "<!-- #{"x" * Assets::MAX_MAP_BYTES} --></svg>"))
+    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub("</svg>", "<!-- #{"x" * Utils::PlaceOSHelpers::MAX_CARD_FILE_BYTES} --></svg>"))
     client.get("#{Assets.base_route}/#{assets["near"].id}/map", headers: headers).status_code.should eq 413
   end
 end

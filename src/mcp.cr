@@ -30,8 +30,9 @@ module App::MCP
       lists spaces, zones and room features; spaces_show shows a room's meetings with a
       card for booking it. Other tools take these ids as filters (`zones`, `zone_ids`,
       `system_ids`). Book meetings and rooms with events_book
-    - desks are assets drawn on their level's map. desks_nearby lists the free desks
-      closest to a desk, or to the desk a colleague has booked; book one with bookings_book
+    - desks are assets drawn on their level's map. desks_index lists a level's free desks,
+      desks_nearby the free desks closest to a desk or a colleague's desk, and
+      desks_near_colleagues the free desks near several colleagues; book with bookings_book
     - times are unix epochs in seconds (`period_start`, `period_end`, `booking_start`,
       `event_start`...). Work them out in the user's time zone, a booking's `timezone`
       field says which zone it was made in

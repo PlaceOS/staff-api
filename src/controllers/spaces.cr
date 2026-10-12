@@ -110,7 +110,7 @@ class Spaces < Application
     raise Error::Forbidden.new("guests can't browse spaces") if user_token.guest_scope?
   end
 
-  @[AC::Route::Filter(:before_action, only: [:show])]
+  @[AC::Route::Filter(:before_action, only: [:show, :image, :map])]
   private def find_space(id : String)
     Log.context.set(system_id: id)
     clause, args = space_scope
@@ -250,5 +250,45 @@ class Spaces < Application
 
     space_zones = zone_ids.compact_map { |zone_id| zones.find(&.id.==(zone_id)) }.map { |zone| SpaceZone.new(zone) }
     SpaceSchedule.new(Space.new(system), space_zones, location.name, starting.to_unix, ending.to_unix, events, events_error)
+  end
+
+  # Get one of the space's images.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/:id/images/:index")]
+  def image(
+    @[AC::Param::Info(description: "the image's position in the space's images, from 0", example: "0")]
+    index : Int32,
+  ) : Nil
+    url = current_space.images[index]? if index >= 0
+    raise Error::NotFound.new("space #{current_space.id} has no image #{index}") unless url
+
+    file = fetch_upload(url, "image/*", MAX_CARD_FILE_BYTES, "space image")
+    media_type = file.media_type
+    unless media_type && media_type.starts_with?("image/")
+      raise Error::BadUpstreamResponse.new("the space image #{url} isn't an image (#{media_type})")
+    end
+
+    @__render_called__ = true
+    if file.truncated
+      response.status = :payload_too_large
+      response.content_type = "text/plain"
+      response.print "the image is too large to return"
+    else
+      response.content_type = media_type
+      response.print file.body
+    end
+  end
+
+  # Get the space's level map, an SVG, with the space's position in the X-Map-Pin header.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/:id/map")]
+  def map : Nil
+    system = current_space
+    zones = system.zones.empty? ? [] of ::PlaceOS::Model::Zone : ::PlaceOS::Model::Zone.find_all(system.zones).to_a.select!(&.map_id.presence)
+    # the space's level, otherwise its most specific zone with a map (systems list zones from the org down)
+    level = zones.find(&.tags.includes?("level")) ||
+            system.zones.reverse.compact_map { |zone_id| zones.find(&.id.==(zone_id)) }.first?
+    raise Error::NotFound.new("space #{system.id} isn't on a level with a map") unless level
+    render_level_map(level, system.map_id.presence || system.id.as(String))
   end
 end

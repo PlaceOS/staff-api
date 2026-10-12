@@ -1,5 +1,5 @@
-require "http/client"
 require "xml"
+require "./upload"
 
 # A level map SVG, indexing the centre of every element with an id so we can rank
 # things, such as desks, by how close they are to each other.
@@ -97,28 +97,24 @@ struct StaffApi::LevelMap
   # Loading
   # =========================
 
-  MAX_REDIRECTS = 5
-  CACHE_TTL     = 10.minutes
-  CACHE_SIZE    = 32
+  CACHE_TTL  = 10.minutes
+  CACHE_SIZE = 32
 
   @@cache = {} of String => Tuple(LevelMap, Time::Instant)
   @@cache_lock = Mutex.new
 
-  # Fetches and parses the map at `url`, caching it for `CACHE_TTL`.
-  #
-  # A relative url resolves against `origin`, the authority's domain. Redirects are
-  # followed, but `credentials` are only ever sent to the origin's host, so a rest-api
-  # upload (which redirects to its storage) never leaks the caller's token.
+  # Fetches (see `StaffApi::Upload.fetch`) and parses the map at `url`, caching it for `CACHE_TTL`.
   def self.load(url : String, origin : URI, credentials : HTTP::Headers) : LevelMap
-    location = origin.resolve(url.strip)
-    key = location.to_s
+    key = StaffApi::Upload.resolve(url, origin).to_s
 
     if cached = @@cache_lock.synchronize { @@cache[key]? }
       map, loaded_at = cached
       return map if Time.instant - loaded_at < CACHE_TTL
     end
 
-    map = new(fetch(location, origin, credentials))
+    file = StaffApi::Upload.fetch(url, origin, credentials, accept: "image/svg+xml, */*;q=0.5", label: "level map")
+    raise ::Error::BadUpstreamResponse.new("the level map #{url} is too large") if file.truncated
+    map = new(file.body)
     @@cache_lock.synchronize do
       @@cache.delete(key)
       # hashes keep their insertion order, so the first entry is the oldest
@@ -133,39 +129,6 @@ struct StaffApi::LevelMap
   # :nodoc: specs reset the cache between examples
   def self.clear_cache : Nil
     @@cache_lock.synchronize { @@cache.clear }
-  end
-
-  protected def self.fetch(location : URI, origin : URI, credentials : HTTP::Headers) : String
-    (MAX_REDIRECTS + 1).times do
-      unless location.scheme.in?("http", "https") && location.host.presence
-        raise ::Error::BadUpstreamResponse.new("unsupported level map url #{location}")
-      end
-
-      headers = HTTP::Headers{"Accept" => "image/svg+xml, */*;q=0.5"}
-      headers.merge!(credentials) if same_origin?(location, origin)
-
-      response = HTTP::Client.new(location) do |client|
-        client.connect_timeout = 5.seconds
-        client.read_timeout = 20.seconds
-        client.get(location.request_target, headers)
-      end
-
-      if response.status.redirection? && (target = response.headers["Location"]?)
-        location = location.resolve(target)
-        next
-      end
-      return response.body if response.success?
-      raise ::Error::BadUpstreamResponse.new("the level map #{location} responded with #{response.status_code}")
-    end
-    raise ::Error::BadUpstreamResponse.new("the level map #{location} redirected too many times")
-  rescue error : IO::Error | OpenSSL::Error
-    raise ::Error::BadUpstreamResponse.new("unable to load the level map #{location}: #{error.message}")
-  end
-
-  protected def self.same_origin?(location : URI, origin : URI) : Bool
-    location.scheme == origin.scheme &&
-      location.host.try(&.downcase) == origin.host.try(&.downcase) &&
-      location.port == origin.port
   end
 
   # SVG parsing

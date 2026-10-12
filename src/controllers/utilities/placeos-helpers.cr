@@ -8,7 +8,43 @@ module Utils::PlaceOSHelpers
   # Loads a level map (a zone's `map_id`), a relative url is a PlaceOS upload on the
   # authority's domain, loaded with this request's credentials
   def level_map(url : String) : StaffApi::LevelMap
-    StaffApi::LevelMap.load(url, URI.parse("https://#{current_authority.as(PlaceOS::Model::Authority).domain}"), map_credentials)
+    StaffApi::LevelMap.load(url, upload_origin, map_credentials)
+  end
+
+  # Fetches a file PlaceOS links to, such as an image, see `level_map`
+  def fetch_upload(url : String, accept : String, max_bytes : Int32, label : String) : StaffApi::Upload::File
+    StaffApi::Upload.fetch(url, upload_origin, map_credentials, accept: accept, max_bytes: max_bytes, label: label)
+  end
+
+  # the largest file relayed to a card, MCP hosts send it in a single message
+  MAX_CARD_FILE_BYTES = 5 * 1024 * 1024
+
+  # Responds with the level map SVG and where the element is on it, in the `X-Map-Pin`
+  # (x,y), `X-Map-View-Box` and `X-Map-Level` headers. 404 when it isn't drawn on the map
+  def render_level_map(level : PlaceOS::Model::Zone, element_id : String) : Nil
+    url = level.map_id.presence
+    raise Error::NotFound.new("level #{level.id} doesn't have a map") unless url
+    map = level_map(url)
+    pin = map.centers[element_id]?
+    raise Error::NotFound.new("#{element_id} isn't drawn on the level map") unless pin
+
+    @__render_called__ = true
+    response.headers["X-Map-Level"] = level.id.as(String)
+    response.headers["X-Map-Pin"] = "#{pin.x},#{pin.y}"
+    map.view_box.try { |box| response.headers["X-Map-View-Box"] = box }
+    svg = map.svg
+    if svg.bytesize > MAX_CARD_FILE_BYTES
+      response.status = :payload_too_large
+      response.content_type = "text/plain"
+      response.print "the level map is too large to return (#{svg.bytesize} bytes)"
+    else
+      response.content_type = "image/svg+xml"
+      response.print svg
+    end
+  end
+
+  private def upload_origin : URI
+    URI.parse("https://#{current_authority.as(PlaceOS::Model::Authority).domain}")
   end
 
   private def map_credentials : HTTP::Headers

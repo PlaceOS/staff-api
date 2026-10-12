@@ -188,4 +188,79 @@ describe Spaces do
       client.get("#{SPACES_BASE}/sys-missing", headers: headers).status_code.should eq 404
     end
   end
+
+  describe "#image and #map" do
+    upload = "https://toby.staff-api.dev/api/engine/v2/uploads/upload-photo/url"
+    storage = "https://storage.example.com/photos/alpine.jpg?signature=abc"
+    public_photo = "https://cdn.example.com/bondi.png"
+    map_url = "https://toby.staff-api.dev/maps/level-1.svg"
+    svg = %(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><rect id="room.alpine" x="10" y="10" width="20" height="10"/></svg>)
+
+    before_each do
+      StaffApi::LevelMap.clear_cache
+      system = PlaceOS::Model::ControlSystem.find!("sys-spaces-1")
+      system.images = ["/api/engine/v2/uploads/upload-photo/url", public_photo, "https://cdn.example.com/notes.txt"]
+      system.map_id = "room.alpine"
+      system.save!
+      level = PlaceOS::Model::Zone.find!(SpacesSpecHelper::LEVEL_1)
+      level.map_id = map_url
+      level.save!
+    end
+
+    it "returns a photo uploaded to PlaceOS, only sending the token to PlaceOS" do
+      seen = [] of HTTP::Headers
+      WebMock.stub(:get, upload).to_return do |request|
+        seen << request.headers.dup
+        HTTP::Client::Response.new(307, headers: HTTP::Headers{"Location" => storage})
+      end
+      WebMock.stub(:get, storage).to_return do |request|
+        seen << request.headers.dup
+        HTTP::Client::Response.new(200, body: "JPEG-DATA", headers: HTTP::Headers{"Content-Type" => "image/jpeg"})
+      end
+
+      response = client.get("#{SPACES_BASE}/sys-spaces-1/images/0", headers: headers)
+      response.status_code.should eq 200
+      response.headers["Content-Type"].should start_with "image/jpeg"
+      response.body.should eq "JPEG-DATA"
+      seen[0]["Authorization"].should eq headers["Authorization"]
+      seen[1]["Authorization"]?.should be_nil
+    end
+
+    it "returns a public photo" do
+      WebMock.stub(:get, public_photo).to_return(body: "PNG-DATA", headers: HTTP::Headers{"Content-Type" => "image/png"})
+      response = client.get("#{SPACES_BASE}/sys-spaces-1/images/1", headers: headers)
+      response.status_code.should eq 200
+      response.headers["Content-Type"].should start_with "image/png"
+      response.body.should eq "PNG-DATA"
+    end
+
+    it "only returns images" do
+      WebMock.stub(:get, "https://cdn.example.com/notes.txt").to_return(body: "hello", headers: HTTP::Headers{"Content-Type" => "text/plain"})
+      client.get("#{SPACES_BASE}/sys-spaces-1/images/2", headers: headers).status_code.should eq 500
+    end
+
+    it "is not found for a photo the space doesn't have" do
+      client.get("#{SPACES_BASE}/sys-spaces-1/images/3", headers: headers).status_code.should eq 404
+      client.get("#{SPACES_BASE}/sys-spaces-1/images/-1", headers: headers).status_code.should eq 404
+    end
+
+    it "returns the space's level map with its position" do
+      building = PlaceOS::Model::Zone.find!(SpacesSpecHelper::BUILDING)
+      building.map_id = "https://toby.staff-api.dev/maps/building.svg"
+      building.save!
+      WebMock.stub(:get, map_url).to_return(body: svg, headers: HTTP::Headers{"Content-Type" => "image/svg+xml"})
+
+      response = client.get("#{SPACES_BASE}/sys-spaces-1/map", headers: headers)
+      response.status_code.should eq 200
+      response.headers["Content-Type"].should start_with "image/svg+xml"
+      # the level's map, not the building's
+      response.headers["X-Map-Level"].should eq SpacesSpecHelper::LEVEL_1
+      response.headers["X-Map-Pin"].should eq "20.0,15.0"
+      response.headers["X-Map-View-Box"].should eq "0.0 0.0 100.0 50.0"
+    end
+
+    it "is not found when the space isn't on a level with a map" do
+      client.get("#{SPACES_BASE}/sys-spaces-2/map", headers: headers).status_code.should eq 404
+    end
+  end
 end

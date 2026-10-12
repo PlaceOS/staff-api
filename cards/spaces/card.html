@@ -7,7 +7,8 @@
 <!--
   The space card (MCP Apps), rendered for the spaces_show tool. It shows a space's
   meetings for a day and books it with events_book. Talks to the host with JSON-RPC
-  over postMessage: ui/initialize, ui/notifications/tool-result and tools/call.
+  over postMessage: ui/initialize, ui/notifications/tool-result and tools/call. Photos and the
+  level map come from the card only spaces_image and spaces_map tools.
   Tool results are the {status, headers, body} envelope as structuredContent.
 -->
 <style>
@@ -54,7 +55,21 @@
   button.primary:disabled { opacity: 0.6; cursor: default; }
   .status { margin-top: 8px; min-height: 1.4em; }
   .status.error { color: var(--error); }
-  img.hero { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+  .carousel { position: relative; margin: 0 0 12px; border-radius: 8px; overflow: hidden; background: var(--chip); }
+  .carousel img, .carousel .placeholder { display: block; width: 100%; height: 180px; object-fit: cover; }
+  .carousel .placeholder { display: grid; place-items: center; }
+  .carousel .nav { position: absolute; top: 50%; transform: translateY(-50%); border: 0; border-radius: 50%; width: 32px; height: 32px; background: rgba(0, 0, 0, 0.45); color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
+  .carousel .prev { left: 8px; }
+  .carousel .next { right: 8px; }
+  .carousel .dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .carousel .dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.6); cursor: pointer; }
+  .carousel .dot.active { background: #ffffff; }
+  details.map { margin-top: 12px; }
+  details.map summary { cursor: pointer; color: var(--accent); }
+  .map-frame { margin-top: 8px; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: #ffffff; }
+  .map-canvas { position: relative; width: 250%; }
+  .map-canvas img { display: block; width: 100%; height: auto; }
+  .map-pin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #e5484d; border: 3px solid #ffffff; box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4); }
 </style>
 </head>
 <body>
@@ -115,7 +130,91 @@
       return;
     }
     schedule = response.body;
+    resetMedia();
     render();
+  }
+
+  // ---- the space's images and level map, loaded through card only tools ----
+  // they're updated in place, so a half filled booking form isn't lost
+  let media = { space: null, images: {}, index: 0, map: null };
+
+  function resetMedia() {
+    if (media.space === schedule.space.id) return;
+    media = { space: schedule.space.id, images: {}, index: 0, map: null };
+    loadMap();
+  }
+
+  function refresh(id, view) {
+    const node = document.getElementById(id);
+    if (node) node.replaceWith(view());
+  }
+
+  async function loadImage(index) {
+    if (media.images[index] !== undefined) return;
+    const space = media.space;
+    media.images[index] = null; // loading
+    let src = "error";
+    try {
+      const result = await request("tools/call", { name: "spaces_image", arguments: { id: space, index } });
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      if (image) src = `data:${image.mimeType};base64,${image.data}`;
+    } catch { /* shown as unavailable */ }
+    if (media.space !== space) return;
+    media.images[index] = src;
+    refresh("space-images", carousel);
+  }
+
+  function carousel() {
+    const count = (schedule.space.images || []).length;
+    if (!count) return el("div", { id: "space-images" });
+    const index = Math.min(media.index, count - 1);
+    const src = media.images[index];
+    if (src === undefined) loadImage(index);
+    const show = (target) => { media.index = (target + count) % count; refresh("space-images", carousel); };
+    const name = schedule.space.display_name || schedule.space.name;
+    return el("figure", { id: "space-images", class: "carousel" },
+      src && src !== "error"
+        ? el("img", { src, alt: `${name}, photo ${index + 1} of ${count}` })
+        : el("div", { class: "placeholder muted" }, src === "error" ? "Photo unavailable" : "Loading photo…"),
+      count > 1 ? [
+        el("button", { type: "button", class: "nav prev", title: "Previous photo", onclick: () => show(index - 1) }, "‹"),
+        el("button", { type: "button", class: "nav next", title: "Next photo", onclick: () => show(index + 1) }, "›"),
+        el("div", { class: "dots" }, Array.from({ length: count }, (_, dot) =>
+          el("button", { type: "button", class: dot === index ? "dot active" : "dot", title: `Photo ${dot + 1}`, onclick: () => show(dot) }))),
+      ] : null);
+  }
+
+  // the level map with a pin on the space, from spaces_map: {src, x, y, box}
+  async function loadMap() {
+    const space = media.space;
+    try {
+      const result = await request("tools/call", { name: "spaces_map", arguments: { id: space } });
+      const response = envelope(result);
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      const headers = Object.fromEntries(Object.entries((response && response.headers) || {}).map(([key, value]) => [key.toLowerCase(), value]));
+      const pin = String(headers["x-map-pin"] || "").split(",").map(Number);
+      const box = String(headers["x-map-view-box"] || "").split(/[\s,]+/).map(Number);
+      if (!image || pin.length !== 2 || box.length !== 4 || !(box[2] > 0 && box[3] > 0) || media.space !== space) return;
+      media.map = { src: `data:${image.mimeType};base64,${image.data}`, x: pin[0], y: pin[1], box };
+      refresh("space-map", mapView);
+    } catch { /* not on a map */ }
+  }
+
+  function mapView() {
+    const map = media.map;
+    if (!map) return el("div", { id: "space-map" });
+    const [minX, minY, width, height] = map.box;
+    const pin = el("div", { class: "map-pin", style: `left:${((map.x - minX) / width) * 100}%;top:${((map.y - minY) / height) * 100}%`, title: schedule.space.display_name || schedule.space.name });
+    const frame = el("div", { class: "map-frame" });
+    // centre the pin once the map has its size
+    const centre = () => {
+      frame.scrollLeft = pin.offsetLeft - frame.clientWidth / 2;
+      frame.scrollTop = pin.offsetTop - frame.clientHeight / 2;
+    };
+    // the SVG is shown as an image, so nothing in it can run
+    frame.append(el("div", { class: "map-canvas" }, el("img", { src: map.src, alt: "Level map", onload: centre }), pin));
+    return el("details", { id: "space-map", class: "map", ontoggle: (event) => { if (event.target.open) requestAnimationFrame(centre); } },
+      el("summary", {}, "Show on map"), frame);
   }
 
   function errorText(response, fallback) {
@@ -162,13 +261,14 @@
 
     app.innerHTML = "";
     app.append(
-      space.images && space.images[0] && /^https:/.test(space.images[0]) ? el("img", { class: "hero", src: space.images[0], alt: "" }) : null,
+      carousel(),
       el("div", { class: "row between" },
         el("h1", {}, space.display_name || space.name),
         space.capacity ? el("span", { class: "chip" }, `Seats ${space.capacity}`) : null),
       place.length ? el("div", { class: "muted" }, place.join(" · ")) : null,
       space.features.length ? el("ul", { class: "chips" }, space.features.map((feature) => el("li", { class: "chip" }, feature))) : null,
       space.approval ? el("p", { class: "muted" }, "Bookings need to be approved.") : null,
+      mapView(),
       el("section", {},
         el("div", { class: "row day" },
           el("button", { type: "button", title: "Previous day", onclick: () => changeDay(-1) }, "‹"),

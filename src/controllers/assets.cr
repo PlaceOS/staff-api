@@ -169,37 +169,15 @@ class Assets < Application
     current_asset
   end
 
-  # the largest map returned, MCP hosts relay it in a single message
-  MAX_MAP_BYTES = 5 * 1024 * 1024
-
   # Get the asset's level map, an SVG, with the asset's position in the X-Map-Pin header.
   @[AC::MCP(visibility: :card)]
   @[AC::Route::GET("/:id/map")]
   def map : Nil
     asset = current_asset
-    # as the workplace apps do, an asset without a map_id is drawn under its id
-    element_id = Desks.map_id_of(asset)
     level = asset.zone_id.try { |zone_id| ::PlaceOS::Model::Zone.find?(zone_id) }
-    url = level.try(&.map_id.presence)
-    raise Error::NotFound.new("the level of asset #{asset.id} doesn't have a map") unless level && url
-
-    level_map = level_map(url)
-    pin = level_map.centers[element_id]?
-    raise Error::NotFound.new("asset #{asset.id} (#{element_id}) isn't drawn on the level map") unless pin
-
-    @__render_called__ = true
-    response.headers["X-Map-Level"] = level.id.as(String)
-    response.headers["X-Map-Pin"] = "#{pin.x},#{pin.y}"
-    level_map.view_box.try { |box| response.headers["X-Map-View-Box"] = box }
-    svg = level_map.svg
-    if svg.bytesize > MAX_MAP_BYTES
-      response.status = :payload_too_large
-      response.content_type = "text/plain"
-      response.print "the level map is too large to return (#{svg.bytesize} bytes)"
-    else
-      response.content_type = "image/svg+xml"
-      response.print svg
-    end
+    raise Error::NotFound.new("asset #{asset.id} isn't on a level") unless level
+    # as the workplace apps do, an asset without a map_id is drawn under its id
+    render_level_map(level, Desks.map_id_of(asset))
   end
 
   # Update an asset with the fields in the request body and return the saved asset.

@@ -109,6 +109,11 @@ describe App::MCP do
     # the booking card loads the asset's level map
     _toolbox, map = description.tool?("assets_map").not_nil!
     map.visibility.should eq ["card"]
+    # and the space card the space's photos and level map
+    {"spaces_image", "spaces_map"}.each do |name|
+      _toolbox, tool = description.tool?(name).not_nil!
+      tool.visibility.should eq ["card"]
+    end
     description.tool?("events_notify_change").should be_nil
     description.tool?("events_link_master_metadata").should be_nil
     description.tool?("staff_show").should_not be_nil
@@ -140,7 +145,7 @@ describe App::MCP do
     headers = open_session.call(bearer.call)
     tools = JSON.parse(rpc.call(headers, "tools/list", no_params).body)["result"]["tools"].as_a
     names = tools.map(&.["name"].as_s)
-    {"events_book", "events_edit", "events_destroy", "bookings_book", "bookings_edit", "bookings_destroy", "users_current", "desks_nearby", "desks_index"}.each { |name| names.should contain name }
+    {"events_book", "events_edit", "events_destroy", "bookings_book", "bookings_edit", "bookings_destroy", "users_current", "desks_nearby", "desks_index", "desks_near_colleagues"}.each { |name| names.should contain name }
     # the full create and update tools stay in their toolboxes, their schemas are large
     {"events_create", "events_update", "bookings_update"}.each { |name| names.should_not contain name }
     {"bookings_show" => "bookings", "events_show" => "events", "staff_show" => "staff"}.each do |name, folder|
