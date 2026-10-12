@@ -53,6 +53,12 @@
   .status { margin-top: 8px; min-height: 1.4em; }
   .status.error { color: var(--error); }
   .status.ok { color: var(--ok); }
+  details.map { margin-top: 16px; }
+  details.map summary { cursor: pointer; color: var(--accent); }
+  .map-frame { margin-top: 8px; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: #ffffff; }
+  .map-canvas { position: relative; width: 250%; }
+  .map-canvas img { display: block; width: 100%; height: auto; }
+  .map-pin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #e5484d; border: 3px solid #ffffff; box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4); }
   a { color: var(--accent); }
 </style>
 </head>
@@ -193,6 +199,8 @@
   let booking = null;
   let mode = "view"; // view | edit | confirm-cancel
   let busy = false;
+  // the asset's level map with its pin, from assets_map: {asset, src, x, y, box}
+  let map = null;
 
   const STATES = {
     reserved: "Reserved", checked_in: "Checked in", checked_out: "Checked out", no_show: "No show",
@@ -222,6 +230,42 @@
     booking = response.body;
     mode = "view";
     render();
+    loadMap();
+  }
+
+  // bookings of assets drawn on a level map show where the asset is
+  async function loadMap() {
+    const asset = booking.asset_id;
+    if (!asset || booking.booking_type === "visitor" || (map && map.asset === asset)) return;
+    try {
+      const result = await request("tools/call", { name: "assets_map", arguments: { id: asset } });
+      const response = envelope(result);
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      const headers = Object.fromEntries(Object.entries((response && response.headers) || {}).map(([key, value]) => [key.toLowerCase(), value]));
+      const pin = String(headers["x-map-pin"] || "").split(",").map(Number);
+      const box = String(headers["x-map-view-box"] || "").split(/[\s,]+/).map(Number);
+      if (!image || pin.length !== 2 || box.length !== 4 || !(box[2] > 0 && box[3] > 0)) return;
+      map = { asset, src: `data:${image.mimeType};base64,${image.data}`, x: pin[0], y: pin[1], box };
+      if (mode === "view") render();
+    } catch { /* not on a map */ }
+  }
+
+  function mapView() {
+    if (!map || map.asset !== booking.asset_id) return null;
+    const [minX, minY, width, height] = map.box;
+    const left = ((map.x - minX) / width) * 100;
+    const top = ((map.y - minY) / height) * 100;
+    const pin = el("div", { class: "map-pin", style: `left:${left}%;top:${top}%`, title: booking.asset_name || booking.asset_id });
+    const frame = el("div", { class: "map-frame" });
+    // centre the pin once the map has its size
+    const centre = () => {
+      frame.scrollLeft = pin.offsetLeft - frame.clientWidth / 2;
+      frame.scrollTop = pin.offsetTop - frame.clientHeight / 2;
+    };
+    // the SVG is shown as an image, so nothing in it can run
+    frame.append(el("div", { class: "map-canvas" }, el("img", { src: map.src, alt: "Level map", onload: centre }), pin));
+    return el("details", { class: "map", ontoggle: (event) => { if (event.target.open) requestAnimationFrame(centre); } },
+      el("summary", {}, "Show on map"), frame);
   }
 
   // the arguments that identify this booking (and occurrence) in tool calls
@@ -254,6 +298,7 @@
         bookedBy ? [el("dt", {}, "Booked by"), el("dd", {}, bookedBy)] : null,
         booking.approved ? [el("dt", {}, "Approval"), el("dd", {}, "Approved")] : null,
         booking.description ? [el("dt", {}, "Notes"), el("dd", {}, booking.description)] : null),
+      mapView(),
       canChange(user) ? actions(tz) : null,
       el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || ""),
     );

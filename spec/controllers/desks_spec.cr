@@ -258,6 +258,64 @@ describe "Bookings#book" do
   end
 end
 
+describe "Assets#map" do
+  client = AC::SpecHelper.client
+  headers = Mock::Headers.office365_guest
+
+  before_each { StaffApi::LevelMap.clear_cache }
+
+  it "returns the level map with the asset's position" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map
+
+    response = client.get("#{Assets.base_route}/#{assets["near"].id}/map", headers: headers)
+    response.status_code.should eq 200
+    response.headers["Content-Type"].should start_with "image/svg+xml"
+    response.headers["X-Map-Pin"].should eq "25.0,5.0"
+    response.headers["X-Map-View-Box"].should eq "0.0 0.0 1000.0 100.0"
+    response.headers["X-Map-Level"].should eq DesksSpecHelper::LEVEL
+    response.body.should eq DesksSpecHelper::SVG
+  end
+
+  it "uses the width and height when the map has no viewBox" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub(%(viewBox="0 0 1000 100"), %(width="800px" height="80px")))
+
+    response = client.get("#{Assets.base_route}/#{assets["near"].id}/map", headers: headers)
+    response.status_code.should eq 200
+    response.headers["X-Map-View-Box"].should eq "0 0 800.0 80.0"
+  end
+
+  it "is not found when the asset isn't drawn on the map" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map
+    client.get("#{Assets.base_route}/#{assets["unmapped"].id}/map", headers: headers).status_code.should eq 404
+  end
+
+  it "is not found when the asset's level has no map" do
+    assets = DesksSpecHelper.setup
+    asset = assets["near"]
+    asset.zone_id = DesksSpecHelper::BUILDING
+    asset.save!
+    client.get("#{Assets.base_route}/#{asset.id}/map", headers: headers).status_code.should eq 404
+  end
+
+  it "is not found for another authority's asset" do
+    DesksSpecHelper.setup
+    DesksSpecHelper.stub_map
+    other = PlaceOS::Model::Generator.authority("https://map-other.example.com").save!
+    type = PlaceOS::Model::Generator.asset_type(PlaceOS::Model::Generator.asset_category(other).save!).save!
+    theirs = DesksSpecHelper.asset("Theirs", "desk.2", type, PlaceOS::Model::Generator.asset_purchase_order(other).save!)
+    client.get("#{Assets.base_route}/#{theirs.id}/map", headers: headers).status_code.should eq 404
+  end
+
+  it "refuses maps too large to relay" do
+    assets = DesksSpecHelper.setup
+    DesksSpecHelper.stub_map(DesksSpecHelper::SVG.sub("</svg>", "<!-- #{"x" * Assets::MAX_MAP_BYTES} --></svg>"))
+    client.get("#{Assets.base_route}/#{assets["near"].id}/map", headers: headers).status_code.should eq 413
+  end
+end
+
 describe StaffApi::LevelMap do
   it "finds the centre of shapes, groups and transformed elements" do
     map = StaffApi::LevelMap.new(DesksSpecHelper::SVG)

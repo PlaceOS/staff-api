@@ -865,15 +865,10 @@ class Bookings < Application
     booking_zones = zones || [] of String
     authority_id = current_authority.as(::PlaceOS::Model::Authority).id
     if asset = ::PlaceOS::Model::Asset.where(id: asset_id).where(Desks::AUTHORITY_SCOPE, authority_id).to_a.first?
-      # the asset's level and its parents, i.e. the building and organisation
-      zone_id = asset.zone_id
-      5.times do
-        break unless zone_id && (zone = ::PlaceOS::Model::Zone.find?(zone_id))
-        booking_zones << zone_id
-        timezone ||= zone.timezone.try(&.name)
-        zone_id = zone.parent_id.presence
-      end
-      booking_zones.concat asset.zones
+      # zones is the asset's zone tree (org, building, level...) and zone_id its level
+      tree = (asset.zones + [asset.zone_id].compact).uniq
+      booking_zones.concat tree
+      timezone ||= timezone_of(asset.zone_id, tree)
     end
 
     changes = {
@@ -1263,6 +1258,17 @@ class Bookings < Application
   # ============================================
   #              Helper Methods
   # ============================================
+
+  # the level's timezone, otherwise the closest zone in the tree with one
+  private def timezone_of(level_id : String?, tree : Array(String)) : String?
+    zones = ::PlaceOS::Model::Zone.find_all(tree).to_a
+    ordered = [level_id].compact + tree.reverse
+    ordered.each do |zone_id|
+      if location = zones.find(&.id.==(zone_id)).try(&.timezone)
+        return location.name
+      end
+    end
+  end
 
   private def check_clashing(new_booking, ignore_assets : Bool = false)
     new_booking.clashing_bookings(ignore_assets: ignore_assets).reject! { |book| book.id == new_booking.id && (new_booking.instance.nil? || book.instance == new_booking.instance) }

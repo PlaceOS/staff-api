@@ -106,6 +106,9 @@ describe App::MCP do
     # the photo is a binary stream, only the staff card loads it
     _toolbox, photo = description.tool?("staff_photo").not_nil!
     photo.visibility.should eq ["card"]
+    # the booking card loads the asset's level map
+    _toolbox, map = description.tool?("assets_map").not_nil!
+    map.visibility.should eq ["card"]
     description.tool?("events_notify_change").should be_nil
     description.tool?("events_link_master_metadata").should be_nil
     description.tool?("staff_show").should_not be_nil

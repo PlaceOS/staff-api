@@ -11,7 +11,7 @@ class Assets < Application
   # Scopes
   ###############################################################################################
 
-  before_action :can_read, only: [:index, :show]
+  before_action :can_read, only: [:index, :show, :map]
   before_action :can_write, only: [:create, :update, :destroy, :remove, :bulk_create, :bulk_update, :bulk_destroy]
 
   ###############################################################################################
@@ -31,7 +31,7 @@ class Assets < Application
   # semantics as AssetCategories#update). Applies to admin and support
   # users too. Declared before `confirm_access` so another authority's
   # asset is a 404 rather than a 403.
-  @[AC::Route::Filter(:before_action, only: [:show, :update, :destroy])]
+  @[AC::Route::Filter(:before_action, only: [:show, :map, :update, :destroy])]
   private def confirm_authority
     raise Error::NotFound.new("asset #{current_asset.id} not found") unless owned_by_caller?(current_asset)
   end
@@ -167,6 +167,39 @@ class Assets < Application
   @[AC::Route::GET("/:id")]
   def show : ::PlaceOS::Model::Asset
     current_asset
+  end
+
+  # the largest map returned, MCP hosts relay it in a single message
+  MAX_MAP_BYTES = 5 * 1024 * 1024
+
+  # Get the asset's level map, an SVG, with the asset's position in the X-Map-Pin header.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/:id/map")]
+  def map : Nil
+    asset = current_asset
+    element_id = asset.map_id.presence
+    raise Error::NotFound.new("asset #{asset.id} isn't on a map") unless element_id
+    level = asset.zone_id.try { |zone_id| ::PlaceOS::Model::Zone.find?(zone_id) }
+    url = level.try(&.map_id.presence)
+    raise Error::NotFound.new("the level of asset #{asset.id} doesn't have a map") unless level && url
+
+    level_map = level_map(url)
+    pin = level_map.centers[element_id]?
+    raise Error::NotFound.new("asset #{asset.id} (#{element_id}) isn't drawn on the level map") unless pin
+
+    @__render_called__ = true
+    response.headers["X-Map-Level"] = level.id.as(String)
+    response.headers["X-Map-Pin"] = "#{pin.x},#{pin.y}"
+    level_map.view_box.try { |box| response.headers["X-Map-View-Box"] = box }
+    svg = level_map.svg
+    if svg.bytesize > MAX_MAP_BYTES
+      response.status = :payload_too_large
+      response.content_type = "text/plain"
+      response.print "the level map is too large to return (#{svg.bytesize} bytes)"
+    else
+      response.content_type = "image/svg+xml"
+      response.print svg
+    end
   end
 
   # Update an asset with the fields in the request body and return the saved asset.

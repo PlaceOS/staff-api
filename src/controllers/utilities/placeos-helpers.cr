@@ -5,6 +5,22 @@ module Utils::PlaceOSHelpers
   # The authority (PlaceOS domain) this request is being made against
   getter current_authority : PlaceOS::Model::Authority? { PlaceOS::Model::Authority.find_by_domain(request.hostname.as(String)) }
 
+  # Loads a level map (a zone's `map_id`), a relative url is a PlaceOS upload on the
+  # authority's domain, loaded with this request's credentials
+  def level_map(url : String) : StaffApi::LevelMap
+    StaffApi::LevelMap.load(url, URI.parse("https://#{current_authority.as(PlaceOS::Model::Authority).domain}"), map_credentials)
+  end
+
+  private def map_credentials : HTTP::Headers
+    headers = HTTP::Headers.new
+    if api_key = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
+      headers["X-API-Key"] = api_key
+    elsif token = acquire_token
+      headers["Authorization"] = "Bearer #{token}"
+    end
+    headers
+  end
+
   # Systems
   # =======
 

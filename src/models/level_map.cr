@@ -78,8 +78,11 @@ struct StaffApi::LevelMap
 
   # id => centre point of the element
   getter centers : Hash(String, Point)
+  getter svg : String
+  # the SVG's coordinate system, `min-x min-y width height`, for placing things over the map
+  getter view_box : String?
 
-  def initialize(svg : String)
+  def initialize(@svg : String)
     @centers = {} of String => Point
     build_index svg
   end
@@ -96,7 +99,7 @@ struct StaffApi::LevelMap
 
   MAX_REDIRECTS = 5
   CACHE_TTL     = 10.minutes
-  CACHE_SIZE    = 64
+  CACHE_SIZE    = 32
 
   @@cache = {} of String => Tuple(LevelMap, Time::Instant)
   @@cache_lock = Mutex.new
@@ -170,6 +173,7 @@ struct StaffApi::LevelMap
 
   protected def build_index(svg : String) : Nil
     document = XML.parse(svg)
+    @view_box = document.first_element_child.try { |root| parse_view_box(root) }
 
     document.xpath_nodes("//*[@id]").each do |node|
       id = node["id"]?
@@ -183,6 +187,17 @@ struct StaffApi::LevelMap
         @centers[id] = center
       end
     end
+  end
+
+  # the root's viewBox, or one covering its width and height
+  protected def parse_view_box(root : XML::Node) : String?
+    if box = root["viewBox"]?
+      values = number_tokens(box)
+      return values.join(' ') if values.size == 4
+    end
+    width = root["width"]?.try { |value| number_tokens(value).first? }
+    height = root["height"]?.try { |value| number_tokens(value).first? }
+    "0 0 #{width} #{height}" if width && height
   end
 
   # combines the transforms of this node and all of its ancestors

@@ -103,17 +103,6 @@ class Desks < Application
     booking
   end
 
-  # the credentials of this request, for loading level maps hosted by PlaceOS
-  private def map_credentials : HTTP::Headers
-    headers = HTTP::Headers.new
-    if api_key = request.headers["X-API-Key"]? || params["api-key"]? || cookies["api-key"]?.try(&.value)
-      headers["X-API-Key"] = api_key
-    elsif token = acquire_token
-      headers["Authorization"] = "Bearer #{token}"
-    end
-    headers
-  end
-
   ###############################################################################################
 
   # List the available desks nearest to a desk, or to the desk a colleague has booked.
@@ -157,7 +146,7 @@ class Desks < Application
     raise Error::NotFound.new("desk #{origin.id} isn't on a level map") unless origin_map_id
     map_url = level.map_id.presence
     raise Error::NotFound.new("level #{level_id} doesn't have a map") unless map_url
-    map = StaffApi::LevelMap.load(map_url, URI.parse("https://#{current_authority.as(::PlaceOS::Model::Authority).domain}"), map_credentials)
+    map = level_map(map_url)
     raise Error::NotFound.new("desk #{origin.id} (#{origin_map_id}) isn't drawn on the level map") unless map.centers.has_key?(origin_map_id)
 
     # bookable desks of the same kind (asset category) on the level, that the caller's groups can use
