@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **MCP**: card fixes, meeting availability and rooms on the staff card
 - **MCP**: prompts for booking rooms and checking bookings and meetings
 - **MCP**: desks near colleagues, space photos and space map
 - **MCP**: desk booking prompt and free desk listing
