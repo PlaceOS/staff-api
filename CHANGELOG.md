@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **MCP**: desk booking prompt and free desk listing
 - **MCP**: show a booking's asset on its level map
 - **MCP**: nearby desks and a lean desk booking tool
 - **MCP**: spaces, cards and lean booking tools
