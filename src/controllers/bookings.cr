@@ -844,7 +844,7 @@ class Bookings < Application
   end
 
   # Book a desk or other asset for yourself, the zones (level, building) are taken from the asset.
-  @[AC::MCP(root: true)]
+  @[AC::MCP(ui: "bookings/card.html")]
   @[AC::Route::POST("/book", status_code: HTTP::Status::CREATED, converters: {zones: ConvertStringArray})]
   def book(
     @[AC::Param::Info(description: "the asset id to book, i.e. a desk id from desks_index", example: "asset-1234")]

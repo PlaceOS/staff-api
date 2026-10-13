@@ -439,7 +439,7 @@ class Events < Application
   end
 
   # Book a meeting in the user's calendar, optionally in a room (system).
-  @[AC::MCP(root: true)]
+  @[AC::MCP(ui: "events/card.html")]
   @[AC::Route::POST("/book", converters: {attendees: ConvertStringArray}, status_code: HTTP::Status::CREATED)]
   def book(
     @[AC::Param::Info(description: "the meeting title", example: "Project catch up")]

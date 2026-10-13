@@ -557,9 +557,8 @@ class Desks < Application
       6. Book with bookings_book (booking_type desk, the desk's id as asset_id). Without
          times it books from now, or for a future day pass that day's start, until the end
          of the day. For several days, book each day separately.
-      7. Once you have enough information, book it without asking me to confirm, then call
-         bookings_show with the booking's id to show me the booking and the desk on the map.
-         Cancel anything booked on the wrong day.
+      7. Once you have enough information, book it without asking me to confirm, its card shows
+         me the booking and the desk on the map. Cancel anything booked on the wrong day.
       PROMPT
   end
 end

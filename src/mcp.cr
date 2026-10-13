@@ -42,8 +42,8 @@ module App::MCP
     Working well:
     - check availability before booking: the clashing assets tools and the calendar
       availability and free/busy tools report conflicts without changing anything
-    - show the user what you did: after bookings_book call bookings_show, after events_book
-      call events_show and after finding a person call staff_show, each displays a card
+    - bookings_book, events_book, staff_index, spaces_index, calendars_availability and the
+      show tools display a card
     - read before writing, and confirm with the user before cancelling, deleting or
       declining anything on their behalf. Prefer the user's own calendar unless asked
     - list results are paginated: follow the `Link` header (or use `X-Total-Count`)

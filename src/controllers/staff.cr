@@ -3,6 +3,7 @@ class Staff < Application
   base "/api/staff/v1/people"
 
   # Search the organisation directory for people.
+  @[AC::MCP(ui: "staff/card.html")]
   @[AC::Route::GET("/", converters: {additional_fields: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]

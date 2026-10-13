@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Person</title>
 <!--
-  The staff card (MCP Apps), rendered for staff_show. Shows a person with their photo
+  The staff card (MCP Apps), rendered for staff_show and people searches (several people are
+  listed, picking one shows them). Shows a person with their photo
   (staff_photo), email and phone links and books a meeting with them via events_book.
   When they've booked a desk, offers the free desks nearest to them (desks_nearby, bookings_book).
   Talks to the host with JSON-RPC over postMessage (ui/initialize, ui/notifications/tool-result,
@@ -213,19 +214,46 @@
   // the free desks near the person's desk booking, from desks_nearby
   let nearby = null;
 
+  // the people a search found, when there were several
+  let people = null;
+
+  // staff_show gives a person, a people search a list: one person is shown, several listed
   function showResult(result) {
     const response = envelope(result);
-    if (!response || response.status >= 400 || !response.body || !(response.body.email || response.body.name)) {
+    const body = response && response.status < 400 ? response.body : null;
+    if (Array.isArray(body)) {
+      people = body.length > 1 ? body : null;
+      if (body.length === 1) return showPerson(body[0]);
+      if (body.length === 0) return app.replaceChildren(el("p", { class: "muted" }, "No one found"));
+      return renderPeople();
+    }
+    if (!body || !(body.email || body.name)) {
       app.replaceChildren(el("p", { class: "status error" }, errorText(response, "Unable to load this person")));
       return;
     }
-    person = response.body;
+    showPerson(body);
+  }
+
+  function showPerson(found) {
+    person = found;
+    photo = null;
+    nearby = null;
     schedule = null;
     rooms = null;
     render();
     loadPhoto();
     loadDesks();
     loadSchedule();
+  }
+
+  function renderPeople() {
+    app.replaceChildren(
+      el("strong", {}, `${people.length} people found`),
+      el("ul", { class: "desks" }, people.map((found) => el("li", {},
+        el("div", {},
+          el("div", {}, found.name || found.email),
+          el("div", { class: "muted" }, [found.title, found.department, found.email].filter(Boolean).join(" · "))),
+        el("button", { type: "button", onclick: () => showPerson(found) }, "Show")))));
   }
 
   // ---- when we're both free: staff_free_busy for the form's date, shown as slots ----
@@ -256,18 +284,20 @@
     if (!meeting || !meeting.elements.date.value) return;
     const date = meeting.elements.date.value;
     if (schedule && schedule.date === date) return;
-    schedule = { date, loading: true };
+    const loading = schedule = { date, loading: true };
     refresh("availability", availabilityView);
     myEmail = lower((await currentUser()).email) || null;
     try {
-      const people = await callTool("staff_free_busy", {
+      const found = await callTool("staff_free_busy", {
         id: person.email,
         period_start: zonedEpoch(date, "00:00", localZone),
         period_end: zonedEpoch(nextDay(date), "00:00", localZone),
       }, "Unable to check calendars");
-      if (schedule.date === date) schedule = { date, people };
+      if (schedule !== loading) return;
+      schedule = { date, people: found };
     } catch (error) {
-      if (schedule.date === date) schedule = { date, error: error.message };
+      if (schedule !== loading) return;
+      schedule = { date, error: error.message };
     }
     refresh("availability", availabilityView);
     checkTime();
@@ -407,11 +437,14 @@
 
   // only shown when the person has booked a desk and it isn't the signed in user
   async function loadDesks() {
-    if (!person.email) return;
+    const shown = person;
+    if (!shown.email) return;
     const user = await currentUser();
-    if (user.email && user.email.toLowerCase() === person.email.toLowerCase()) return;
+    if (user.email && user.email.toLowerCase() === shown.email.toLowerCase()) return;
     try {
-      nearby = await callTool("desks_nearby", { email: person.email, limit: 5 }, "No desks nearby");
+      const found = await callTool("desks_nearby", { email: shown.email, limit: 5 }, "No desks nearby");
+      if (person !== shown) return;
+      nearby = found;
       if (nearby && nearby.desks && nearby.desks.length) renderDesks();
     } catch { /* they haven't booked a desk */ }
   }
@@ -455,10 +488,11 @@
 
   // the photo comes back as an image content block
   async function loadPhoto() {
+    const shown = person;
     try {
-      const result = await request("tools/call", { name: "staff_photo", arguments: { id: person.email || person.id } });
+      const result = await request("tools/call", { name: "staff_photo", arguments: { id: shown.email || shown.id } });
       const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
-      if (image) {
+      if (image && person === shown) {
         photo = `data:${image.mimeType};base64,${image.data}`;
         const avatar = document.getElementById("avatar");
         if (avatar) avatar.replaceWith(avatarView());
@@ -489,7 +523,8 @@
 
     // replaceChildren, unlike el(), would show a null child as the text "null"
     app.replaceChildren(...[
-      el("div", { class: "row", style: "gap:12px;flex-wrap:nowrap" },
+      people ? el("button", { type: "button", onclick: renderPeople }, "‹ All results") : null,
+      el("div", { class: "row", style: `gap:12px;flex-wrap:nowrap${people ? ";margin-top:12px" : ""}` },
         avatarView(),
         el("div", {},
           el("h1", {}, person.name || person.email),

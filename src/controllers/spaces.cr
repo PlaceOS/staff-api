@@ -177,6 +177,7 @@ class Spaces < Application
   ###############################################################################################
 
   # List the bookable spaces (rooms), filtered by zones, features and capacity.
+  @[AC::MCP(ui: "spaces/card.html")]
   @[AC::Route::GET("/", converters: {zone_ids: ConvertStringArray, features: ConvertStringArray})]
   def index(
     @[AC::Param::Info(description: "comma separated zone ids, spaces must be in every zone, i.e. a building and a level", example: "zone-building,zone-level")]
@@ -391,17 +392,17 @@ class Spaces < Application
          possible to my desk that day: find my desk booking with bookings_index (bookings toolbox,
          type desk, its zones give the level) and prefer rooms on that level, then the nearest
          levels to it in the same building. Match levels loosely: "first floor" is "level 1".
-      4. Find rooms that are free for the whole meeting with calendars_availability (calendars
-         toolbox): the period, the level's zone id in zone_ids, capacity for everyone including me,
-         the features I need and bookable true. Widen to the building when the level has none free.
+      4. Find rooms that are free for the whole meeting with calendars_availability: the period,
+         the level's zone id in zone_ids, capacity for everyone including me, the features I need
+         and bookable true. Widen to the building when the level has none free.
       5. Pick the smallest room that fits and has the features, on the closest level. If none are
          free, offer the nearest free times (calendars_free_busy with the rooms' system_ids) or
          another level.
       6. Book with events_book: the title, event_start, event_end, the people's emails as
          attendees (I'm added as the host, the room comes from system_id) and the room's
          system_id. If the room needs approval, tell me the booking is pending approval.
-      7. Once you have enough information, book it without asking me to confirm, then call
-         events_show with the event's id to show me the meeting.
+      7. Once you have enough information, book it without asking me to confirm, its card shows
+         me the meeting.
       PROMPT
   end
 end

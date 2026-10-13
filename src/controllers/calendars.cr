@@ -75,6 +75,7 @@ class Calendars < Application
   end
 
   # Find the rooms or people that are free for a whole time period.
+  @[AC::MCP(ui: "spaces/card.html")]
   @[AC::Route::GET("/availability")]
   def availability(
     @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]

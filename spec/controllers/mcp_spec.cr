@@ -57,10 +57,10 @@ describe App::MCP do
     mcp_client.get(App::MCP::AUTH_PROBE, headers: HTTP::Headers{"Host" => domain}.merge!(bearer.call)).status_code.should eq 200
   end
 
-  it "asks the model to show the card after booking or finding someone" do
+  it "tells the model which tools show cards" do
     headers = mcp_headers.call(bearer.call)
     instructions = JSON.parse(rpc.call(headers, "initialize", initialize_params).body)["result"]["instructions"].as_s
-    {"after bookings_book call bookings_show", "after events_book call events_show", "call staff_show"}.each do |text|
+    {"bookings_book, events_book, staff_index, spaces_index, calendars_availability and the show tools display a card"}.each do |text|
       instructions.gsub(/\s+/, " ").should contain text.gsub(/\s+/, " ")
     end
   end
@@ -136,8 +136,7 @@ describe App::MCP do
     result = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]
     text = result["messages"][0]["content"]["text"].as_s
     text.should start_with "Book me a desk for tomorrow near Jane."
-    # bookings_show displays the booking's card
-    {"desks_index", "desks_nearby", "bookings_book", "spaces_zones", "bookings_show"}.each { |tool| text.should contain tool }
+    {"desks_index", "desks_nearby", "bookings_book", "spaces_zones"}.each { |tool| text.should contain tool }
   end
 
   it "lists the meeting room booking prompt without opening a toolbox" do
@@ -149,7 +148,7 @@ describe App::MCP do
     params = {"name" => JSON::Any.new("spaces_book"), "arguments" => JSON::Any.new(arguments.transform_values { |value| JSON::Any.new(value) })}
     text = JSON.parse(rpc.call(headers, "prompts/get", params).body)["result"]["messages"][0]["content"]["text"].as_s
     text.should start_with "Book me a meeting room for tomorrow 2pm, 1 hour with Jane for 4 people with vidconf."
-    {"calendars_availability", "calendars_free_busy", "events_book", "spaces_zones", "users_current", "events_show"}.each { |tool| text.should contain tool }
+    {"calendars_availability", "calendars_free_busy", "events_book", "spaces_zones", "users_current"}.each { |tool| text.should contain tool }
   end
 
   it "lists the prompts for checking my bookings and meetings without opening a toolbox" do
@@ -205,7 +204,12 @@ describe App::MCP do
     {"events_book", "events_edit", "events_destroy", "bookings_book", "bookings_edit", "bookings_destroy", "users_current", "desks_nearby", "desks_index", "desks_near_colleagues"}.each { |name| names.should contain name }
     # the full create and update tools stay in their toolboxes, their schemas are large
     {"events_create", "events_update", "bookings_update"}.each { |name| names.should_not contain name }
-    {"bookings_show" => "bookings", "events_show" => "events", "staff_show" => "staff"}.each do |name, folder|
+    # booking and searching show their results' cards, no follow-up show call needed
+    {
+      "bookings_show" => "bookings", "bookings_book" => "bookings", "events_show" => "events",
+      "events_book" => "events", "staff_show" => "staff", "staff_index" => "staff",
+      "spaces_index" => "spaces", "calendars_availability" => "spaces",
+    }.each do |name, folder|
       tools.find!(&.["name"].==(name))["_meta"]["ui"]["resourceUri"].as_s.should start_with "ui://#{folder}/card.html?v="
     end
 

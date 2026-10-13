@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Space</title>
 <!--
-  The space card (MCP Apps), rendered for the spaces_show tool. It shows a space's
-  meetings for a day and books it with events_book. Talks to the host with JSON-RPC
+  The space card (MCP Apps), rendered for spaces_show and room listings (spaces_index,
+  calendars_availability: several rooms are listed, picking one loads it with spaces_show). It
+  shows a space's meetings for a day and books it with events_book. Talks to the host with JSON-RPC
   over postMessage: ui/initialize, ui/notifications/tool-result and tools/call. Photos and the
   level map come from the card only spaces_image and spaces_map tools.
   Tool results are the {status, headers, body} envelope as structuredContent.
@@ -43,6 +44,9 @@
   .day button { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; }
   .day strong { min-width: 150px; text-align: center; }
   ol.slots { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  ul.rooms { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  ul.rooms li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  main > button:first-child { margin-bottom: 12px; }
   .slot { border-radius: 8px; padding: 8px 10px; display: flex; gap: 12px; }
   .slot time { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; }
   .slot.busy { background: var(--busy); color: var(--busy-fg); }
@@ -80,6 +84,8 @@
   let nextId = 1;
   const pending = new Map();
   let schedule = null;   // the spaces_show body
+  let rooms = null;      // the rooms a listing found, when there were several
+  let toolInput = {};
   let busy = false;
 
   // JSON-RPC over postMessage with the host
@@ -101,6 +107,7 @@
       return;
     }
     switch (msg.method) {
+      case "ui/notifications/tool-input": toolInput = (msg.params && msg.params.arguments) || {}; break;
       case "ui/notifications/tool-result": showResult(msg.params); break;
       case "ui/notifications/host-context-changed": applyContext(msg.params); break;
       case "ui/resource-teardown": send({ jsonrpc: "2.0", id: msg.id, result: {} }); break;
@@ -122,15 +129,47 @@
     try { return text ? JSON.parse(text.text) : null; } catch { return null; }
   }
 
+  // spaces_show gives a space, listings an array: one room is shown, several listed
   function showResult(result) {
     const response = envelope(result);
-    if (!response || response.status >= 400 || !response.body || !response.body.space) {
+    const body = response && response.status < 400 ? response.body : null;
+    if (Array.isArray(body)) return showRooms(body);
+    if (!body || !body.space) {
       app.replaceChildren(el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
       return;
     }
     schedule = response.body;
     resetMedia();
     render();
+  }
+
+  // spaces_index lists spaces, calendars_availability {id, system} where people have no system
+  function showRooms(items) {
+    const found = items.map((item) => (item.system || (item.capacity !== undefined ? item : null))).filter(Boolean);
+    rooms = found.length > 1 ? found : null;
+    if (found.length === 1) return openRoom(found[0]);
+    if (found.length) return renderRooms();
+    const people = items.filter((item) => !item.system && item.id).map((item) => item.id);
+    app.replaceChildren(el("p", { class: "muted" }, people.length ? `Free: ${people.join(", ")}` : "No rooms found"));
+  }
+
+  function renderRooms() {
+    schedule = null;
+    app.replaceChildren(
+      el("strong", {}, `${rooms.length} rooms`),
+      el("ul", { class: "rooms" }, rooms.map((room) => el("li", {},
+        el("div", {},
+          el("div", {}, room.display_name || room.name),
+          room.capacity ? el("div", { class: "muted" }, `Seats ${room.capacity}`) : null),
+        el("button", { type: "button", onclick: () => openRoom(room) }, "Show")))));
+  }
+
+  // a listing's room, from the listing's start (an availability search) or today
+  async function openRoom(room) {
+    app.replaceChildren(el("p", { class: "muted" }, "Loading…"));
+    const args = { id: room.id };
+    if (toolInput.period_start) args.period_start = Number(toolInput.period_start);
+    showResult(await request("tools/call", { name: "spaces_show", arguments: args }).catch(() => null));
   }
 
   // ---- the space's images and level map, loaded through card only tools ----
@@ -260,6 +299,7 @@
 
     // replaceChildren, unlike el(), would show a null child as the text "null"
     app.replaceChildren(...[
+      rooms ? el("button", { type: "button", onclick: renderRooms }, "‹ All rooms") : null,
       carousel(),
       el("div", { class: "row between" },
         el("h1", {}, space.display_name || space.name),
