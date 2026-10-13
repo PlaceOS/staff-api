@@ -340,6 +340,8 @@ describe Spaces do
       response.headers["X-Map-Level"].should eq SpacesSpecHelper::LEVEL_1
       response.headers["X-Map-Pin"].should eq "20.0,15.0"
       response.headers["X-Map-View-Box"].should eq "0.0 0.0 100.0 50.0"
+      # the level and its building, for the card's caption
+      URI.decode(response.headers["X-Map-Location"]).should eq "Spaces Level 1 · Spaces Building"
     end
 
     it "is not found when the space isn't on a level with a map" do

@@ -6,89 +6,256 @@
 <title>Space</title>
 <!--
   The space card (MCP Apps), rendered for spaces_show and room listings (spaces_index,
-  calendars_availability: several rooms are listed, picking one loads it with spaces_show). It
-  shows a space's meetings for a day and books it with events_book. Talks to the host with JSON-RPC
-  over postMessage: ui/initialize, ui/notifications/tool-result and tools/call. Photos and the
-  level map come from the card only spaces_image and spaces_map tools.
-  Tool results are the {status, headers, body} envelope as structuredContent.
+  calendars_availability: several rooms are listed as tiles, picking one loads it with
+  spaces_show). Shows a room's photos (spaces_image), level map (spaces_map) and the day's
+  meetings as a timeline, and books it with events_book.
+  Talks to the host with JSON-RPC over postMessage (ui/initialize, ui/notifications/tool-result,
+  tools/call). Tool results are the {status, headers, body} envelope as structuredContent.
 -->
 <style>
-  :root {
-    --bg: #ffffff; --fg: #1d1f23; --muted: #6b7079; --line: #e3e5e9;
-    --chip: #f1f3f6; --busy: #fde8e8; --busy-fg: #9b1c1c; --free: #e7f6ec; --free-fg: #1e6b3a;
-    --accent: #2f6fde; --accent-fg: #ffffff; --error: #b42318;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    color-scheme: light;
+/* kit:css */
+/* Shared by every card, copied in by `npm run cards:kit` (scripts/sync-card-kit.mjs).
+   Colours follow the host's theme variables (MCP Apps hostContext.styles) when it sends
+   them, with our own light and dark values otherwise. */
+:root {
+  --bg: var(--color-background-primary, #ffffff);
+  --surface: var(--color-background-secondary, #f5f6f8);
+  --surface-2: var(--color-background-tertiary, #eaecf0);
+  --fg: var(--color-text-primary, #1c1f24);
+  --muted: var(--color-text-secondary, #5f6672);
+  --line: var(--color-border-primary, #d9dde3);
+  --line-soft: var(--color-border-secondary, #e8ebef);
+  --danger: var(--color-text-danger, #c4314b);
+  --accent: #3b5bdb; --accent-fg: #ffffff; --accent-soft: #e6ebfd; --accent-line: #8da2f0;
+  --ok: #1d7a46; --ok-soft: #e2f3e9; --ok-fill: #3a9a63;
+  --warn: #8a5300; --warn-soft: #fdf0d9; --warn-line: #e3a542; --warn-fill: #d08a2c;
+  --busy: #b42318; --busy-fill: #c8513f;
+  --overlay: rgba(20, 22, 26, 0.72); --overlay-fg: #ffffff;
+  --radius: var(--border-radius-lg, 12px); --radius-sm: var(--border-radius-md, 8px);
+  --font: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  font-family: var(--font);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--color-background-primary, #1b1d21); --surface: var(--color-background-secondary, #232529);
+    --surface-2: var(--color-background-tertiary, #2c2f34); --fg: var(--color-text-primary, #eceef1);
+    --muted: var(--color-text-secondary, #9aa1ab); --line: var(--color-border-primary, #383c43);
+    --line-soft: var(--color-border-secondary, #2c3036); --danger: var(--color-text-danger, #f08396);
+    --accent: #5b7cf0; --accent-soft: #263055; --accent-line: #7f97f2;
+    --ok: #8fd6aa; --ok-soft: #1f3a2b; --ok-fill: #2f7a50;
+    --warn: #f3c46e; --warn-soft: #3d2f17; --warn-line: #b8862f; --warn-fill: #c0812a;
+    --busy: #f4a3a3; --busy-fill: #a8473a; color-scheme: dark;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c;
-      --chip: #2a2d33; --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3;
-      --accent: #5b8ff0; --error: #f97066; color-scheme: dark;
-    }
+}
+:root[data-theme="dark"] {
+  --bg: var(--color-background-primary, #1b1d21); --surface: var(--color-background-secondary, #232529);
+  --surface-2: var(--color-background-tertiary, #2c2f34); --fg: var(--color-text-primary, #eceef1);
+  --muted: var(--color-text-secondary, #9aa1ab); --line: var(--color-border-primary, #383c43);
+  --line-soft: var(--color-border-secondary, #2c3036); --danger: var(--color-text-danger, #f08396);
+  --accent: #5b7cf0; --accent-soft: #263055; --accent-line: #7f97f2;
+  --ok: #8fd6aa; --ok-soft: #1f3a2b; --ok-fill: #2f7a50;
+  --warn: #f3c46e; --warn-soft: #3d2f17; --warn-line: #b8862f; --warn-fill: #c0812a;
+  --busy: #f4a3a3; --busy-fill: #a8473a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 20px; background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.45; }
+h1 { font-size: 22px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
+h2 { font-size: 15px; margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+[hidden] { display: none !important; }
+
+/* header: title, subtitle and status chips */
+.head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.head .subtitle { color: var(--muted); margin-top: 4px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; list-style: none; margin: 0; padding: 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); color: var(--fg); border-radius: 999px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.danger { background: var(--surface-2); color: var(--danger); }
+.chip.dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* buttons and form controls */
+button, .btn { font: inherit; font-size: 14px; border-radius: var(--radius-sm); padding: 7px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg); display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; min-height: 36px; }
+button:hover:not(:disabled), .btn:hover { background: var(--surface); }
+button.primary, .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button.primary:hover:not(:disabled), .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+button.primary.caution { background: var(--warn-fill); border-color: var(--warn-fill); }
+button.danger { color: var(--danger); border-color: transparent; background: none; }
+button.danger:hover:not(:disabled) { background: var(--surface); }
+button.link { border: 0; background: none; color: var(--accent); padding: 0; min-height: 0; text-decoration: underline; }
+button.link:hover:not(:disabled) { background: none; }
+button:disabled { opacity: 0.55; cursor: default; }
+button svg, .btn svg { width: 16px; height: 16px; flex: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fg); min-width: 0; }
+input, select, textarea { font: inherit; font-weight: 400; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 10px; width: 100%; min-height: 38px; }
+textarea { resize: vertical; min-height: 64px; }
+input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--accent); }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fields .wide { grid-column: 1 / -1; }
+label.check { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+
+/* sections and the footer action bar */
+section { margin-top: 20px; }
+section > h2 { margin-bottom: 10px; }
+.divider { border: 0; border-top: 1px solid var(--line-soft); margin: 20px 0; }
+.footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line-soft); margin-top: 24px; padding-top: 16px; }
+.footer .summary { flex: 1; min-width: 160px; color: var(--muted); }
+.footer .end { margin-left: auto; }
+.status { min-height: 1.4em; margin-top: 10px; }
+.status:empty { display: none; }
+.status.error { color: var(--danger); }
+.status.ok { color: var(--ok); }
+.banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-radius: var(--radius-sm); padding: 10px 14px; margin-top: 12px; }
+.banner.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+.banner .grow { min-width: 180px; }
+.banner button { border-color: currentColor; color: inherit; background: none; font-weight: 600; }
+
+/* label / value details */
+.details { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 14px 16px; margin: 20px 0 0; }
+.details dt { color: var(--muted); padding-top: 2px; }
+.details dd { margin: 0; overflow-wrap: anywhere; }
+.details .chips { margin-top: 8px; }
+
+/* people: an avatar with photo or initials, name and a muted line */
+.avatar { width: 36px; height: 36px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; overflow: hidden; position: relative; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.avatar.large { width: 64px; height: 64px; font-size: 22px; }
+.person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.person .who { min-width: 0; }
+.person .name { font-weight: 500; overflow-wrap: anywhere; }
+.person .sub { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 16px; list-style: none; margin: 0; padding: 0; }
+.response { font-size: 12px; }
+.response.accepted { color: var(--ok); }
+.response.declined { color: var(--danger); }
+
+/* selectable tiles, i.e. rooms, desks and search results */
+/* --tile-min: wider for tiles holding a button or an avatar */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile-min, 190px), 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+.tile { display: grid; gap: 4px; text-align: left; align-content: start; justify-content: stretch; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); color: var(--fg); width: 100%; height: 100%; min-height: 0; }
+.tile .title { font-weight: 600; overflow-wrap: anywhere; }
+.tile .sub { color: var(--muted); font-size: 13px; }
+.tile .free { color: var(--ok); font-size: 13px; }
+.tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.tile.person-tile { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+
+/* media: the photos and the level map, side by side on wide cards */
+.media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.media > .solo { grid-column: 1 / -1; }
+.panel { position: relative; aspect-ratio: 16 / 10; border-radius: var(--radius); overflow: hidden; background: var(--surface-2); border: 1px solid var(--line-soft); }
+.media > .solo.panel { aspect-ratio: 21 / 9; }
+/* a map on its own: wide enough to find the room or desk, without taking the whole card */
+.media > .solo.map { aspect-ratio: auto; height: min(320px, 40vw); }
+.panel .caption { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); background: var(--overlay); color: var(--overlay-fg); border-radius: var(--radius-sm); padding: 5px 10px; font-size: 13px; pointer-events: none; }
+.panel .placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.carousel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.carousel .nav { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; border: 0; background: var(--overlay); color: var(--overlay-fg); font-size: 18px; }
+.carousel .nav:hover:not(:disabled) { background: var(--overlay); filter: brightness(1.3); }
+.carousel .prev { left: 10px; }
+.carousel .next { right: 10px; }
+.carousel .dots { position: absolute; right: 12px; bottom: 14px; display: flex; gap: 6px; }
+.carousel .dots button { width: 8px; height: 8px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.55); }
+.carousel .dots button[aria-current="true"] { background: #ffffff; }
+.map { touch-action: none; cursor: grab; user-select: none; }
+.map.dragging { cursor: grabbing; }
+.map .canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.map .canvas img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.map .pin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent); border: 3px solid #ffffff; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent), 0 1px 4px rgba(0, 0, 0, 0.4); }
+.map .controls { position: absolute; top: 10px; right: 10px; display: grid; border-radius: var(--radius-sm); overflow: hidden; background: var(--overlay); }
+.map .controls button { width: 36px; height: 36px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--overlay-fg); }
+.map .controls button + button { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.map .controls button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+.map-toggle { display: none; }
+
+/* a day's availability as a bar, with the chosen time outlined */
+.timeline { margin-top: 6px; }
+.timeline .legend { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.timeline .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.timeline .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.timeline .bar { position: relative; height: 44px; border-radius: var(--radius-sm); background: var(--ok-fill); overflow: hidden; cursor: pointer; margin-top: 8px; }
+.timeline .bar.loading { background: var(--surface-2); cursor: default; }
+.timeline .seg { position: absolute; top: 0; bottom: 0; }
+.kind-free { background: var(--ok-fill); }
+.kind-me { background: repeating-linear-gradient(135deg, var(--warn-fill) 0 6px, color-mix(in srgb, var(--warn-fill) 55%, transparent) 6px 12px); }
+.kind-them { background: repeating-linear-gradient(135deg, var(--busy-fill) 0 6px, color-mix(in srgb, var(--busy-fill) 55%, transparent) 6px 12px); }
+.kind-both, .kind-busy { background: var(--busy-fill); }
+.kind-past { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+.timeline .legend i.kind-past { background: color-mix(in srgb, var(--surface-2) 70%, var(--ok-fill)); }
+.timeline .selected { position: absolute; top: 3px; bottom: 3px; border: 2px solid #ffffff; border-radius: 6px; box-shadow: 0 0 0 2px var(--accent); pointer-events: none; min-width: 6px; }
+.timeline .ticks { position: relative; height: 18px; font-size: 11px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.timeline .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.timeline .ticks span:first-child { transform: none; }
+
+@media (max-width: 639px) {
+  body { padding: 16px; }
+  h1 { font-size: 20px; }
+  .head { flex-direction: column; gap: 8px; }
+  .media { grid-template-columns: minmax(0, 1fr); }
+  .media > .solo.panel, .panel { aspect-ratio: 16 / 10; height: auto; }
+  .media .map:not(.open) { display: none; }
+  .map-toggle { display: inline-flex; justify-self: start; }
+  .details { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .details dd { margin-bottom: 10px; }
+  .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .fields .first { grid-column: 1 / -1; }
+  button, .btn, input, select { min-height: 44px; }
+  .carousel .dots button, .map .controls button, button.link { min-height: 0; }
+  .timeline .ticks span:nth-child(even) { display: none; }
+}
+/* /kit:css */
+  .back { margin: 0 0 14px; padding-left: 8px; }
+  .head .subtitle:empty { display: none; }
+  .features { margin-top: 12px; }
+  .day { display: flex; align-items: center; gap: 4px; }
+  .day h2 { min-width: 150px; text-align: center; }
+  .day button { width: 36px; padding: 0; }
+  .day .next svg { transform: scaleX(-1); }
+  .schedule .timeline > .row { margin-bottom: 2px; }
+  .meetings { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--line-soft); }
+  .meetings li { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); }
+  .meetings .when { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .meetings .what { font-weight: 500; overflow-wrap: anywhere; }
+  .meetings .host { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .meetings li.past { opacity: 0.6; }
+  .meetings li.clash { box-shadow: inset 3px 0 0 var(--warn-line); background: var(--warn-soft); }
+  .meetings li.empty { display: block; color: var(--muted); }
+  form.book { margin-top: 28px; }
+  form.book h2 { margin-bottom: 10px; }
+  .fields.when { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .note { margin-top: 20px; }
+  .rooms { margin-top: 18px; }
+  .rooms .tile .free { font-weight: 600; }
+  .rooms .tile .approval { color: var(--warn); font-size: 13px; }
+  /* the past is drawn over the free bar, the legend shows the two mixed */
+  @media (max-width: 639px) {
+    .day { width: 100%; justify-content: space-between; }
+    .day h2 { min-width: 0; }
+    .meetings li { grid-template-columns: 8.5em minmax(0, 1fr); }
+    .meetings .host { grid-column: 2; }
+    .fields.when { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    form.book .footer .summary { flex-basis: 100%; }
+    form.book .footer button { width: 100%; }
   }
-  :root[data-theme="dark"] {
-    --bg: #1b1d21; --fg: #eceef1; --muted: #9aa0a9; --line: #33363c;
-    --chip: #2a2d33; --busy: #3a2224; --busy-fg: #f4b4b4; --free: #1f3327; --free-fg: #9fdcb3;
-    --accent: #5b8ff0; --error: #f97066; color-scheme: dark;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.4; }
-  h1 { font-size: 18px; margin: 0; }
-  .muted { color: var(--muted); }
-  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .between { justify-content: space-between; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
-  .chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
-  section { margin-top: 16px; }
-  .day button { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; }
-  .day strong { min-width: 150px; text-align: center; }
-  ol.slots { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-  ul.rooms { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-  ul.rooms li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-  main > button:first-child { margin-bottom: 12px; }
-  .slot { border-radius: 8px; padding: 8px 10px; display: flex; gap: 12px; }
-  .slot time { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; }
-  .slot.busy { background: var(--busy); color: var(--busy-fg); }
-  .slot.free { background: var(--free); color: var(--free-fg); cursor: pointer; border: 0; text-align: left; font: inherit; width: 100%; }
-  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-  label.wide { grid-column: 1 / -1; }
-  input, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-  button.primary { grid-column: 1 / -1; background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: 8px; font: inherit; font-weight: 600; cursor: pointer; }
-  button.primary:disabled { opacity: 0.6; cursor: default; }
-  .status { margin-top: 8px; min-height: 1.4em; }
-  .status.error { color: var(--error); }
-  .carousel { position: relative; margin: 0 0 12px; border-radius: 8px; overflow: hidden; background: var(--chip); }
-  .carousel img, .carousel .placeholder { display: block; width: 100%; height: 180px; object-fit: cover; }
-  .carousel .placeholder { display: grid; place-items: center; }
-  .carousel .nav { position: absolute; top: 50%; transform: translateY(-50%); border: 0; border-radius: 50%; width: 32px; height: 32px; background: rgba(0, 0, 0, 0.45); color: #ffffff; font-size: 20px; line-height: 1; cursor: pointer; }
-  .carousel .prev { left: 8px; }
-  .carousel .next { right: 8px; }
-  .carousel .dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
-  .carousel .dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.6); cursor: pointer; }
-  .carousel .dot.active { background: #ffffff; }
-  details.map { margin-top: 12px; }
-  details.map summary { cursor: pointer; color: var(--accent); }
-  .map-frame { margin-top: 8px; max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: #ffffff; }
-  .map-canvas { position: relative; width: 250%; }
-  .map-canvas img { display: block; width: 100%; height: auto; }
-  .map-pin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #e5484d; border: 3px solid #ffffff; box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.35), 0 1px 4px rgba(0, 0, 0, 0.4); }
 </style>
 </head>
 <body>
 <main id="app"><p class="muted">Loading space…</p></main>
 <script>
 (() => {
+  // kit:js
+  // Shared by every card, copied in by `npm run cards:kit` (scripts/sync-card-kit.mjs).
+
+  // ---- host bridge: JSON-RPC over postMessage (MCP Apps) ----
   const app = document.getElementById("app");
   let nextId = 1;
   const pending = new Map();
-  let schedule = null;   // the spaces_show body
-  let rooms = null;      // the rooms a listing found, when there were several
-  let toolInput = {};
-  let busy = false;
+  const hooks = { input: () => {}, result: () => {} };
 
-  // JSON-RPC over postMessage with the host
   function send(message) { window.parent.postMessage(message, "*"); }
   function request(method, params) {
     const id = nextId++;
@@ -107,8 +274,8 @@
       return;
     }
     switch (msg.method) {
-      case "ui/notifications/tool-input": toolInput = (msg.params && msg.params.arguments) || {}; break;
-      case "ui/notifications/tool-result": showResult(msg.params); break;
+      case "ui/notifications/tool-input": hooks.input((msg.params && msg.params.arguments) || {}); break;
+      case "ui/notifications/tool-result": hooks.result(msg.params); break;
       case "ui/notifications/host-context-changed": applyContext(msg.params); break;
       case "ui/resource-teardown": send({ jsonrpc: "2.0", id: msg.id, result: {} }); break;
       default:
@@ -117,308 +284,26 @@
     }
   });
 
+  // the host's theme and, when it sends them, its colours and fonts
   function applyContext(context) {
-    if (context && context.theme) document.documentElement.dataset.theme = context.theme;
+    if (!context) return;
+    if (context.theme) document.documentElement.dataset.theme = context.theme;
+    const variables = context.styles && context.styles.variables;
+    if (variables) for (const [name, value] of Object.entries(variables)) if (value) document.documentElement.style.setProperty(name, value);
   }
 
-  // the tool result envelope: {status, headers, body}
-  function envelope(result) {
-    const content = result && result.structuredContent;
-    if (content && typeof content.status === "number") return content;
-    const text = result && result.content && result.content.find((item) => item.type === "text");
-    try { return text ? JSON.parse(text.text) : null; } catch { return null; }
-  }
-
-  // spaces_show gives a space, listings an array: one room is shown, several listed
-  function showResult(result) {
-    const response = envelope(result);
-    const body = response && response.status < 400 ? response.body : null;
-    if (Array.isArray(body)) return showRooms(body);
-    if (!body || !body.space) {
-      app.replaceChildren(el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
-      return;
-    }
-    schedule = response.body;
-    resetMedia();
-    render();
-  }
-
-  // spaces_index lists spaces, calendars_availability {id, system} where people have no system
-  function showRooms(items) {
-    const found = items.map((item) => (item.system || (item.capacity !== undefined ? item : null))).filter(Boolean);
-    rooms = found.length > 1 ? found : null;
-    if (found.length === 1) return openRoom(found[0]);
-    if (found.length) return renderRooms();
-    const people = items.filter((item) => !item.system && item.id).map((item) => item.id);
-    app.replaceChildren(el("p", { class: "muted" }, people.length ? `Free: ${people.join(", ")}` : "No rooms found"));
-  }
-
-  function renderRooms() {
-    schedule = null;
-    app.replaceChildren(
-      el("strong", {}, `${rooms.length} rooms`),
-      el("ul", { class: "rooms" }, rooms.map((room) => el("li", {},
-        el("div", {},
-          el("div", {}, room.display_name || room.name),
-          room.capacity ? el("div", { class: "muted" }, `Seats ${room.capacity}`) : null),
-        el("button", { type: "button", onclick: () => openRoom(room) }, "Show")))));
-  }
-
-  // a listing's room, from the listing's start (an availability search) or today
-  async function openRoom(room) {
-    app.replaceChildren(el("p", { class: "muted" }, "Loading…"));
-    const args = { id: room.id };
-    if (toolInput.period_start) args.period_start = Number(toolInput.period_start);
-    showResult(await request("tools/call", { name: "spaces_show", arguments: args }).catch(() => null));
-  }
-
-  // ---- the space's images and level map, loaded through card only tools ----
-  // they're updated in place, so a half filled booking form isn't lost
-  let media = { space: null, images: {}, index: 0, map: null };
-
-  function resetMedia() {
-    if (media.space === schedule.space.id) return;
-    media = { space: schedule.space.id, images: {}, index: 0, map: null };
-    loadMap();
-  }
-
-  function refresh(id, view) {
-    const node = document.getElementById(id);
-    if (node) node.replaceWith(view());
-  }
-
-  async function loadImage(index) {
-    if (media.images[index] !== undefined) return;
-    const space = media.space;
-    media.images[index] = null; // loading
-    let src = "error";
-    try {
-      const result = await request("tools/call", { name: "spaces_image", arguments: { id: space, index } });
-      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
-      if (image) src = `data:${image.mimeType};base64,${image.data}`;
-    } catch { /* shown as unavailable */ }
-    if (media.space !== space) return;
-    media.images[index] = src;
-    refresh("space-images", carousel);
-  }
-
-  function carousel() {
-    const count = (schedule.space.images || []).length;
-    if (!count) return el("div", { id: "space-images" });
-    const index = Math.min(media.index, count - 1);
-    const src = media.images[index];
-    if (src === undefined) loadImage(index);
-    const show = (target) => { media.index = (target + count) % count; refresh("space-images", carousel); };
-    const name = schedule.space.display_name || schedule.space.name;
-    return el("figure", { id: "space-images", class: "carousel" },
-      src && src !== "error"
-        ? el("img", { src, alt: `${name}, photo ${index + 1} of ${count}` })
-        : el("div", { class: "placeholder muted" }, src === "error" ? "Photo unavailable" : "Loading photo…"),
-      count > 1 ? [
-        el("button", { type: "button", class: "nav prev", title: "Previous photo", onclick: () => show(index - 1) }, "‹"),
-        el("button", { type: "button", class: "nav next", title: "Next photo", onclick: () => show(index + 1) }, "›"),
-        el("div", { class: "dots" }, Array.from({ length: count }, (_, dot) =>
-          el("button", { type: "button", class: dot === index ? "dot active" : "dot", title: `Photo ${dot + 1}`, onclick: () => show(dot) }))),
-      ] : null);
-  }
-
-  // the level map with a pin on the space, from spaces_map: {src, x, y, box}
-  async function loadMap() {
-    const space = media.space;
-    try {
-      const result = await request("tools/call", { name: "spaces_map", arguments: { id: space } });
-      const response = envelope(result);
-      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
-      const headers = Object.fromEntries(Object.entries((response && response.headers) || {}).map(([key, value]) => [key.toLowerCase(), value]));
-      const pin = String(headers["x-map-pin"] || "").split(",").map(Number);
-      const box = String(headers["x-map-view-box"] || "").split(/[\s,]+/).map(Number);
-      if (!image || pin.length !== 2 || box.length !== 4 || !(box[2] > 0 && box[3] > 0) || media.space !== space) return;
-      media.map = { src: `data:${image.mimeType};base64,${image.data}`, x: pin[0], y: pin[1], box };
-      refresh("space-map", mapView);
-    } catch { /* not on a map */ }
-  }
-
-  function mapView() {
-    const map = media.map;
-    if (!map) return el("div", { id: "space-map" });
-    const [minX, minY, width, height] = map.box;
-    const pin = el("div", { class: "map-pin", style: `left:${((map.x - minX) / width) * 100}%;top:${((map.y - minY) / height) * 100}%`, title: schedule.space.display_name || schedule.space.name });
-    const frame = el("div", { class: "map-frame" });
-    // centre the pin once the map has its size
-    const centre = () => {
-      frame.scrollLeft = pin.offsetLeft - frame.clientWidth / 2;
-      frame.scrollTop = pin.offsetTop - frame.clientHeight / 2;
-    };
-    // the SVG is shown as an image, so nothing in it can run
-    frame.append(el("div", { class: "map-canvas" }, el("img", { src: map.src, alt: "Level map", onload: centre }), pin));
-    return el("details", { id: "space-map", class: "map", ontoggle: (event) => { if (event.target.open) requestAnimationFrame(centre); } },
-      el("summary", {}, "Show on map"), frame);
-  }
-
-  function errorText(response, fallback) {
-    const body = response && response.body;
-    const detail = body && (body.message || body.error || (typeof body === "string" ? body : null));
-    return detail ? `${fallback}: ${detail}` : fallback;
-  }
-
-  // tiny DOM helper
-  function el(tag, attrs = {}, ...children) {
-    const node = document.createElement(tag);
-    for (const [key, value] of Object.entries(attrs)) {
-      if (value === undefined || value === null || value === false) continue;
-      if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
-      else node.setAttribute(key, value === true ? "" : value);
-    }
-    for (const child of children.flat()) if (child !== null && child !== undefined) node.append(child);
-    return node;
-  }
-
-  const timeFormat = () => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: schedule.timezone });
-  const dayFormat = () => new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: schedule.timezone });
-  const time = (epoch) => timeFormat().format(new Date(epoch * 1000));
-
-  // busy and free slots across the period
-  function slots() {
-    const events = (schedule.events || []).filter((event) => !event.all_day);
-    const result = [];
-    let cursor = schedule.period_start;
-    for (const event of events) {
-      const end = event.event_end || event.event_start + 3600;
-      if (event.event_start > cursor) result.push({ free: true, start: cursor, end: event.event_start });
-      result.push({ free: false, start: event.event_start, end, event });
-      cursor = Math.max(cursor, end);
-    }
-    if (cursor < schedule.period_end) result.push({ free: true, start: cursor, end: schedule.period_end });
-    return result;
-  }
-
-  function render() {
-    const { space, zones } = schedule;
-    const place = zones.filter((zone) => !zone.tags.includes("org")).map((zone) => zone.display_name || zone.name);
-    const allDay = (schedule.events || []).filter((event) => event.all_day);
-
-    // replaceChildren, unlike el(), would show a null child as the text "null"
-    app.replaceChildren(...[
-      rooms ? el("button", { type: "button", onclick: renderRooms }, "‹ All rooms") : null,
-      carousel(),
-      el("div", { class: "row between" },
-        el("h1", {}, space.display_name || space.name),
-        space.capacity ? el("span", { class: "chip" }, `Seats ${space.capacity}`) : null),
-      place.length ? el("div", { class: "muted" }, place.join(" · ")) : null,
-      space.features.length ? el("ul", { class: "chips" }, space.features.map((feature) => el("li", { class: "chip" }, feature))) : null,
-      space.approval ? el("p", { class: "muted" }, "Bookings need to be approved.") : null,
-      mapView(),
-      el("section", {},
-        el("div", { class: "row day" },
-          el("button", { type: "button", title: "Previous day", onclick: () => changeDay(-1) }, "‹"),
-          el("strong", {}, dayFormat().format(new Date(schedule.period_start * 1000))),
-          el("button", { type: "button", title: "Next day", onclick: () => changeDay(1) }, "›")),
-        schedule.events ? null : el("p", { class: "status error" }, schedule.events_error || "The calendar is unavailable"),
-        allDay.map((event) => el("p", { class: "muted" }, `All day: ${event.title || "Private meeting"}`)),
-        schedule.events ? el("ol", { class: "slots" }, slots().map(slotView)) : null),
-      space.email ? bookingForm() : el("p", { class: "muted" }, "This space has no calendar, so it can't be booked here."),
-    ].filter(Boolean));
-  }
-
-  function slotView(slot) {
-    const range = el("time", {}, `${time(slot.start)} – ${time(slot.end)}`);
-    if (!slot.free) {
-      const event = slot.event;
-      return el("li", { class: "slot busy" }, range, el("span", {}, event.title || "Private meeting", event.host ? el("span", { class: "muted" }, ` · ${event.host}`) : null));
-    }
-    return el("li", {}, el("button", { type: "button", class: "slot free", title: "Book from this time", onclick: () => pickStart(slot.start) }, range, el("span", {}, "Available")));
-  }
-
-  // the local "HH:MM" of an epoch in the space's timezone
-  function clock(epoch) {
-    const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: schedule.timezone }).formatToParts(new Date(epoch * 1000));
-    const part = (type) => parts.find((item) => item.type === type).value;
-    return `${part("hour")}:${part("minute")}`;
-  }
-
-  function defaultStart() {
-    const now = Math.floor(Date.now() / 1000);
-    const from = Math.max(schedule.period_start, now);
-    return Math.ceil(from / 900) * 900; // next quarter hour
-  }
-
-  function bookingForm() {
-    const start = clock(Math.min(defaultStart(), schedule.period_end - 900));
-    return el("section", {},
-      el("strong", {}, "Book this space"),
-      el("form", { id: "book", onsubmit: book },
-        el("label", { class: "wide" }, "Title", el("input", { name: "title", required: true, value: "Meeting", maxlength: "200" })),
-        el("label", {}, "Start", el("input", { name: "start", type: "time", required: true, value: start, step: "300" })),
-        el("label", {}, "Duration", el("select", { name: "duration" },
-          [15, 30, 45, 60, 90, 120, 180, 240].map((minutes) => el("option", { value: minutes, selected: minutes === 30 }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`)))),
-        el("button", { class: "primary", type: "submit", disabled: busy }, busy ? "Booking…" : "Book")),
-      el("div", { id: "status", class: "status", role: "status" }));
-  }
-
-  function pickStart(epoch) {
-    const input = document.querySelector("#book input[name=start]");
-    if (input) { input.value = clock(Math.max(epoch, defaultStart())); input.focus(); }
-  }
-
-  function setStatus(text, error = false) {
-    const status = document.getElementById("status");
-    if (status) { status.textContent = text; status.className = error ? "status error" : "status"; }
-  }
-
-  async function book(event) {
-    event.preventDefault();
-    const form = event.target;
-    const [hours, minutes] = form.start.value.split(":").map(Number);
-    const start = midnightOf(schedule.period_start) + hours * 3600 + minutes * 60;
-    const end = start + Number(form.duration.value) * 60;
-    const title = form.title.value.trim() || "Meeting";
-
-    const clash = (schedule.events || []).find((item) => !item.all_day && item.event_start < end && (item.event_end || item.event_start + 3600) > start);
-    if (clash) return setStatus(`That time overlaps ${clash.title || "a private meeting"} (${time(clash.event_start)} – ${time(clash.event_end)})`, true);
-    if (end <= Math.floor(Date.now() / 1000)) return setStatus("That time has already passed", true);
-
-    busy = true;
-    form.querySelector("button.primary").disabled = true;
-    setStatus("Booking…");
-    try {
-      const result = await request("tools/call", {
-        name: "events_book",
-        arguments: { title, event_start: start, event_end: end, timezone: schedule.timezone, system_id: schedule.space.id },
-      });
-      const response = envelope(result);
-      if (result.isError || !response || response.status >= 400) throw new Error(errorText(response, "The booking failed"));
-
-      const summary = `Booked "${title}" in ${schedule.space.display_name || schedule.space.name}, ${dayFormat().format(new Date(start * 1000))} ${time(start)} – ${time(end)}.`;
-      // let the model know, hosts that don't support it reject the request
-      request("ui/update-model-context", { content: [{ type: "text", text: summary }] }).catch(() => {});
-      busy = false;
-      await reload();
-      setStatus(summary);
-    } catch (error) {
-      busy = false;
-      form.querySelector("button.primary").disabled = false;
-      setStatus(error.message, true);
-    }
-  }
-
-  async function load(periodStart) {
-    const result = await request("tools/call", { name: "spaces_show", arguments: { id: schedule.space.id, period_start: periodStart } });
-    showResult(result);
-  }
-
-  function reload() { return load(schedule.period_start); }
-
-  // midnight, in the space's timezone, of the day an epoch falls on
-  function midnightOf(epoch) {
-    const [hours, minutes] = clock(epoch).split(":").map(Number);
-    return epoch - (epoch % 60) - hours * 3600 - minutes * 60;
-  }
-
-  function changeDay(offset) {
-    // aim for 2am so daylight saving changes don't skip or repeat a day
-    const target = midnightOf(schedule.period_start) + offset * 86400 + 7200;
-    app.querySelectorAll(".day button").forEach((button) => (button.disabled = true));
-    load(midnightOf(target)).catch((error) => setStatus(error.message, true));
+  // connects to the host, `onInput` gets the tool's arguments and `onResult` its result
+  function start(name, { onInput, onResult }) {
+    if (onInput) hooks.input = onInput;
+    hooks.result = onResult;
+    request("ui/initialize", {
+      protocolVersion: "2026-01-26",
+      appInfo: { name, version: "2.0.0" },
+      appCapabilities: {},
+    }).then((result) => {
+      applyContext(result && result.hostContext);
+      notify("ui/notifications/initialized", {});
+    }).catch(() => notify("ui/notifications/initialized", {}));
   }
 
   // keep the host's frame the size of the content
@@ -426,14 +311,820 @@
     notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
   }).observe(document.body);
 
-  request("ui/initialize", {
-    protocolVersion: "2026-01-26",
-    appInfo: { name: "placeos-space-card", version: "1.0.0" },
-    appCapabilities: {},
-  }).then((result) => {
-    applyContext(result && result.hostContext);
-    notify("ui/notifications/initialized", {});
-  }).catch(() => notify("ui/notifications/initialized", {}));
+  // a tool result's {status, headers, body} envelope
+  function envelope(result) {
+    const content = result && result.structuredContent;
+    if (content && typeof content.status === "number") return content;
+    const text = result && result.content && result.content.find((item) => item.type === "text");
+    try { return text ? JSON.parse(text.text) : null; } catch { return null; }
+  }
+
+  function errorText(response, fallback) {
+    const body = response && response.body;
+    const detail = body && (typeof body === "string" ? body : body.message || body.error);
+    return detail ? `${fallback}: ${detail}` : fallback;
+  }
+
+  // calls a tool, returning the response body or throwing the error
+  async function callTool(name, args, failure) {
+    const result = await request("tools/call", { name, arguments: args });
+    const response = envelope(result);
+    if ((result && result.isError) || !response || response.status >= 400) throw new Error(errorText(response, failure));
+    return response.body;
+  }
+
+  // calls a tool that returns an image: {src, headers} with lower case header names, or null
+  async function callImage(name, args) {
+    try {
+      const result = await request("tools/call", { name, arguments: args });
+      const image = result && !result.isError && result.content && result.content.find((item) => item.type === "image");
+      if (!image) return null;
+      const response = envelope(result) || {};
+      const headers = Object.fromEntries(Object.entries(response.headers || {}).map(([key, value]) => [key.toLowerCase(), value]));
+      return { src: `data:${image.mimeType};base64,${image.data}`, headers };
+    } catch { return null; }
+  }
+
+  // tells the model what the user did in the card, hosts without support reject it
+  function tellModel(text) {
+    request("ui/update-model-context", { content: [{ type: "text", text }] }).catch(() => {});
+  }
+
+  // opens a link through the host, or itself when the host refuses (some only open web links)
+  function openLink(url) {
+    const fallback = () => window.open(url, "_blank", "noopener");
+    request("ui/open-link", { url }).then((result) => { if (result && result.isError) fallback(); }).catch(fallback);
+  }
+
+  // the signed in user, for deciding which actions to offer
+  let me = null;
+  function currentUser() {
+    me = me || callTool("users_current", {}, "Unable to load your details").catch(() => ({}));
+    return me;
+  }
+
+  // ---- DOM ----
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of children.flat(Infinity)) if (child !== null && child !== undefined && child !== false) node.append(child);
+    return node;
+  }
+
+  // replaces the children, skipping empty ones (null would show as the text "null")
+  function fill(node, ...children) {
+    node.replaceChildren(...children.flat(Infinity).filter((child) => child !== null && child !== undefined && child !== false));
+    return node;
+  }
+
+  // replaces the element with this id by a fresh render of it
+  function refresh(id, view) {
+    const node = document.getElementById(id);
+    if (node) node.replaceWith(view());
+  }
+
+  const ICONS = {
+    mail: '<path d="M3 5h18v14H3z"/><path d="m3 6 9 7 9-7"/>',
+    phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M5 12h14"/>',
+    locate: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+    map: '<path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
+    video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
+  };
+  function icon(name) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = ICONS[name] || "";
+    return svg;
+  }
+
+  const lower = (value) => String(value || "").trim().toLowerCase();
+  const narrow = () => window.matchMedia("(max-width: 639px)").matches;
+
+  // ---- time: epochs shown and entered in an IANA timezone ----
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  function zoneOf(tz) { try { new Intl.DateTimeFormat(undefined, { timeZone: tz }); return tz || localZone; } catch { return localZone; } }
+  const format = (epoch, tz, options) => new Intl.DateTimeFormat(undefined, { ...options, timeZone: zoneOf(tz) }).format(new Date(epoch * 1000));
+  const fmtTime = (epoch, tz) => format(epoch, tz, { hour: "numeric", minute: "2-digit" });
+  const fmtHour = (epoch, tz) => format(epoch, tz, { hour: "numeric" });
+  // "Today, Tue 13 Oct", "Tomorrow, …" or "Thu 15 Oct", with the year when it isn't this year
+  function fmtDay(epoch, tz) {
+    const date = wallClock(epoch, tz).date;
+    const today = wallClock(Date.now() / 1000, tz).date;
+    const options = { weekday: "short", day: "numeric", month: "short" };
+    if (date.slice(0, 4) !== today.slice(0, 4)) options.year = "numeric";
+    const day = format(epoch, tz, options);
+    if (date === today) return `Today, ${day}`;
+    if (date === nextDay(today)) return `Tomorrow, ${day}`;
+    return day;
+  }
+  // the zone's short name, i.e. "AEDT", when it's not the viewer's own zone
+  function zoneName(epoch, tz) {
+    const part = new Intl.DateTimeFormat(undefined, { timeZoneName: "short", timeZone: zoneOf(tz) }).formatToParts(new Date(epoch * 1000)).find((item) => item.type === "timeZoneName");
+    return part ? part.value : "";
+  }
+  // "4:00 – 4:30 pm", the locale's way of writing a range of times
+  function fmtTimes(start, end, tz) {
+    const formatter = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: zoneOf(tz) });
+    return formatter.formatRange ? formatter.formatRange(new Date(start * 1000), new Date(end * 1000)) : `${fmtTime(start, tz)} – ${fmtTime(end, tz)}`;
+  }
+  // "Today, Tue 13 Oct · 4:00 – 4:30 pm AEDT"
+  function fmtRange(start, end, tz, withZone = true) {
+    const sameDay = wallClock(start, tz).date === wallClock(end - 1, tz).date;
+    const times = sameDay ? fmtTimes(start, end, tz) : `${fmtTime(start, tz)} – ${fmtDay(end, tz)} ${fmtTime(end, tz)}`;
+    return `${fmtDay(start, tz)} · ${times}${withZone ? ` ${zoneName(start, tz)}` : ""}`;
+  }
+  // {date: "YYYY-MM-DD", time: "HH:MM"} of an epoch in a timezone
+  function wallClock(epoch, tz) {
+    const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: zoneOf(tz) }).formatToParts(new Date(epoch * 1000));
+    const part = (type) => parts.find((item) => item.type === type).value;
+    return { date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}` };
+  }
+  // the epoch of a date and time in a timezone
+  function zonedEpoch(date, time, tz) {
+    const [y, m, d] = date.split("-").map(Number);
+    const [h, mi] = time.split(":").map(Number);
+    const target = Date.UTC(y, m - 1, d, h, mi) / 1000;
+    let epoch = target;
+    for (let i = 0; i < 2; i++) {
+      const wall = wallClock(epoch, tz);
+      const [wy, wm, wd] = wall.date.split("-").map(Number);
+      const [wh, wmi] = wall.time.split(":").map(Number);
+      epoch += target - Date.UTC(wy, wm - 1, wd, wh, wmi) / 1000;
+    }
+    return epoch;
+  }
+  // the date (YYYY-MM-DD) some days after another
+  function addDays(date, days) {
+    const [y, m, d] = date.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+  }
+  const nextDay = (date) => addDays(date, 1);
+  const prevDay = (date) => addDays(date, -1);
+  const nextQuarterHour = () => Math.ceil(Date.now() / 900000) * 900;
+
+  // ---- people: avatars with a photo (staff_photo) or initials ----
+  const photos = new Map();
+  let photoSlots = 3;
+  const photoQueue = [];
+  function photoOf(email) {
+    const key = lower(email);
+    if (!key) return Promise.resolve(null);
+    if (!photos.has(key)) {
+      photos.set(key, new Promise((resolve) => photoQueue.push({ key, resolve })));
+      pumpPhotos();
+    }
+    return photos.get(key);
+  }
+  // at most three photo requests at a time
+  function pumpPhotos() {
+    while (photoSlots > 0 && photoQueue.length) {
+      const { key, resolve } = photoQueue.shift();
+      photoSlots--;
+      callImage("staff_photo", { id: key }).then((image) => resolve(image && image.src)).finally(() => { photoSlots++; pumpPhotos(); });
+    }
+  }
+
+  function initials(person) {
+    const name = String((person && (person.name || person.email)) || "?").replace(/@.*/, "");
+    const words = name.split(/[\s._-]+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word[0].toUpperCase()).join("") || "?";
+  }
+
+  // an avatar showing the initials until the photo loads, `photo: false` skips the photo
+  function avatar(person, { large = false, photo = true } = {}) {
+    const node = el("span", { class: large ? "avatar large" : "avatar", "aria-hidden": "true" }, initials(person));
+    if (photo && person && person.email) {
+      photoOf(person.email).then((src) => { if (src) node.append(el("img", { src, alt: "" })); });
+    }
+    return node;
+  }
+
+  function personRow(person, sub, extra) {
+    return el("div", { class: "person" }, avatar(person),
+      el("div", { class: "who" },
+        el("div", { class: "name" }, person.name || person.email),
+        sub || extra ? el("div", { class: "sub" }, sub, extra) : null));
+  }
+
+  // ---- media: photos and the level map ----
+  // images: {count, load(index) → Promise(src | null), caption}
+  // map: {load() → Promise({src, x, y, box} | null), caption}
+  function mediaRow({ images, map }) {
+    const hasImages = images && images.count > 0;
+    const row = el("div", { class: "media" });
+    const photosPanel = hasImages ? carousel(images) : null;
+    let toggle = null;
+    // a room or desk that isn't drawn on a map leaves the photos on their own
+    const missing = () => {
+      mapPanel.remove();
+      if (toggle) toggle.remove();
+      if (photosPanel) photosPanel.classList.add("solo");
+      else row.remove();
+    };
+    const mapPanel = map ? mapViewer({ ...map, missing }) : null;
+    if (photosPanel && !mapPanel) photosPanel.classList.add("solo");
+    if (mapPanel && !photosPanel) mapPanel.classList.add("solo", "open");
+    fill(row, photosPanel, mapPanel);
+    if (mapPanel && photosPanel) {
+      // narrow cards show the map under the photos once asked for, loading it then
+      toggle = el("button", { type: "button", class: "map-toggle", "aria-expanded": "false" }, icon("map"), "Show map");
+      toggle.addEventListener("click", () => {
+        const open = !mapPanel.classList.contains("open");
+        mapPanel.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.lastChild.textContent = open ? "Hide map" : "Show map";
+        if (open) mapPanel.load();
+      });
+      row.append(toggle);
+      if (!narrow()) mapPanel.load();
+    } else if (mapPanel) {
+      mapPanel.load();
+    }
+    if (!photosPanel && !mapPanel) return null;
+    return row;
+  }
+
+  function carousel({ count, load, caption }) {
+    const loaded = new Map();
+    let index = 0;
+    const panel = el("div", { class: "panel carousel", role: "group", "aria-label": "Photos" });
+    const show = (next) => {
+      index = (next + count) % count;
+      render();
+      if (!loaded.has(index)) {
+        const wanted = index;
+        loaded.set(wanted, null);
+        load(wanted).then((src) => { loaded.set(wanted, src || "error"); if (index === wanted) render(); });
+      }
+    };
+    const render = () => {
+      const src = loaded.get(index);
+      fill(panel,
+        src && src !== "error" ? el("img", { src, alt: `Photo ${index + 1} of ${count}` }) : el("div", { class: "placeholder" }, src === "error" ? "Photo unavailable" : "Loading photo…"),
+        caption ? el("div", { class: "caption" }, caption) : null,
+        count > 1 ? [
+          el("button", { type: "button", class: "nav prev", "aria-label": "Previous photo", onclick: () => show(index - 1) }, "‹"),
+          el("button", { type: "button", class: "nav next", "aria-label": "Next photo", onclick: () => show(index + 1) }, "›"),
+          el("div", { class: "dots" }, Array.from({ length: count }, (_, dot) =>
+            el("button", { type: "button", "aria-label": `Photo ${dot + 1}`, "aria-current": String(dot === index), onclick: () => show(dot) }))),
+        ] : null);
+    };
+    show(0);
+    return panel;
+  }
+
+  // the level map with a pin, zoomed with the buttons, ctrl + wheel or a pinch, dragged to pan
+  function mapViewer({ load, caption, missing }) {
+    const panel = el("div", { class: "panel map", role: "group", "aria-label": "Level map" });
+    const canvas = el("div", { class: "canvas" });
+    let map = null;
+    let view = { scale: 1, x: 0, y: 0 };
+    let base = { width: 0, height: 0 };
+    let started = false;
+    const MIN = 1;
+    const MAX = 8;
+
+    fill(panel, el("div", { class: "placeholder" }, "Loading map…"));
+
+    // the map's size at scale 1, contained in the panel
+    function measure() {
+      const width = panel.clientWidth;
+      const height = panel.clientHeight;
+      const ratio = map.box[2] / map.box[3];
+      base = width / height > ratio ? { width: height * ratio, height } : { width, height: width / ratio };
+      canvas.style.width = `${base.width}px`;
+      canvas.style.height = `${base.height}px`;
+    }
+    function clamp() {
+      const width = panel.clientWidth;
+      const height = panel.clientHeight;
+      view.scale = Math.min(MAX, Math.max(MIN, view.scale));
+      const w = base.width * view.scale;
+      const h = base.height * view.scale;
+      view.x = w <= width ? (width - w) / 2 : Math.min(0, Math.max(width - w, view.x));
+      view.y = h <= height ? (height - h) / 2 : Math.min(0, Math.max(height - h, view.y));
+      canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+      panel.dataset.scale = view.scale.toFixed(2);
+    }
+    // zoom around a point of the panel
+    function zoom(factor, cx = panel.clientWidth / 2, cy = panel.clientHeight / 2) {
+      const scale = Math.min(MAX, Math.max(MIN, view.scale * factor));
+      view.x = cx - ((cx - view.x) * scale) / view.scale;
+      view.y = cy - ((cy - view.y) * scale) / view.scale;
+      view.scale = scale;
+      clamp();
+    }
+    // the pin in the middle, zoomed in a little
+    function recenter() {
+      measure();
+      view.scale = 2;
+      const px = ((map.x - map.box[0]) / map.box[2]) * base.width * view.scale;
+      const py = ((map.y - map.box[1]) / map.box[3]) * base.height * view.scale;
+      view.x = panel.clientWidth / 2 - px;
+      view.y = panel.clientHeight / 2 - py;
+      clamp();
+    }
+
+    function show() {
+      const [minX, minY, width, height] = map.box;
+      const pin = el("div", { class: "pin", style: `left:${((map.x - minX) / width) * 100}%;top:${((map.y - minY) / height) * 100}%` });
+      // the SVG is shown as an image, so nothing in it can run
+      fill(canvas, el("img", { src: map.src, alt: "", onload: recenter }), pin);
+      fill(panel, canvas,
+        el("div", { class: "controls" },
+          el("button", { type: "button", "aria-label": "Zoom in", title: "Zoom in", onclick: () => zoom(1.5) }, icon("plus")),
+          el("button", { type: "button", "aria-label": "Zoom out", title: "Zoom out", onclick: () => zoom(1 / 1.5) }, icon("minus")),
+          el("button", { type: "button", "aria-label": "Recenter", title: "Recenter", onclick: recenter }, icon("locate"))),
+        caption || map.location ? el("div", { class: "caption" }, caption || map.location) : null);
+      new ResizeObserver(() => { if (panel.clientWidth) { measure(); clamp(); } }).observe(panel);
+    }
+
+    // dragging with one pointer, pinching with two
+    const pointers = new Map();
+    let pinch = null;
+    panel.addEventListener("pointerdown", (event) => {
+      if (!map || event.target.closest(".controls")) return;
+      panel.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      panel.classList.add("dragging");
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinch = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    });
+    panel.addEventListener("pointermove", (event) => {
+      const last = pointers.get(event.pointerId);
+      if (!last) return;
+      const point = { x: event.clientX, y: event.clientY };
+      pointers.set(event.pointerId, point);
+      if (pointers.size === 2 && pinch) {
+        const [a, b] = [...pointers.values()];
+        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        const rect = panel.getBoundingClientRect();
+        zoom(distance / pinch, (a.x + b.x) / 2 - rect.left, (a.y + b.y) / 2 - rect.top);
+        pinch = distance;
+      } else if (pointers.size === 1) {
+        view.x += point.x - last.x;
+        view.y += point.y - last.y;
+        clamp();
+      }
+    });
+    const release = (event) => {
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) pinch = null;
+      if (!pointers.size) panel.classList.remove("dragging");
+    };
+    panel.addEventListener("pointerup", release);
+    panel.addEventListener("pointercancel", release);
+    // trackpad pinches arrive as ctrl + wheel, a plain wheel keeps scrolling the page
+    panel.addEventListener("wheel", (event) => {
+      if (!map || !event.ctrlKey) return;
+      event.preventDefault();
+      const rect = panel.getBoundingClientRect();
+      zoom(Math.exp(-event.deltaY / 200), event.clientX - rect.left, event.clientY - rect.top);
+    }, { passive: false });
+
+    panel.load = () => {
+      if (started) return;
+      started = true;
+      load().then((found) => {
+        if (!found) return missing ? missing() : fill(panel, el("div", { class: "placeholder" }, "Map unavailable"));
+        map = found;
+        show();
+      });
+    };
+    return panel;
+  }
+
+  // a map tool's image as the viewer's {src, x, y, box, location}, or null when it isn't
+  // drawn on one. location is "Level 1 · Building", from the X-Map-Location header
+  async function loadMap(tool, args) {
+    const image = await callImage(tool, args);
+    if (!image) return null;
+    const pin = String(image.headers["x-map-pin"] || "").split(",").map(Number);
+    const box = String(image.headers["x-map-view-box"] || "").split(/[\s,]+/).map(Number);
+    if (pin.length !== 2 || box.length !== 4 || !(box[2] > 0 && box[3] > 0)) return null;
+    let location = "";
+    try { location = decodeURIComponent(image.headers["x-map-location"] || ""); } catch { /* left out */ }
+    return { src: image.src, x: pin[0], y: pin[1], box, location };
+  }
+
+  // ---- a day's availability as a bar ----
+  // segments: [{start, end, kind}] with kind free, me, them, both, busy or past;
+  // legend: [[kind, label]]; selected: {start, end}; onPick(epoch) when a spot is clicked
+  function timeline({ id, from, to, tz, segments, selected, legend, title, loading, onPick }) {
+    const span = to - from;
+    const pct = (epoch) => `${((Math.min(Math.max(epoch, from), to) - from) / span) * 100}%`;
+    const bar = el("div", { class: loading ? "bar loading" : "bar", role: "img", "aria-label": title || "Availability" });
+    if (!loading) {
+      for (const segment of segments) {
+        if (segment.end <= from || segment.start >= to || segment.kind === "free") continue;
+        bar.append(el("div", { class: `seg kind-${segment.kind}`, style: `left:${pct(segment.start)};width:calc(${pct(segment.end)} - ${pct(segment.start)})`, title: segment.label || "" }));
+      }
+      if (selected && selected.end > from && selected.start < to) {
+        bar.append(el("div", { class: "selected", style: `left:${pct(selected.start)};width:calc(${pct(selected.end)} - ${pct(selected.start)})` }));
+      }
+      if (onPick) {
+        bar.addEventListener("click", (event) => {
+          const rect = bar.getBoundingClientRect();
+          const epoch = from + ((event.clientX - rect.left) / rect.width) * span;
+          onPick(Math.floor(epoch / 900) * 900);
+        });
+      }
+    }
+    const ticks = el("div", { class: "ticks", "aria-hidden": "true" });
+    for (let tick = from; tick < to; tick += 7200) ticks.append(el("span", { style: `left:${pct(tick)}` }, fmtHour(tick, tz)));
+    return el("div", { class: "timeline", id },
+      el("div", { class: "row", style: "justify-content:space-between" },
+        title ? el("strong", { style: "font-size:13px" }, title) : null,
+        legend ? el("div", { class: "legend" }, legend.map(([kind, label]) => el("span", {}, el("i", { class: `kind-${kind}` }), label))) : null),
+      bar, ticks);
+  }
+
+  // the busy segments merged into who's busy when: me, them or both
+  function overlay(mine, theirs) {
+    const points = [...new Set([...mine, ...theirs].flatMap((period) => [period.start, period.end]))].sort((a, b) => a - b);
+    const busy = (list, start, end) => list.some((period) => period.start < end && period.end > start);
+    const segments = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const [start, end] = [points[i], points[i + 1]];
+      const me = busy(mine, start, end);
+      const them = busy(theirs, start, end);
+      if (!me && !them) continue;
+      const kind = me && them ? "both" : me ? "me" : "them";
+      const last = segments[segments.length - 1];
+      if (last && last.kind === kind && last.end === start) last.end = end;
+      else segments.push({ start, end, kind });
+    }
+    return segments;
+  }
+  // /kit:js
+
+  // ---- the space card: a room's day of meetings, booked with events_book ----
+  let schedule = null;   // the spaces_show body
+  let rooms = null;      // {list, free, people} when a listing found several rooms
+  let toolInput = {};
+  let busy = false;
+  let draft = null;      // the booking form: {title, start, duration (minutes)}
+  let media = null;      // the photos and map, kept across re-renders
+  const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240];
+
+  const tz = () => schedule.timezone || localZone;
+  const space = () => schedule.space;
+  const nameOf = (room) => room.display_name || room.name;
+  const now = () => Math.floor(Date.now() / 1000);
+  const ending = (meeting) => meeting.event_end || meeting.event_start + 3600;
+
+  // the day shown, in the space's timezone
+  const dayDate = () => wallClock(schedule.period_start, tz()).date;
+  const dayStart = () => zonedEpoch(dayDate(), "00:00", tz());
+  const dayEnd = () => zonedEpoch(nextDay(dayDate()), "00:00", tz());
+
+  const meetings = () => (schedule.events || []).filter((meeting) => !meeting.all_day && ending(meeting) > dayStart() && meeting.event_start < dayEnd());
+  const allDay = () => (schedule.events || []).filter((meeting) => meeting.all_day);
+  const overlapping = (start, end) => meetings().find((meeting) => meeting.event_start < end && ending(meeting) > start);
+
+  // spaces_show gives a space, listings an array: one room is shown, several listed
+  function showResult(result, message, kind) {
+    const response = envelope(result);
+    const body = response && response.status < 400 ? response.body : null;
+    if (Array.isArray(body)) return showRooms(body);
+    if (!body || !body.space) {
+      fill(app, rooms ? backButton() : null, el("p", { class: "status error" }, errorText(response, "Unable to load the space")));
+      return;
+    }
+    const title = schedule && schedule.space.id === body.space.id && draft ? draft.title : "Meeting";
+    schedule = body;
+    draft = defaultDraft(title);
+    render(message, kind);
+  }
+
+  // ---- room listings: spaces_index spaces, calendars_availability {id, system} (people have no system) ----
+  function showRooms(items) {
+    const found = items.map((item) => item.system || (item.capacity !== undefined ? item : null)).filter(Boolean);
+    const people = items.filter((item) => !item.system && item.capacity === undefined && item.id).map((item) => item.id);
+    rooms = found.length > 1 ? { list: found, free: items.some((item) => item.system), people } : null;
+    if (found.length === 1) return openRoom(found[0]);
+    if (found.length) return renderRooms();
+    fill(app, el("p", { class: "muted empty" }, people.length ? `Free: ${people.join(", ")}` : "No rooms found"));
+  }
+
+  // when an availability search was for, i.e. "Today, Tue, 13 Oct · 5:00 – 6:00 pm AEDT"
+  function searched() {
+    const start = Number(toolInput.period_start);
+    const end = Number(toolInput.period_end);
+    if (!(start > 0)) return "";
+    const zone = (rooms.list.find((room) => room.timezone) || {}).timezone || localZone;
+    return end > start ? fmtRange(start, end, zone) : fmtDay(start, zone);
+  }
+
+  function renderRooms() {
+    schedule = null;
+    const { list, free, people } = rooms;
+    fill(app,
+      el("div", { class: "head" },
+        el("div", { class: "grow" },
+          el("h1", {}, `${list.length} rooms`),
+          el("div", { class: "subtitle" }, free ? searched() : ""))),
+      el("ul", { class: "tiles rooms", "aria-label": "Rooms" }, list.map((room) => {
+        const sub = [room.capacity ? `${room.capacity} seats` : null, ...(room.features || [])].filter(Boolean).join(" · ");
+        return el("li", {}, el("button", { type: "button", class: "tile", onclick: () => openRoom(room) },
+          el("span", { class: "title" }, nameOf(room)),
+          sub ? el("span", { class: "sub" }, sub) : null,
+          room.approval ? el("span", { class: "approval" }, "Needs approval") : null,
+          free ? el("span", { class: "free" }, "Free") : null));
+      })),
+      people.length ? el("p", { class: "muted" }, `Also free: ${people.join(", ")}`) : null);
+  }
+
+  // a listing's room, from the listing's start (an availability search) or today
+  async function openRoom(room) {
+    fill(app, el("p", { class: "muted" }, "Loading…"));
+    const args = { id: room.id };
+    if (toolInput.period_start) args.period_start = Number(toolInput.period_start);
+    showResult(await request("tools/call", { name: "spaces_show", arguments: args }).catch(() => null));
+  }
+
+  const backButton = () => el("button", { type: "button", class: "back", onclick: renderRooms }, icon("back"), "All rooms");
+
+  // ---- the room's photos and level map ----
+  function mediaView() {
+    const room = space();
+    if (!media || media.space !== room.id) {
+      const entry = { space: room.id, map: null };
+      const seats = room.capacity ? ` · ${room.capacity} seats` : "";
+      entry.node = mediaRow({
+        images: { count: (room.images || []).length, caption: `${nameOf(room)}${seats}`, load: (index) => callImage("spaces_image", { id: room.id, index }).then((image) => image && image.src) },
+        map: {
+          load: () => {
+            entry.map = entry.map || loadMap("spaces_map", { id: room.id });
+            entry.map.then(showLocation);
+            return entry.map;
+          },
+        },
+      });
+      media = entry;
+    }
+    // a room without photos that isn't on a map leaves an empty row
+    return media.node && media.node.children.length ? media.node : null;
+  }
+
+  // "Level 1 · PlaceOS Sydney Dev": the space's zones, most specific first, without the org
+  function place() {
+    const rank = (zone) => (zone.tags.includes("level") || zone.tags.includes("area") ? 0 : zone.tags.includes("building") ? 1 : 2);
+    return (schedule.zones || [])
+      .filter((zone) => !(zone.tags || []).includes("org"))
+      .map((zone) => ({ ...zone, tags: zone.tags || [] }))
+      .sort((a, b) => rank(a) - rank(b))
+      .map((zone) => zone.display_name || zone.name)
+      .join(" · ");
+  }
+
+  // the map knows where the space is when its zones don't
+  function showLocation(map) {
+    const node = document.getElementById("space-place");
+    if (node && !node.textContent && map && map.location) node.textContent = map.location;
+  }
+
+  function header() {
+    const room = space();
+    return el("div", { class: "head" },
+      el("div", { class: "grow" },
+        el("h1", {}, nameOf(room)),
+        el("div", { class: "subtitle", id: "space-place" }, place())),
+      el("ul", { class: "chips", "aria-label": "Space" },
+        room.capacity ? el("li", { class: "chip" }, `${room.capacity} seats`) : null,
+        room.approval ? el("li", { class: "chip warn dot" }, "Needs approval") : null));
+  }
+
+  // ---- the day: navigation, the timeline and the meetings ----
+  function dayNav() {
+    return el("div", { class: "day" },
+      el("button", { type: "button", class: "prev", "aria-label": "Previous day", title: "Previous day", onclick: () => changeDay(-1) }, icon("back")),
+      el("h2", {}, fmtDay(dayStart(), tz())),
+      el("button", { type: "button", class: "next", "aria-label": "Next day", title: "Next day", onclick: () => changeDay(1) }, icon("back")));
+  }
+
+  // 7am to 7pm, stretched to the meetings and the chosen time, never before the period's start
+  // (a listing's search time, the calendar wasn't read before it)
+  function bounds() {
+    const date = dayDate();
+    let from = zonedEpoch(date, "07:00", tz());
+    let to = zonedEpoch(date, "19:00", tz());
+    const periods = meetings().map((meeting) => ({ start: meeting.event_start, end: ending(meeting) }));
+    if (space().email) periods.push(chosen());
+    for (const period of periods) { from = Math.min(from, period.start); to = Math.max(to, period.end); }
+    from = Math.max(dayStart(), Math.floor(schedule.period_start / 3600) * 3600, Math.floor(from / 3600) * 3600);
+    // at least six hours, so a search late in the day still reads as a day
+    to = Math.min(dayEnd(), Math.max(from + 6 * 3600, Math.ceil(to / 3600) * 3600));
+    return to > from ? { from, to } : { from: dayStart(), to: dayEnd() };
+  }
+
+  function dayView() {
+    if (!schedule.events) {
+      return el("div", { id: "day", class: "timeline" },
+        el("div", { class: "row" }, dayNav()),
+        el("p", { class: "status error" }, schedule.events_error || "The calendar is unavailable"));
+    }
+    const { from, to } = bounds();
+    const segments = meetings().map((meeting) => ({ start: meeting.event_start, end: ending(meeting), kind: "busy", label: `${fmtTimes(meeting.event_start, ending(meeting), tz())} ${meeting.title || "Private meeting"}` }));
+    const elapsed = Math.min(now(), to);
+    if (elapsed > from) segments.push({ start: from, end: elapsed, kind: "past", label: "Past" });
+    const legend = [["free", "Free"], ["busy", "Booked"]];
+    if (elapsed > from) legend.push(["past", "Past"]);
+    const node = timeline({ id: "day", from, to, tz: tz(), segments, legend, selected: space().email ? chosen() : null, onPick: space().email ? pick : null });
+    // the day navigation sits in the timeline's header row, beside the legend
+    node.firstChild.prepend(dayNav());
+    return node;
+  }
+
+  function meetingsList() {
+    if (!schedule.events) return el("div", { id: "meetings" });
+    const list = meetings();
+    const days = allDay();
+    const { start, end } = chosen();
+    const host = (meeting) => (meeting.host ? el("span", { class: "host" }, meeting.host) : null);
+    return el("ul", { id: "meetings", class: "meetings", "aria-label": "Meetings" },
+      days.map((meeting) => el("li", { class: "all-day" },
+        el("span", { class: "when" }, "All day"), el("span", { class: "what" }, meeting.title || "Private meeting"), host(meeting))),
+      list.map((meeting) => {
+        const classes = [ending(meeting) <= now() ? "past" : "", space().email && meeting.event_start < end && ending(meeting) > start ? "clash" : ""].filter(Boolean).join(" ");
+        return el("li", { class: classes || null },
+          el("time", { class: "when" }, fmtTimes(meeting.event_start, ending(meeting), tz())),
+          el("span", { class: "what" }, meeting.title || "Private meeting"),
+          host(meeting));
+      }),
+      list.length || days.length ? null : el("li", { class: "empty" }, "No meetings, it's free all day"));
+  }
+
+  // ---- booking ----
+  const chosen = () => ({ start: draft.start, end: draft.start + draft.duration * 60 });
+
+  // the first time from `start` that's free for `minutes`, the same day, or null
+  function freeFrom(start, minutes) {
+    let time = start;
+    for (let clash = overlapping(time, time + minutes * 60); clash; clash = overlapping(time, time + minutes * 60)) time = ending(clash);
+    return time + minutes * 60 <= dayEnd() ? time : null;
+  }
+
+  // the searched time (a listing's period_start), else the next free time today or 9am
+  function defaultDraft(title) {
+    const searchedFor = schedule.period_start !== dayStart() && schedule.period_start > now() - 300;
+    let duration = 30;
+    const wanted = (Number(toolInput.period_end) - Number(toolInput.period_start)) / 60;
+    if (searchedFor && Number(toolInput.period_start) === schedule.period_start && DURATIONS.includes(wanted)) duration = wanted;
+    if (searchedFor) return { title, duration, start: Math.ceil(schedule.period_start / 300) * 300 };
+    const today = dayStart() <= now() && now() < dayEnd();
+    const from = today ? nextQuarterHour() : zonedEpoch(dayDate(), "09:00", tz());
+    const free = freeFrom(from, duration);
+    return { title, duration, start: free === null ? from : free };
+  }
+
+  // why the chosen time can't be booked, with the next free time
+  function problem() {
+    const { start, end } = chosen();
+    if (start + 300 <= now()) {
+      return { text: "That time has already passed.", next: dayEnd() > now() ? freeFrom(nextQuarterHour(), draft.duration) : null };
+    }
+    const clash = overlapping(start, end);
+    if (!clash) return null;
+    return { text: `Booked ${fmtTimes(clash.event_start, ending(clash), tz())}.`, next: freeFrom(start, draft.duration) };
+  }
+
+  function clashBanner() {
+    const found = problem();
+    if (!found) return el("div", { id: "clash", hidden: true });
+    const next = found.next !== null ? fmtTime(found.next, tz()) : null;
+    return el("div", { id: "clash", class: "banner warn", role: "alert" },
+      el("span", { class: "grow" }, found.text, next ? ` Next free at ${next}.` : " There's no free time later this day."),
+      next ? el("button", { type: "button", onclick: () => setStart(found.next) }, `Use ${next}`) : null);
+  }
+
+  const summaryText = () => `${nameOf(space())} · ${fmtRange(draft.start, chosen().end, tz(), false)}`;
+
+  function bookingForm(message, kind) {
+    const duration = DURATIONS.includes(draft.duration) ? DURATIONS : [...DURATIONS, draft.duration].sort((a, b) => a - b);
+    return el("form", { id: "book", class: "book", onsubmit: book, oninput: changed },
+      el("h2", {}, "Book this room"),
+      el("div", { class: "fields when" },
+        el("label", { class: "field first" }, "Title", el("input", { name: "title", required: true, value: draft.title, maxlength: "200" })),
+        el("label", { class: "field" }, "Start", el("input", { name: "start", type: "time", required: true, value: wallClock(draft.start, tz()).time, step: "300" })),
+        el("label", { class: "field" }, "Duration", el("select", { name: "duration" },
+          duration.map((minutes) => el("option", { value: minutes, selected: minutes === draft.duration }, minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`))))),
+      clashBanner(),
+      el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || ""),
+      el("div", { class: "footer" },
+        el("span", { class: "summary", id: "summary" }, summaryText()),
+        el("button", { type: "submit", class: "primary", id: "book-button", disabled: busy || !!problem() }, busy ? "Booking…" : "Book room")));
+  }
+
+  // the form's fields into the draft, then the timeline, meetings, banner and footer follow
+  function changed(input) {
+    const fields = document.getElementById("book").elements;
+    draft.title = fields.title.value;
+    if (input && input.target === fields.title) return;
+    if (fields.start.value) draft.start = zonedEpoch(dayDate(), fields.start.value, tz());
+    draft.duration = Number(fields.duration.value);
+    updateChoice();
+  }
+
+  function updateChoice() {
+    refresh("day", dayView);
+    refresh("meetings", meetingsList);
+    refresh("clash", clashBanner);
+    const summary = document.getElementById("summary");
+    if (summary) summary.textContent = summaryText();
+    const button = document.getElementById("book-button");
+    if (button) button.disabled = busy || !!problem();
+  }
+
+  function setStart(epoch) {
+    draft.start = epoch;
+    const form = document.getElementById("book");
+    if (form) form.elements.start.value = wallClock(epoch, tz()).time;
+    updateChoice();
+  }
+
+  // a click on the timeline, the elapsed part of today picks the next quarter hour
+  function pick(epoch) {
+    setStart(epoch < now() && dayEnd() > now() ? nextQuarterHour() : epoch);
+  }
+
+  function setStatus(text, kind = "") {
+    const status = document.getElementById("status");
+    if (status) { status.textContent = text; status.className = `status ${kind}`; }
+  }
+
+  async function book(submitted) {
+    submitted.preventDefault();
+    changed();
+    if (busy || problem()) return;
+    const { start, end } = chosen();
+    const title = draft.title.trim() || "Meeting";
+    const button = document.getElementById("book-button");
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Booking…";
+    setStatus("Booking…");
+    try {
+      await callTool("events_book", { title, event_start: start, event_end: end, timezone: tz(), system_id: space().id }, "The booking failed");
+      const summary = `Booked "${title}" in ${nameOf(space())}, ${fmtRange(start, end, tz(), false)}.`;
+      tellModel(summary);
+      busy = false;
+      draft.title = "Meeting";
+      await load(schedule.period_start, summary, "ok");
+    } catch (error) {
+      busy = false;
+      button.textContent = "Book room";
+      button.disabled = !!problem();
+      setStatus(error.message, "error");
+    }
+  }
+
+  async function load(periodStart, message, kind) {
+    const result = await request("tools/call", { name: "spaces_show", arguments: { id: space().id, period_start: periodStart } });
+    showResult(result, message, kind);
+  }
+
+  function changeDay(offset) {
+    const date = offset > 0 ? nextDay(dayDate()) : prevDay(dayDate());
+    app.querySelectorAll(".day button").forEach((button) => (button.disabled = true));
+    load(zonedEpoch(date, "00:00", tz())).catch((error) => {
+      app.querySelectorAll(".day button").forEach((button) => (button.disabled = false));
+      setStatus(error.message, "error");
+    });
+  }
+
+  function render(message, kind) {
+    const room = space();
+    fill(app,
+      rooms ? backButton() : null,
+      header(),
+      mediaView(),
+      room.features && room.features.length ? el("ul", { class: "chips features", "aria-label": "Features" }, room.features.map((feature) => el("li", { class: "chip" }, feature))) : null,
+      el("section", { class: "schedule", "aria-label": "Schedule" }, dayView(), meetingsList()),
+      room.email
+        ? bookingForm(message, kind)
+        : [el("p", { class: "muted note" }, "This space has no calendar, so it can't be booked here."),
+          el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || "")]);
+    if (media && media.map) media.map.then(showLocation);
+  }
+
+  start("placeos-space-card", { onInput: (args) => { toolInput = args; }, onResult: (result) => showResult(result) });
 })();
 </script>
 </body>

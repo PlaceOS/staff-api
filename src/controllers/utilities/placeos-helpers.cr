@@ -20,7 +20,8 @@ module Utils::PlaceOSHelpers
   MAX_CARD_FILE_BYTES = 5 * 1024 * 1024
 
   # Responds with the level map SVG and where the element is on it, in the `X-Map-Pin`
-  # (x,y), `X-Map-View-Box` and `X-Map-Level` headers. 404 when it isn't drawn on the map
+  # (x,y), `X-Map-View-Box` and `X-Map-Level` headers, with `X-Map-Location` naming the
+  # level and its building (URI encoded, "Level 1 · Sydney"). 404 when it isn't drawn on the map
   def render_level_map(level : PlaceOS::Model::Zone, element_id : String) : Nil
     url = level.map_id.presence
     raise Error::NotFound.new("level #{level.id} doesn't have a map") unless url
@@ -30,6 +31,7 @@ module Utils::PlaceOSHelpers
 
     @__render_called__ = true
     response.headers["X-Map-Level"] = level.id.as(String)
+    response.headers["X-Map-Location"] = URI.encode_path_segment(map_location(level))
     response.headers["X-Map-Pin"] = "#{pin.x},#{pin.y}"
     map.view_box.try { |box| response.headers["X-Map-View-Box"] = box }
     svg = map.svg
@@ -41,6 +43,12 @@ module Utils::PlaceOSHelpers
       response.content_type = "image/svg+xml"
       response.print svg
     end
+  end
+
+  # "Level 1 · Sydney": the level's name and its parent's, i.e. the building
+  private def map_location(level : PlaceOS::Model::Zone) : String
+    parent = level.parent_id.presence.try { |id| PlaceOS::Model::Zone.find?(id) }
+    [level, parent].compact.map { |zone| zone.display_name.presence || zone.name }.join(" · ")
   end
 
   private def upload_origin : URI

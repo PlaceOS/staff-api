@@ -59,6 +59,10 @@ claude mcp add --transport http placeos-staff https://<your-placeos-domain>/api/
   and routes, so keep them accurate. The Docker build generates `mcp.yml` and ships
   it with the binary (`staff-api --mcp=mcp.yml`; override the location with
   `MCP_DESCRIPTION_PATH`). The model's instructions are in `src/mcp.cr`.
+* **Cards:** booking, showing and searching tools render MCP Apps cards from `cards/`
+  (`@[AC::MCP(ui:)]`). Set `MCP_PREVIEW_PATH` (i.e. `/api/staff/v1/mcp/preview`) in
+  development to try them in action-controller's card previewer. Release builds, such as
+  the Docker image, leave it out: its pages are served without authentication. Browser tests: see [e2e/README.md](e2e/README.md).
 
 ## Contributing
 

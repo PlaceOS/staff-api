@@ -28,6 +28,10 @@ An LLM reads them to pick a tool, so when adding or changing a route:
   `@[AC::MCP(behaviour: :read_only)]`
 * preview the descriptions with `crystal build src/staff-api.cr && ./staff-api --mcp=mcp.yml`
 
+MCP Apps cards live in `cards/<name>/card.html`; the code they share is in `cards/_kit` and
+is copied into each card with `npm run cards:kit`. Test card changes in a browser with
+Playwright (`npm run test:e2e`, see `e2e/README.md`) and look at the screenshots it saves.
+
 When the API changes, update the OpenAPI docs: build the app locally
 (`crystal build ./src/staff-api.cr`), run `./staff-api -d > OPENAPI_DOC.yml`, then remove the binary.
 

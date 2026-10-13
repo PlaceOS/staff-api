@@ -1,0 +1,12 @@
+{
+  "name": "staff-api-e2e",
+  "private": true,
+  "description": "Browser tests for the MCP Apps cards, run in action-controller's card previewer",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "cards:kit": "node scripts/sync-card-kit.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  }
+}

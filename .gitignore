@@ -15,3 +15,9 @@ data
 staff-api
 tasks
 /mcp.yml
+
+# browser tests
+node_modules
+test-results
+playwright-report
+blob-report

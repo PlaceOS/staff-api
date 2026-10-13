@@ -188,7 +188,7 @@ describe App::MCP do
   it "lists every tool the cards call without opening a toolbox" do
     # hosts only let cards call tools in their tool list
     called = Dir.glob("./cards/*/card.html").flat_map do |card|
-      File.read(card).scan(/name: "(\w+)", arguments|callTool\("(\w+)"/).map { |match| match[1]? || match[2] }
+      File.read(card).scan(/name: "(\w+)", arguments|(?:callTool|callImage|loadMap)\("(\w+)"/).map { |match| match[1]? || match[2] }
     end.uniq!
     called.size.should be > 10
 
