@@ -37,8 +37,7 @@ COPY ./src src
 # --release optimises the binary and leaves out the MCP card previewer (src/staff-api.cr).
 # -no-pie: backtraces of a static PIE binary can't be resolved, they print `from ???`
 # -Devloop=libevent: the native epoll event loop corrupts its timers under load
-# (crystal-lang/crystal#17058). The parallel execution contexts (-Dexecution_context)
-# stay off until that's fixed.
+# (crystal-lang/crystal#17058)
 RUN PLACE_COMMIT=$PLACE_COMMIT \
     shards build --production --release --link-flags=-no-pie --error-trace --static -Devloop=libevent
 

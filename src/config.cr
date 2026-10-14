@@ -25,7 +25,7 @@ alias History = PlaceOS::Model::History
 # Server required after application controllers
 require "action-controller/server"
 
-# Execution contexts (no-ops without -Dpreview_mt -Dexecution_context).
+# Execution contexts (the Crystal runtime default since 1.21).
 # The bookings index route can return large payloads, so it runs the whole
 # request in a dedicated "bookings" context. Unbound routes offload their
 # response serialisation to the shared response context.
