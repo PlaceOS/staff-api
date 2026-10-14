@@ -34,12 +34,13 @@ RUN shards install --production --ignore-crystal-version --skip-postinstall --sk
 COPY ./src src
 
 # Build App
-# -Dpreview_mt -Dexecution_context enable RFC 2 execution contexts so heavy
-# routes (e.g. bookings index) serialise responses in dedicated parallel pools.
 # --release optimises the binary and leaves out the MCP card previewer (src/staff-api.cr).
 # -no-pie: backtraces of a static PIE binary can't be resolved, they print `from ???`
+# -Devloop=libevent: the native epoll event loop corrupts its timers under load
+# (crystal-lang/crystal#17058). The parallel execution contexts (-Dexecution_context)
+# stay off until that's fixed.
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --release --link-flags=-no-pie --error-trace --static -Dpreview_mt -Dexecution_context
+    shards build --production --release --link-flags=-no-pie --error-trace --static -Devloop=libevent
 
 # Generate the MCP tool descriptions, they're extracted from the source code comments
 RUN ./bin/staff-api --mcp=/app/mcp.yml
