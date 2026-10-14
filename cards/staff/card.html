@@ -90,6 +90,7 @@ button.danger:hover:not(:disabled) { background: var(--surface); }
 button.link { border: 0; background: none; color: var(--accent); padding: 0; min-height: 0; text-decoration: underline; }
 button.link:hover:not(:disabled) { background: none; }
 button:disabled { opacity: 0.55; cursor: default; }
+button.done:disabled { background: var(--ok-fill); border-color: var(--ok-fill); color: #ffffff; opacity: 1; }
 button svg, .btn svg { width: 16px; height: 16px; flex: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 label.field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fg); min-width: 0; }
@@ -185,6 +186,7 @@ section > h2 { margin-bottom: 10px; }
 .kind-me { background: repeating-linear-gradient(135deg, var(--warn-fill) 0 6px, color-mix(in srgb, var(--warn-fill) 55%, transparent) 6px 12px); }
 .kind-them { background: repeating-linear-gradient(135deg, var(--busy-fill) 0 6px, color-mix(in srgb, var(--busy-fill) 55%, transparent) 6px 12px); }
 .kind-both, .kind-busy { background: var(--busy-fill); }
+.kind-booked { background: var(--accent); }
 .kind-past { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
 .timeline .legend i.kind-past { background: color-mix(in srgb, var(--surface-2) 70%, var(--ok-fill)); }
 .timeline .selected { position: absolute; top: 3px; bottom: 3px; border: 2px solid #ffffff; border-radius: 6px; box-shadow: 0 0 0 2px var(--accent); pointer-events: none; min-width: 6px; }
@@ -720,7 +722,7 @@ section > h2 { margin-bottom: 10px; }
   }
 
   // ---- a day's availability as a bar ----
-  // segments: [{start, end, kind}] with kind free, me, them, both, busy or past;
+  // segments: [{start, end, kind}] with kind free, me, them, both, busy, booked or past;
   // legend: [[kind, label]]; selected: {start, end}; onPick(epoch) when a spot is clicked
   function timeline({ id, from, to, tz, segments, selected, legend, title, loading, onPick }) {
     const span = to - from;
@@ -779,6 +781,10 @@ section > h2 { margin-bottom: 10px; }
   let nearby = null;
   // the signed in user's email, from users_current
   let myEmail = null;
+  // the meetings booked with this person: [{start, end, title}], shown without reading the calendars again
+  let made = [];
+  // the meeting the form just booked {start, end, title, space}, until the form changes
+  let booked = null;
 
   const firstName = () => String(person.name || "").split(" ")[0] || person.email || "them";
   const isMe = (email) => !!myEmail && myEmail === lower(email);
@@ -804,6 +810,8 @@ section > h2 { margin-bottom: 10px; }
     person = found;
     nearby = null;
     schedule = null;
+    made = [];
+    booked = null;
     rooms = null;
     room = null;
     pickBuilding = false;
@@ -865,7 +873,7 @@ section > h2 { margin-bottom: 10px; }
 
   function meetingForm() {
     const starting = wallClock(nextQuarterHour(), localZone);
-    return el("form", { id: "meeting", class: "meeting", onsubmit: book },
+    return el("form", { id: "meeting", class: "meeting", onsubmit: book, oninput: formChanged, onchange: formChanged },
       el("h2", {}, `Book a meeting with ${firstName()}`),
       el("div", { class: "fields" },
         el("label", { class: "field wide" }, "Title", el("input", { name: "title", required: true, value: `Meeting with ${firstName()}`, maxlength: "200" })),
@@ -888,6 +896,14 @@ section > h2 { margin-bottom: 10px; }
     return { start, end: start + Number(meeting.elements.duration.value) * 60 };
   }
 
+  // a change after a booking makes the form bookable again
+  function formChanged() {
+    if (!booked) return;
+    booked = null;
+    refresh("availability", availabilityView);
+    refresh("footer", footerView);
+  }
+
   function timeChanged() {
     refresh("availability", availabilityView);
     refresh("footer", footerView);
@@ -896,6 +912,7 @@ section > h2 { margin-bottom: 10px; }
 
   // sets the start, never in the past
   function pickStart(epoch) {
+    booked = null;
     form().elements.start.value = wallClock(Math.max(epoch, nextQuarterHour()), localZone).time;
     timeChanged();
   }
@@ -945,8 +962,8 @@ section > h2 { margin-bottom: 10px; }
 
   // who's busy at the chosen time: {me, them, from, to} or null when both are free
   function clash(time) {
-    if (!time || !schedule || !schedule.people) return null;
-    const [mine, theirs] = busyLists().map((list) => overlapping(list, time.start, time.end));
+    if (booked || !time || !schedule || !schedule.people) return null;
+    const [mine, theirs] = busyLists().map((list) => overlapping([...list, ...made], time.start, time.end));
     if (!mine.length && !theirs.length) return null;
     const all = [...mine, ...theirs];
     return { me: mine.length > 0, them: theirs.length > 0, from: Math.min(...all.map((period) => period.start)), to: Math.max(...all.map((period) => period.end)) };
@@ -955,7 +972,7 @@ section > h2 { margin-bottom: 10px; }
   // the first start from the chosen time (and not before now) when both are free for the
   // whole meeting, before the end of the day, or null
   function nextFree(time) {
-    const all = busyLists().flat();
+    const all = [...busyLists().flat(), ...made];
     const dayEnd = zonedEpoch(schedule.date, DAY_TO, localZone);
     const length = time.end - time.start;
     const from = Math.max(time.start, nextQuarterHour());
@@ -982,6 +999,8 @@ section > h2 { margin-bottom: 10px; }
       const first = firstName();
       const labels = { me: "You're busy", them: `${first} is busy`, both: "You're both busy" };
       segments = overlay(mine, theirs).map((segment) => ({ ...segment, label: `${labels[segment.kind]} ${fmtTimes(segment.start, segment.end, localZone)}` }));
+      // the meetings booked here, drawn over the calendars
+      segments.push(...made.map((meeting) => ({ ...meeting, kind: "booked", label: `Booked: ${meeting.title} ${fmtTimes(meeting.start, meeting.end, localZone)}` })));
       // the part of today that's gone, greyed out
       const now = Date.now() / 1000;
       if (now > from) segments.push({ start: from, end: Math.min(now, to), kind: "past", label: "Past" });
@@ -993,7 +1012,7 @@ section > h2 { margin-bottom: 10px; }
         selected: time,
         loading: !!schedule.loading,
         title: availabilityTitle(schedule.date),
-        legend: [["free", "Both free"], ["them", `${firstName()} busy`], ["me", "You busy"], ["both", "Both busy"]],
+        legend: [["free", "Both free"], ["them", `${firstName()} busy`], ["me", "You busy"], ["both", "Both busy"], ...(made.some((meeting) => meeting.end > from && meeting.start < to) ? [["booked", "Booked"]] : [])],
         onPick: pickStart,
       }),
       schedule.loading ? el("p", { class: "status muted" }, "Checking calendars…") : busyBanner(time));
@@ -1088,7 +1107,7 @@ section > h2 { margin-bottom: 10px; }
     else if (rooms.zone_id && !(rooms.spaces || []).length) body = el("p", { class: "muted" }, "No rooms are free then, try another time.");
     else if (rooms.zone_id) {
       body = el("ul", { class: "tiles", "aria-label": "Free rooms" }, rooms.spaces.map((space) => el("li", {},
-        el("button", { type: "button", class: "tile", "aria-pressed": String(space.id === room), onclick: () => { room = space.id; refresh("rooms", roomsView); refresh("footer", footerView); } },
+        el("button", { type: "button", class: "tile", "aria-pressed": String(space.id === room), onclick: () => { room = space.id; booked = null; refresh("rooms", roomsView); refresh("footer", footerView); } },
           el("span", { class: "title" }, roomName(space)),
           el("span", { class: "sub" }, [space.capacity ? `${space.capacity} seats` : null, ...(space.features || [])].filter(Boolean).join(" · ") || "Room"),
           space.approval ? el("span", { class: "approval" }, "Needs approval") : el("span", { class: "free" }, "Free")))));
@@ -1105,18 +1124,19 @@ section > h2 { margin-bottom: 10px; }
 
   // ---- the footer: what's being booked, and the button ----
   function footerView() {
-    const time = meetingTime();
-    const space = chosenRoom();
+    const time = booked || meetingTime();
+    const space = booked ? booked.space : chosenRoom();
     const warned = !!clash(time);
     const summary = [person.name || person.email, space ? roomName(space) : null, time ? fmtRange(time.start, time.end, localZone, false) : null].filter(Boolean).join(" · ");
+    const label = busy ? "Booking…" : booked ? "Booked!" : warned ? "Book anyway" : "Book meeting";
     return el("div", { id: "footer", class: "footer" },
       el("span", { class: "summary" }, summary),
-      el("button", { type: "submit", class: warned ? "primary caution" : "primary", disabled: busy }, busy ? "Booking…" : warned ? "Book anyway" : "Book meeting"));
+      el("button", { type: "submit", class: booked ? "primary done" : warned ? "primary caution" : "primary", disabled: busy || !!booked }, label));
   }
 
   async function book(submitted) {
     submitted.preventDefault();
-    if (busy) return;
+    if (busy || booked) return;
     const meeting = submitted.target;
     const { start, end } = meetingTime();
     if (end <= Date.now() / 1000) return setStatus("That time has already passed", "error");
@@ -1140,11 +1160,15 @@ section > h2 { margin-bottom: 10px; }
       const summary = `Booked "${title}" with ${person.name || person.email}${where}, ${fmtRange(start, end, localZone, false)}.`;
       tellModel(summary);
       setStatus(summary, "ok");
-      // the calendars changed: show it
-      schedule = null;
-      rooms = null;
-      loadSchedule();
-      if (space) loadRooms();
+      // shown straight away, without reading the calendars again
+      booked = { start, end, title, space };
+      made.push({ start, end, title });
+      if (space && rooms && rooms.spaces) {
+        rooms.spaces = rooms.spaces.filter((free) => free.id !== space.id);
+        room = null;
+        refresh("rooms", roomsView);
+      }
+      refresh("availability", availabilityView);
     } catch (error) {
       setStatus(error.message, "error");
     }
@@ -1176,27 +1200,29 @@ section > h2 { margin-bottom: 10px; }
       el("hr", { class: "divider" }),
       el("h2", {}, `Sit near ${firstName()}`),
       el("p", { class: "muted" }, `${firstName()} is at ${deskName(nearby.origin)}${level ? `, ${level}` : ""}, ${fmtRange(nearby.period_start, nearby.period_end, tz, false)}`),
-      nearby.booked ? null : el("ul", { class: "tiles", "aria-label": "Desks nearby" }, nearby.desks.map((desk, index) => el("li", { class: "tile desk-tile" },
+      el("ul", { class: "tiles", "aria-label": "Desks nearby" }, (nearby.desks || []).map((desk, index) => el("li", { class: "tile desk-tile" },
         el("div", {},
           el("span", { class: "title" }, deskName(desk)),
           el("span", { class: "sub" }, [index === 0 ? "Closest" : null, ...(desk.features || [])].filter(Boolean).join(" · ") || "Free")),
-        el("button", { type: "button", "aria-label": `Book ${deskName(desk)}`, onclick: (event) => bookDesk(desk, event.currentTarget) }, "Book")))),
+        el("button", { type: "button", class: nearby.desk === desk.id ? "done" : null, "aria-label": `Book ${deskName(desk)}`, disabled: !!nearby.booked, onclick: () => bookDesk(desk) }, nearby.desk === desk.id ? "Booked!" : "Book")))),
       el("div", { id: "desk-status", class: nearby.booked ? "status ok" : "status", role: "status" }, nearby.booked || ""));
   }
 
-  async function bookDesk(desk, button) {
-    if (busy) return;
+  async function bookDesk(desk) {
+    if (busy || nearby.booked) return;
     busy = true;
-    button.disabled = true;
+    for (const button of document.querySelectorAll("#desks .desk-tile button")) button.disabled = true;
     setStatus("Booking…", "", "desk-status");
     try {
       await callTool("bookings_book", { asset_id: desk.id, booking_type: "desk", booking_start: nearby.period_start, booking_end: nearby.period_end, title: `Desk near ${firstName()}`, timezone: nearby.timezone }, "The desk couldn't be booked");
       const summary = `Booked ${deskName(desk)} near ${person.name || person.email}, ${fmtRange(nearby.period_start, nearby.period_end, nearby.timezone, false)}.`;
       tellModel(summary);
+      // one desk a day: the others can't be booked now
       nearby.booked = summary;
+      nearby.desk = desk.id;
       refresh("desks", desksView);
     } catch (error) {
-      button.disabled = false;
+      for (const button of document.querySelectorAll("#desks .desk-tile button")) button.disabled = false;
       setStatus(error.message, "error", "desk-status");
     }
     busy = false;

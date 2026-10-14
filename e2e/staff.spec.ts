@@ -231,8 +231,38 @@ test.describe("staff card", () => {
     await expect(card.locator("#status")).toHaveClass(/ok/);
     expect(mcp.callsTo("events_book")).toEqual([{ title: "Roadmap chat", event_start: at("16:00"), event_end: at("16:30"), attendees: [PEOPLE.johanna.email], timezone: TIMEZONE }]);
     await expect.poll(() => toldModel(page)).toEqual(['Booked "Roadmap chat" with Johanna Lorenz, Today, Tue, 13 Oct · 4:00 – 4:30 pm.']);
-    // the calendars are read again
-    await expect.poll(() => mcp.callsTo("staff_free_busy").length).toBe(2);
+
+    // done: the button says so, the meeting is on the timeline and the busy warning is gone
+    const button = card.locator(".footer button[type=submit]");
+    await expect(button).toHaveText("Booked!");
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveClass(/done/);
+    const timeline = card.locator("#timeline");
+    await expect(timeline.locator(".seg.kind-booked")).toHaveCount(1);
+    expect(spaces(await timeline.locator(".seg.kind-booked").getAttribute("title"))).toBe("Booked: Roadmap chat 4:00 – 4:30 pm");
+    await expect(timeline.locator(".legend span")).toHaveText(["Both free", "Johanna busy", "You busy", "Both busy", "Booked"]);
+    await expect(card.locator("#availability .banner")).toHaveCount(0);
+    // without reading the calendars again
+    expect(mcp.callsTo("staff_free_busy")).toHaveLength(1);
+    await snapshot(page, "staff-desktop-booked");
+
+    // a change to the form makes it bookable again, the new meeting counts as both of us busy
+    await card.locator("input[name=start]").fill("16:15");
+    await expect(button).toHaveText("Book anyway");
+    await expect(button).toBeEnabled();
+    await expect(card.locator("#availability .banner")).toContainText("You're both busy");
+  });
+
+  test("makes the form bookable again after a booking when the title changes", async ({ page }) => {
+    const { card } = await showJohanna(page);
+    await card.locator("input[name=start]").fill("17:00");
+    await card.getByRole("button", { name: "Book meeting" }).click();
+    const button = card.locator(".footer button[type=submit]");
+    await expect(button).toHaveText("Booked!");
+    await card.locator("input[name=title]").fill("Follow up");
+    // the same time is now taken by the meeting just booked
+    await expect(button).toHaveText("Book anyway");
+    await expect(button).toBeEnabled();
   });
 
   test("books a meeting when we're both free", async ({ page }) => {
@@ -285,8 +315,12 @@ test.describe("staff card", () => {
     await card.getByRole("button", { name: "Book anyway" }).click();
     await expect(card.locator("#status")).toHaveText('Booked "Meeting with Johanna" with Johanna Lorenz in Sydney Room 2, Today, Tue, 13 Oct · 4:00 – 4:30 pm.');
     expect(mcp.callsTo("events_book")).toEqual([{ title: "Meeting with Johanna", event_start: at("16:00"), event_end: at("16:30"), attendees: [PEOPLE.johanna.email], timezone: TIMEZONE, system_id: ROOMS[1].id }]);
-    // the free rooms are looked up again
-    await expect.poll(() => mcp.callsTo("spaces_free").length).toBe(2);
+    // the booked room isn't free any more, without looking the rooms up again
+    await expect(card.locator(".footer button[type=submit]")).toHaveText("Booked!");
+    await expect(tiles.locator(".title")).toHaveText(["Sydney Room 1", "Sydney Room 4", "Sydney Room 3"]);
+    await expect(card.locator("#rooms .tile[aria-pressed=true]")).toHaveCount(0);
+    await expect(card.locator(".footer .summary")).toHaveText("Johanna Lorenz · Sydney Room 2 · Today, Tue, 13 Oct · 4:00 – 4:30 pm");
+    expect(mcp.callsTo("spaces_free")).toHaveLength(1);
   });
 
   test("looks for rooms again when the time changes, keeping the chosen room", async ({ page }) => {
@@ -361,7 +395,12 @@ test.describe("staff card", () => {
     await desks.getByRole("button", { name: "Book Desk 1.03" }).click();
     const booked = "Booked Desk 1.03 near Johanna Lorenz, Today, Tue, 13 Oct · 9:00 am – 5:00 pm.";
     await expect(card.locator("#desk-status")).toHaveText(booked);
-    await expect(desks.locator(".tile")).toHaveCount(0);
+    // the desk says it's booked, and no other desk can be booked that day
+    await expect(desks.getByRole("button", { name: "Book Desk 1.03" })).toHaveText("Booked!");
+    await expect(desks.locator(".tile button")).toHaveCount(4);
+    await expect(desks.getByRole("button", { name: "Book Desk 1.03" })).toHaveClass(/done/);
+    for (const button of await desks.locator(".tile button").all()) await expect(button).toBeDisabled();
+    await snapshot(page, "staff-desktop-desk-booked");
     expect(mcp.callsTo("bookings_book")).toEqual([{ asset_id: DESKS[2].id, booking_type: "desk", booking_start: at("09:00"), booking_end: at("17:00"), title: "Desk near Johanna", timezone: TIMEZONE }]);
     await expect.poll(() => toldModel(page)).toEqual([booked]);
   });

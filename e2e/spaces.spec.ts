@@ -226,12 +226,45 @@ test.describe("space card", () => {
     await expect(card.locator("#status")).toHaveText('Booked "Catch up" in Sydney Room 1, Today, Tue, 13 Oct · 5:00 – 6:00 pm.');
     await expect(card.locator("#status")).toHaveClass(/ok/);
     expect(mcp.callsTo("events_book")).toEqual([{ title: "Catch up", event_start: at("17:00"), event_end: at("18:00"), timezone: TIMEZONE, system_id: ROOMS[0].id }]);
-    // the day is reloaded to show the new meeting
-    expect(mcp.callsTo("spaces_show")).toEqual([SHOW, { id: ROOMS[0].id, period_start: at("00:00") }]);
+    // done: the button says so and can't book it twice
+    const button = card.locator("#book-button");
+    await expect(button).toHaveText("Booked!");
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveClass(/done/);
+    // the new meeting is on the timeline and in the list, without reading the calendar again
+    await expect(card.locator(".timeline .seg.kind-busy")).toHaveCount(4);
+    await expect(card.locator(".timeline .seg.kind-busy").last()).toHaveAttribute("title", /^5:00\s–\s6:00\spm Catch up$/);
+    await expect(card.locator(".meetings li").last()).toHaveText(/5:00\s–\s6:00\spm\s*Catch up/);
+    await expect(card.locator(".meetings li.clash")).toHaveCount(0);
+    await expect(card.locator("#clash")).toBeHidden();
+    expect(mcp.callsTo("spaces_show")).toEqual([SHOW]);
     // and the model is told
     const told = await page.evaluate(() => JSON.stringify((window as any).cardPreviewer.log));
     expect(told).toContain("ui/update-model-context");
     await snapshot(page, "spaces-desktop-booked");
+
+    // a change to the form makes it bookable again, and the new meeting now clashes
+    await card.locator("input[name=title]").fill("Catch up again");
+    await expect(button).toHaveText("Book room");
+    await expect(button).not.toHaveClass(/done/);
+    await expect(card.locator("#clash")).toContainText("Booked 5:00 – 6:00 pm.");
+    await expect(button).toBeDisabled();
+    await card.locator("input[name=start]").fill("18:00");
+    await expect(button).toBeEnabled();
+  });
+
+  test("lists a new booking in time order", async ({ page }) => {
+    const schedule = spaceSchedule(ROOMS[0].id);
+    const events = [...schedule.events, { id: "late", title: "Late call", host: null, event_start: at("18:00"), event_end: at("18:30"), all_day: false, private: false }];
+    const { card } = await renderCard(page, "spaces_show", SHOW, { tools: { spaces_show: () => ok({ ...schedule, events }) } });
+    await card.locator("input[name=title]").fill("Quick sync");
+    await card.locator("input[name=start]").fill("17:00");
+    await card.getByRole("button", { name: "Book room" }).click();
+    await expect(card.locator("#book-button")).toHaveText("Booked!");
+    const rows = card.locator(".meetings li");
+    await expect(rows).toHaveCount(5);
+    await expect(rows.nth(3)).toHaveText(/5:00\s–\s5:30\spm\s*Quick sync/);
+    await expect(rows.nth(4)).toContainText("Late call");
   });
 
   test("shows why a booking failed", async ({ page }) => {

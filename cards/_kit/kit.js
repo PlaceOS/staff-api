@@ -474,7 +474,7 @@
   }
 
   // ---- a day's availability as a bar ----
-  // segments: [{start, end, kind}] with kind free, me, them, both, busy or past;
+  // segments: [{start, end, kind}] with kind free, me, them, both, busy, booked or past;
   // legend: [[kind, label]]; selected: {start, end}; onPick(epoch) when a spot is clicked
   function timeline({ id, from, to, tz, segments, selected, legend, title, loading, onPick }) {
     const span = to - from;

@@ -89,6 +89,7 @@ button.danger:hover:not(:disabled) { background: var(--surface); }
 button.link { border: 0; background: none; color: var(--accent); padding: 0; min-height: 0; text-decoration: underline; }
 button.link:hover:not(:disabled) { background: none; }
 button:disabled { opacity: 0.55; cursor: default; }
+button.done:disabled { background: var(--ok-fill); border-color: var(--ok-fill); color: #ffffff; opacity: 1; }
 button svg, .btn svg { width: 16px; height: 16px; flex: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 label.field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--fg); min-width: 0; }
@@ -184,6 +185,7 @@ section > h2 { margin-bottom: 10px; }
 .kind-me { background: repeating-linear-gradient(135deg, var(--warn-fill) 0 6px, color-mix(in srgb, var(--warn-fill) 55%, transparent) 6px 12px); }
 .kind-them { background: repeating-linear-gradient(135deg, var(--busy-fill) 0 6px, color-mix(in srgb, var(--busy-fill) 55%, transparent) 6px 12px); }
 .kind-both, .kind-busy { background: var(--busy-fill); }
+.kind-booked { background: var(--accent); }
 .kind-past { background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
 .timeline .legend i.kind-past { background: color-mix(in srgb, var(--surface-2) 70%, var(--ok-fill)); }
 .timeline .selected { position: absolute; top: 3px; bottom: 3px; border: 2px solid #ffffff; border-radius: 6px; box-shadow: 0 0 0 2px var(--accent); pointer-events: none; min-width: 6px; }
@@ -724,7 +726,7 @@ section > h2 { margin-bottom: 10px; }
   }
 
   // ---- a day's availability as a bar ----
-  // segments: [{start, end, kind}] with kind free, me, them, both, busy or past;
+  // segments: [{start, end, kind}] with kind free, me, them, both, busy, booked or past;
   // legend: [[kind, label]]; selected: {start, end}; onPick(epoch) when a spot is clicked
   function timeline({ id, from, to, tz, segments, selected, legend, title, loading, onPick }) {
     const span = to - from;
@@ -779,6 +781,7 @@ section > h2 { margin-bottom: 10px; }
   let rooms = null;      // {list, free, people} when a listing found several rooms
   let toolInput = {};
   let busy = false;
+  let booked = false;    // the form's booking was made, until the form changes
   let draft = null;      // the booking form: {title, start, duration (minutes)}
   let media = null;      // the photos and map, kept across re-renders
   const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240];
@@ -808,6 +811,7 @@ section > h2 { margin-bottom: 10px; }
       return;
     }
     const title = schedule && schedule.space.id === body.space.id && draft ? draft.title : "Meeting";
+    booked = false;
     schedule = body;
     draft = defaultDraft(title);
     render(message, kind);
@@ -962,7 +966,7 @@ section > h2 { margin-bottom: 10px; }
       days.map((meeting) => el("li", { class: "all-day" },
         el("span", { class: "when" }, "All day"), el("span", { class: "what" }, meeting.title || "Private meeting"), host(meeting))),
       list.map((meeting) => {
-        const classes = [ending(meeting) <= now() ? "past" : "", space().email && meeting.event_start < end && ending(meeting) > start ? "clash" : ""].filter(Boolean).join(" ");
+        const classes = [ending(meeting) <= now() ? "past" : "", space().email && !booked && meeting.event_start < end && ending(meeting) > start ? "clash" : ""].filter(Boolean).join(" ");
         return el("li", { class: classes || null },
           el("time", { class: "when" }, fmtTimes(meeting.event_start, ending(meeting), tz())),
           el("span", { class: "what" }, meeting.title || "Private meeting"),
@@ -1006,7 +1010,8 @@ section > h2 { margin-bottom: 10px; }
   }
 
   function clashBanner() {
-    const found = problem();
+    // just booked: the chosen time is that booking
+    const found = booked ? null : problem();
     if (!found) return el("div", { id: "clash", hidden: true });
     const next = found.next !== null ? fmtTime(found.next, tz()) : null;
     return el("div", { id: "clash", class: "banner warn", role: "alert" },
@@ -1029,13 +1034,21 @@ section > h2 { margin-bottom: 10px; }
       el("div", { id: "status", class: `status ${kind || ""}`, role: "status" }, message || ""),
       el("div", { class: "footer" },
         el("span", { class: "summary", id: "summary" }, summaryText()),
-        el("button", { type: "submit", class: "primary", id: "book-button", disabled: busy || !!problem() }, busy ? "Booking…" : "Book room")));
+        el("button", { type: "submit", class: booked ? "primary done" : "primary", id: "book-button", disabled: bookDisabled() }, bookLabel())));
   }
+
+  const bookDisabled = () => busy || booked || !!problem();
+  const bookLabel = () => (busy ? "Booking…" : booked ? "Booked!" : "Book room");
 
   // the form's fields into the draft, then the timeline, meetings, banner and footer follow
   function changed(input) {
     const fields = document.getElementById("book").elements;
     draft.title = fields.title.value;
+    if (booked) {
+      booked = false;
+      refresh("clash", clashBanner);
+      updateButton();
+    }
     if (input && input.target === fields.title) return;
     if (fields.start.value) draft.start = zonedEpoch(dayDate(), fields.start.value, tz());
     draft.duration = Number(fields.duration.value);
@@ -1048,11 +1061,19 @@ section > h2 { margin-bottom: 10px; }
     refresh("clash", clashBanner);
     const summary = document.getElementById("summary");
     if (summary) summary.textContent = summaryText();
+    updateButton();
+  }
+
+  function updateButton() {
     const button = document.getElementById("book-button");
-    if (button) button.disabled = busy || !!problem();
+    if (!button) return;
+    button.disabled = bookDisabled();
+    button.textContent = bookLabel();
+    button.classList.toggle("done", booked);
   }
 
   function setStart(epoch) {
+    booked = false;
     draft.start = epoch;
     const form = document.getElementById("book");
     if (form) form.elements.start.value = wallClock(epoch, tz()).time;
@@ -1084,15 +1105,18 @@ section > h2 { margin-bottom: 10px; }
       await callTool("events_book", { title, event_start: start, event_end: end, timezone: tz(), system_id: space().id }, "The booking failed");
       const summary = `Booked "${title}" in ${nameOf(space())}, ${fmtRange(start, end, tz(), false)}.`;
       tellModel(summary);
-      busy = false;
-      draft.title = "Meeting";
-      await load(schedule.period_start, summary, "ok");
+      // shown straight away, without reading the calendar again
+      if (schedule.events) {
+        schedule.events.push({ title, event_start: start, event_end: end });
+        schedule.events.sort((a, b) => a.event_start - b.event_start);
+      }
+      booked = true;
+      setStatus(summary, "ok");
     } catch (error) {
-      busy = false;
-      button.textContent = "Book room";
-      button.disabled = !!problem();
       setStatus(error.message, "error");
     }
+    busy = false;
+    updateChoice();
   }
 
   async function load(periodStart, message, kind) {
