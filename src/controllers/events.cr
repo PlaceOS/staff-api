@@ -398,8 +398,11 @@ class Events < Application
     # Collect event IDs from metadata
     event_ids = metadatas.flat_map { |meta| [meta.event_id, meta.ical_uid] }.uniq!
 
-    # Query history for these event IDs
-    History.where({:type => "event", :resource_id => event_ids}).to_a
+    # Query history of these events and their metadata, newest first
+    History
+      .where(resource_type: ["event", EventMetadata.table_name], resource_id: event_ids)
+      .order(created_at: :desc, id: :desc)
+      .to_a
   end
 
   protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
@@ -1525,8 +1528,8 @@ class Events < Application
   end
 
   private def record_event_history(event_id : String, action : String, changed_fields : Array(String) = [] of String)
-    History.create!(
-      type: "event",
+    History.record_change(
+      resource_type: "event",
       resource_id: event_id,
       action: action,
       changed_fields: changed_fields

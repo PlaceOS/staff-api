@@ -48,7 +48,7 @@ describe "Bookings#index extension_data SQL injection", tags: ["security", "sqli
     JSON.parse(injected.body).as_a.should be_empty
 
     # a classic tautology payload is likewise inert
-    tautology = client.get("#{BOOKINGS_BASE}?#{period}&extension_data={foo:x%27 OR %271%27=%271}", headers: headers)
+    tautology = client.get("#{BOOKINGS_BASE}?#{period}&extension_data={foo:x%27%20OR%20%271%27=%271}", headers: headers)
     tautology.status_code.should eq(200)
     JSON.parse(tautology.body).as_a.should be_empty
   end

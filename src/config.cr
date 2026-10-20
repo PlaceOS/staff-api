@@ -27,15 +27,15 @@ require "action-controller/server"
 
 # Execution contexts (the Crystal runtime default since 1.21).
 # The bookings index route can return large payloads, so it runs the whole
-# request in a dedicated "bookings" context. Unbound routes offload their
-# response serialisation to the shared response context.
+# request in a dedicated "bookings" context.
+#
+# Responses of unbound routes are not offloaded: transaction-wrapped routes
+# (booking and event create / update) serialise their response before the
+# transaction commits, and an offloaded fiber reads on another connection that
+# can't see those writes. `offload_responses` is a compile time macro, so it
+# can't be toggled by an environment variable.
 ActionController::ExecutionContext.define "bookings"
 ActionController::ExecutionContext.parallelism "bookings", ENV["BOOKINGS_WORKERS"]?.try(&.to_i) || 4
-
-if (response_parallelism = ENV["OFFLOAD_WORKERS"]?.try(&.to_i)) && response_parallelism > 0
-  ActionController::ExecutionContext.offload_responses
-  ActionController::ExecutionContext.response_parallelism = response_parallelism
-end
 
 # Filter out sensitive params that shouldn't be logged
 filter_params = ["password", "bearer_token"]
