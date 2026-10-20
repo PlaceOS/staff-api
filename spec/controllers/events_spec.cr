@@ -1264,13 +1264,13 @@ describe Events, tags: ["event"] do
 
       # Create history records for the event
       History.create!(
-        type: "event",
+        resource_type: "event",
         resource_id: event.event_id,
         action: "created",
         changed_fields: [] of String
       )
       History.create!(
-        type: "event",
+        resource_type: "event",
         resource_id: event.event_id,
         action: "updated",
         changed_fields: ["event_start", "event_end"]
@@ -1309,8 +1309,8 @@ describe Events, tags: ["event"] do
       )
 
       # Create history for both events
-      History.create!(type: "event", resource_id: event1.event_id, action: "created", changed_fields: [] of String)
-      History.create!(type: "event", resource_id: event2.event_id, action: "created", changed_fields: [] of String)
+      History.create!(resource_type: "event", resource_id: event1.event_id, action: "created", changed_fields: [] of String)
+      History.create!(resource_type: "event", resource_id: event2.event_id, action: "created", changed_fields: [] of String)
 
       # Query history filtered by system_id
       response = client.get(
@@ -1352,7 +1352,7 @@ describe Events, tags: ["event"] do
       )
 
       # Create history using ical_uid as resource_id (as might happen with some calendar providers)
-      History.create!(type: "event", resource_id: event.ical_uid, action: "updated", changed_fields: ["ext_data.notes"])
+      History.create!(resource_type: "event", resource_id: event.ical_uid, action: "updated", changed_fields: ["ext_data.notes"])
 
       response = client.get(
         "#{EVENTS_BASE}/history?period_start=#{event_start - 60}&period_end=#{event_end + 60}",

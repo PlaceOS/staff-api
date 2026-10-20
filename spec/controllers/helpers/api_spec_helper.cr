@@ -319,7 +319,7 @@ end
 # the shared spec users, so specs that create groups clear them before each example.
 def clear_group_tables
   [
-    PlaceOS::Model::GroupHistory,
+    PlaceOS::Model::History,
     PlaceOS::Model::GroupInvitation,
     PlaceOS::Model::GroupZone,
     PlaceOS::Model::GroupUser,

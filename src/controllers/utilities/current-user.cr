@@ -10,6 +10,9 @@ module Utils::CurrentUser
 
   @user_token : ::UserJWT?
 
+  # The API key used to authenticate the request, if any
+  getter api_key : ::PlaceOS::Model::ApiKey? = nil
+
   # Parses, and validates JWT if present.
   # Throws Error::MissingBearer and JWT::Error.
   def authorize!
@@ -24,6 +27,7 @@ module Utils::CurrentUser
         raise Error::Unauthorized.new "API key has expired" if api_key.expired?
         user_token = api_key.build_jwt
         Log.context.set(api_key_id: api_key.id, api_key_name: api_key.name)
+        @api_key = api_key
         @current_user = ::PlaceOS::Model::User.find(user_token.id)
         return @user_token = user_token
       rescue e : Error::Unauthorized

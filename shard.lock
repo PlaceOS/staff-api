@@ -11,7 +11,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 4.5.0
+    version: 4.7.0
 
   ameba:
     git: https://github.com/veelenga/ameba.git
@@ -139,7 +139,7 @@ shards:
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 2.4.1
+    version: 2.5.1
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
@@ -151,7 +151,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.119.6
+    version: 9.122.1
 
   pool:
     git: https://github.com/ysbaddaden/pool.git
