@@ -172,6 +172,44 @@ describe Bookings do
   end
 
   describe "tenant booking_range" do
+    it "#create rejects an open-ended recurring booking" do
+      set_tenant.call({} of String => UInt32, {"desk" => 7_u32})
+      starting = 1.day.from_now.at_beginning_of_hour
+      recurrence = {
+        booking_start:   starting.to_unix,
+        booking_end:     (starting + 1.hour).to_unix,
+        recurrence_type: "DAILY",
+        recurrence_days: 0b1111111,
+        timezone:        "UTC",
+      }
+
+      status, _body = BookingsHelper.http_create_booking(**recurrence)
+      status.should eq 422
+      Booking.count.should eq 0
+
+      status, _body = BookingsHelper.http_create_booking(**recurrence, recurrence_end: 5.days.from_now.to_unix)
+      status.should eq 201
+
+      # booking types without a range can still be open-ended
+      status, _body = BookingsHelper.http_create_booking(**recurrence, booking_type: "parking", asset_id: "car-1")
+      status.should eq 201
+    end
+
+    it "#update rejects making a booking an open-ended series" do
+      tenant = set_tenant.call({} of String => UInt32, {"desk" => 7_u32})
+      starting = 1.hour.from_now.to_unix
+      booking = BookingsHelper.create_booking(tenant.id.not_nil!, starting, starting + 3600)
+      # #update doesn't take a timezone, which recurring bookings also require
+      booking.timezone = "UTC"
+      booking.save!
+
+      response = client.patch("#{BOOKINGS_BASE}/#{booking.id}", headers: headers,
+        body: {recurrence_type: "DAILY", recurrence_days: 0b1111111}.to_json)
+      response.status_code.should eq 422
+      failed_fields.call(response).should eq ["recurrence_end"]
+      Booking.find(booking.id.not_nil!).recurrence_type.none?.should be_true
+    end
+
     it "#update_instance rejects moving an occurrence beyond the range" do
       tenant = get_tenant
       booking, occurrence = recurring.call(tenant, 1.hour)
