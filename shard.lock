@@ -55,7 +55,7 @@ shards:
 
   dns:
     git: https://github.com/spider-gazelle/dns.git
-    version: 1.6.1
+    version: 1.6.2
 
   ed25519:
     git: https://github.com/spider-gazelle/ed25519.git
