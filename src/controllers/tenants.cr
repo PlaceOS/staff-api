@@ -1,4 +1,4 @@
-# Tenants, the calendar platform configuration (office365 or google) for a domain, along with its booking limits, booking range and early check-in window
+# Tenants, the calendar platform configuration (office365 or google) for a domain, along with its booking limits, range, period and early check-in window
 class Tenants < Application
   base "/api/staff/v1/tenants"
 
@@ -25,7 +25,7 @@ class Tenants < Application
   # List the tenants.
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :delegated, :service_account, :outlook_config, :early_checkin).to_a.map(&.as_json)
+    Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :booking_period, :delegated, :service_account, :outlook_config, :early_checkin).to_a.map(&.as_json)
   end
 
   # Create a tenant.
@@ -49,9 +49,12 @@ class Tenants < Application
       end
     {% end %}
 
-    # booking_range defaults to {} on the model, so check the request body to avoid clearing it
+    # booking_range and booking_period default to {} on the model, so check the request body to avoid clearing them
     if range = tenant_body.booking_range
       tenant.booking_range = range
+    end
+    if period = tenant_body.booking_period
+      tenant.booking_period = period
     end
 
     tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")

@@ -16683,7 +16683,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     get:
       summary: List the tenants.
       tags:
@@ -16856,7 +16856,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants/{id}:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     put:
       summary: Update a tenant with the fields in the request body and return the
         saved tenant.
@@ -17130,7 +17130,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants/current_limits:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     get:
       summary: Get the booking limits of the current tenant.
       tags:
@@ -17214,7 +17214,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants/{id}/limits:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     get:
       summary: Get the booking limits of a tenant.
       tags:
@@ -17397,7 +17397,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants/current_early_checkin:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     get:
       summary: Get the early check-in window of the current tenant.
       tags:
@@ -17481,7 +17481,7 @@ paths:
                 $ref: '#/components/schemas/Application.CommonError'
   /api/staff/v1/tenants/{id}/early_checkin:
     summary: Tenants, the calendar platform configuration (office365 or google) for
-      a domain, along with its booking limits, booking range and early check-in window
+      a domain, along with its booking limits, range, period and early check-in window
     get:
       summary: Get the early check-in window of a tenant.
       tags:
@@ -18775,21 +18775,20 @@ components:
     PlaceOS.Model.History:
       type: object
       properties:
-        created_at:
+        id:
           anyOf:
           - type: string
-            format: date-time
+            format: uuid
           - type: "null"
-        updated_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: "null"
-        type:
+        resource_type:
           anyOf:
           - type: "null"
           - type: string
         resource_id:
+          anyOf:
+          - type: "null"
+          - type: string
+        correlation_id:
           anyOf:
           - type: "null"
           - type: string
@@ -18803,10 +18802,31 @@ components:
           - type: array
             items:
               type: string
-        id:
+        diff:
+          anyOf:
+          - type: object
+          - type: "null"
+        snapshot:
+          anyOf:
+          - type: object
+          - type: "null"
+        user_id:
           anyOf:
           - type: "null"
           - type: string
+        user_email:
+          anyOf:
+          - type: "null"
+          - type: string
+        context:
+          anyOf:
+          - type: object
+          - type: "null"
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: "null"
     PlaceOS.Model.EventMetadata:
       type: object
       properties:
@@ -19614,6 +19634,13 @@ components:
           - type: object
           - type: "null"
         booking_range:
+          anyOf:
+          - type: "null"
+          - type: object
+            additionalProperties:
+              type: integer
+              format: UInt32
+        booking_period:
           anyOf:
           - type: "null"
           - type: object

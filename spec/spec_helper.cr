@@ -49,8 +49,8 @@ Spec.before_each &->WebMock.reset
 # glob order (NOT alphabetically), so any spec that persists a tenant setting
 # without putting it back becomes an order dependent landmine for every other
 # file -- a leaked `booking_limits` turns unrelated creates into 410 Gone.
-# Restore the model defaults before each example; the specs that need a limit
-# or an early check-in window already set it themselves inside their example.
+# Restore the model defaults before each example; the specs that need a limit,
+# range, period or an early check-in window already set it themselves inside their example.
 Spec.before_each do
   if tenant = Tenant.find_by?(domain: "toby.staff-api.dev")
     limits = tenant.booking_limits_default
@@ -59,9 +59,12 @@ Spec.before_each do
     # (placeos-models `tenant.cr`), so the generated accessor fails to compile.
     # Keep this value in sync with that default.
     early_checkin = 3600_i64
-    unless tenant.booking_limits == limits && tenant.early_checkin == early_checkin
+    unless tenant.booking_limits == limits && tenant.early_checkin == early_checkin &&
+           tenant.booking_range.empty? && tenant.booking_period.empty?
       tenant.booking_limits = limits
       tenant.early_checkin = early_checkin
+      tenant.booking_range = {} of String => UInt32
+      tenant.booking_period = {} of String => UInt32
       tenant.save!
     end
   end
