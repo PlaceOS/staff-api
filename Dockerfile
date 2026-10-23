@@ -36,10 +36,8 @@ COPY ./src src
 # Build App
 # --release optimises the binary and leaves out the MCP card previewer (src/staff-api.cr).
 # -no-pie: backtraces of a static PIE binary can't be resolved, they print `from ???`
-# -Devloop=libevent: the native epoll event loop corrupts its timers under load
-# (crystal-lang/crystal#17058)
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --release --link-flags=-no-pie --error-trace --static -Devloop=libevent
+    shards build --production --release --link-flags=-no-pie --error-trace --static
 
 # Generate the MCP tool descriptions, they're extracted from the source code comments
 RUN ./bin/staff-api --mcp=/app/mcp.yml
