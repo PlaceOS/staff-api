@@ -96,6 +96,22 @@ describe Guests do
       JSON.parse(client.get("#{GUESTS_BASE}?q=jovany%20fay", headers: headers).body).as_a.map(&.["id"]).should eq([jovany.id])
     end
 
+    it "query treats punctuation in names as a word break" do
+      tenant = get_tenant
+      obrien = GuestsHelper.create_guest(tenant.id, "Patrick O'Brien", "pat@example.com")
+
+      search = ->(q : String) do
+        response = client.get("#{GUESTS_BASE}?#{URI::Params.encode({"q" => q})}", headers: headers)
+        response.status_code.should eq 200
+        JSON.parse(response.body).as_a.map(&.["id"])
+      end
+
+      search.call("O'Brien").should eq([obrien.id])
+      search.call("patrick o'brien").should eq([obrien.id])
+      search.call("o'bri").should eq([obrien.id])
+      search.call("(brien) & !patrick:").should eq([obrien.id])
+    end
+
     pending "should return guests visiting today in a subset of rooms and bookings" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))

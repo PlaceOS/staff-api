@@ -56,7 +56,9 @@ class Guests < Application
     @[AC::Param::Info(description: "a comma separated list of zone ids, only bookings in these zones are included", example: "zone-123,zone-456")]
     zones : Array(String)? = nil,
   ) : Array(Guest)
-    search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
+    # punctuation becomes a word break, matching how names are indexed:
+    # "O'Brien" must search as "o brien", not "obrien"
+    search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, " ").strip.downcase
 
     if starting && ending
       period_start = Time.unix(starting)
