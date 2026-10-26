@@ -23,7 +23,11 @@ class Surveys::Answers < Application
     survey_id = answers.first?.try(&.survey_id)
     raise Error::BadRequest.new("At least one answer, with a survey_id, is required") unless survey_id
     raise Error::BadRequest.new("All answers must be for the same survey") unless answers.all? { |answer| answer.survey_id == survey_id }
-    find_survey!(survey_id)
+    survey = find_survey!(survey_id)
+
+    # answers may only be for the survey's questions, which are all of this domain
+    unknown = answers.compact_map(&.question_id) - survey.question_ids
+    raise Error::BadRequest.new("Questions are not part of the survey: #{unknown.join(", ")}") unless unknown.empty?
 
     missing = Survey.missing_answers(survey_id, answers)
     raise Error::BadRequest.new("Missing required answers for questions: #{missing.join(", ")}") unless missing.empty?
