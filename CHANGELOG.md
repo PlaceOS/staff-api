@@ -135,6 +135,7 @@
 
 ### Fix
 
+- **security**: bump placeos-models to 9.123.2
 - **guests**: treat punctuation in search queries as a word break
 - **search**: match dotted room numbers like "4.23" as a single term
 - unified change history, stateless MCP specs and stale linked bookings ([#393](https://github.com/PlaceOS/staff-api/pull/393))
