@@ -80,6 +80,30 @@ describe Spaces do
       SpacesSpecHelper.ids(client.get("#{SPACES_BASE}?zone_ids=zone-spaces-bld&q=bond", headers: headers)).should eq ["sys-spaces-2"]
     end
 
+    it "searches dotted room numbers like 4.23 as a unit" do
+      zones = [SpacesSpecHelper::ORG, SpacesSpecHelper::BUILDING, SpacesSpecHelper::LEVEL_1]
+      rooms = {
+        "sys-spaces-dotted" => "Spaces Darwin 4.23 Classroom",
+        "sys-spaces-suffix" => "Spaces Rm 4.23a",
+        "sys-spaces-level"  => "Spaces Darwin L4.23 Lab",
+        "sys-spaces-hyphen" => "Spaces Room 4-23",
+        "sys-spaces-spaced" => "Spaces Level 4 Room 23",
+      }
+      systems = rooms.map { |id, name| SystemsHelper.system(id, nil, zones, name) }
+
+      search = ->(q : String) do
+        params = URI::Params.encode({"zone_ids" => SpacesSpecHelper::BUILDING, "q" => q})
+        SpacesSpecHelper.ids(client.get("#{SPACES_BASE}?#{params}", headers: headers)).sort
+      end
+
+      search.call("4.23").should eq ["sys-spaces-dotted", "sys-spaces-suffix"]
+      search.call("4.2").should eq ["sys-spaces-dotted", "sys-spaces-suffix"]
+      search.call("L4.23").should eq ["sys-spaces-level"]
+      search.call("4-23").should eq ["sys-spaces-hyphen"]
+    ensure
+      systems.try &.each(&.delete)
+    end
+
     it "paginates" do
       response = client.get("#{SPACES_BASE}?zone_ids=zone-spaces-bld&limit=1", headers: headers)
       SpacesSpecHelper.ids(response).should eq ["sys-spaces-1"]
