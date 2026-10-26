@@ -135,6 +135,7 @@
 
 ### Fix
 
+- **survey**: keep survey answers and triggers within the tenant
 - **security**: bump placeos-models to 9.123.2
 - **guests**: treat punctuation in search queries as a word break
 - **search**: match dotted room numbers like "4.23" as a single term
