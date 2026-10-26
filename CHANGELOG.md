@@ -135,6 +135,7 @@
 
 ### Fix
 
+- **guests**: treat punctuation in search queries as a word break
 - **search**: match dotted room numbers like "4.23" as a single term
 - unified change history, stateless MCP specs and stale linked bookings ([#393](https://github.com/PlaceOS/staff-api/pull/393))
 - **events**: a meeting moved to a new host is sent with the attendees as given (PPT-2640) ([#389](https://github.com/PlaceOS/staff-api/pull/389))
