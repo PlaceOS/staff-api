@@ -152,9 +152,9 @@ module Mock
       ).encode
     end
 
-    # `office` and `google` tokens claim Admin, and authorize! caps a token to the user's
-    # current permissions, so the user they name must be a sys_admin too. The flags only
-    # pick which user (email) the token is for.
+    # `office` and `google` tokens claim Admin, but authorize! takes permissions from the
+    # user record, so the user they name must be a sys_admin. The flags only pick which
+    # user (email) the token is for.
     def admin_user(sys_admin, support, groups)
       user = generate_auth_user(sys_admin, support, groups)
       unless user.sys_admin

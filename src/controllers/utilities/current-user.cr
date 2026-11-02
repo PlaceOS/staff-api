@@ -53,7 +53,7 @@ module Utils::CurrentUser
           raise JWT::Error.new("logged out")
         end
         @current_user = user_model
-        user_token = cap_permissions(user_token, user_model)
+        user_token = apply_user_permissions(user_token, user_model)
       end
 
       @user_token = user_token
@@ -75,14 +75,14 @@ module Utils::CurrentUser
     user
   end
 
-  # A JWT can't grant more than the user currently holds, so revoking sys_admin or
-  # support applies before the token expires. Promotions still need a new token.
-  private def cap_permissions(token : UserJWT, user : ::PlaceOS::Model::User) : UserJWT
+  # The user record, not the JWT claims, decides sys_admin / support, so permission
+  # changes apply to existing sessions without the user signing in again.
+  private def apply_user_permissions(token : UserJWT, user : ::PlaceOS::Model::User) : UserJWT
     held = UserJWT::Permissions::User
     held |= UserJWT::Permissions::Admin if user.sys_admin
     held |= UserJWT::Permissions::Support if user.support
     meta = token.user
-    return token if meta.permissions <= held
+    return token if meta.permissions == held
 
     UserJWT.new(
       iss: token.iss,

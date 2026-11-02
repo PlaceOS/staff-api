@@ -1,8 +1,8 @@
 require "../spec_helper"
 require "./helpers/survey_helper"
 
-# sys_admin / support are capped by the user's current model, so revoking them applies
-# before the JWT expires. API keys deliberately keep their own stored permissions.
+# sys_admin / support come from the user's current model, not the JWT claims, so changes
+# apply to existing sessions. API keys deliberately keep their own stored permissions.
 describe "live user permissions" do
   client = AC::SpecHelper.client
   domain = "toby.staff-api.dev"
@@ -81,16 +81,19 @@ describe "live user permissions" do
     create_question.call(headers).should eq 201
   end
 
-  it "does not elevate a JWT when the user is promoted" do
+  it "elevates a JWT when the user is promoted" do
     user = new_user.call(false, false)
     headers = bearer_headers.call(user)
+
+    client.get(admin_path, headers: headers).status_code.should eq 403
+    create_question.call(headers).should eq 403
 
     user.sys_admin = true
     user.support = true
     user.save!
 
-    client.get(admin_path, headers: headers).status_code.should eq 403
-    create_question.call(headers).should eq 403
+    client.get(admin_path, headers: headers).status_code.should eq 200
+    create_question.call(headers).should eq 201
   end
 
   it "lets an API key grant more than its owner holds" do
