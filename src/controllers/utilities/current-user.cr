@@ -25,10 +25,12 @@ module Utils::CurrentUser
       begin
         api_key = ::PlaceOS::Model::ApiKey.find_key!(token)
         raise Error::Unauthorized.new "API key has expired" if api_key.expired?
+        user = active_user!(api_key.user_id.as(String))
+        # API keys keep their stored permissions, which may exceed the owner's
         user_token = api_key.build_jwt
         Log.context.set(api_key_id: api_key.id, api_key_name: api_key.name)
         @api_key = api_key
-        @current_user = ::PlaceOS::Model::User.find(user_token.id)
+        @current_user = user
         return @user_token = user_token
       rescue e : Error::Unauthorized
         raise e
@@ -44,12 +46,14 @@ module Utils::CurrentUser
 
     begin
       user_token = UserJWT.decode(token)
-      if !user_token.guest_scope? && (user_model = ::PlaceOS::Model::User.find(user_token.id))
+      unless user_token.guest_scope?
+        user_model = active_user!(user_token.id)
         logged_out_at = user_model.logged_out_at
         if logged_out_at && (logged_out_at >= user_token.iat)
           raise JWT::Error.new("logged out")
         end
         @current_user = user_model
+        user_token = cap_permissions(user_token, user_model)
       end
 
       @user_token = user_token
@@ -62,6 +66,38 @@ module Utils::CurrentUser
     # ensure that the user token is nil if this function ever errors.
     @user_token = nil
     raise e
+  end
+
+  # Tokens outlive the user record, so a deleted user's credentials must be refused
+  private def active_user!(id : String) : ::PlaceOS::Model::User
+    user = ::PlaceOS::Model::User.find?(id)
+    raise Error::Unauthorized.new("user not found") if user.nil? || user.deleted
+    user
+  end
+
+  # A JWT can't grant more than the user currently holds, so revoking sys_admin or
+  # support applies before the token expires. Promotions still need a new token.
+  private def cap_permissions(token : UserJWT, user : ::PlaceOS::Model::User) : UserJWT
+    held = UserJWT::Permissions::User
+    held |= UserJWT::Permissions::Admin if user.sys_admin
+    held |= UserJWT::Permissions::Support if user.support
+    meta = token.user
+    return token if meta.permissions <= held
+
+    UserJWT.new(
+      iss: token.iss,
+      iat: token.iat,
+      exp: token.exp,
+      domain: token.domain,
+      id: token.id,
+      scope: token.scope,
+      user: UserJWT::Metadata.new(
+        name: meta.name,
+        email: meta.email,
+        permissions: held,
+        roles: meta.roles,
+      ),
+    )
   end
 
   # Getter for user_token
