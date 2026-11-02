@@ -135,6 +135,7 @@
 
 ### Fix
 
+- **security**: take JWT sys_admin/support from the user record ([#394](https://github.com/PlaceOS/staff-api/pull/394))
 - **survey**: keep survey answers and triggers within the tenant
 - **security**: bump placeos-models to 9.123.2
 - **guests**: treat punctuation in search queries as a word break
