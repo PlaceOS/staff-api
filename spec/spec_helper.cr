@@ -80,7 +80,7 @@ module Mock
 
     # office_mock_token
     def office(sys_admin = false, support = false, groups = ["manage", "admin"])
-      user = generate_auth_user(sys_admin, support, groups)
+      user = admin_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
@@ -135,7 +135,7 @@ module Mock
 
     # google_mock_token
     def google(sys_admin = false, support = false, groups = ["manage", "admin"])
-      user = generate_auth_user(sys_admin, support, groups)
+      user = admin_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
@@ -150,6 +150,18 @@ module Mock
           roles: groups
         )
       ).encode
+    end
+
+    # `office` and `google` tokens claim Admin, but authorize! takes permissions from the
+    # user record, so the user they name must be a sys_admin. The flags only pick which
+    # user (email) the token is for.
+    def admin_user(sys_admin, support, groups)
+      user = generate_auth_user(sys_admin, support, groups)
+      unless user.sys_admin
+        user.sys_admin = true
+        user.save!
+      end
+      user
     end
 
     def generate_auth_user(sys_admin, support, groups = [] of String)
