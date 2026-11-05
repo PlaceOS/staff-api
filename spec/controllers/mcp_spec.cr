@@ -51,6 +51,24 @@ describe App::MCP do
     JSON.parse(response.body)["authorization_servers"].as_a.map(&.as_s).should eq ["https://#{domain}"]
   end
 
+  it "publishes a Server Card in the host's namespace, without authentication" do
+    response = mcp_client.get("#{App::MCP::PATH}/server-card", headers: HTTP::Headers{"Host" => domain, "X-Forwarded-Proto" => "https"})
+    response.status_code.should eq 200
+    response.headers["Content-Type"].should start_with "application/mcp-server-card+json"
+    card = JSON.parse(response.body)
+    card["name"].should eq "dev.staff-api.toby/placeos-workplace"
+    card["title"].should eq "PlaceOS Workplace"
+    card["description"].as_s.size.should be <= 100
+    card["version"].should eq App::VERSION
+    card["remotes"][0]["url"].should eq "https://#{domain}#{App::MCP::PATH}"
+
+    # clients see the same identity once connected
+    headers = mcp_headers.call(bearer.call)
+    info = JSON.parse(rpc.call(headers, "initialize", initialize_params).body)["result"]["serverInfo"]
+    info["name"].should eq "placeos-workplace"
+    info["title"].should eq "PlaceOS Workplace"
+  end
+
   it "authenticates with the current user route, which any signed in user can reach" do
     App::MCP::AUTH_PROBE.should eq "/api/staff/v1/users/current"
     mcp_client.get(App::MCP::AUTH_PROBE, headers: HTTP::Headers{"Host" => domain}.merge!(bearer.call)).status_code.should eq 200

@@ -108,7 +108,7 @@ export class FakeMcp {
         return {
           protocolVersion: params.protocolVersion,
           capabilities: { tools: { listChanged: true }, resources: {}, extensions: { "io.modelcontextprotocol/ui": {} } },
-          serverInfo: { name: "placeos-staff", version: "e2e" },
+          serverInfo: { name: "placeos-workplace", version: "e2e" },
         };
       case "tools/list":
         return { tools: this.listTools() };

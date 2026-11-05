@@ -59,8 +59,13 @@ module App::MCP
 
   def self.configure : Nil
     ActionController::MCPServer.tap do |mcp|
-      mcp.server_name = "placeos-staff"
+      # no namespace: the Server Card (`<PATH>/server-card`) prefixes the request host
+      # reversed, so each deployment is its own publisher (`com.acme.placeos/placeos-workplace`)
+      mcp.server_name = "placeos-workplace"
       mcp.server_version = App::VERSION
+      mcp.server_title = "PlaceOS Workplace"
+      mcp.server_description = "Book desks, parking, lockers and meeting rooms, manage meetings and visitors, and find colleagues"
+      mcp.website_url = "https://docs.placeos.com"
       mcp.instructions = "#{INSTRUCTIONS}\n\n#{mcp.toolbox_instructions}"
       mcp.description_path = ENV["MCP_DESCRIPTION_PATH"]? || "mcp.yml"
       mcp.ui_base = ENV["MCP_UI_PATH"]? || "cards"
