@@ -2,6 +2,7 @@
 
 ### Feat
 
+- **mcp**: describe the server for its MCP Server Card
 - **tenants**: persist and return booking_period
 - **MCP**: cards show "Booked!" and the new booking without reloading
 - **MCP**: card redesign with browser tests in the card previewer
