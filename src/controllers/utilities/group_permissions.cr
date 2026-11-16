@@ -1,0 +1,417 @@
+# Ported from rest-api (group_permissions.cr); keep in sync with the original.
+require "placeos-models/group"
+require "placeos-models/group/user"
+require "placeos-models/group/zone"
+require "placeos-models/permissions"
+require "placeos-models/control_system"
+require "placeos-models/module"
+
+# Helpers for authorising actions against the group-permissions system.
+# Include in any controller that needs to gate on a user's group
+# membership or Manage grant.
+#
+# All helpers operate on the *effective* membership of a user computed
+# via the group tree's replace semantics (closest explicit ancestor
+# GroupUser entry wins). A Manage grant on a group implicitly covers
+# that group's descendants.
+#
+# Zone grants do not flow the same way: a `GroupZone` row only applies to
+# members of its owning group (or an ancestor of it), so a member of a
+# child group never inherits the parent group's zones. That resolution
+# lives in `Group.resolve_subsystem_permissions` (placeos-models).
+module Utils::GroupPermissions
+  # Per-request memo caches. Controllers are per-request `ActionController::Base`
+  # instances, so these are request-scoped and cannot serve stale authz (gates
+  # run in before_actions, before any mutation). Never cache across requests.
+  @group_memberships_cache : Hash(String, Hash(UUID, ::PlaceOS::Model::Permissions))?
+  @subsystem_perms_cache : Hash(String, Hash(String, ::PlaceOS::Model::Permissions))?
+
+  # Effective per-group Permissions for the user, keyed by group id.
+  # Groups where the user has no transitive membership are absent.
+  # Memoised per request (called repeatedly across gates/reads).
+  def group_memberships(user : ::PlaceOS::Model::User) : Hash(UUID, ::PlaceOS::Model::Permissions)
+    cache = (@group_memberships_cache ||= {} of String => Hash(UUID, ::PlaceOS::Model::Permissions))
+    cache[user.id.as(String)] ||= compute_group_memberships(user)
+  end
+
+  private def compute_group_memberships(user : ::PlaceOS::Model::User) : Hash(UUID, ::PlaceOS::Model::Permissions)
+    user_id = user.id.as(String)
+
+    # Direct GroupUser rows, scoped to the user's authority.
+    direct = {} of UUID => ::PlaceOS::Model::Permissions
+    sql = <<-SQL
+      SELECT gu.group_id, gu.permissions
+      FROM group_users gu
+      INNER JOIN groups g ON g.id = gu.group_id
+      WHERE gu.user_id = $1 AND g.authority_id = $2
+    SQL
+    args = [user_id.as(::PgORM::Value), user.authority_id.as(::PgORM::Value)]
+    ::PgORM::Database.connection do |conn|
+      conn.query_all(sql, args: args) do |rs|
+        gid = rs.read(UUID)
+        perms = rs.read(Int32)
+        direct[gid] = ::PlaceOS::Model::Permissions.new(perms)
+      end
+    end
+    return direct if direct.empty?
+
+    # Walk up the authority's group tree so transitive memberships
+    # inherit the closest explicit ancestor's perms.
+    parent_of = {} of UUID => UUID
+    all_ids = [] of UUID
+    ::PlaceOS::Model::Group.where(authority_id: user.authority_id).each do |g|
+      gid = g.id.as(UUID)
+      all_ids << gid
+      if parent = g.parent_id
+        parent_of[gid] = parent
+      end
+    end
+
+    effective = {} of UUID => ::PlaceOS::Model::Permissions
+    all_ids.each do |gid|
+      current = gid
+      loop do
+        if p = direct[current]?
+          effective[gid] = p
+          break
+        end
+        next_parent = parent_of[current]?
+        break if next_parent.nil?
+        current = next_parent
+      end
+    end
+    effective
+  end
+
+  # True if `user` is a member (any non-zero perm) of `group`,
+  # directly or via ancestor.
+  def user_is_member?(user : ::PlaceOS::Model::User, group : ::PlaceOS::Model::Group) : Bool
+    gid = group.id
+    return false if gid.nil?
+    perms = group_memberships(user)[gid]?
+    !perms.nil? && perms != ::PlaceOS::Model::Permissions::None
+  end
+
+  # True if `user` has Manage on `group` (directly or via ancestor).
+  def user_has_manage?(user : ::PlaceOS::Model::User, group : ::PlaceOS::Model::Group) : Bool
+    gid = group.id
+    return false if gid.nil?
+    perms = group_memberships(user)[gid]?
+    !perms.nil? && perms.manage?
+  end
+
+  # Raises Error::Forbidden unless the user has any effective
+  # permission on `group`.
+  def ensure_member!(user : ::PlaceOS::Model::User, group : ::PlaceOS::Model::Group)
+    raise Error::Forbidden.new unless user_is_member?(user, group)
+  end
+
+  # Raises Error::Forbidden unless the user has Manage on `group`.
+  def ensure_manage!(user : ::PlaceOS::Model::User, group : ::PlaceOS::Model::Group)
+    raise Error::Forbidden.new unless user_has_manage?(user, group)
+  end
+
+  # Group ids the user is any kind of member of (direct or transitive).
+  # Useful for scoping index queries.
+  def viewable_group_ids(user : ::PlaceOS::Model::User) : Array(UUID)
+    group_memberships(user).compact_map { |gid, perms| gid if perms != ::PlaceOS::Model::Permissions::None }
+  end
+
+  # Group ids the user has Manage on (direct or transitive).
+  def manageable_group_ids(user : ::PlaceOS::Model::User) : Array(UUID)
+    group_memberships(user).compact_map { |gid, perms| gid if perms.manage? }
+  end
+
+  # True if `zone_id` is already reachable from at least one group the
+  # user has Manage on — via any subsystem one of those groups
+  # participates in. Enforces the "can only delegate what you have"
+  # rule for GroupZone creation.
+  def user_can_delegate_zone?(user : ::PlaceOS::Model::User, zone_id : String) : Bool
+    managed_ids = manageable_group_ids(user)
+    return false if managed_ids.empty?
+
+    subsystems = Set(String).new
+    ::PlaceOS::Model::Group.where(id: managed_ids).each do |g|
+      g.subsystems.each { |s| subsystems << s }
+    end
+    return false if subsystems.empty?
+
+    authority_id = user.authority_id.as(String)
+    user_id = user.id.as(String)
+    subsystems.any? do |subsystem|
+      ::PlaceOS::Model::Group.zone_accessible?(authority_id, subsystem, user_id, zone_id)
+    end
+  end
+
+  def ensure_zone_delegatable!(user : ::PlaceOS::Model::User, zone_id : String)
+    raise Error::Forbidden.new("zone not reachable from any of your manageable groups") unless user_can_delegate_zone?(user, zone_id)
+  end
+
+  # Authorise an action against a single group. The group must exist in
+  # the caller's authority (404 otherwise, so ids from other authorities
+  # aren't distinguishable from unknown ones). Support/admin callers
+  # bypass; everyone else needs every bit of `required` — or Manage, which
+  # covers everything — as effective permissions, so membership of an
+  # ancestor group counts.
+  def ensure_group_access!(group_id : UUID, required : ::PlaceOS::Model::Permissions) : ::PlaceOS::Model::Group
+    group = ::PlaceOS::Model::Group.find?(group_id)
+    authority_id = current_authority.as(::PlaceOS::Model::Authority).id
+    raise Error::NotFound.new("group #{group_id} not found") if group.nil? || group.authority_id != authority_id
+    return group if user_support?
+    perms = group_memberships(current_user)[group_id]? || ::PlaceOS::Model::Permissions::None
+    raise Error::Forbidden.new("missing #{required} permission on group #{group_id}") unless perms.manage? || (perms & required) == required
+    group
+  end
+
+  # Authorise a group-scoped removal (e.g. unlinking a shared media item or
+  # template from one group rather than deleting it outright): Delete or
+  # Manage on the group.
+  def ensure_group_delete_access!(group_id : UUID) : ::PlaceOS::Model::Group
+    ensure_group_access!(group_id, ::PlaceOS::Model::Permissions::Delete)
+  end
+
+  # Resolve group ids (typically the junction rows a resource is shared
+  # into) to the `Group` records, ordered by name. No permission filtering
+  # is applied — callers use this to hydrate "shared with" details, where
+  # the point is seeing every group holding the resource, including ones
+  # the caller isn't a member of.
+  def groups_by_id(group_ids : Array(UUID)) : Array(::PlaceOS::Model::Group)
+    return [] of ::PlaceOS::Model::Group if group_ids.empty?
+    ::PlaceOS::Model::Group.where(id: group_ids).order(name: :asc).to_a
+  end
+
+  # OR of the user's effective permissions across the supplied group
+  # ids. Pairs with a junction-table lookup: fetch the groups linked
+  # to a resource, pass them here to get the user's effective bitmask
+  # on that resource.
+  #
+  #   linked = ::PlaceOS::Model::GroupPlaylist
+  #     .where(playlist_id: id).to_a.map(&.group_id)
+  #   perms = effective_permissions_for(current_user, linked)
+  def effective_permissions_for(
+    user : ::PlaceOS::Model::User,
+    group_ids : Array(UUID),
+  ) : ::PlaceOS::Model::Permissions
+    return ::PlaceOS::Model::Permissions::None if group_ids.empty?
+    memberships = group_memberships(user)
+    group_ids.reduce(::PlaceOS::Model::Permissions::None) do |acc, gid|
+      if perms = memberships[gid]?
+        acc | perms
+      else
+        acc
+      end
+    end
+  end
+
+  # ------------------------------------------------------------------------
+  # Support-subsystem authorisation
+  #
+  # Shared by every controller that gates on the zone-scoped "support"
+  # subsystem (systems, zones, modules, settings, metadata, assets, …).
+  # The host controller must also `include Utils::Permissions` (for the
+  # legacy `check_access` path); `current_authority`, `current_user`,
+  # `user_support?`/`user_admin?` and `request` come from `Application`.
+  # ------------------------------------------------------------------------
+
+  SUPPORT_SUBSYSTEM = "support"
+
+  # Permissions bit corresponding to the current HTTP verb.
+  def verb_permission : ::PlaceOS::Model::Permissions
+    case request.method.upcase
+    when "POST"         then ::PlaceOS::Model::Permissions::Create
+    when "PUT", "PATCH" then ::PlaceOS::Model::Permissions::Update
+    when "DELETE"       then ::PlaceOS::Model::Permissions::Delete
+    else                     ::PlaceOS::Model::Permissions::None
+    end
+  end
+
+  # The authority's configured "org zone" (a soft key in `authority.config`).
+  # Named with a `support_` prefix to avoid clashing with controllers that
+  # define their own `org_zone_id` (e.g. `modules.cr`).
+  def support_org_zone_id : String?
+    current_authority.as(::PlaceOS::Model::Authority).config["org_zone"]?.try(&.as_s?)
+  end
+
+  # True if the user's effective permissions on `zones` (within any of
+  # `subsystems`) include `required`, or Manage (a superset). The model
+  # resolver already ANDs the user's group perms with the GroupZone
+  # grants, so a non-zero result means both sides agree.
+  # Memoised `{zone_id => Permissions}` map for the current user within
+  # `subsystem`, resolved once per request (then reused by every gate /
+  # scoping query for that subsystem).
+  def subsystem_zone_permissions(subsystem : String) : Hash(String, ::PlaceOS::Model::Permissions)
+    cache = (@subsystem_perms_cache ||= {} of String => Hash(String, ::PlaceOS::Model::Permissions))
+    cache[subsystem] ||= ::PlaceOS::Model::Group.resolve_subsystem_permissions(
+      current_user.authority_id.as(String), subsystem, current_user.id.as(String),
+    )
+  end
+
+  def subsystem_grants_on_zones?(
+    subsystems : Array(String),
+    zones : Array(String),
+    required : ::PlaceOS::Model::Permissions,
+  ) : Bool
+    return false if zones.empty?
+    subsystems.any? do |subsystem|
+      perms_map = subsystem_zone_permissions(subsystem)
+      perms = zones.reduce(::PlaceOS::Model::Permissions::None) { |acc, z| acc | (perms_map[z]? || ::PlaceOS::Model::Permissions::None) }
+      perms.manage? || (perms & required) != ::PlaceOS::Model::Permissions::None
+    end
+  end
+
+  # Stricter variant of `subsystem_grants_on_zones?` for writes that
+  # *assign* zones (create / adding zones on update): every zone in
+  # `zones` must be covered, not just one of them. A zone is covered when
+  #   - the user holds `required` (or Manage) on it within one of
+  #     `subsystems`, or
+  #   - it is an ancestor of such a granted zone that is *also* in `zones`
+  #     (a system placed on a level naturally also lists the building and
+  #     org above it, so a grant on the leaf is enough for the chain).
+  # Unrelated zones — neither granted nor above a granted zone in the
+  # set — cause a false result.
+  #
+  # `within` is the full zone set the anchors are drawn from; it defaults
+  # to `zones` and only differs on update, where `zones` is just the
+  # zones being *added* while `within` is the system's resulting zone
+  # list (so a new ancestor can anchor on an already-present granted zone).
+  def subsystem_covers_zones?(
+    subsystems : Array(String),
+    zones : Array(String),
+    required : ::PlaceOS::Model::Permissions,
+    within : Array(String) = zones,
+  ) : Bool
+    return false if zones.empty?
+
+    granted = within.select do |zone|
+      subsystems.any? do |subsystem|
+        perms = subsystem_zone_permissions(subsystem)[zone]?
+        !perms.nil? && (perms.manage? || (perms & required) != ::PlaceOS::Model::Permissions::None)
+      end
+    end
+    return false if granted.empty?
+
+    remaining = zones - granted
+    return true if remaining.empty?
+
+    ancestors = zone_ancestor_ids(granted)
+    remaining.all? { |zone| ancestors.includes?(zone) }
+  end
+
+  # Ancestor zone ids (excluding the zones themselves) of `zone_ids`,
+  # walked up `zone.parent_id` in the database. Bounded by the depth of
+  # the zone tree; UNION (not UNION ALL) terminates on accidental cycles.
+  def zone_ancestor_ids(zone_ids : Array(String)) : Set(String)
+    ancestors = Set(String).new
+    return ancestors if zone_ids.empty?
+
+    sql = <<-SQL
+      WITH RECURSIVE ancestors AS (
+        SELECT z.parent_id
+        FROM zone z
+        WHERE z.id = ANY($1) AND z.parent_id IS NOT NULL AND z.parent_id <> ''
+        UNION
+        SELECT z.parent_id
+        FROM zone z
+        INNER JOIN ancestors a ON z.id = a.parent_id
+        WHERE z.parent_id IS NOT NULL AND z.parent_id <> ''
+      )
+      SELECT parent_id FROM ancestors
+    SQL
+    ::PgORM::Database.connection do |conn|
+      conn.query_each(sql, args: [zone_ids]) { |rs| ancestors << rs.read(String) }
+    end
+    ancestors
+  end
+
+  # Convenience wrapper for the "support" subsystem.
+  def support_subsystem_grants?(zones : Array(String), required : ::PlaceOS::Model::Permissions) : Bool
+    subsystem_grants_on_zones?([SUPPORT_SUBSYSTEM], zones, required)
+  end
+
+  # Legacy org_zone permission path (backwards compatibility): the
+  # request's `zones` must include the org_zone, and `current_user.groups`
+  # must satisfy `admin?` (when `admin_required`) or `can_manage?`.
+  def has_legacy_access?(zones : Array(String), admin_required : Bool = false) : Bool
+    org_zone = support_org_zone_id
+    return false unless org_zone
+    return false unless zones.includes?(org_zone)
+    access = check_access(current_user.groups, zones)
+    admin_required ? access.admin? : access.can_manage?
+  end
+
+  # The combined support gate. Raises `Error::Forbidden` unless one of:
+  #   - the JWT role bypasses (admin when `admin_required`, else support),
+  #   - the legacy org_zone path grants access, or
+  #   - the "support" subsystem grants `required` on `zones`.
+  def ensure_support_access!(
+    zones : Array(String),
+    required : ::PlaceOS::Model::Permissions = verb_permission,
+    admin_required : Bool = false,
+  ) : Nil
+    return if admin_required ? user_admin? : user_support?
+    return if has_legacy_access?(zones, admin_required)
+    return if support_subsystem_grants?(zones, required)
+    raise Error::Forbidden.new
+  end
+
+  # Resolve a legacy prefixed parent id to the zone ids it implies:
+  #   zone-… -> the zone itself
+  #   sys-…  -> the control system's zones
+  #   mod-…  -> the module's zones (via its systems)
+  #   driver-… / user-… / other -> [] (no zone scope => deny by default)
+  def support_zones_for_parent(parent_id : String?) : Array(String)
+    return [] of String unless parent_id
+    case
+    when parent_id.starts_with?("zone-")
+      [parent_id]
+    when parent_id.starts_with?("sys-")
+      ::PlaceOS::Model::ControlSystem.find?(parent_id).try(&.zones) || [] of String
+    when parent_id.starts_with?("mod-")
+      module_zones(parent_id)
+    else
+      [] of String
+    end
+  end
+
+  # Zones a module belongs to: the union of its logic-module system
+  # (`control_system_id`) and every system that references it. Empty when
+  # the module is attached to no system (=> deny / admin-or-support only).
+  def module_zones(module_id : String) : Array(String)
+    mod = ::PlaceOS::Model::Module.find?(module_id)
+    return [] of String unless mod
+
+    zones = [] of String
+    if (sys_id = mod.control_system_id) && (sys = ::PlaceOS::Model::ControlSystem.find?(sys_id))
+      zones.concat(sys.zones)
+    end
+    ::PlaceOS::Model::ControlSystem.by_module_id(mod.id.as(String)).each do |cs|
+      zones.concat(cs.zones)
+    end
+    zones.uniq
+  end
+
+  # SQL subquery (single column: zone id) of the zones where the current
+  # user holds `required` within any of `subsystems` — the zone-subtree
+  # expansion runs in the database rather than materialising the zone set
+  # in memory (see Group.accessible_zones_sql). nil when nothing
+  # qualifies; callers should treat that as an empty set.
+  def accessible_zones_scope_sql(subsystems : Array(String), required : ::PlaceOS::Model::Permissions) : String?
+    ::PlaceOS::Model::Group.accessible_zones_sql(
+      current_user.authority_id.as(String), subsystems, current_user.id.as(String), required,
+    )
+  end
+
+  # Zone ids reachable by the current user via the "support" subsystem.
+  # Useful for scoping index/list queries. Served from the per-request memo.
+  # With no `required` any non-zero permission qualifies; otherwise the zone
+  # needs the `required` bit (Manage is a superset).
+  def support_accessible_zone_ids(required : ::PlaceOS::Model::Permissions? = nil) : Array(String)
+    subsystem_zone_permissions(SUPPORT_SUBSYSTEM).compact_map do |zid, perms|
+      if required
+        zid if perms.manage? || (perms & required) != ::PlaceOS::Model::Permissions::None
+      else
+        zid if perms != ::PlaceOS::Model::Permissions::None
+      end
+    end
+  end
+end

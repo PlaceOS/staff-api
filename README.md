@@ -11,7 +11,7 @@ Service for integrating [PlaceOS](https://placeos.com/) with the workplace.
 These environment variables are required for configuring an instance of Staff API
 
 ```console
-SG_ENV=production  # When set to production, the auth token in the request header will be used for auth, instead of static credentials from environment variables
+SG_ENV=production
 
 # Database config:
 PG_DATABASE_URL=postgresql://user:password@hostname/placeos?max_pool_size=5&max_idle_pool_size=5
@@ -19,8 +19,8 @@ PG_DATABASE_URL=postgresql://user:password@hostname/placeos?max_pool_size=5&max_
 # Public key for decrypting and validating JWT tokens
 JWT_PUBLIC=base64-public-key  #same one used by PlaceOS rest-api
 
-# Location of PlaceOS API
-PLACE_URI=https://example.place.technology
+# Redis, signals are published here for drivers and frontends to consume
+REDIS_URL=redis://redis:6379
 ```
 
 ### Optional
@@ -29,19 +29,6 @@ PLACE_URI=https://example.place.technology
 # Default Timezone
 STAFF_TIME_ZONE=Australia/Sydney #default to UTC if not provided
 
-# Host header to use when connecting to PlaceOS endpoints
-PLACE_HOST_HEADER=example.place.technology
-
-# Skip SSL verification when connecting to PlaceOS endpoints
-SSL_VERIFY_NONE=true
-
-# Sentry monitoring
-SENTRY_DSN=<sentry dsn>
-
-# Logstash log ingest
-LOGSTASH_HOST=example.com
-LOGSTASH_PORT=12345
-
 # Sentry monitoring
 SENTRY_DSN=<sentry dsn>
 
@@ -49,6 +36,33 @@ SENTRY_DSN=<sentry dsn>
 LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
 ```
+
+## MCP Server
+
+The API is also available to LLM clients (Claude Code, Claude Desktop, VS Code,
+Cursor, ...) as an [MCP](https://modelcontextprotocol.io) server at
+`/api/staff/v1/mcp`, using the Streamable HTTP transport.
+
+```shell
+claude mcp add --transport http placeos-staff https://<your-placeos-domain>/api/staff/v1/mcp
+```
+
+* **Signing in:** the client signs the user in through PlaceOS (OAuth with PKCE and
+  a consent screen, served by auth). Tokens are refreshed automatically. Headless
+  agents can send an API key instead, e.g. `--header "X-API-Key: <key>"`.
+* **Tools:** each API resource (bookings, events, guests, calendars, ...) is a toolbox.
+  The model opens the toolboxes it needs, which keeps its context small. Calls run as
+  the signed in user, with their permissions.
+* **Exposure:** the health check, user photos and the event change notifications used
+  by drivers are not exposed (`@[AC::MCP(hide: true)]`).
+* **Tool descriptions:** they come from the source code comments on the controllers
+  and routes, so keep them accurate. The Docker build generates `mcp.yml` and ships
+  it with the binary (`staff-api --mcp=mcp.yml`; override the location with
+  `MCP_DESCRIPTION_PATH`). The model's instructions are in `src/mcp.cr`.
+* **Cards:** booking, showing and searching tools render MCP Apps cards from `cards/`
+  (`@[AC::MCP(ui:)]`). Set `MCP_PREVIEW_PATH` (i.e. `/api/staff/v1/mcp/preview`) in
+  development to try them in action-controller's card previewer. Release builds, such as
+  the Docker image, leave it out: its pages are served without authentication. Browser tests: see [e2e/README.md](e2e/README.md).
 
 ## Contributing
 

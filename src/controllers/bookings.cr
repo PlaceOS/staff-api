@@ -1,3 +1,4 @@
+# Bookings of desks, car parking spaces, lockers, visitors and other assets, with approval, check-in/out and attendee (guest) management
 class Bookings < Application
   base "/api/staff/v1/bookings"
 
@@ -11,7 +12,7 @@ class Bookings < Application
   # retried a few times with jittered backoff before giving up.
   SERIALIZE_RETRY_CODES = {"40001", "40P01"}
 
-  @[AC::Route::Filter(:around_action, only: [:create, :update])]
+  @[AC::Route::Filter(:around_action, only: [:create, :book, :update, :edit])]
   def wrap_in_transaction(&)
     attempt = 0
     loop do
@@ -54,10 +55,10 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, except: [:index, :create, :booked, :clashing_assets])]
+  @[AC::Route::Filter(:before_action, except: [:index, :create, :book, :booked, :clashing_assets, :mine])]
   private def find_booking(
     id : Int64,
-    @[AC::Param::Info(description: "a recurring instance id", example: "1234567")]
+    @[AC::Param::Info(description: "the occurrence of a recurring booking to act on, the instance id (the occurrence start time as a unix epoch in seconds) as returned in the booking `instance` field. Omit to act on the booking or whole series", example: "1661725146")]
     instance : Int64? = nil,
   )
     @booking = booking = Booking
@@ -73,7 +74,7 @@ class Bookings < Application
     end
   end
 
-  @[AC::Route::Filter(:before_action, only: [:update, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata, :check_in])]
+  @[AC::Route::Filter(:before_action, only: [:update, :edit, :update_alt, :destroy, :update_state, :update_induction, :patch_extdata, :check_in])]
   private def confirm_access
     return if is_support?
     if user = current_user
@@ -139,65 +140,64 @@ class Bookings < Application
 
   PARAMS = %w(booking_type checked_in created_before created_after approved rejected extension_data state department)
 
-  # lists bookings based on the parameters provided
-  #
-  # booking_type is required unless event_id or ical_uid is present
+  # List bookings in a time period.
   @[AC::Route::GET("/", execution_context: "bookings")]
   def index(
-    @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "start of the period to search, unix epoch in seconds. Defaults to now", example: "1661725146")]
     starting : Int64 = Time.utc.to_unix,
-    @[AC::Param::Info(name: "period_end", description: "booking period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "end of the period to search, unix epoch in seconds. Defaults to one hour from now", example: "1661743123")]
     ending : Int64 = 1.hours.from_now.to_unix,
-    @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
+    @[AC::Param::Info(name: "type", description: "the booking type to search, such as desk, parking, locker, visitor or group-event. Required unless event_id or ical_uid is provided", example: "desk")]
     booking_type : String? = nil,
-    @[AC::Param::Info(description: "when true, returns all bookings including deleted ones", example: "true")]
+    @[AC::Param::Info(description: "when true, deleted and non-deleted bookings are returned (overrides `deleted`)", example: "true")]
     include_deleted : Bool = false,
-    @[AC::Param::Info(name: "deleted", description: "when true, only returns deleted bookings, unless `include_deleted=true`", example: "true")]
+    @[AC::Param::Info(name: "deleted", description: "when true, only deleted bookings are returned. Ignored if `include_deleted=true`", example: "true")]
     deleted_flag : Bool = false,
-    @[AC::Param::Info(description: "when true, returns all bookings including checked out ones", example: "true")]
+    @[AC::Param::Info(description: "when true, checked out and not checked out bookings are returned (overrides `checked_out`)", example: "true")]
     include_checked_out : Bool = false,
-    @[AC::Param::Info(name: "checked_out", description: "when true, only returns checked out bookings, unless `include_checked_out=true`", example: "true")]
+    @[AC::Param::Info(name: "checked_out", description: "when true, only checked out bookings are returned. Ignored if `include_checked_out=true`", example: "true")]
     checked_out_flag : Bool = false,
-    @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "only include bookings in any of these zones (e.g. a building or level), comma separated zone ids. When provided, bookings of all users in the zones are returned unless `user` or `email` is also set", example: "zone-123,zone-456")]
     zones : String? = nil,
-    @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
+    @[AC::Param::Info(name: "email", description: "only include bookings owned by the user with this email. If none of `user`, `email` or `zones` is set the signed in user's bookings are returned", example: "user@org.com")]
     user_email : String? = nil,
-    @[AC::Param::Info(name: "user", description: "filters bookings owned by this user id", example: "user-1234")]
+    @[AC::Param::Info(name: "user", description: "only include bookings owned by this user id, use `current` for the signed in user", example: "user-1234")]
     user_id : String? = nil,
-    @[AC::Param::Info(description: "if `email` or `user` parameters are set, this includes bookings that user booked on behalf of others", example: "true")]
+    @[AC::Param::Info(description: "when `email` or `user` is set (or defaulted to the signed in user), also include bookings that user made on behalf of others", example: "true")]
     include_booked_by : Bool? = nil,
 
-    @[AC::Param::Info(description: "filters bookings that have been checked in or not", example: "true")]
+    @[AC::Param::Info(description: "true only includes checked in bookings, false only includes bookings that have been checked out", example: "true")]
     checked_in : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings that were created before the unix epoch specified", example: "1661743123")]
+    @[AC::Param::Info(description: "only include bookings last changed before this time, unix epoch in seconds", example: "1661743123")]
     created_before : Int64? = nil,
-    @[AC::Param::Info(description: "filters bookings that were created after the unix epoch specified", example: "1661743123")]
+    @[AC::Param::Info(description: "only include bookings last changed after this time, unix epoch in seconds", example: "1661743123")]
     created_after : Int64? = nil,
-    @[AC::Param::Info(description: "filters bookings that are approved or not", example: "true")]
+    @[AC::Param::Info(description: "true only includes approved bookings, false only includes bookings that are not approved", example: "true")]
     approved : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings that are rejected or not", example: "true")]
+    @[AC::Param::Info(description: "true only includes rejected bookings, false excludes them. Defaults to including both", example: "false")]
     rejected : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings with matching extension data entries", example: %({"entry1":"value to match","entry2":1234}))]
+    @[AC::Param::Info(description: "only include bookings whose extension data contains all of these key/value pairs, as a JSON object", example: %({"entry1":"value to match","entry2":1234}))]
     extension_data : String? = nil,
-    @[AC::Param::Info(description: "filters on the booking process state, a user defined value", example: "pending-approval")]
+    @[AC::Param::Info(description: "only include bookings in this process state, a user defined value (see update_state)", example: "pending-approval")]
     state : String? = nil,
-    @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
+    @[AC::Param::Info(description: "only include bookings belonging to this department, a user defined value", example: "accounting")]
     department : String? = nil,
 
-    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "return the bookings linked to this calendar event id (e.g. an Office365 or Google event id). When set, `type` is optional and the period, zone and user filters are ignored", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String? = nil,
-    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    @[AC::Param::Info(description: "return the bookings linked to the calendar event with this iCal UID. When set, `type` is optional and the period, zone and user filters are ignored", example: "19rh93h5t893h5v@calendar.iCloud.com")]
     ical_uid : String? = nil,
-    @[AC::Param::Info(description: "the maximum number of results to return", example: "10000")]
+    @[AC::Param::Info(description: "the maximum number of bookings to return, defaults to 100", example: "100")]
     limit : Int32 = 100,
-    @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
+    @[AC::Param::Info(description: "the number of bookings to skip, used for pagination (take the next value from the `Link` header)", example: "0")]
     offset : Int32 = 0,
-    @[AC::Param::Info(description: "the recurring bookings index of the result set. Used to implement pagination with recurring bookings")]
+    @[AC::Param::Info(description: "position within the expanded recurring bookings, used for pagination (take the next value from the `Link` header)", example: "0")]
     recurrence : Int32 = 0,
-    @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
+    @[AC::Param::Info(description: "only include bookings with this permission level: PRIVATE, OPEN or PUBLIC. Ignored for unauthenticated requests, which only see PUBLIC bookings", example: "PUBLIC")]
     permission : String? = nil,
+    @[AC::Param::Info(description: "internal use, a path suffix appended to the pagination `Link` header URL", example: "booked")]
     link_ext : String? = nil,
-    @[AC::Param::Info(description: "include parent bookings", example: "true")]
+    @[AC::Param::Info(description: "when true, linked (child) bookings in the results include their parent booking", example: "true")]
     include_parent_bookings : Bool? = nil,
   ) : Array(Booking)
     query = Booking.by_tenant(tenant.id)
@@ -307,50 +307,48 @@ class Bookings < Application
     result
   end
 
-  # lists asset IDs based on the parameters provided
-  #
-  # booking_type is required unless event_id or ical_uid is present
+  # List the ids of assets booked in a time period.
   @[AC::Route::GET("/booked")]
   def booked(
-    @[AC::Param::Info(name: "period_start", description: "booking period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "start of the period to search, unix epoch in seconds. Defaults to now", example: "1661725146")]
     starting : Int64 = Time.utc.to_unix,
-    @[AC::Param::Info(name: "period_end", description: "booking period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "end of the period to search, unix epoch in seconds. Defaults to one hour from now", example: "1661743123")]
     ending : Int64 = 1.hours.from_now.to_unix,
-    @[AC::Param::Info(name: "type", description: "the generic name of the asset whose bookings you wish to view", example: "desk")]
+    @[AC::Param::Info(name: "type", description: "the booking type to search, such as desk, parking, locker, visitor or group-event. Required unless event_id or ical_uid is provided", example: "desk")]
     booking_type : String? = nil,
-    @[AC::Param::Info(description: "this filters only bookings in the zones provided, multiple zones can be provided comma seperated", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "only include bookings in any of these zones (e.g. a building or level), comma separated zone ids. When provided, bookings of all users in the zones are returned unless `user` or `email` is also set", example: "zone-123,zone-456")]
     zones : String? = nil,
-    @[AC::Param::Info(name: "email", description: "filters bookings owned by this user email", example: "user@org.com")]
+    @[AC::Param::Info(name: "email", description: "only include bookings owned by the user with this email. If none of `user`, `email` or `zones` is set the signed in user's bookings are returned", example: "user@org.com")]
     user_email : String? = nil,
-    @[AC::Param::Info(name: "user", description: "filters bookings owned by this user id", example: "user-1234")]
+    @[AC::Param::Info(name: "user", description: "only include bookings owned by this user id, use `current` for the signed in user", example: "user-1234")]
     user_id : String? = nil,
-    @[AC::Param::Info(description: "if `email` or `user` parameters are set, this includes bookings that user booked on behalf of others", example: "true")]
+    @[AC::Param::Info(description: "when `email` or `user` is set (or defaulted to the signed in user), also include bookings that user made on behalf of others", example: "true")]
     include_booked_by : Bool? = nil,
 
-    @[AC::Param::Info(description: "filters bookings that have been checked in or not", example: "true")]
+    @[AC::Param::Info(description: "true only includes checked in bookings, false only includes bookings that have been checked out", example: "true")]
     checked_in : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings that were created before the unix epoch specified", example: "1661743123")]
+    @[AC::Param::Info(description: "only include bookings last changed before this time, unix epoch in seconds", example: "1661743123")]
     created_before : Int64? = nil,
-    @[AC::Param::Info(description: "filters bookings that were created after the unix epoch specified", example: "1661743123")]
+    @[AC::Param::Info(description: "only include bookings last changed after this time, unix epoch in seconds", example: "1661743123")]
     created_after : Int64? = nil,
-    @[AC::Param::Info(description: "filters bookings that are approved or not", example: "true")]
+    @[AC::Param::Info(description: "true only includes approved bookings, false only includes bookings that are not approved", example: "true")]
     approved : Bool? = nil,
-    @[AC::Param::Info(description: "filters bookings with matching extension data entries", example: %({"entry1":"value to match","entry2":1234}))]
+    @[AC::Param::Info(description: "only include bookings whose extension data contains all of these key/value pairs, as a JSON object", example: %({"entry1":"value to match","entry2":1234}))]
     extension_data : String? = nil,
-    @[AC::Param::Info(description: "filters on the booking process state, a user defined value", example: "pending-approval")]
+    @[AC::Param::Info(description: "only include bookings in this process state, a user defined value (see update_state)", example: "pending-approval")]
     state : String? = nil,
-    @[AC::Param::Info(description: "filters bookings owned by a department, a user defined value", example: "accounting")]
+    @[AC::Param::Info(description: "only include bookings belonging to this department, a user defined value", example: "accounting")]
     department : String? = nil,
 
-    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "return the bookings linked to this calendar event id (e.g. an Office365 or Google event id). When set, `type` is optional and the period, zone and user filters are ignored", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String? = nil,
-    @[AC::Param::Info(description: "filters bookings associated with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    @[AC::Param::Info(description: "return the bookings linked to the calendar event with this iCal UID. When set, `type` is optional and the period, zone and user filters are ignored", example: "19rh93h5t893h5v@calendar.iCloud.com")]
     ical_uid : String? = nil,
-    @[AC::Param::Info(description: "the maximum number of results to return", example: "100000")]
+    @[AC::Param::Info(description: "the maximum number of bookings to inspect, defaults to 100000", example: "100000")]
     limit : Int32 = 100000,
-    @[AC::Param::Info(description: "the starting offset of the result set. Used to implement pagination")]
+    @[AC::Param::Info(description: "the number of bookings to skip, used for pagination (take the next value from the `Link` header)", example: "0")]
     offset : Int32 = 0,
-    @[AC::Param::Info(description: "filters bookings based on the permission level. Options: PRIVATE, OPEN, PUBLIC", example: "PUBLIC")]
+    @[AC::Param::Info(description: "only include bookings with this permission level: PRIVATE, OPEN or PUBLIC. Ignored for unauthenticated requests, which only see PUBLIC bookings", example: "PUBLIC")]
     permission : String? = nil,
   ) : Array(String)
     result = index(starting: starting, ending: ending, booking_type: booking_type, deleted_flag: false, include_checked_out: false,
@@ -362,15 +360,14 @@ class Bookings < Application
     asset_ids.uniq!
   end
 
-  # lists conflicting assets based on booking
-  # will return a list of asset_ids that are already booked during the specified time range
-  # if asset_ids or asset_id is set on the booking, then it will only return booked assets from that list
+  # List the assets already booked during a booking's time range.
+  @[AC::MCP(behaviour: :read_only)]
   @[AC::Route::POST("/clashing-assets", body: :booking)]
   def clashing_assets(
     booking : Booking,
-    @[AC::Param::Info(description: "return available assets, this requires asset_ids be set to the full list", example: "false")]
+    @[AC::Param::Info(description: "when true, return the assets from the booking's asset_ids that are NOT booked, so asset_ids must contain every candidate asset", example: "false")]
     return_available : Bool = false,
-    @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
+    @[AC::Param::Info(description: "when true, return objects with asset_id, booking_start and booking_end for each clash rather than plain asset ids. Cannot be combined with return_available", example: "false")]
     include_clash_time : Bool = false,
   ) : Array(String) | Array(NamedTuple(asset_id: String, booking_start: Int64, booking_end: Int64))
     unless booking.booking_start_present? &&
@@ -426,19 +423,19 @@ class Bookings < Application
     end
   end
 
-  # creates a new booking
+  # Create a booking.
   @[AC::Route::POST("/", body: :booking, status_code: HTTP::Status::CREATED)]
   def create(
     booking : Booking,
 
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
-    @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
+    @[AC::Param::Info(description: "the maximum number of concurrent bookings of this type the user may hold in the booking's zones, used instead of the tenant's configured booking limit", example: "3")]
     limit_override : Int32? = nil,
 
-    @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "link the booking to this calendar event id (e.g. an Office365 or Google event id). The event must already have staff-api metadata, otherwise 422 is returned", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String? = nil,
-    @[AC::Param::Info(description: "links booking with an event, such as an Office365 Calendar event ical_uid", example: "19rh93h5t893h5v@calendar.iCloud.com")]
+    @[AC::Param::Info(description: "link the booking to the calendar event with this iCal UID. The event must already have staff-api metadata, otherwise 422 is returned", example: "19rh93h5t893h5v@calendar.iCloud.com")]
     ical_uid : String? = nil,
   ) : Booking
     unless booking.booking_start_present? &&
@@ -539,7 +536,7 @@ class Bookings < Application
         )
 
         spawn do
-          get_placeos_client.root.signal("staff/guest/attending", {
+          signal("staff/guest/attending", {
             action:         :booking_created,
             id:             guest.id,
             booking_id:     booking.id,
@@ -559,7 +556,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:          :create,
           id:              booking.id,
           booking_type:    booking.booking_type,
@@ -590,7 +587,7 @@ class Bookings < Application
     booking
   end
 
-  # patches an existing booking with the changes provided
+  # Update a booking with the fields in the request body and return the saved booking.
   @[AC::Route::PUT("/:id", body: :changes)]
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id/instance/:instance", body: :changes)]
@@ -598,7 +595,7 @@ class Bookings < Application
   def update(
     changes : Booking,
 
-    @[AC::Param::Info(description: "allows a client to override any limits imposed on bookings", example: "3")]
+    @[AC::Param::Info(description: "the maximum number of concurrent bookings of this type the user may hold in the booking's zones, used instead of the tenant's configured booking limit", example: "3")]
     limit_override : Int32? = nil,
   ) : Booking
     changes.id = booking.id
@@ -765,7 +762,7 @@ class Bookings < Application
 
             if !previously_visiting
               spawn do
-                get_placeos_client.root.signal("staff/guest/attending", {
+                signal("staff/guest/attending", {
                   action:         :booking_updated,
                   id:             guest.id,
                   booking_id:     existing_booking.id,
@@ -797,7 +794,7 @@ class Bookings < Application
     if original_host_email.to_s.downcase != existing_booking.user_email.to_s.downcase
       spawn do
         begin
-          get_placeos_client.root.signal("staff/booking/host_changed", {
+          signal("staff/booking/host_changed", {
             action:              :host_changed,
             booking_id:          existing_booking.id,
             resource_id:         existing_booking.asset_id,
@@ -818,13 +815,13 @@ class Bookings < Application
     result
   end
 
-  # patches an existing booking extension data with the changes provided
+  # Merge the keys in the request body into a booking's extension data.
   @[AC::Route::PATCH("/:id/ext_data", body: :changes)]
   @[AC::Route::PATCH("/:id/ext_data/:instance", body: :changes)]
   def patch_extdata(
     changes : Hash(String, JSON::Any),
 
-    @[AC::Param::Info(description: "signal changes to the booking", example: "true")]
+    @[AC::Param::Info(description: "when true, publish a `staff/booking/changed` signal (action extdata_changed) so other services are notified, defaults to false", example: "true")]
     signal_changes : Bool = false,
   ) : Booking
     book = booking
@@ -846,18 +843,140 @@ class Bookings < Application
     book
   end
 
-  # returns the booking requested
+  # Book a desk or other asset for yourself, the zones (level, building) are taken from the asset.
+  @[AC::MCP(ui: "bookings/card.html")]
+  @[AC::Route::POST("/book", status_code: HTTP::Status::CREATED, converters: {zones: ConvertStringArray})]
+  def book(
+    @[AC::Param::Info(description: "the asset id to book, i.e. a desk id from desks_index", example: "asset-1234")]
+    asset_id : String,
+    @[AC::Param::Info(description: "start as a unix epoch in seconds, defaults to now; a start earlier today moves to now", example: "1661725146")]
+    booking_start : Int64? = nil,
+    @[AC::Param::Info(description: "end as a unix epoch in seconds, defaults to the end of the start's day", example: "1661743123")]
+    booking_end : Int64? = nil,
+    @[AC::Param::Info(description: "the kind of asset, such as desk, parking or locker", example: "desk")]
+    booking_type : String = "desk",
+    @[AC::Param::Info(description: "a title for the booking, defaults to the asset's name", example: "Desk near the team")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "comma separated zone ids to file the booking under, added to the asset's zones", example: "zone-building,zone-level")]
+    zones : Array(String)? = nil,
+    @[AC::Param::Info(description: "IANA timezone of the booking, defaults to the asset's level or building timezone", example: "Australia/Sydney")]
+    timezone : String? = nil,
+  ) : Booking
+    booking_zones = zones || [] of String
+    authority_id = current_authority.as(::PlaceOS::Model::Authority).id
+    asset = ::PlaceOS::Model::Asset.where(id: asset_id).where(Desks::AUTHORITY_SCOPE, authority_id).to_a.first?
+    if asset
+      # zones is the asset's zone tree (org, building, level...) and zone_id its level
+      tree = (asset.zones + [asset.zone_id].compact).uniq
+      booking_zones.concat tree
+      timezone ||= timezone_of(asset.zone_id, tree)
+    end
+    location = timezone.try { |name| Time::Location.load(name) rescue nil } || DEFAULT_TIME_ZONE
+
+    # now, rounded up to the next 10 minutes, so a booking for today never starts in the past
+    now = (Time.utc.to_unix / 600.0).ceil.to_i64 * 600
+    today = Time.utc.in(location).at_beginning_of_day.to_unix
+    booking_start = now if booking_start.nil? || (today <= booking_start < now)
+    booking_end ||= Time.unix(booking_start).in(location).at_end_of_day.to_unix
+
+    changes = {
+      "booking_type"  => JSON::Any.new(booking_type),
+      "asset_id"      => JSON::Any.new(asset_id),
+      "asset_ids"     => JSON::Any.new([JSON::Any.new(asset_id)]),
+      "booking_start" => JSON::Any.new(booking_start),
+      "booking_end"   => JSON::Any.new(booking_end),
+      "zones"         => JSON::Any.new(booking_zones.uniq.map { |zone| JSON::Any.new(zone) }),
+      "timezone"      => JSON::Any.new(location.name),
+    }
+    name = asset.try { |found| Desks.name_of(found) }
+    title ||= name
+    changes["title"] = JSON::Any.new(title) if title
+    if asset
+      # what the workplace apps set, so the booking shows on their maps
+      changes["extension_data"] = JSON::Any.new({
+        "assigned_asset_id"   => JSON::Any.new(asset_id),
+        "assigned_asset_name" => JSON::Any.new(name.as(String)),
+        "name"                => JSON::Any.new(name.as(String)),
+        "map_id"              => JSON::Any.new(Desks.map_id_of(asset)),
+        "app_name"            => JSON::Any.new("MCP"),
+      })
+    end
+
+    create(Booking.from_json(changes.to_json), utm_source: "mcp", event_id: nil.as(String?), ical_uid: nil.as(String?))
+  end
+
+  # Check my bookings: desks, car parking, lockers and visitors, with how to change or cancel them.
+  @[AC::MCP(prompt: true, root: true, title: "My bookings")]
+  def mine(
+    @[AC::Param::Info(description: "the period to look at, i.e. today, tomorrow or this week", example: "this week")]
+    period : String? = nil,
+    @[AC::Param::Info(description: "only this kind of booking, i.e. desk, parking, locker or visitor", example: "desk")]
+    type : String? = nil,
+  ) : String
+    ask = String.build do |str|
+      str << "What " << (type.presence.try { |kind| "#{kind} " } || "") << "bookings do I have"
+      str << ' ' << (period.presence || "today") << '?'
+    end
+
+    <<-PROMPT
+      #{ask}
+
+      How to check my bookings:
+      1. Call users_current to see who I am. Work out the period in my timezone, as unix epochs
+         in seconds, from the start of the first day to the end of the last.
+      2. List them with bookings_index (bookings toolbox), once per type: desk, parking, locker and
+         visitor (or just the type I asked about). Without user, email or zones it returns my own
+         bookings; include_booked_by true adds the ones I made for other people. Follow the Link
+         header when there are more.
+      3. Give me a short summary by day: the type, what was booked (the title or
+         extension_data.name, otherwise the asset_id), the building and level (the booking's
+         zones, spaces_zones in the spaces toolbox has their names), the times in the booking's
+         timezone and anything notable: pending approval, rejected, checked in. Visitor bookings
+         list who is visiting.
+      4. Say if I have no bookings. Don't list cancelled (deleted) or rejected ones unless I ask.
+      5. bookings_show shows one booking with a card where I can change or cancel it;
+         bookings_edit changes the title or times and bookings_destroy cancels it (pass instance
+         for one occurrence of a recurring booking).
+      PROMPT
+  end
+
+  # Change a booking's title, description or times.
+  @[AC::MCP(root: true)]
+  @[AC::Route::PATCH("/:id/edit")]
+  def edit(
+    @[AC::Param::Info(description: "the new title", example: "Focus time")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "the new description", example: "near the window")]
+    description : String? = nil,
+    @[AC::Param::Info(description: "the new start as a unix epoch in seconds", example: "1661725146")]
+    booking_start : Int64? = nil,
+    @[AC::Param::Info(description: "the new end as a unix epoch in seconds", example: "1661743123")]
+    booking_end : Int64? = nil,
+  ) : Booking
+    changes = {} of String => JSON::Any
+    changes["title"] = JSON::Any.new(title) if title
+    changes["description"] = JSON::Any.new(description) if description
+    changes["booking_start"] = JSON::Any.new(booking_start) if booking_start
+    changes["booking_end"] = JSON::Any.new(booking_end) if booking_end
+    raise Error::BadRequest.new("nothing to change") if changes.empty?
+
+    update(Booking.from_json(changes.to_json))
+  end
+
+  # Get a single booking.
+  @[AC::MCP(ui: "bookings/card.html")]
   @[AC::Route::GET("/:id")]
   @[AC::Route::GET("/:id/instance/:instance")]
   def show : Booking
     booking
   end
 
-  # marks the provided booking as deleted
+  # Cancel a booking.
+  @[AC::MCP(root: true)]
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   @[AC::Route::DELETE("/:id/instance/:instance", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Nil
     booking_local = booking
@@ -868,7 +987,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:          :cancelled,
           id:              booking_local.id,
           instance:        booking_local.instance,
@@ -899,11 +1018,11 @@ class Bookings < Application
     end
   end
 
-  # approves a booking (if booking approval is required in an organisation)
+  # Approve a booking.
   @[AC::Route::POST("/:id/approve")]
   @[AC::Route::POST("/:id/approve/:instance")]
   def approve(
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
     booking.utm_source = utm_source
@@ -915,11 +1034,11 @@ class Bookings < Application
     update_booking(booking, "approved")
   end
 
-  # rejects a booking
+  # Reject a booking.
   @[AC::Route::POST("/:id/reject")]
   @[AC::Route::POST("/:id/reject/:instance")]
   def reject(
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
     booking.utm_source = utm_source
@@ -927,15 +1046,15 @@ class Bookings < Application
     update_booking(booking, "rejected")
   end
 
-  # indicates that a booking has commenced
+  # Check a booking in, or out with state=false.
   @[AC::Route::POST("/:id/check_in")]
   @[AC::Route::POST("/:id/checkin")]
   @[AC::Route::POST("/:id/check_in/:instance")]
   @[AC::Route::POST("/:id/checkin/:instance")]
   def check_in(
-    @[AC::Param::Info(description: "the desired value of the booking checked-in flag", example: "false")]
+    @[AC::Param::Info(description: "true to check in, false to check out. Defaults to true", example: "false")]
     state : Bool = true,
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
     # NOTE:: resolve this *before* touching `checked_in`. Both guards below ask what
@@ -981,13 +1100,13 @@ class Bookings < Application
     booking
   end
 
-  # the current state of a booking, if a custom state machine is being used
+  # Set a booking's process state.
   @[AC::Route::POST("/:id/update_state")]
   @[AC::Route::POST("/:id/update_state/:instance")]
   def update_state(
-    @[AC::Param::Info(description: "the user defined process state of the booking", example: "pending_approval")]
+    @[AC::Param::Info(description: "the new user defined process state of the booking", example: "pending_approval")]
     state : String,
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
     booking.process_state = state
@@ -995,13 +1114,13 @@ class Bookings < Application
     update_booking(booking, "process_state")
   end
 
-  # update the induction status
+  # Set a booking's induction status.
   @[AC::Route::POST("/:id/update_induction")]
   @[AC::Route::POST("/:id/update_induction/:instance")]
   def update_induction(
-    @[AC::Param::Info(description: "the induction status of the booking", example: "accepted")]
+    @[AC::Param::Info(description: "the induction status: tentative, accepted or declined", example: "accepted")]
     induction : PlaceOS::Model::Booking::Induction,
-    @[AC::Param::Info(description: "provided for use with analytics", example: "mobile")]
+    @[AC::Param::Info(description: "the client or channel making the change, recorded for analytics", example: "mobile")]
     utm_source : String? = nil,
   ) : Booking
     if (induction.accepted? || induction.declined?) &&
@@ -1013,7 +1132,7 @@ class Bookings < Application
                end
 
       spawn do
-        get_placeos_client.root.signal("staff/guest/#{action}", {
+        signal("staff/guest/#{action}", {
           action:         action,
           id:             guest.id,
           induction:      induction,
@@ -1036,10 +1155,10 @@ class Bookings < Application
     update_booking(booking, "induction")
   end
 
-  # returns a list of guests associated with a booking
+  # List the guests attending a booking.
   @[AC::Route::GET("/:id/guests")]
   def guest_list(
-    @[AC::Param::Info(description: "include guests from linked (child) bookings", example: "true")]
+    @[AC::Param::Info(description: "when true and this is a parent booking, also include guests from its linked (child) bookings. Defaults to false", example: "true")]
     include_linked : Bool = false,
   ) : Array(Guest)
     guests = booking.attendees.to_a.map do |visitor|
@@ -1064,13 +1183,13 @@ class Bookings < Application
     guests
   end
 
-  # marks the standalone visitor as checked-in or checked-out based on the state param
+  # Check a guest of a booking in, or out with state=false.
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
-    @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
+    @[AC::Param::Info(name: "guest_id", description: "the email address of the guest to check in or out", example: "person@external.com")]
     guest_email : String,
-    @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
+    @[AC::Param::Info(name: "state", description: "true to check the guest in, false to check them out. Defaults to true", example: "false")]
     checkin : Bool = true,
   ) : Guest
     guest = Guest.by_tenant(tenant.id).find_by(email: guest_email.strip.downcase)
@@ -1101,7 +1220,7 @@ class Bookings < Application
     guest.for_booking_to_h(attendee, booking.as_h(include_attendees: false))
   end
 
-  # Adds a single attendee to an existing booking
+  # Add an attendee to a booking.
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
     attendee : PlaceCalendar::Event::Attendee,
@@ -1156,7 +1275,7 @@ class Bookings < Application
 
     if !previously_visiting
       spawn do
-        get_placeos_client.root.signal("staff/guest/attending", {
+        signal("staff/guest/attending", {
           action:         :booking_updated,
           id:             guest.id,
           booking_id:     booking.id,
@@ -1176,9 +1295,10 @@ class Bookings < Application
     attend
   end
 
+  # Remove an attendee from a booking.
   @[AC::Route::DELETE("/:id/attendee/:attendee_id", status_code: HTTP::Status::ACCEPTED)]
   def destroy_attendee(
-    @[AC::Param::Info(name: "attendee_id", description: "the email of the attendee we want to remove", example: "person@example.com")]
+    @[AC::Param::Info(name: "attendee_id", description: "the email address of the attendee to remove", example: "person@example.com")]
     attendee_email : String,
   ) : Nil
     email = attendee_email.strip.downcase
@@ -1186,14 +1306,24 @@ class Bookings < Application
     attendee = booking.attendees.find { |a| a.email.strip.downcase == email }
     raise Error::BadRequest.new("Attendee not found in this booking") unless attendee
 
-    # Is this really the right way of doing this?
-    attendee.guest.try &.delete
+    # the guest is shared with their other visits, deleting it would cascade to those attendees
     attendee.delete
   end
 
   # ============================================
   #              Helper Methods
   # ============================================
+
+  # the level's timezone, otherwise the closest zone in the tree with one
+  private def timezone_of(level_id : String?, tree : Array(String)) : String?
+    zones = ::PlaceOS::Model::Zone.find_all(tree).to_a
+    ordered = [level_id].compact + tree.reverse
+    ordered.each do |zone_id|
+      if location = zones.find(&.id.==(zone_id)).try(&.timezone)
+        return location.name
+      end
+    end
+  end
 
   private def check_clashing(new_booking, ignore_assets : Bool = false)
     new_booking.clashing_bookings(ignore_assets: ignore_assets).reject! { |book| book.id == new_booking.id && (new_booking.instance.nil? || book.instance == new_booking.instance) }
@@ -1264,7 +1394,7 @@ class Bookings < Application
 
   private def signal_guest_checkin(guest : Guest, checkin : Bool) : Nil
     spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
+      signal("staff/guest/checkin", {
         action:         :checkin,
         id:             guest.id,
         checkin:        checkin,
@@ -1293,7 +1423,7 @@ class Bookings < Application
 
     spawn do
       begin
-        get_placeos_client.root.signal("staff/booking/changed", {
+        signal("staff/booking/changed", {
           action:                 signal,
           id:                     booking.id,
           instance:               booking.instance,

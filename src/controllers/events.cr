@@ -1,3 +1,4 @@
+# Calendar events (meetings) on user and room resource calendars (Office365 / Google), with PlaceOS room metadata, room approvals and visitor (guest) management
 class Events < Application
   base "/api/staff/v1/events"
 
@@ -38,7 +39,7 @@ class Events < Application
 
     if system_id
       system = PlaceOS::Model::ControlSystem.find!(system_id)
-      return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+      return if check_access(current_user.groups, system.zones).can_manage?
     end
 
     raise Error::Forbidden.new("user not in an appropriate user group or involved in the meeting")
@@ -47,7 +48,7 @@ class Events < Application
   private def confirm_access_for_add_attendee(
     event : PlaceCalendar::Event,
     metadata : EventMetadata,
-    system : PlaceOS::Client::API::Models::System? = nil,
+    system : PlaceOS::Model::ControlSystem? = nil,
   )
     return if metadata.permission.public?
     return if is_support?
@@ -55,7 +56,7 @@ class Events < Application
     if user = current_user
       return if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
       if system
-        return if check_access(current_user.groups, system.zones || [] of String).can_manage?
+        return if check_access(current_user.groups, system.zones).can_manage?
       end
       return if metadata.permission.open? && (authority = user.authority) && (event_tenant = metadata.tenant) && (authority.domain == event_tenant.domain)
     end
@@ -67,7 +68,7 @@ class Events < Application
     email : String,
     cal_id : String,
     event_id : String,
-    system : PlaceOS::Client::API::Models::System? = nil,
+    system : PlaceOS::Model::ControlSystem? = nil,
   ) : PlaceCalendar::Event?
     return if is_support?
 
@@ -76,7 +77,7 @@ class Events < Application
       event = get_hosts_event_or_event(cal_id, event_id)
       return event if event && (event_creator = event.creator) && (event_creator.downcase == user.email.downcase)
       if system
-        return event if check_access(current_user.groups, system.zones || [] of String).can_manage?
+        return event if check_access(current_user.groups, system.zones).can_manage?
       end
     end
 
@@ -84,7 +85,7 @@ class Events < Application
   end
 
   # update includes a bunch of moving parts so we want to roll back if something fails
-  @[AC::Route::Filter(:around_action, only: [:update])]
+  @[AC::Route::Filter(:around_action, only: [:update, :edit])]
   def wrap_in_transaction(&)
     PgORM::Database.transaction do
       yield
@@ -109,26 +110,26 @@ class Events < Application
     All    # error on any failure (invalid calendar ids etc)
   end
 
-  # lists events occuring in the period provided, by default on the current users calendar
+  # List calendar events in a time period.
   @[AC::Route::GET("/")]
   def index(
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
     starting : Int64,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "period end as a unix epoch in seconds", example: "1661743123")]
     ending : Int64,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "comma separated list of calendar ids (email addresses) to list events from, prefer `system_ids` for room resource calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "comma separated list of zone ids, events are listed for every room (system) in these zones", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    @[AC::Param::Info(description: "comma separated list of room (system) ids, events are listed from each room's resource calendar", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
-    @[AC::Param::Info(description: "includes events that have been marked as cancelled", example: "true")]
+    @[AC::Param::Info(description: "include cancelled events, defaults to false", example: "true")]
     include_cancelled : Bool = false,
-    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    @[AC::Param::Info(name: "ical_uid", description: "only return events with this ical uid", example: "sqvitruh3ho3mrq896tplad4v8")]
     icaluid : String? = nil,
-    @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax", example: "")]
+    @[AC::Param::Info(name: "filter", description: "optional advanced search filter in Microsoft Graph (Azure AD) OData filter syntax, passed to the calendar provider", example: "")]
     filter : String? = nil,
-    @[AC::Param::Info(description: "how to respond when there are calendar errors. Notify sets X-Calendar-Errors, limit returns a 429 error when rate limiting occured, any will 500 if there are any calendar errors", example: "notify")]
+    @[AC::Param::Info(description: "how to respond to calendar errors: `notify` (default) returns 206 with X-Calendar-Errors headers, `limit` returns 429 if any calendar was rate limited, `all` returns 500 on any calendar error", example: "notify")]
     strict : Strict = Strict::Notify,
   ) : Array(PlaceCalendar::Event)
     period_start = Time.unix(starting)
@@ -163,7 +164,7 @@ class Events < Application
     calendar_rate_limit = [] of String
     calendar_other_error = [] of String
 
-    results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+    results = [] of Tuple(String, PlaceOS::Model::ControlSystem?, PlaceCalendar::Event)
     mappings.each do |(request, calendar_id, system)|
       begin
         results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
@@ -282,10 +283,10 @@ class Events < Application
     end
 
     # grab the system details for resource calendars, if they exist
-    system_emails = {} of String => PlaceOS::Client::API::Models::System
+    system_emails = {} of String => PlaceOS::Model::ControlSystem
     if !event_resources.empty?
-      systems = get_placeos_client.systems.with_emails event_resources.values.uniq!
-      systems.each { |sys| system_emails[sys.email.as(String).downcase] = sys }
+      systems = systems_with_emails(event_resources.values)
+      systems.each { |sys| system_emails[sys.email.to_s.downcase] = sys }
     end
 
     response_code = if errors > 0
@@ -324,20 +325,48 @@ class Events < Application
     }
   end
 
-  # returns history records for events in the specified period
+  # Check my meetings: my calendar for a period, with the rooms, and how to change or cancel them.
+  @[AC::MCP(prompt: true, root: true, title: "My meetings")]
+  def mine(
+    @[AC::Param::Info(description: "the period to look at, i.e. today, tomorrow or this week", example: "this week")]
+    period : String? = nil,
+  ) : String
+    <<-PROMPT
+      What meetings do I have #{period.presence || "today"}?
+
+      How to check my meetings:
+      1. Call users_current to see who I am. Work out the period in my timezone, as unix epochs
+         in seconds, from the start of the first day to the end of the last.
+      2. List my calendar with events_index (events toolbox) for the period, without calendars,
+         zone_ids or system_ids. Rooms are the attendees marked as resources; an event's system
+         is the room booked through PlaceOS, its zones give the building and level.
+      3. Give me a short summary by day, in time order: the time (all day events may have no
+         end), the title, the room and level, the host when it isn't me, my response (accepted,
+         tentative, declined, not responded) and the online meeting link if there is one.
+         Private meetings I'm not hosting have no details.
+      4. Say if I have no meetings. Mention clashes, meetings I haven't responded to and any
+         that need a room but don't have one.
+      5. events_show shows one meeting with a card where I can change or cancel it;
+         events_edit changes the title, times or people and events_destroy cancels it. Before
+         moving a meeting, check the people and room are free with calendars_free_busy
+         (calendars toolbox). To book a room for a meeting, use the spaces_book prompt's steps.
+      PROMPT
+  end
+
+  # List the change history of events in a time period.
   @[AC::Route::GET("/history")]
   def history(
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
     starting : Int64,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "period end as a unix epoch in seconds", example: "1661743123")]
     ending : Int64,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "comma separated list of resource calendar ids (email addresses) to filter by, prefer `system_ids`", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "comma separated list of zone ids, includes events for every room (system) in these zones", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    @[AC::Param::Info(description: "comma separated list of room (system) ids to filter by", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
-    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    @[AC::Param::Info(name: "ical_uid", description: "only return history for the event with this ical uid", example: "sqvitruh3ho3mrq896tplad4v8")]
     icaluid : String? = nil,
   ) : Array(History)
     # Query EventMetadata for events in the time period
@@ -369,8 +398,11 @@ class Events < Application
     # Collect event IDs from metadata
     event_ids = metadatas.flat_map { |meta| [meta.event_id, meta.ical_uid] }.uniq!
 
-    # Query history for these event IDs
-    History.where({:type => "event", :resource_id => event_ids}).to_a
+    # Query history of these events and their metadata, newest first
+    History
+      .where(resource_type: ["event", EventMetadata.table_name], resource_id: event_ids)
+      .order(created_at: :desc, id: :desc)
+      .to_a
   end
 
   protected def can_create?(user_email : String, host_email : String, attendees : Array(String)) : Bool
@@ -409,11 +441,76 @@ class Events < Application
     true
   end
 
-  # creates a new calendar event
+  # Book a meeting in the user's calendar, optionally in a room (system).
+  @[AC::MCP(ui: "events/card.html")]
+  @[AC::Route::POST("/book", converters: {attendees: ConvertStringArray}, status_code: HTTP::Status::CREATED)]
+  def book(
+    @[AC::Param::Info(description: "the meeting title", example: "Project catch up")]
+    title : String,
+    @[AC::Param::Info(description: "start as a unix epoch in seconds", example: "1661725146")]
+    event_start : Int64,
+    @[AC::Param::Info(description: "end as a unix epoch in seconds", example: "1661728746")]
+    event_end : Int64,
+    @[AC::Param::Info(description: "comma separated attendee emails, the user is added as the host", example: "jane@org.com,bob@org.com")]
+    attendees : Array(String)? = nil,
+    @[AC::Param::Info(description: "the room (system) id to book", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(description: "the meeting's IANA timezone, defaults to the room's", example: "Australia/Sydney")]
+    timezone : String? = nil,
+    @[AC::Param::Info(description: "the meeting description", example: "agenda: budget")]
+    body : String? = nil,
+  ) : PlaceCalendar::Event
+    event = PlaceCalendar::Event.new(
+      title: title,
+      body: body,
+      event_start: Time.unix(event_start),
+      event_end: Time.unix(event_end),
+      timezone: timezone.presence || system_id.try { |id| find_system!(id).timezone.try(&.name) },
+      attendees: (attendees || [] of String).map(&.downcase).uniq!.map { |email| PlaceCalendar::Event::Attendee.new(name: email, email: email) },
+    )
+    event.system_id = system_id
+    create(event)
+  end
+
+  # Change a calendar event's title, times or attendees.
+  @[AC::MCP(root: true)]
+  @[AC::Route::PATCH("/:id/edit", converters: {attendees: ConvertStringArray})]
+  def edit(
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    event_id : String,
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
+    system_id : String? = nil,
+    @[AC::Param::Info(name: "calendar", description: "calendar the event is on, defaults to the user's calendar", example: "user@org.com")]
+    user_cal : String? = nil,
+    @[AC::Param::Info(description: "the new title", example: "Project catch up")]
+    title : String? = nil,
+    @[AC::Param::Info(description: "the new start as a unix epoch in seconds", example: "1661725146")]
+    event_start : Int64? = nil,
+    @[AC::Param::Info(description: "the new end as a unix epoch in seconds", example: "1661728746")]
+    event_end : Int64? = nil,
+    @[AC::Param::Info(description: "comma separated attendee emails, replaces the people invited (rooms are kept)", example: "jane@org.com,bob@org.com")]
+    attendees : Array(String)? = nil,
+  ) : PlaceCalendar::Event
+    cal_id = user_cal.presence.try(&.downcase) || system_id.try { |id| find_system!(id).email.to_s.presence } || user.email
+    event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
+    raise Error::NotFound.new("event #{event_id} not found on calendar #{cal_id}") unless event
+
+    event.title = title if title
+    event.event_start = Time.unix(event_start) if event_start
+    event.event_end = Time.unix(event_end) if event_end
+    if attendees
+      emails = attendees.map(&.downcase).uniq!
+      existing = event.attendees.index_by(&.email.downcase)
+      people = emails.map { |email| existing[email]? || PlaceCalendar::Event::Attendee.new(name: email, email: email) }
+      event.attendees = event.attendees.select(&.resource) + people
+    end
+
+    update(event, event_id, system_id, user_cal)
+  end
+
+  # Create a calendar event.
   @[AC::Route::POST("/", body: :input_event, status_code: HTTP::Status::CREATED)]
   def create(input_event : PlaceCalendar::Event) : PlaceCalendar::Event
-    placeos_client = get_placeos_client
-
     # get_user_calendars returns only calendars where the user has write access
     user_email = user.email.downcase
     host = input_event.host.try(&.downcase) || user_email
@@ -422,8 +519,8 @@ class Events < Application
 
     system_id = input_event.system_id || input_event.system.try(&.id)
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      raise Error::BadUpstreamResponse.new("email.presence must be present on system #{system_id}") unless system_email_presence = system.email.presence
+      system = find_system!(system_id)
+      raise Error::BadUpstreamResponse.new("email.presence must be present on system #{system_id}") unless system_email_presence = system.email.to_s.presence
       system_email = system_email_presence
       system_attendee = PlaceCalendar::Event::Attendee.new(name: system.display_name.presence || system.name, email: system_email, resource: true)
       input_event.attendees << system_attendee
@@ -521,13 +618,13 @@ class Events < Application
           )
 
           spawn do
-            placeos_client.root.signal("staff/guest/attending", {
+            signal("staff/guest/attending", {
               action:         :meeting_created,
               system_id:      sys.id,
               event_id:       created_event.id,
               event_ical_uid: created_event.ical_uid,
               host:           host,
-              resource:       sys.email,
+              resource:       sys.email.to_s,
               event_title:    created_event.title,
               event_summary:  created_event.title,
               event_starting: created_event_start.to_unix,
@@ -539,54 +636,49 @@ class Events < Application
         end
       end
 
-      return StaffApi::Event.augment(created_event, sys.email, sys, meta)
+      return StaffApi::Event.augment(created_event, sys.email.to_s, sys, meta)
     end
 
     Log.info { "no system provided for event #{created_event.id}" }
     StaffApi::Event.augment(created_event, host)
   end
 
-  # patches an existing booking with the changes provided
-  # by default it assumes the event exists on the users calendar.
-  # you can provide a calendar param to override this default
-  # or you can provide a system id if the event exists on a resource calendar
+  # NOTE:: by default the event is assumed to exist on the user's calendar. Provide the
+  # `calendar` param to override this, or `system_id` if the event exists on a resource calendar.
   #
-  # Note: event metadata is associated with a resource calendar, not the hosts event.
-  # so if you want to update an event and the metadata then you need to provide both
-  # the `calendar` param and the `system_id` param
+  # Event metadata is associated with a resource calendar, not the host's event, so to update
+  # an event and its metadata provide both the `calendar` and `system_id` params.
   #
-  # when moving a room from one system to another, the `system_id` param should be
-  # set to the current rooms associated system.
-  # Then in the event body, the `system_id` field should be the new system.
+  # When moving a room from one system to another, the `system_id` param should be set to the
+  # current room's system, and the `system_id` field in the event body to the new system.
   #
-  # Changing `host` hands the meeting to that person. Office365 cannot change a
-  # meeting's organiser, so this does what a person does in Outlook: the meeting
-  # is cancelled and sent again from the new host's calendar, which re-invites
-  # the attendees and gives the event a new id and ical uid. Recurring meetings
-  # are refused. A `host` matching the requesting user is ignored, as front ends
-  # fall back to the current user when they cannot resolve the organiser.
+  # Changing `host` hands the meeting to that person. Office365 cannot change a meeting's
+  # organiser, so this does what a person does in Outlook: the meeting is cancelled and sent
+  # again from the new host's calendar, which re-invites the attendees and gives the event a new
+  # id and ical uid. Recurring meetings are refused. A `host` matching the requesting user is
+  # ignored, as front ends fall back to the current user when they cannot resolve the organiser.
   #
-  # `extension_data.host_override` instead records who is hosting while leaving
-  # the meeting on the organiser's calendar — for deployments that book rooms as
-  # a service account. Send an empty string to clear it. Moving the meeting
-  # supersedes it, as the new host owns the meeting afterwards.
+  # `extension_data.host_override` instead records who is hosting while leaving the meeting on
+  # the organiser's calendar — for deployments that book rooms as a service account. Send an
+  # empty string to clear it. Moving the meeting supersedes it, as the new host owns the meeting
+  # afterwards.
+
+  # Update a calendar event with the changes in the request body and return the updated event.
   @[AC::Route::PATCH("/:id", body: :changes)]
   @[AC::Route::PUT("/:id", body: :changes)]
   def update(
     changes : PlaceCalendar::Event,
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(name: "system_id", description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(name: "system_id", description: "the room (system) id the event is currently booked in, its resource calendar is searched when `calendar` isn't provided and its metadata is updated", example: "sys-1234")]
     associated_system : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "the calendar the event id belongs to, defaults to the current user's calendar; the user needs write access to it", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(description: "(office365 only) set to false when the only change is adding attendees, so that existing attendees aren't notified by email. Warning: while false, only the attendee changes are propagated to the provider - any other edits in the request body are ignored", example: "false")]
     notify_existing_attendees : Bool = true,
   ) : PlaceCalendar::Event
     changes.id = event_id = original_id
     system_id = (associated_system || changes.system_id).presence
-
-    placeos_client = get_placeos_client
 
     user_cal = user_cal.try &.downcase
     if user_cal == user.email
@@ -598,10 +690,10 @@ class Events < Application
     end
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -628,7 +720,7 @@ class Events < Application
     existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
     if !tenant.delegated && user_email != host && !user_email.in?(existing_attendees)
       # may be able to edit on behalf of the user
-      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+      raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id.as(String)] + system.zones).forbidden?)
     end
 
     # Check if attendees need updating
@@ -694,8 +786,8 @@ class Events < Application
     if changing_room
       raise Error::BadRequest.new("system_id must be present when changing room") unless new_system_id = changes.system_id
 
-      new_system = placeos_client.systems.fetch(new_system_id)
-      new_sys_cal = new_system.email.presence.try &.downcase
+      new_system = find_system!(new_system_id)
+      new_sys_cal = new_system.email.to_s.presence.try &.downcase
       raise AC::Route::Param::ValueError.new("attempting to move location and system '#{new_system.name}' (#{new_system_id}) does not have a resource email address specified", "event.system_id") unless new_sys_cal
 
       previous_meta_for_signal = system_id ? get_event_metadata(event, system_id) : nil
@@ -889,13 +981,13 @@ class Events < Application
                 sys = system
                 raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
-                placeos_client.root.signal("staff/guest/attending", {
+                signal("staff/guest/attending", {
                   action:         :meeting_update,
                   system_id:      sys.id,
                   event_id:       event_id,
                   event_ical_uid: updated_event.ical_uid,
                   host:           signal_host,
-                  resource:       sys.email,
+                  resource:       sys.email.to_s,
                   event_title:    updated_event.title,
                   event_summary:  updated_event.title,
                   event_starting: updated_event_start.to_unix,
@@ -917,7 +1009,7 @@ class Events < Application
       end
 
       if !resource_calendars.empty?
-        systems = placeos_client.systems.with_emails(resource_calendars)
+        systems = systems_with_emails(resource_calendars)
         if sys = systems.first?
           raise Error::BadUpstreamResponse.new("id must be present on system") unless sys_id = sys.id
 
@@ -930,29 +1022,28 @@ class Events < Application
     end
   end
 
-  # Adds a single attendee to an existing event
+  # Add an attendee to an event.
   @[AC::Route::POST("/:id/attendee", body: :attendee)]
   def add_attendee(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     attendee : PlaceCalendar::Event::Attendee,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "the calendar the event id belongs to", example: "user@org.com")]
     user_cal : String? = nil,
     @[AC::Param::Info(description: "(office365 only) when true, existing attendees are also emailed about the change, otherwise only the new attendee is notified", example: "false")]
     notify_existing_attendees : Bool = false,
   ) : Attendee | PlaceCalendar::Event::Attendee
-    placeos_client = get_placeos_client
     event_id = original_id
     email = attendee.email.strip.downcase
     cal_id = user_cal.try &.downcase
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -1056,13 +1147,13 @@ class Events < Application
           sys = system
           raise Error::BadUpstreamResponse.new("event_start must be present on updated event #{updated_event.id}") unless updated_event_start = updated_event.event_start
 
-          placeos_client.root.signal("staff/guest/attending", {
+          signal("staff/guest/attending", {
             action:         :meeting_update,
             system_id:      sys.id,
             event_id:       event_id,
             event_ical_uid: updated_event.ical_uid,
             host:           host,
-            resource:       sys.email,
+            resource:       sys.email.to_s,
             event_title:    updated_event.title,
             event_summary:  updated_event.title,
             event_starting: updated_event_start.to_unix,
@@ -1077,27 +1168,27 @@ class Events < Application
     attend || attendee
   end
 
+  # Remove an attendee from an event.
   @[AC::Route::DELETE("/:id/attendee/:email")]
   def delete_attendee(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
     @[AC::Param::Info(name: "email", description: "the email of the attendee to delete", example: "user@example.com")]
     attendee_email : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "the calendar the event id belongs to", example: "user@org.com")]
     user_cal : String? = nil,
   ) : Nil
-    placeos_client = get_placeos_client
     event_id = original_id
     email = attendee_email.strip.downcase
     cal_id = user_cal.try &.downcase
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence
       if cal_id.nil?
-        cal_id = system.email.presence
+        cal_id = system.email.to_s.presence
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
       end
     end
@@ -1144,7 +1235,8 @@ class Events < Application
     nil
   end
 
-  # used to link resource recurring master ids to metadata
+  # Link the room's recurring master event id to its metadata.
+  @[AC::MCP(hide: true)]
   @[AC::Route::POST("/:id/metadata/:system_id/link/:ical_uid", status_code: HTTP::Status::ACCEPTED)]
   def link_master_metadata(
     @[AC::Param::Info(name: "id", description: "the event id to link", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
@@ -1170,21 +1262,17 @@ class Events < Application
     end
   end
 
-  # # returns the event metadata requested.
-  #
-  # by default it assumes the event exists on the resource calendar.
-  # you can provide a calendar param to override this default
+  # Get the PlaceOS metadata of an event booked in a room.
   @[AC::Route::GET("/:id/metadata/:system_id")]
   def get_metadata(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, on the host's or the room's calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in", example: "sys-1234")]
     system_id : String,
-    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    @[AC::Param::Info(description: "the event's ical uid, an alternative lookup for when the event id doesn't match", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
     ical_uid : String? = nil,
   ) : JSON::Any
     event_id = original_id
-    placeos_client = get_placeos_client
 
     # Guest access
     if user_token.guest_scope?
@@ -1193,8 +1281,8 @@ class Events < Application
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
     end
 
-    system = placeos_client.systems.fetch(system_id)
-    cal_id = system.email.presence.try &.downcase
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     # attempt to find the metadata
@@ -1215,55 +1303,49 @@ class Events < Application
     meta_ext_data
   end
 
-  # Patches the metadata on a booking without touching the calendar event
-  # only updates the keys provided in the request
-  #
-  # by default it assumes the event exists on the resource calendar.
-  # you can provide a calendar param to override this default
+  # Merge the keys in the request body into the PlaceOS metadata of an event booked in a room.
   @[AC::Route::PATCH("/:id/metadata/:system_id", body: :changes)]
   def patch_metadata(
     changes : Hash(String, JSON::Any),
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, on the host's or the room's calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in", example: "sys-1234")]
     system_id : String,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar to look the event up on when metadata doesn't exist yet, defaults to the room's resource calendar", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    @[AC::Param::Info(description: "the event's ical uid, an alternative lookup for when the event id doesn't match", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
     ical_uid : String? = nil,
-    @[AC::Param::Info(description: "update event setup time", example: "10")]
+    @[AC::Param::Info(description: "set the setup time stored against the event, before it starts", example: "10")]
     setup_time : Int64? = nil,
-    @[AC::Param::Info(description: "update event breakdown time", example: "10")]
+    @[AC::Param::Info(description: "set the breakdown time stored against the event, after it ends", example: "10")]
     breakdown_time : Int64? = nil,
-    @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "set the id of the calendar event blocking the room for setup", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     setup_event_id : String? = nil,
-    @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "set the id of the calendar event blocking the room for breakdown", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     breakdown_event_id : String? = nil,
   ) : JSON::Any
     update_metadata(changes, original_id, system_id, user_cal, ical_uid, merge: true, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
   end
 
-  # Replaces the metadata on a booking without touching the calendar event
-  # by default it assumes the event exists on the resource calendar.
-  # you can provide a calendar param to override this default
+  # Replace the PlaceOS metadata of an event booked in a room.
   @[AC::Route::PUT("/:id/metadata/:system_id", body: :changes)]
   def replace_metadata(
     changes : Hash(String, JSON::Any),
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, on the host's or the room's calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in", example: "sys-1234")]
     system_id : String,
-    @[AC::Param::Info(name: "calendar", description: "the calendar associated with this event id", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar to look the event up on when metadata doesn't exist yet, defaults to the room's resource calendar", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(description: "an alternative lookup for finding event-metadata", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
+    @[AC::Param::Info(description: "the event's ical uid, an alternative lookup for when the event id doesn't match", example: "5FC53010-1267-4F8E-BC28-1D7AE55A7C99")]
     ical_uid : String? = nil,
-    @[AC::Param::Info(description: "update event setup time", example: "10")]
+    @[AC::Param::Info(description: "set the setup time stored against the event, before it starts", example: "10")]
     setup_time : Int64? = nil,
-    @[AC::Param::Info(description: "update event breakdown time", example: "10")]
+    @[AC::Param::Info(description: "set the breakdown time stored against the event, after it ends", example: "10")]
     breakdown_time : Int64? = nil,
-    @[AC::Param::Info(description: "update setup event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "set the id of the calendar event blocking the room for setup", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     setup_event_id : String? = nil,
-    @[AC::Param::Info(description: "update breakdown event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(description: "set the id of the calendar event blocking the room for breakdown", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     breakdown_event_id : String? = nil,
   ) : JSON::Any
     update_metadata(changes, original_id, system_id, user_cal, ical_uid, merge: false, setup_time: setup_time, breakdown_time: breakdown_time, setup_event_id: setup_event_id, breakdown_event_id: breakdown_event_id)
@@ -1271,7 +1353,6 @@ class Events < Application
 
   protected def update_metadata(changes : Hash(String, JSON::Any), original_id : String, system_id : String, event_calendar : String?, uuid : String?, merge : Bool = false, setup_time : Int64? = nil, breakdown_time : Int64? = nil, setup_event_id : String? = nil, breakdown_event_id : String? = nil) : JSON::Any
     event_id = original_id
-    placeos_client = get_placeos_client
 
     # Guest access
     if user_token.guest_scope?
@@ -1280,8 +1361,8 @@ class Events < Application
       raise Error::Forbidden.new("guest #{user_token.id} attempting to view a system they are not associated with") unless system_id == guest_system_id
     end
 
-    system = placeos_client.systems.fetch(system_id)
-    cal_id = system.email.presence.try &.downcase
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence.try &.downcase
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
@@ -1335,7 +1416,7 @@ class Events < Application
              raise Error::BadUpstreamResponse.new("ical_uid must be present on event #{upstream_event_id}") unless event_ical_uid = event.ical_uid
              raise Error::BadUpstreamResponse.new("event_start must be present on event") unless event_start = event.event_start
              raise Error::BadUpstreamResponse.new("event_end must be present on event") unless event_end = event.event_end
-             raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email
+             raise Error::BadUpstreamResponse.new("email must be present on system") unless system_email = system.email.to_s.presence
              raise Error::BadUpstreamResponse.new("host must be present on event") unless event_host = event.host
 
              is_host = event_host.downcase == cal_id.downcase
@@ -1371,14 +1452,14 @@ class Events < Application
     meta.save!
 
     spawn do
-      placeos_client.root.signal("staff/event/changed", {
+      signal("staff/event/changed", {
         action:          :update,
         system_id:       system.id,
         event_id:        original_id,
         event_ical_uid:  meta.ical_uid,
         host:            effective_host(meta),
         organiser_email: meta.host_email,
-        resource:        system.email,
+        resource:        system.email.to_s,
         event:           event,
         ext_data:        meta.ext_data,
       })
@@ -1394,6 +1475,8 @@ class Events < Application
     Deleted
   end
 
+  # Notify that a room's calendar event was created, updated or deleted.
+  @[AC::MCP(hide: true)]
   @[AC::Route::POST("/notify/:change/:system_id/:event_id", body: :event, status_code: HTTP::Status::ACCEPTED)]
   def notify_change(
     @[AC::Param::Info(description: "the type of change that has occured", example: "created")]
@@ -1445,8 +1528,8 @@ class Events < Application
   end
 
   private def record_event_history(event_id : String, action : String, changed_fields : Array(String) = [] of String)
-    History.create!(
-      type: "event",
+    History.record_change(
+      resource_type: "event",
       resource_id: event_id,
       action: action,
       changed_fields: changed_fields
@@ -1455,20 +1538,17 @@ class Events < Application
     Log.error(exception: ex) { "failed to record event history for #{event_id}" }
   end
 
-  # returns the event requested.
-  # by default it assumes the event exists on the users calendar.
-  # you can provide a calendar param to override this default
-  # or you can provide a system id if the event exists on a resource calendar
+  # Get a single calendar event.
+  @[AC::MCP(ui: "events/card.html")]
   @[AC::Route::GET("/:id")]
   def show(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "room (system) id, looks the event up on the room's resource calendar", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar to look the event up on, defaults to the current user's calendar", example: "user@org.com")]
     user_cal : String? = nil,
   ) : PlaceCalendar::Event
-    placeos_client = get_placeos_client
     event_id = original_id
 
     # Guest access
@@ -1480,8 +1560,8 @@ class Events < Application
 
     if system_id
       # Need to grab the calendar associated with this system
-      system = placeos_client.systems.fetch(system_id)
-      cal_id = system.email
+      system = find_system!(system_id)
+      cal_id = system.email.to_s.presence
       user_email = user_token.guest_scope? ? cal_id : user.email
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
@@ -1533,7 +1613,7 @@ class Events < Application
       end
 
       if !resource_calendars.empty?
-        systems = placeos_client.systems.with_emails(resource_calendars)
+        systems = systems_with_emails(resource_calendars)
         if system = systems.first?
           return StaffApi::Event.augment(event, user_cal, system, metadata)
         end
@@ -1543,46 +1623,38 @@ class Events < Application
     end
   end
 
-  # deletes the event from the calendar, it will not appear as cancelled, it will be gone
-  #
-  # by default it assumes the event id exists on the users calendar
-  # you can clarify the calendar that the event belongs to by using the calendar param
-  # and specify a system id if there is event metadata or linked booking associated with the event
+  # Delete a calendar event.
+  @[AC::MCP(root: true)]
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar the event is on, defaults to the current user's calendar; the user needs write access to it", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
+    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified, defaults to true", example: "false")]
     notify_guests : Bool = true,
   ) : Nil
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: true)
   end
 
-  # cancels the meeting without deleting it
-  #
-  # visually the event will remain on the calendar with a line through it
-  # NOTE:: any body data you post will be used as the message body in the declined message
+  # Decline (cancel) a calendar event, leaving it on the calendar.
   @[AC::Route::POST("/:id/decline", status_code: HTTP::Status::ACCEPTED)]
   def decline(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, its resource calendar is searched when `calendar` isn't provided", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar the event is on, defaults to the current user's calendar; the user needs write access to it", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified of the change", example: "false")]
+    @[AC::Param::Info(name: "notify", description: "set to `false` to prevent attendees being notified, defaults to true", example: "false")]
     notify_guests : Bool = true,
   ) : Nil
     cancel_event(event_id, notify_guests, system_id, user_cal, delete: false)
   end
 
   protected def cancel_event(event_id : String, notify_guests : Bool, system_id : String?, user_cal : String?, delete : Bool)
-    placeos_client = get_placeos_client
-
     user_cal = user_cal.try &.strip.downcase
     if user_cal == user.email
       cal_id = user_cal
@@ -1593,8 +1665,8 @@ class Events < Application
     end
 
     if system_id
-      system = placeos_client.systems.fetch(system_id)
-      sys_cal = system.email.presence.try(&.strip.downcase)
+      system = find_system!(system_id)
+      sys_cal = system.email.to_s.presence.try(&.strip.downcase)
       if cal_id.nil?
         cal_id = sys_cal
         raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
@@ -1621,7 +1693,7 @@ class Events < Application
       existing_attendees = event.attendees.try(&.map { |a| a.email.downcase }) || [] of String
       unless user_email == host || user_email.in?(existing_attendees)
         # may be able to delete on behalf of the user
-        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id] + system.zones).forbidden?)
+        raise Error::Forbidden.new("user #{user_email} not involved in meeting and no role is permitted to make this change") if !(system && !check_access(user.roles, [system.id.as(String)] + system.zones).forbidden?)
       end
     end
 
@@ -1665,34 +1737,35 @@ class Events < Application
     end
   end
 
-  # approves / accepts the meeting on behalf of the event space
+  # Accept a meeting on behalf of a room.
   @[AC::Route::POST("/:id/approve")]
   def approve(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) accepting the meeting", example: "sys-1234")]
     system_id : String,
   ) : Bool
     # Check this system has an associated resource
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
     client.accept_event(cal_id, id: event_id, calendar_id: cal_id)
   end
 
+  # Accept every meeting in a time period on behalf of the selected rooms.
   @[AC::Route::POST("/approve_all")]
   def approve_all(
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "period start as a unix epoch in seconds", example: "1661725146")]
     starting : Int64,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "period end as a unix epoch in seconds", example: "1661743123")]
     ending : Int64,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "comma separated resource calendar emails; only those resolving to a room (system) are approved", example: "room1@resource.org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "comma separated list of zone ids, approves events for every room (system) in these zones", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    @[AC::Param::Info(description: "comma separated list of room (system) ids to approve events for", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
-    @[AC::Param::Info(name: "ical_uid", description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    @[AC::Param::Info(name: "ical_uid", description: "only approve the event with this ical uid", example: "sqvitruh3ho3mrq896tplad4v8")]
     icaluid : String? = nil,
   ) : Array(String)
     period_start = Time.unix(starting)
@@ -1749,17 +1822,17 @@ class Events < Application
     approved_event_ids
   end
 
-  # rejects / declines the meeting on behalf of the event space
+  # Decline a meeting on behalf of a room.
   @[AC::Route::POST("/:id/reject")]
   def reject(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) declining the meeting", example: "sys-1234")]
     system_id : String,
   ) : Bool
     # Check this system has an associated resource
-    system = get_placeos_client.systems.fetch(system_id)
-    cal_id = system.email
+    system = find_system!(system_id)
+    cal_id = system.email.to_s.presence
     raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless cal_id
 
     event = client.get_event(cal_id, id: event_id, calendar_id: cal_id)
@@ -1772,21 +1845,21 @@ class Events < Application
     result
   end
 
-  # Event Guest management
+  # List the visitors expected at an event booked in a room.
   @[AC::Route::GET("/:id/guests")]
   def guest_list(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id on the room's resource calendar", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     event_id : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in", example: "sys-1234")]
     system_id : String,
-    @[AC::Param::Info(description: "the ical uid of the event you are looking for", example: "sqvitruh3ho3mrq896tplad4v8")]
+    @[AC::Param::Info(description: "the event's ical uid, when provided the metadata is found without querying the calendar", example: "sqvitruh3ho3mrq896tplad4v8")]
     ical_uid : String? = nil,
   ) : Array(Guest)
     if ical_uid.presence
       metadata = EventMetadata.by_tenant(tenant.id).where(ical_uid: ical_uid, system_id: system_id).first?
       parent_meta = false
     else
-      cal_id = get_placeos_client.systems.fetch(system_id).email
+      cal_id = find_system!(system_id).email.to_s.presence
       return [] of Guest unless cal_id
 
       event = client.get_event(user.email, id: event_id, calendar_id: cal_id)
@@ -1811,23 +1884,20 @@ class Events < Application
     end
   end
 
-  # This exists to obtain events that have some condition that requires action.
-  # i.e. you might have a flag that indicates if an action has taken place and can use this to
-  # look up events in certain states.
-  # example route: /extension_metadata?field_name=colour&value=blue
+  # Search event metadata by an extension data field.
   @[AC::Route::GET("/extension_metadata/?:system_id", converters: {event_ref: ConvertStringArray})]
   def extension_metadata(
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "only return metadata for this room (system)", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(description: "the field we want to query", example: "status")]
+    @[AC::Param::Info(description: "the extension data field to match, used together with `value`", example: "status")]
     field_name : String? = nil,
-    @[AC::Param::Info(description: "value we want to match", example: "approved")]
+    @[AC::Param::Info(description: "the value `field_name` must have", example: "approved")]
     value : String? = nil,
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "only events ending after this time, unix epoch in seconds", example: "1661725146")]
     starting : Int64? = nil,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "only events starting before this time, unix epoch in seconds", example: "1661743123")]
     ending : Int64? = nil,
-    @[AC::Param::Info(description: "list of event ids that we're potentially", example: "event_id,recurring_event_id,ical_uid")]
+    @[AC::Param::Info(description: "comma separated list of event ids, recurring master ids or ical uids to match", example: "event_id,recurring_event_id,ical_uid")]
     event_ref : Array(String)? = nil,
   ) : Array(EventMetadata)
     raise Error::BadRequest.new("must provide one of field_name & value, system_id, event_ref, period_start or period_end") unless system_id || (field_name && value) || starting || ending || (event_ref && event_ref.size > 0)
@@ -1844,15 +1914,14 @@ class Events < Application
     query.limit(10_000).to_a
   end
 
-  # lists conflicting system_ids based on event time range
-  # will return a list of system_ids that are already booked during the specified time range
-  # if system_id is set on the event, then it will only return booked systems from that list
+  # List the rooms already booked during an event's time range.
+  @[AC::MCP(behaviour: :read_only)]
   @[AC::Route::POST("/clashing-assets", body: :input_event)]
   def clashing_assets(
     input_event : PlaceCalendar::Event,
-    @[AC::Param::Info(description: "return available systems, this requires system_id be set on the event", example: "false")]
+    @[AC::Param::Info(description: "return the system if it is available instead of clashes, requires `system_id` on the event, defaults to false", example: "false")]
     return_available : Bool = false,
-    @[AC::Param::Info(description: "include the clash times, this is not compatible with return_available", example: "false")]
+    @[AC::Param::Info(description: "return the start and end time of each clash, can't be combined with `return_available`, defaults to false", example: "false")]
     include_clash_time : Bool = false,
   ) : Array(String) | Array(NamedTuple(system_id: String, event_start: Int64, event_end: Int64))
     raise Error::BadRequest.new("event_start must be present") unless event_start = input_event.event_start
@@ -1901,20 +1970,19 @@ class Events < Application
     end
   end
 
-  # a guest has arrived for a meeting in person.
-  # This route can be used to notify hosts
+  # Check a visitor in to, or out of, an event booked in a room.
   @[AC::Route::POST("/:id/guests/:guest_id/check_in")]
   @[AC::Route::POST("/:id/guests/:guest_id/checkin")]
   def guest_checkin(
-    @[AC::Param::Info(name: "id", description: "the event id", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
+    @[AC::Param::Info(name: "id", description: "the event id, as found on the calendar being searched", example: "AAMkAGVmMDEzMTM4LTZmYWUtNDdkNC1hMDZe")]
     original_id : String,
-    @[AC::Param::Info(name: "guest_id", description: "the email of the guest we want to checkin", example: "person@external.com")]
+    @[AC::Param::Info(name: "guest_id", description: "the email (or numeric id) of the guest to check in", example: "person@external.com")]
     guest_email : String,
-    @[AC::Param::Info(description: "the event space associated with this event", example: "sys-1234")]
+    @[AC::Param::Info(description: "the room (system) id the event is booked in, required except for guest tokens", example: "sys-1234")]
     system_id : String? = nil,
-    @[AC::Param::Info(name: "calendar", description: "the users calendar associated with this event", example: "user@org.com")]
+    @[AC::Param::Info(name: "calendar", description: "calendar to look the event up on, defaults to the room's resource calendar; the user needs write access to it", example: "user@org.com")]
     user_cal : String? = nil,
-    @[AC::Param::Info(name: "state", description: "the checkin state, defaults to `true`", example: "false")]
+    @[AC::Param::Info(name: "state", description: "`true` to check in (default), `false` to check out", example: "false")]
     checkin : Bool = true,
   ) : Guest
     guest_id = guest_email.downcase
@@ -1946,15 +2014,15 @@ class Events < Application
       raise AC::Route::Param::ValueError.new("user doesn't have write access to #{cal_id}", "calendar") unless found
     end
 
-    system = get_placeos_client.systems.fetch(system_id)
-    sys_cal = system.email.presence.try(&.strip.downcase)
+    system = find_system!(system_id)
+    sys_cal = system.email.to_s.presence.try(&.strip.downcase)
     if cal_id.nil?
       cal_id = sys_cal
       raise AC::Route::Param::ValueError.new("system '#{system.name}' (#{system_id}) does not have a resource email address specified", "system_id") unless sys_cal
     end
 
     # defaults to the room email
-    cal_id = cal_id.presence || system.email.as(String)
+    cal_id = cal_id.presence || system.email.to_s
     user_email = user_token.guest_scope? ? cal_id : user.email.downcase
     event = client.get_event(user_email, id: event_id, calendar_id: cal_id)
     raise Error::NotFound.new("failed to find event #{event_id} searching on #{cal_id} as #{user_email}") unless event
@@ -2023,7 +2091,7 @@ class Events < Application
 
     # Update PlaceOS with an signal "staff/guest/checkin"
     spawn do
-      get_placeos_client.root.signal("staff/guest/checkin", {
+      signal("staff/guest/checkin", {
         action:         :checkin,
         id:             guest.id,
         checkin:        checkin,
@@ -2193,7 +2261,7 @@ class Events < Application
     meta.host_email = event.host.as(String).downcase
     meta.event_start = starting
     meta.event_end = ending
-    meta.resource_calendar = system.email.to_s.as(String).downcase
+    meta.resource_calendar = system.email.to_s.downcase
     meta.tenant_id = tenant.id
     meta.cancelled = cancelled
     meta.save!
@@ -2213,7 +2281,7 @@ class Events < Application
     return if skip_signal
 
     spawn do
-      get_placeos_client.root.signal("staff/event/changed", {
+      signal("staff/event/changed", {
         action:               action,
         system_id:            system.id,
         event_id:             meta.event_id,
@@ -2261,13 +2329,13 @@ class Events < Application
       end
     end
 
-    get_placeos_client.root.signal("staff/event/changed", {
+    signal("staff/event/changed", {
       action:         :cancelled,
       reason:         reason,
       system_id:      system.id,
       event_id:       event_id,
       event_ical_uid: event_ical_uid,
-      resource:       system.email,
+      resource:       system.email.to_s,
       event:          event,
       ext_data:       meta.try &.ext_data,
     })

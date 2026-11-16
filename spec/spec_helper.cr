@@ -12,6 +12,7 @@ require "uuid"
 # If you have a testing environment, replace this with a test config file
 require "../src/config"
 require "webmock"
+require "./controllers/helpers/placeos_helper"
 
 PgORM::Database.parse(ENV["PG_DATABASE_URL"])
 
@@ -48,8 +49,8 @@ Spec.before_each &->WebMock.reset
 # glob order (NOT alphabetically), so any spec that persists a tenant setting
 # without putting it back becomes an order dependent landmine for every other
 # file -- a leaked `booking_limits` turns unrelated creates into 410 Gone.
-# Restore the model defaults before each example; the specs that need a limit
-# or an early check-in window already set it themselves inside their example.
+# Restore the model defaults before each example; the specs that need a limit,
+# range, period or an early check-in window already set it themselves inside their example.
 Spec.before_each do
   if tenant = Tenant.find_by?(domain: "toby.staff-api.dev")
     limits = tenant.booking_limits_default
@@ -58,9 +59,12 @@ Spec.before_each do
     # (placeos-models `tenant.cr`), so the generated accessor fails to compile.
     # Keep this value in sync with that default.
     early_checkin = 3600_i64
-    unless tenant.booking_limits == limits && tenant.early_checkin == early_checkin
+    unless tenant.booking_limits == limits && tenant.early_checkin == early_checkin &&
+           tenant.booking_range.empty? && tenant.booking_period.empty?
       tenant.booking_limits = limits
       tenant.early_checkin = early_checkin
+      tenant.booking_range = {} of String => UInt32
+      tenant.booking_period = {} of String => UInt32
       tenant.save!
     end
   end
@@ -76,7 +80,7 @@ module Mock
 
     # office_mock_token
     def office(sys_admin = false, support = false, groups = ["manage", "admin"])
-      user = generate_auth_user(sys_admin, support, groups)
+      user = admin_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
@@ -131,7 +135,7 @@ module Mock
 
     # google_mock_token
     def google(sys_admin = false, support = false, groups = ["manage", "admin"])
-      user = generate_auth_user(sys_admin, support, groups)
+      user = admin_user(sys_admin, support, groups)
       UserJWT.new(
         iss: "staff-api",
         iat: Time.local,
@@ -146,6 +150,18 @@ module Mock
           roles: groups
         )
       ).encode
+    end
+
+    # `office` and `google` tokens claim Admin, but authorize! takes permissions from the
+    # user record, so the user they name must be a sys_admin. The flags only pick which
+    # user (email) the token is for.
+    def admin_user(sys_admin, support, groups)
+      user = generate_auth_user(sys_admin, support, groups)
+      unless user.sys_admin
+        user.sys_admin = true
+        user.save!
+      end
+      user
     end
 
     def generate_auth_user(sys_admin, support, groups = [] of String)

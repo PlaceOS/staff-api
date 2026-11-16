@@ -13,3 +13,28 @@ jobs:
 
   dockerfile-style:
     uses: PlaceOS/.github/.github/workflows/dockerfile-style.yml@main
+
+  # renders the MCP Apps cards in a browser, see e2e/README.md
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: crystal-lang/install-crystal@v1
+    - name: Install dependencies
+      run: shards install --ignore-crystal-version --skip-postinstall --skip-executables
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: npm
+    - name: Install Playwright
+      run: npm ci && npx playwright install --with-deps chromium
+    - name: Run browser tests
+      run: npx playwright test
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 7

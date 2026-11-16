@@ -1,3 +1,4 @@
+# Tenants, the calendar platform configuration (office365 or google) for a domain, along with its booking limits, range, period and early check-in window
 class Tenants < Application
   base "/api/staff/v1/tenants"
 
@@ -23,14 +24,14 @@ class Tenants < Application
   # Routes
   # =====================
 
-  # lists the configured tenants
+  # List the tenants.
   @[AC::Route::GET("/")]
   def index : Array(Tenant::Responder)
-    tenants = Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :delegated, :service_account, :outlook_config, :early_checkin).to_a
+    tenants = Tenant.select(:id, :name, :domain, :email_domain, :platform, :booking_limits, :booking_range, :booking_period, :delegated, :service_account, :outlook_config, :early_checkin).to_a
     scope_tenants(tenants).map(&.as_json)
   end
 
-  # creates a new tenant
+  # Create a tenant.
   @[AC::Route::POST("/", body: :tenant_body, status_code: HTTP::Status::CREATED)]
   def create(tenant_body : Tenant::Responder) : Tenant::Responder
     tenant = tenant_body.to_tenant
@@ -39,7 +40,7 @@ class Tenants < Application
     tenant.as_json
   end
 
-  # patches an existing booking with the changes provided
+  # Update a tenant with the fields in the request body and return the saved tenant.
   @[AC::Route::PUT("/:id", body: :tenant_body)]
   @[AC::Route::PATCH("/:id", body: :tenant_body)]
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
@@ -52,16 +53,19 @@ class Tenants < Application
       end
     {% end %}
 
-    # booking_range defaults to {} on the model, so check the request body to avoid clearing it
+    # booking_range and booking_period default to {} on the model, so check the request body to avoid clearing them
     if range = tenant_body.booking_range
       tenant.booking_range = range
+    end
+    if period = tenant_body.booking_period
+      tenant.booking_period = period
     end
 
     tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
   end
 
-  # removes the selected tenant from the system
+  # Delete a tenant.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
     tenant.delete
@@ -69,20 +73,20 @@ class Tenants < Application
 
   alias Limits = Hash(String, Int32)
 
-  # returns the limits for the current domain (Host header)
+  # Get the booking limits of the current tenant.
   @[AC::Route::GET("/current_limits")]
   def current_limits : Limits
     response.headers["X-Delegated"] = (!!current_tenant.delegated).to_s
     current_tenant.booking_limits.as_h.transform_values(&.as_i)
   end
 
-  # returns the limits for the selected tenant
+  # Get the booking limits of a tenant.
   @[AC::Route::GET("/:id/limits")]
   def show_limits : Limits
     tenant.booking_limits.as_h.transform_values(&.as_i)
   end
 
-  # updates the limits for the tenant provided
+  # Set the booking limits of a tenant.
   @[AC::Route::POST("/:id/limits", body: :limits)]
   def update_limits(limits : Limits) : Limits
     tenant.booking_limits = JSON.parse(limits.to_json)
@@ -91,20 +95,20 @@ class Tenants < Application
     tenant.booking_limits.as_h.transform_values(&.as_i)
   end
 
-  # returns the early checkin limit for the current domain (Host header)
+  # Get the early check-in window of the current tenant.
   @[AC::Route::GET("/current_early_checkin")]
   def current_early_checkin : Int64
     response.headers["X-Delegated"] = (!!current_tenant.delegated).to_s
     current_tenant.early_checkin
   end
 
-  # returns the early checkin limit for the selected tenant
+  # Get the early check-in window of a tenant.
   @[AC::Route::GET("/:id/early_checkin")]
   def show_early_checkin : Int64
     tenant.early_checkin
   end
 
-  # updates the early checkin limit for the tenant provided
+  # Set the early check-in window of a tenant.
   @[AC::Route::POST("/:id/early_checkin", body: :early_checkin)]
   def update_early_checkin(early_checkin : Int64) : Int64
     tenant.early_checkin = early_checkin

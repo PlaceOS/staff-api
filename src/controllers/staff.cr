@@ -1,19 +1,18 @@
+# People, the staff directory of the tenant's Office365 or Google organisation (search users, user details, managers, group memberships)
 class Staff < Application
   base "/api/staff/v1/people"
 
-  # Retrieves a list of users from the organization directory
-  # This function supports advanced filtering using Azure AD filter syntax.
-  # For more information on Azure AD filter syntax, visit:
-  # https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http
+  # Search the organisation directory for people.
+  @[AC::MCP(ui: "staff/card.html")]
   @[AC::Route::GET("/", converters: {additional_fields: ConvertStringArray})]
   def index(
     @[AC::Param::Info(name: "q", description: "An optional search query to filter users by name or email. If both 'q' and 'filter' parameters are provided, 'filter' takes precedence.", example: "steve")]
     query : String? = nil,
     @[AC::Param::Info(name: "filter", description: "An optional advanced search filter using Azure AD filter syntax. Provides more control over the search criteria and takes precedence over the 'q' parameter. Supports both Azure AD and Google providers.", example: "startsWith(givenName,'ben') or startsWith(surname,'ben')")]
     filter : String? = nil,
-    @[AC::Param::Info(description: "a google token or graph api URI representing the next page of results")]
+    @[AC::Param::Info(description: "the next page of results, a google page token or graph api URI. Normally taken from the `Link` header of the previous response")]
     next_page : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of additional user fields to return (Office365 only)", example: "employeeId,department")]
+    @[AC::Param::Info(description: "a comma separated list of additional user fields to return (Office365 only)", example: "employeeId,department")]
     additional_fields : Array(String)? = nil,
   ) : Array(PlaceCalendar::User)
     search = filter ? nil : query
@@ -51,7 +50,8 @@ class Staff < Application
     users
   end
 
-  # returns user details for the id provided
+  # Get a person from the directory.
+  @[AC::MCP(ui: "staff/card.html")]
   @[AC::Route::GET("/:id")]
   def show(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
@@ -73,20 +73,53 @@ class Staff < Application
     user
   end
 
-  # returns user photo
+  # someone's busy times in a period, as unix epochs
+  record Busy, email : String, busy : Array(NamedTuple(start: Int64, end: Int64)) do
+    include JSON::Serializable
+  end
+
+  # Get the busy times of a person and the signed in user, for picking a meeting time.
+  @[AC::MCP(visibility: :card)]
+  @[AC::Route::GET("/:id/free_busy")]
+  def free_busy(
+    @[AC::Param::Info(description: "the person's email address", example: "user@org.com")]
+    id : String,
+    @[AC::Param::Info(description: "period start as a unix epoch in seconds", example: "1661725146")]
+    period_start : Int64,
+    @[AC::Param::Info(description: "period end as a unix epoch in seconds, at most a week after the start", example: "1661743123")]
+    period_end : Int64,
+  ) : Array(Busy)
+    raise AC::Route::Param::ValueError.new("must be an email address", "id") unless id.includes?('@')
+    starting = Time.unix(period_start)
+    ending = Time.unix(period_end)
+    unless starting < ending && ending - starting <= 7.days
+      raise AC::Route::Param::ValueError.new("must be after period_start and at most a week after it", "period_end")
+    end
+
+    emails = [id.strip.downcase, user.email.downcase].uniq!
+    schedules = client.get_availability(tenant.which_account(user.email), emails, starting, ending)
+    emails.map do |email|
+      availability = schedules.find(&.calendar.downcase.==(email)).try(&.availability) || [] of PlaceCalendar::Availability
+      busy = availability
+        .select { |avail| avail.status.busy? && avail.starts_at < ending && avail.ends_at > starting }
+        .map { |avail| {start: {avail.starts_at, starting}.max.to_unix, end: {avail.ends_at, ending}.min.to_unix} }
+        .sort_by!(&.[:start])
+      Busy.new(email, busy)
+    end
+  end
+
+  # Get a person's photo.
+  @[AC::MCP(visibility: :card)]
   @[AC::Route::GET("/:id/photo")]
   def photo(
     @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
     id : String,
   ) : Nil
     if client.client_id == :office365
-      # get current users token
-      # NOTE: we should move this rest-api function into models
-      # so we can access it from staff-api. This will improve performance
-      token = get_placeos_client.users.resource_token
+      token = current_user.resource_token
 
       # make request to the photo endpoint
-      HTTP::Client.get("https://graph.microsoft.com/v1.0/users/#{id}/photo/$value", headers: HTTP::Headers{
+      HTTP::Client.get("https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(id)}/photo/$value", headers: HTTP::Headers{
         "Authorization" => "Bearer #{token.token}",
       }) do |upstream_response|
         stream(upstream_response)
@@ -122,15 +155,21 @@ class Staff < Application
     end
   end
 
-  # returns the list of groups the user is a member
+  # List the directory groups a person is a member of.
   @[AC::Route::GET("/:id/groups")]
-  def groups(id : String) : Array(PlaceCalendar::Group)
+  def groups(
+    @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
+    id : String,
+  ) : Array(PlaceCalendar::Group)
     client.get_groups(id)
   end
 
-  # returns the users manager
+  # Get a person's manager.
   @[AC::Route::GET("/:id/manager")]
-  def manager(id : String) : PlaceCalendar::User
+  def manager(
+    @[AC::Param::Info(description: "a user id OR user email address", example: "user@org.com")]
+    id : String,
+  ) : PlaceCalendar::User
     case client.client_id
     when :office365
       client.calendar.as(PlaceCalendar::Office365).client.get_user_manager(id).to_place_calendar
@@ -139,9 +178,12 @@ class Staff < Application
     end
   end
 
-  # returns the list of public calendars
+  # List a person's calendars.
   @[AC::Route::GET("/:id/calendars")]
-  def calendars(id : String) : Array(PlaceCalendar::Calendar)
+  def calendars(
+    @[AC::Param::Info(description: "the user's email address", example: "user@org.com")]
+    id : String,
+  ) : Array(PlaceCalendar::Calendar)
     client.list_calendars(id)
   end
 end

@@ -1,3 +1,4 @@
+# Calendars, lists the user's calendars and checks room and people availability (free/busy) via the tenant's Office365 or Google calendar
 class Calendars < Application
   base "/api/staff/v1/calendars"
 
@@ -16,17 +17,17 @@ class Calendars < Application
 
   @[AC::Route::Filter(:before_action, except: [:index, :check_permission])]
   private def find_matching_calendars(
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "a comma separated list of calendar ids (email addresses) to include; for room resource calendars prefer `system_ids`", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "a comma separated list of zone ids (buildings or levels); all rooms (systems with a calendar email) in any of these zones are checked", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    @[AC::Param::Info(description: "a comma separated list of room system ids to check", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of room features", example: "whiteboard,vidconf")]
+    @[AC::Param::Info(description: "a comma separated list of room features, rooms found via `zone_ids` must have all of them", example: "whiteboard,vidconf")]
     features : String? = nil,
-    @[AC::Param::Info("the minimum capacity required for an event space", example: "8")]
+    @[AC::Param::Info("the minimum room capacity, applies to rooms found via `zone_ids`", example: "8")]
     capacity : Int32? = nil,
-    @[AC::Param::Info(description: "only search for bookable or non-bookable rooms", example: "true")]
+    @[AC::Param::Info(description: "only return bookable (true) or non-bookable (false) rooms found via `zone_ids`", example: "true")]
     bookable : Bool? = nil,
   )
     @matching_calendars = matching_calendar_ids(
@@ -34,22 +35,22 @@ class Calendars < Application
     )
   end
 
-  getter! matching_calendars : Hash(String, PlaceOS::Client::API::Models::System?)
+  getter! matching_calendars : Hash(String, PlaceOS::Model::ControlSystem?)
 
-  record Availability, id : String, system : PlaceOS::Client::API::Models::System? = nil, availability : Array(PlaceCalendar::Availability)? = nil do
+  record Availability, id : String, system : PlaceOS::Model::ControlSystem? = nil, availability : Array(PlaceCalendar::Availability)? = nil do
     include JSON::Serializable
   end
 
-  # lists the users default calendars
+  # List the calendars available to the current user.
   @[AC::Route::GET("/")]
   def index : Array(PlaceCalendar::Calendar)
     client.list_calendars(user.email)
   end
 
-  # Check if current user has write access to specified user's calendar
+  # Check whether the current user can edit another user's calendar.
   @[AC::Route::GET("/:user_email/permission")]
   def check_permission(
-    @[AC::Param::Info(description: "email or UPN of calendar owner", example: "foo@domain.com")]
+    @[AC::Param::Info(description: "email or UPN of the calendar owner", example: "foo@domain.com")]
     user_email : String,
   ) : NamedTuple(can_edit: Bool)
     current_user_email = user.email.downcase
@@ -73,14 +74,15 @@ class Calendars < Application
     raise Error::NotFound.new(ex.message || {error: "Not Found"}.to_json)
   end
 
-  # checks for availability of matched calendars, returns a list of calendars with availability
+  # Find the rooms or people that are free for a whole time period.
+  @[AC::MCP(ui: "spaces/card.html")]
   @[AC::Route::GET("/availability")]
   def availability(
-    @[AC::Param::Info(description: "search period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]
     period_start : Int64,
-    @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(description: "search period end as a unix epoch in seconds", example: "1661743123")]
     period_end : Int64,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "a comma separated list of calendar ids (email addresses) to include; for room resource calendars prefer `system_ids`", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
   ) : Array(Availability)
     # Grab the system emails
@@ -94,22 +96,8 @@ class Calendars < Application
     calendars = all_calendars.to_a
 
     render :no_content, json: [] of Availability if calendars.empty?
-    # perform availability request
-    period_start = Time.unix(period_start)
-    period_end = Time.unix(period_end)
-    user_email = tenant.which_account(user.email)
-    busy = client.get_availability(user_email, calendars, period_start, period_end)
+    calendars = free_calendars(calendars, Time.unix(period_start), Time.unix(period_end))
 
-    # Remove any rooms that have overlapping bookings
-    busy.each do |status|
-      status.availability.each do |avail|
-        if avail.status == PlaceCalendar::AvailabilityStatus::Busy && (period_start < avail.ends_at) && (period_end > avail.starts_at)
-          calendars.delete(status.calendar.downcase)
-        end
-      end
-    end
-
-    # Return the results
     calendars.map { |email|
       if system = candidates[email]?
         Availability.new(id: email, system: system)
@@ -119,15 +107,14 @@ class Calendars < Application
     }
   end
 
-  # Finds the busy times in the period provided on the selected calendars.
-  # Returns the calendars that have meetings overlapping provided period
+  # Get the busy times of rooms or people in a time period.
   @[AC::Route::GET("/free_busy")]
   def free_busy(
-    @[AC::Param::Info(description: "search period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]
     period_start : Int64,
-    @[AC::Param::Info(description: "search period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(description: "search period end as a unix epoch in seconds, must be at least 5 minutes after period_start", example: "1661743123")]
     period_end : Int64,
-    @[AC::Param::Info(description: "a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "a comma separated list of calendar ids (email addresses) to include; for room resource calendars prefer `system_ids`", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
   ) : Array(Availability)
     # Grab the system emails

@@ -1,0 +1,88 @@
+require "action-controller/mcp"
+
+# Exposes the Staff API to LLM clients as an MCP server (Streamable HTTP).
+#
+# Controllers are toolboxes and their routes tools, see `ActionController::MCPServer`.
+# Users authenticate with auth.cr (OAuth + PKCE): unauthenticated requests are
+# challenged with the protected resource metadata, which auth.cr serves (nginx
+# routes `/.well-known/*` to auth). API keys (`X-API-Key`) also work.
+module App::MCP
+  PATH = "/api/staff/v1/mcp"
+
+  # any authenticated user of this domain: runs the full `authorize!`, scope and
+  # token domain checks, without needing a tenant or a calendar connection
+  AUTH_PROBE = "/api/staff/v1/users/current"
+
+  INSTRUCTIONS = <<-TEXT
+    PlaceOS Staff API: the workplace side of PlaceOS. Use it to find and book desks,
+    car parking, lockers and other assets, manage calendar meetings and the rooms they
+    use, register visitors, look up people in the organisation's directory and run
+    workplace surveys. Every call is made as the signed in user, with their permissions.
+
+    Key concepts:
+    - users_current says who the signed in user is (name, email, department, work
+      preferences). The staff toolbox searches the wider directory
+    - bookings are PlaceOS records for desks, parking spaces, lockers, visitors and other
+      assets, identified by `booking_type` and `asset_id`. events are meetings in the
+      user's Office365 or Google calendar, where rooms are attendees (resource calendars)
+    - a room is a space, a PlaceOS system (`sys-...`) with a resource calendar email.
+      Campuses, buildings, levels and areas are zones (`zone-...`). The spaces toolbox
+      lists spaces, zones and room features; spaces_show shows a room's meetings with a
+      card for booking it. Other tools take these ids as filters (`zones`, `zone_ids`,
+      `system_ids`). Book meetings and rooms with events_book
+    - desks are assets drawn on their level's map. desks_index lists a level's free desks,
+      desks_nearby the free desks closest to a desk or a colleague's desk, and
+      desks_near_colleagues the free desks near several colleagues; book with bookings_book
+    - the spaces_book and desks_book prompts walk through booking a meeting room or a desk
+    - times are unix epochs in seconds (`period_start`, `period_end`, `booking_start`,
+      `event_start`...). Work them out in the user's time zone, a booking's `timezone`
+      field says which zone it was made in
+    - guests are visitors, recorded by email, who attend events and bookings
+
+    Working well:
+    - check availability before booking: the clashing assets tools and the calendar
+      availability and free/busy tools report conflicts without changing anything
+    - bookings_book, events_book, staff_index, spaces_index, calendars_availability and the
+      show tools display a card
+    - read before writing, and confirm with the user before cancelling, deleting or
+      declining anything on their behalf. Prefer the user's own calendar unless asked
+    - list results are paginated: follow the `Link` header (or use `X-Total-Count`)
+    - a 511 response means the user needs to sign in to their calendar provider again,
+      a 409 is a booking clash and a 410 a booking limit being reached
+    TEXT
+
+  # tokens are issued by auth.cr on the same host, its issuer is scheme + host
+  def self.authorization_server(request : HTTP::Request) : String
+    scheme = request.headers["X-Forwarded-Proto"]?.try(&.split(',').first.strip.presence) || (App.running_in_production? ? "https" : "http")
+    "#{scheme}://#{request.hostname}"
+  end
+
+  def self.configure : Nil
+    ActionController::MCPServer.tap do |mcp|
+      # no namespace: the Server Card (`<PATH>/server-card`) prefixes the request host
+      # reversed, so each deployment is its own publisher (`com.acme.placeos/placeos-workplace`)
+      mcp.server_name = "placeos-workplace"
+      mcp.server_version = App::VERSION
+      mcp.server_title = "PlaceOS Workplace"
+      mcp.server_description = "Book desks, parking, lockers and meeting rooms, manage meetings and visitors, and find colleagues"
+      mcp.website_url = "https://docs.placeos.com"
+      mcp.instructions = "#{INSTRUCTIONS}\n\n#{mcp.toolbox_instructions}"
+      mcp.description_path = ENV["MCP_DESCRIPTION_PATH"]? || "mcp.yml"
+      mcp.ui_base = ENV["MCP_UI_PATH"]? || "cards"
+      mcp.ui_meta = ActionController::MCPServer::UIMeta.new(prefers_border: true)
+      mcp.auth_probe = AUTH_PROBE
+      mcp.resource_metadata = ->(request : HTTP::Request) do
+        ActionController::MCPServer::ResourceMetadata.new(
+          authorization_servers: [authorization_server(request)],
+          scopes_supported: ["public"],
+        )
+      end
+    end
+  end
+
+  def self.mount(router : ActionController::Router) : ActionController::MCPServer::Transport
+    ActionController::MCPServer.mount(router, PATH)
+  end
+
+  configure
+end

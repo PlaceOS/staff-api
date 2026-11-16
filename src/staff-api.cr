@@ -48,6 +48,11 @@ OptionParser.parse(ARGV.dup) do |parser|
     exit 0
   end
 
+  parser.on("--mcp=FILE", "Writes the MCP tool descriptions (mcp.yml) for this service") do |file|
+    ActionController::MCPServer.write_description(file)
+    exit 0
+  end
+
   parser.on("-h", "--help", "Show this help") do
     puts parser
     exit 0
@@ -77,6 +82,18 @@ PgORM::Database.parse_read(ENV["PG_DATABASE_READ_URL"]?)
 PgORM::Settings.to_uri
 
 server = ActionController::Server.new(port, host)
+
+# MCP (Model Context Protocol) endpoint for LLM clients
+App::MCP.mount(server)
+
+# Renders the MCP Apps cards in a browser, for development and the browser tests (e2e/).
+# Release builds (the Docker image) leave it out, otherwise it's only mounted when
+# MCP_PREVIEW_PATH is set: its pages are served without authentication
+{% unless flag?(:release) %}
+  if preview_path = ENV["MCP_PREVIEW_PATH"]?.presence
+    server.mount_mcp_card_previewer(preview_path)
+  end
+{% end %}
 
 # (process_count < 1) == `System.cpu_count` but this is not always accurate
 # Clustering using processes, there is no forking once crystal threads drop

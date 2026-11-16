@@ -11,19 +11,6 @@ describe Bookings do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
-  # the approval flow saves the booking and spawns a signal to the placeos
-  # engine -- stub the outbound calls so the spawned fibers don't hit the network
-  stub_engine = -> do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-  end
-
   # create a daily recurring booking through the REST API and return its id
   create_recurring = ->(asset_id : String) do
     status, body = BookingsHelper.http_create_booking(
@@ -47,8 +34,6 @@ describe Bookings do
 
   describe "recurring booking approval" do
     it "creates a recurring booking and approves one of its instances" do
-      stub_engine.call
-
       booking_id = create_recurring.call("desk-approve-1")
       instance = instance_time.call(booking_id)
 
@@ -70,8 +55,6 @@ describe Bookings do
     end
 
     it "re-approves an instance that was previously rejected" do
-      stub_engine.call
-
       booking_id = create_recurring.call("desk-approve-2")
       instance = instance_time.call(booking_id)
 
@@ -93,8 +76,6 @@ describe Bookings do
     end
 
     it "approves only the targeted instance, leaving siblings unapproved" do
-      stub_engine.call
-
       booking_id = create_recurring.call("desk-approve-3")
       booking = Booking.find(booking_id)
       instances = booking.calculate_daily(2.days.from_now, 6.days.from_now).instances
@@ -114,8 +95,6 @@ describe Bookings do
 
   describe "updating a recurring booking instance" do
     it "adjusts the end time to be a little earlier without a self clash" do
-      stub_engine.call
-
       booking_id = create_recurring.call("desk-update-1")
       instance = instance_time.call(booking_id)
 

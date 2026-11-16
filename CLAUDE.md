@@ -11,6 +11,30 @@ Make sure to write thorough tests. Reference existing models in the lib folder i
 
 Make sure to create and maintain a new plan file for each task to keep track of progress.
 
+### API documentation and the MCP server
+
+Controller and route doc comments are published twice: as the OpenAPI docs and as the
+MCP server's toolbox and tool descriptions (`src/mcp.cr`, served at `/api/staff/v1/mcp`).
+An LLM reads them to pick a tool, so when adding or changing a route:
+
+* keep them short, every line costs MCP tokens on every tool listing: a one line
+  description on the controller class and a one line summary on each route, e.g.
+  `# Update an asset with the fields in the request body and return the saved asset.`
+  Don't list permissions, status codes or side effects in route comments
+* describe every param with `@[AC::Param::Info(description:, example:)]`, with units
+  (unix epoch seconds) and formats (comma separated lists)
+* hide routes that make no sense as tools (binary streams, driver callbacks) with
+  `@[AC::MCP(hide: true)]`, and mark POSTs that only read with
+  `@[AC::MCP(behaviour: :read_only)]`
+* preview the descriptions with `crystal build src/staff-api.cr && ./staff-api --mcp=mcp.yml`
+
+MCP Apps cards live in `cards/<name>/card.html`; the code they share is in `cards/_kit` and
+is copied into each card with `npm run cards:kit`. Test card changes in a browser with
+Playwright (`npm run test:e2e`, see `e2e/README.md`) and look at the screenshots it saves.
+
+When the API changes, update the OpenAPI docs: build the app locally
+(`crystal build ./src/staff-api.cr`), run `./staff-api -d > OPENAPI_DOC.yml`, then remove the binary.
+
 ## 1. Plan Node Default
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately, don’t keep pushing

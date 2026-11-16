@@ -8,9 +8,9 @@ module Utils::MultiTenant
   getter client : PlaceCalendar::Client do
     tenant = current_tenant
     place_client = if tenant.delegated
-                     # Grab a valid token from RestAPI
+                     # Use the user's SSO resource token
                      begin
-                       token = get_placeos_client.users.resource_token
+                       token = current_user.resource_token
                        tenant.place_calendar_client token.token, token.expires
                      rescue error
                        Log.error(exception: error) { "error obtaining resource token" }

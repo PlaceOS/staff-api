@@ -3,9 +3,6 @@ require "./helpers/booking_helper"
 require "../../src/constants"
 
 describe Guests do
-  systems_json = File.read("./spec/fixtures/placeos/systems.json")
-  systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
-
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
@@ -87,20 +84,42 @@ describe Guests do
       body.map(&.["email"]).should eq([guest.email])
     end
 
+    # names are indexed without stemming ('simple'), so the query must not be stemmed either:
+    # the english stemmer turns "kennedy" into "kennedi", which no longer prefix-matches "kennedy"
+    it "query matches whole names the english stemmer would change" do
+      tenant = get_tenant
+      kennedy = GuestsHelper.create_guest(tenant.id, "Harry Kennedy", "harry.kennedy@example.com")
+      jovany = GuestsHelper.create_guest(tenant.id, "Jovany Fay", "jovany.fay@example.com")
+
+      JSON.parse(client.get("#{GUESTS_BASE}?q=kennedy", headers: headers).body).as_a.map(&.["id"]).should eq([kennedy.id])
+      JSON.parse(client.get("#{GUESTS_BASE}?q=Jovany", headers: headers).body).as_a.map(&.["id"]).should eq([jovany.id])
+      JSON.parse(client.get("#{GUESTS_BASE}?q=jovany%20fay", headers: headers).body).as_a.map(&.["id"]).should eq([jovany.id])
+    end
+
+    it "query treats punctuation in names as a word break" do
+      tenant = get_tenant
+      obrien = GuestsHelper.create_guest(tenant.id, "Patrick O'Brien", "pat@example.com")
+
+      search = ->(q : String) do
+        response = client.get("#{GUESTS_BASE}?#{URI::Params.encode({"q" => q})}", headers: headers)
+        response.status_code.should eq 200
+        JSON.parse(response.body).as_a.map(&.["id"])
+      end
+
+      search.call("O'Brien").should eq([obrien.id])
+      search.call("patrick o'brien").should eq([obrien.id])
+      search.call("o'bri").should eq([obrien.id])
+      search.call("(brien) & !patrick:").should eq([obrien.id])
+    end
+
     pending "should return guests visiting today in a subset of rooms and bookings" do
       WebMock.stub(:post, "https://graph.microsoft.com/v1.0/%24batch")
         .to_return(body: File.read("./spec/fixtures/events/o365/batch_index.json"))
-      {"sys-rJQQlR4Cn7", "sys_id"}.each_with_index do |system_id, index|
-        WebMock
-          .stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/#{system_id}")
-          .to_return(body: systems_resp[index])
-      end
+      SystemsHelper.load_fixture("systems.json")
       WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
         .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
       WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.com/calendar?")
         .to_return(body: File.read("./spec/fixtures/calendars/o365/show.json"))
-      WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-        .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
 
       tenant = get_tenant
       guest = GuestsHelper.create_guest(tenant.id, "Toby", "toby23@redant.com.au")
@@ -277,31 +296,6 @@ describe Guests do
   it "#meetings should show meetings for guest" do
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-
-    WebMock.stub(:any, /^http:\/\/.*\/api\/engine\/v2\/systems\//).to_return(body: %({
-        "name": "Room #{Random.rand(99)}",
-        "description": null,
-        "email": "email-#{Random.rand(99)}@example.com",
-        "capacity": 10,
-        "features": [],
-        "bookable": true,
-        "installed_ui_devices": 0,
-        "zones": [
-            "zone-#{Random.rand(99)}"
-        ],
-        "modules": [
-            "mod-rJRJ#{Random.rand(99)}",
-            "mod-rJRL#{Random.rand(99)}",
-            "mod-rJR#{Random.rand(99)}"
-        ],
-        "created_at": 1562041127,
-        "updated_at": 1562041137,
-        "support_url": null,
-        "version": 5,
-        "id": "sys_id-#{Random.rand(99)}"
-    }))
 
     WebMock.stub(:get, /^https:\/\/graph\.microsoft\.com\/v1\.0\/users\/[^\/]*\/calendar\/calendarView\?startDateTime.*/)
       .to_return(GuestsHelper.mock_event_query_json)
@@ -310,6 +304,7 @@ describe Guests do
     guest = GuestsHelper.create_guest(tenant.id)
 
     meta = EventMetadatasHelper.create_event(tenant.id, "generic_event")
+    SystemsHelper.system(id: meta.system_id.not_nil!, email: "email-#{Random.rand(99)}@example.com", capacity: 10)
 
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_www_form(meta.host_email)}/calendar/events/generic_event")
       .to_return(body: File.read("./spec/fixtures/events/o365/generic_event.json"))

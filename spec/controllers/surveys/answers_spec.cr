@@ -199,6 +199,27 @@ describe Surveys::Answers, tags: ["survey"] do
       response = client.post(ANSWERS_BASE, headers: headers, body: answers)
       response.status_code.should eq(400)
     end
+
+    it "should error if an answer is for a question the survey doesn't use" do
+      questions = SurveyHelper.create_questions
+      survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
+      unused = SurveyHelper.create_questions.first
+      other_authority = PlaceOS::Model::Authority.find_by_domain("survey-answers-other.dev") ||
+                        PlaceOS::Model::Generator.authority("survey-answers-other.dev").save!
+      foreign = SurveyHelper.create_questions(other_authority.id.as(String)).first
+
+      [unused, foreign].each do |question|
+        answers = questions.map do |q|
+          {question_id: q.id, survey_id: survey.id, type: "single_choice", answer_json: {text: "Green"}}
+        end
+        answers << {question_id: question.id, survey_id: survey.id, type: "single_choice", answer_json: {text: "Cat"}}
+
+        response = client.post(ANSWERS_BASE, headers: headers, body: answers.to_json)
+        response.status_code.should eq(400)
+      end
+
+      Survey::Answer.where(survey_id: survey.id).count.should eq(0)
+    end
   end
 end
 

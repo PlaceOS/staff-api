@@ -13,9 +13,6 @@ dependencies:
   placeos-models:
     github: placeos/models
 
-  placeos:
-    github: placeos/crystal-client
-
   placeos-log-backend:
     github: place-labs/log-backend
     version: ">= 0.8.13"
@@ -25,6 +22,10 @@ dependencies:
 
   promise:
     github: spider-gazelle/promise
+
+  # Redis client used to publish signals (supports clustered redis)
+  redis-cluster:
+    github: place-labs/redis-cluster.cr
 
   secrets-env:
     github: place-labs/secrets-env

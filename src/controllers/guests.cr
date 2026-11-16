@@ -1,3 +1,6 @@
+require "promise"
+
+# Guests, visitors (people external to the organisation) stored in PlaceOS that are invited to meetings and bookings as attendees
 class Guests < Application
   base "/api/staff/v1/guests"
 
@@ -35,25 +38,27 @@ class Guests < Application
   # Routes
   # =====================
 
-  # lists known guests (which can be queried) OR locates visitors via meeting start and end times (can be filtered by calendars, zone_ids and system_ids)
+  # Search guests, or list the visitors expected in a time period.
   @[AC::Route::GET("/", converters: {zones: ConvertStringArray})]
   def index(
-    @[AC::Param::Info(name: "q", description: "space seperated search query for guests", example: "steve von")]
+    @[AC::Param::Info(name: "q", description: "space separated search query matching guest name, email etc, ignored when a period is provided", example: "steve von")]
     search_query : String = "",
-    @[AC::Param::Info(name: "period_start", description: "event period start as a unix epoch", example: "1661725146")]
+    @[AC::Param::Info(name: "period_start", description: "visit period start as a unix epoch in seconds, requires period_end", example: "1661725146")]
     starting : Int64? = nil,
-    @[AC::Param::Info(name: "period_end", description: "event period end as a unix epoch", example: "1661743123")]
+    @[AC::Param::Info(name: "period_end", description: "visit period end as a unix epoch in seconds, requires period_start", example: "1661743123")]
     ending : Int64? = nil,
-    @[AC::Param::Info(description: "[deprecated] a comma seperated list of calendar ids, recommend using `system_id` for resource calendars", example: "user@org.com,room2@resource.org.com")]
+    @[AC::Param::Info(description: "[deprecated] a comma separated list of calendar ids to search for events with visitors, prefer `system_ids` for room calendars", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-    @[AC::Param::Info(description: "[deprecated] a comma seperated list of zone ids used for events or bookings", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "[deprecated] a comma separated list of zone ids, filters bookings and selects the rooms whose events are searched", example: "zone-123,zone-456")]
     zone_ids : String? = nil,
-    @[AC::Param::Info(description: "[deprecated] a comma seperated list of event spaces", example: "sys-1234,sys-5678")]
+    @[AC::Param::Info(description: "[deprecated] a comma separated list of room system ids whose events are searched", example: "sys-1234,sys-5678")]
     system_ids : String? = nil,
-    @[AC::Param::Info(description: "a comma seperated list of zone ids for bookings", example: "zone-123,zone-456")]
+    @[AC::Param::Info(description: "a comma separated list of zone ids, only bookings in these zones are included", example: "zone-123,zone-456")]
     zones : Array(String)? = nil,
   ) : Array(Guest)
-    search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, "").strip.downcase
+    # punctuation becomes a word break, matching how names are indexed:
+    # "O'Brien" must search as "o brien", not "obrien"
+    search_query = search_query.gsub(/[^\w\s\@\-\.\~\_\"]/, " ").strip.downcase
 
     if starting && ending
       period_start = Time.unix(starting)
@@ -99,7 +104,7 @@ class Guests < Application
 
       # Process the response (map requests back to responses)
       errors = 0
-      results = [] of Tuple(String, PlaceOS::Client::API::Models::System?, PlaceCalendar::Event)
+      results = [] of Tuple(String, PlaceOS::Model::ControlSystem?, PlaceCalendar::Event)
       mappings.each do |(request, calendar_id, system)|
         begin
           results.concat client.list_events(user.email, responses[request]).map { |event| {calendar_id, system, event} }
@@ -114,7 +119,7 @@ class Guests < Application
       ical_uids = Set(String).new
       metadata_ids = Set(String).new
       metadata_recurring_ids = Set(String).new
-      meeting_lookup = {} of String => Tuple(String, PlaceOS::Client::API::Models::System, PlaceCalendar::Event)
+      meeting_lookup = {} of String => Tuple(String, PlaceOS::Model::ControlSystem, PlaceCalendar::Event)
       results.each { |(calendar_id, system, event)|
         if system
           ical_uid = event.ical_uid.not_nil!
@@ -200,17 +205,18 @@ class Guests < Application
         .order(:name)
         .limit(1500).to_a
     else
-      # Return guests based on the filter query
+      # Return guests based on the filter query. tsv_search is built with the 'simple' configuration
+      # (no stemming), so the query must use it too or a stemmed word stops prefix matching
       tsquery = search_query.split(/\s+/).map { |part| "#{part}:*" }.join(" & ")
       Guest
         .by_tenant(tenant.id.not_nil!)
-        .where("tsv_search @@ to_tsquery(?)", tsquery)
+        .where("tsv_search @@ to_tsquery('simple', ?)", tsquery)
         .order(:name)
         .limit(1500).to_a
     end
   end
 
-  # returns the details of a particular guest and if they are expected to attend in person today
+  # Get a guest, including any visit expected today.
   @[AC::Route::GET("/:id")]
   def show : Guest
     if user_token.guest_scope? && (guest.email != user_token.id)
@@ -222,7 +228,7 @@ class Guests < Application
     (attendee && attendee.for_booking?) ? guest.for_booking_to_h(attendee, attendee.booking.try(&.as_h)) : attending_guest(attendee, guest).as(Guest)
   end
 
-  # patches a guest record with the changes provided
+  # Update a guest with the fields in the request body and return the saved guest.
   @[AC::Route::PUT("/:id", body: :guest_req)]
   @[AC::Route::PATCH("/:id", body: :guest_req)]
   def update(guest_req : ::Guest) : Guest
@@ -244,7 +250,7 @@ class Guests < Application
     attending_guest(attendee, guest).as(Guest)
   end
 
-  # creates a new guest record
+  # Create a guest.
   @[AC::Route::POST("/", body: :guest, status_code: HTTP::Status::CREATED)]
   def create(guest : Guest) : Guest
     guest.tenant_id = tenant.id
@@ -263,30 +269,29 @@ class Guests < Application
     attending_guest(attendee, guest).as(Guest)
   end
 
-  # removes the guest record from the database
+  # Delete a guest.
   @[AC::Route::DELETE("/:id", status_code: HTTP::Status::ACCEPTED)]
   def destroy : Nil
     # TODO: Should we be allowing to delete guests that are associated with attendees?
     guest.delete
   end
 
-  # returns the meetings that the provided guest is attending today (approximation based on internal records)
+  # List the meetings a guest is attending.
   @[AC::Route::GET("/:id/meetings")]
   def meetings(
-    @[AC::Param::Info(description: "shoule we include past events they have visited", example: "true")]
+    @[AC::Param::Info(description: "include events that have already finished, defaults to false", example: "true")]
     include_past : Bool = false,
-    @[AC::Param::Info(description: "how many results to return", example: "10")]
+    @[AC::Param::Info(description: "maximum number of events to return, defaults to 10", example: "10")]
     limit : Int32 = 10,
   ) : Array(PlaceCalendar::Event)
     future_only = !include_past
-    placeos_client = get_placeos_client.systems
 
     events = Promise.all(guest.events(future_only, limit).map { |metadata|
       Promise.defer {
         begin
           cal_id = metadata.host_email.not_nil!
-          system = placeos_client.fetch(metadata.system_id.not_nil!)
-          sys_cal = system.email.presence
+          system = find_system!(metadata.system_id.not_nil!)
+          sys_cal = system.email.to_s.presence
           event = client.get_event(user.email, id: metadata.event_id.not_nil!, calendar_id: cal_id)
           if event
             if sys_cal && client.client_id == :office365 && event.host != sys_cal
@@ -307,12 +312,12 @@ class Guests < Application
     events
   end
 
-  # returns the list of bookings a guest is expected to or has attended in person
+  # List the bookings a guest is attending.
   @[AC::Route::GET("/:id/bookings")]
   def bookings(
-    @[AC::Param::Info(description: "shoule we include past bookings", example: "true")]
+    @[AC::Param::Info(description: "include bookings that have already finished, defaults to false", example: "true")]
     include_past : Bool = false,
-    @[AC::Param::Info(description: "how many results to return", example: "10")]
+    @[AC::Param::Info(description: "maximum number of bookings to return, defaults to 10", example: "10")]
     limit : Int32 = 10,
   ) : Array(Booking)
     if user_token.guest_scope? && (guest.email != user_token.id)
@@ -369,9 +374,10 @@ class Guests < Application
     end
   end
 
+  # List the catering menus available to a visitor.
   @[AC::Route::GET("/:id/catering/menu")]
   def catering_menu(
-    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
     booking_id : Int64? = nil,
   ) : Array(Children)
     booking = get_guest_booking(booking_id)
@@ -382,9 +388,10 @@ class Guests < Application
     end
   end
 
+  # Get a visitor's catering selection.
   @[AC::Route::GET("/:id/catering")]
   def catering(
-    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
     booking_id : Int64? = nil,
   ) : Hash(String, JSON::Any)
     booking = get_guest_booking(booking_id)
@@ -403,10 +410,11 @@ class Guests < Application
     item.as_h
   end
 
+  # Set a visitor's catering selection.
   @[AC::Route::PATCH("/:id/catering", body: :selection)]
   def catering_update(
     selection : Hash(String, JSON::Any),
-    @[AC::Param::Info(description: "the booking id to obtain catering for", example: "32")]
+    @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
     booking_id : Int64? = nil,
   ) : Hash(String, JSON::Any)
     booking = get_guest_booking(booking_id)
@@ -468,10 +476,10 @@ class Guests < Application
     selection
   end
 
-  # remove catering selection from the specified users visit
+  # Remove a visitor's catering selection.
   @[AC::Route::DELETE("/:id/catering", status_code: HTTP::Status::ACCEPTED)]
   def catering_destroy(
-    @[AC::Param::Info(description: "the booking id to remove the catering from", example: "32")]
+    @[AC::Param::Info(description: "the id of the visitor's booking, optional for guest access tokens which default to the booking the token was issued for, otherwise required", example: "32")]
     booking_id : Int64? = nil,
   ) : Nil
     booking = get_guest_booking(booking_id)

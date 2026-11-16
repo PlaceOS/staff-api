@@ -103,35 +103,75 @@ describe Surveys::Questions, tags: ["survey"] do
     end
 
     context "when there are linked answers" do
-      it "should create a new question" do
+      it "edits the question in place when only the wording changes" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
         _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
 
-        update = {title: "Updated Title"}.to_json
+        update = {title: "Updated Title", tags: ["reworded"]}.to_json
 
         response = client.put("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers, body: update)
         response.status_code.should eq(200)
         response_body = JSON.parse(response.body)
         response_body["title"].should eq("Updated Title")
-        response_body["id"].should_not eq(questions.first.id)
+        response_body["id"].should eq(questions.first.id)
+        Survey::Question.find!(questions.first.id).deleted_at.should be_nil
       end
 
-      it "should soft delete the question" do
+      it "creates a new version, used by the surveys, when what is asked changes" do
         questions = SurveyHelper.create_questions
         survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
         _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        old_id = questions.first.id.as(Int64)
 
-        update = {title: "Updated Title"}.to_json
+        update = {choices: [{title: "Red"}, {title: "Blue"}]}.to_json
 
-        response = client.put("#{QUESTIONS_BASE}/#{questions.first.id}", headers: headers, body: update)
+        response = client.put("#{QUESTIONS_BASE}/#{old_id}", headers: headers, body: update)
         response.status_code.should eq(200)
         response_body = JSON.parse(response.body)
-        response_body["title"].should eq("Updated Title")
-        response_body["id"].should_not eq(questions.first.id)
-        Survey::Question.find(response_body["id"].as_i64).not_nil!.deleted_at.should be_nil
-        Survey::Question.find(questions.first.id).not_nil!.deleted_at.should_not be_nil
+        new_id = response_body["id"].as_i64
+        new_id.should_not eq(old_id)
+        response_body["previous_question_id"].should eq(old_id)
+
+        Survey::Question.find!(new_id).deleted_at.should be_nil
+        Survey::Question.find!(old_id).deleted_at.should_not be_nil
+        Survey.find!(survey.id).question_ids.first.should eq(new_id)
+        # answers stay with the version they answered
+        Survey::Answer.where(question_id: old_id).count.should eq(1)
+        Survey::Answer.where(question_id: new_id).count.should eq(0)
       end
+
+      it "moves the answers to the new version when migrate_answers is set" do
+        questions = SurveyHelper.create_questions
+        survey = SurveyHelper.create_survey(question_order: questions.map(&.id))
+        _answers = SurveyHelper.create_answers(survey: survey, questions: questions)
+        old_id = questions.first.id.as(Int64)
+
+        update = {required: false}.to_json
+
+        response = client.put("#{QUESTIONS_BASE}/#{old_id}?migrate_answers=true", headers: headers, body: update)
+        response.status_code.should eq(200)
+        new_id = JSON.parse(response.body)["id"].as_i64
+        new_id.should_not eq(old_id)
+
+        Survey::Answer.where(question_id: new_id).count.should eq(1)
+        Survey::Answer.where(question_id: old_id).count.should eq(0)
+      end
+    end
+
+    it "hides another domain's questions" do
+      other = PlaceOS::Model::Generator.authority(domain: "question-other-#{Random::Secure.hex(4)}.dev").save!.id.as(String)
+      question = SurveyHelper.question_responders.first
+      question.authority_id = other
+      question.save!
+
+      client.get("#{QUESTIONS_BASE}/#{question.id}", headers: headers).status_code.should eq(404)
+      client.put("#{QUESTIONS_BASE}/#{question.id}", headers: headers, body: {title: "taken"}.to_json).status_code.should eq(404)
+      JSON.parse(client.get(QUESTIONS_BASE, headers: headers).body).as_a.map(&.["id"]).should_not contain(question.id)
+
+      # nor can a survey use them
+      body = SurveyHelper.survey_responder(question_order: [question.id.as(Int64)]).to_json
+      client.post(Surveys.base_route, headers: headers, body: body).status_code.should eq(422)
     end
   end
 

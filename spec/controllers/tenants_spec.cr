@@ -19,6 +19,16 @@ describe Tenants do
       found = body.find! { |t| t["id"].as_i64 == tenant.id }
       found["booking_range"]["desk"].should eq(14)
     end
+
+    it "includes the booking period" do
+      tenant = get_tenant
+      tenant.booking_period = {"desk" => 1440_u32}
+      tenant.save!
+
+      body = JSON.parse(client.get(TENANTS_BASE, headers: headers).body).as_a
+      found = body.find! { |t| t["id"].as_i64 == tenant.id }
+      found["booking_period"]["desk"].should eq(1440)
+    end
   end
 
   describe "#update" do
@@ -65,6 +75,49 @@ describe Tenants do
       response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
       response.status_code.should eq(200)
       Tenant.find(tenant.id.not_nil!).booking_range.should eq({"desk" => 7_u32})
+    end
+
+    it "should set the booking_period" do
+      tenant = get_tenant
+      tenant.booking_period = {"desk" => 60_u32}
+      tenant.save!
+
+      body = {booking_period: {desk: 1440, parking: 90}}.to_json
+      response = client.put("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      response.status_code.should eq(200)
+      JSON.parse(response.body)["booking_period"].as_h.transform_values(&.as_i).should eq({"desk" => 1440, "parking" => 90})
+      Tenant.find(tenant.id.not_nil!).booking_period.should eq({"desk" => 1440_u32, "parking" => 90_u32})
+    end
+
+    it "should clear the booking_period when sent empty" do
+      tenant = get_tenant
+      tenant.booking_period = {"desk" => 60_u32}
+      tenant.save!
+
+      response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: {booking_period: {} of String => UInt32}.to_json)
+      response.status_code.should eq(200)
+      Tenant.find(tenant.id.not_nil!).booking_period.should be_empty
+    end
+
+    it "should not clear the booking_period when it is omitted" do
+      tenant = get_tenant
+      tenant.booking_period = {"desk" => 60_u32}
+      tenant.booking_range = {"desk" => 7_u32}
+      tenant.save!
+
+      body = {early_checkin: 3600}.to_json
+      response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: body)
+      response.status_code.should eq(200)
+      found = Tenant.find(tenant.id.not_nil!)
+      found.booking_period.should eq({"desk" => 60_u32})
+      found.booking_range.should eq({"desk" => 7_u32})
+    end
+
+    it "should reject a negative booking_period" do
+      tenant = get_tenant
+      response = client.patch("#{TENANTS_BASE}/#{tenant.id}", headers: headers, body: %({"booking_period": {"desk": -5}}))
+      response.status_code.should eq(400)
+      Tenant.find(tenant.id.not_nil!).booking_period.should be_empty
     end
   end
 

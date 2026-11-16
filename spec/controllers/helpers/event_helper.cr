@@ -4,16 +4,7 @@ module EventsHelper
   def stub_event_tokens
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
       .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/event/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-    systems_json = File.read("./spec/fixtures/placeos/systems.json")
-    systems_resp = Array(JSON::Any).from_json(systems_json).map &.to_json
-    WebMock.stub(:get, ENV["PLACE_URI"].to_s + "/api/engine/v2/systems/sys-rJQQlR4Cn7")
-      .to_return(body: systems_resp[0])
+    SystemsHelper.load_fixture("systemJ.json")
   end
 
   def stub_create_endpoints
@@ -146,32 +137,6 @@ module EventsHelper
     # in UTC rather than in the fixture's timezone
     WebMock.stub(:get, "https://graph.microsoft.com/v1.0/users/#{URI.encode_path_segment(host)}/calendar/calendarView?startDateTime=2020-08-27T00%3A00%3A00-00%3A00&endDateTime=2020-08-27T23%3A59%3A59-00%3A00&%24filter=iCalUId+eq+%27#{ICAL_UID}%27&%24top=10000")
       .to_return(body: %({"value": [#{event}]}))
-  end
-
-  def stub_permissions_check(system_id)
-    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/#{system_id}?name=permissions")
-      .to_return(body: %({
-        "permissions": {
-          "name": "permissions",
-          "description": "",
-          "parent_id": "#{system_id}",
-          "details": {
-            "admin": ["#{system_id}", "admin"]
-          }
-        }
-      }))
-
-    WebMock.stub(:get, "http://toby.dev.place.tech/api/engine/v2/metadata/zone-rGhCRp_aUD?name=permissions")
-      .to_return(body: %({
-        "permissions": {
-          "name": "permissions",
-          "description": "",
-          "parent_id": "zone-rGhCRp_aUD",
-          "details": {
-            "admin": ["#{system_id}", "admin"]
-          }
-        }
-      }))
   end
 
   def event_query_response(id, ical = nil)

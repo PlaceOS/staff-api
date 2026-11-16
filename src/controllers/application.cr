@@ -69,6 +69,37 @@ abstract class Application < ActionController::Base
     response.headers["X-Request-ID"] = request_id
   end
 
+  # Attributes model changes made during the request in their change
+  # history. The metadata is only built when a change is recorded, after
+  # the request has been authenticated.
+  @[AC::Route::Filter(:around_action)]
+  def with_history_metadata(&)
+    provider = ::PlaceOS::Model::History::MetadataProvider.new { history_metadata(request, @current_user) }
+    ::PlaceOS::Model::History.with_metadata(provider) { yield }
+  end
+
+  # Who made a change and from where, see `PlaceOS::Model::History::Metadata`
+  def history_metadata(request : HTTP::Request, current_user : ::PlaceOS::Model::User?) : ::PlaceOS::Model::History::Metadata
+    headers = request.headers
+    metadata = ::PlaceOS::Model::History::Metadata.new(
+      api_key_id: api_key.try(&.id),
+      api_key_name: api_key.try(&.name),
+      app_id: history_header(headers, "X-App-Id"),
+      app_name: history_header(headers, "X-App-Name"),
+      app_date: history_header(headers, "X-App-Date"),
+      app_build: history_header(headers, "X-App-Build"),
+      user_agent: history_header(headers, "User-Agent"),
+      ip: client_ip,
+      request_id: @request_id,
+    )
+    current_user ? metadata.with_user(current_user) : metadata
+  end
+
+  # Client supplied header, limited in length as it is stored with each change
+  private def history_header(headers : HTTP::Headers, name : String) : String?
+    headers[name]?.presence.try(&.[0, 256])
+  end
+
   # ============================
   # JWT Scope Check
   # ============================
@@ -76,13 +107,11 @@ abstract class Application < ActionController::Base
 
   protected def check_jwt_scope
     access = user_token.get_access("public")
-    block_access = true
-
-    if request.method.downcase == "get"
-      block_access = access.none?
-    else
-      block_access = !access.write?
-    end
+    block_access = if request.method.downcase == "get"
+                     access.none?
+                   else
+                     !access.write?
+                   end
 
     if block_access
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
@@ -120,10 +149,12 @@ abstract class Application < ActionController::Base
   end
 
   # for converting comma seperated lists
-  # i.e. `"id-1,id-2,id-3"`
+  # i.e. `"id-1,id-2,id-3"`, or a JSON array `["id-1","id-2"]`
   struct ConvertStringArray
     def convert(raw : String)
-      raw.split(',').map!(&.strip).reject(&.empty?).uniq!
+      # MCP tool calls send array arguments as JSON
+      list = (Array(String).from_json(raw) rescue nil) if raw.lstrip.starts_with?('[')
+      (list || raw.split(',')).map!(&.strip).reject(&.empty?).uniq!
     end
   end
 
@@ -175,7 +206,8 @@ abstract class Application < ActionController::Base
 
   # 511 if the user needs an access token via SSO
   @[AC::Route::Exception(Error::NeedsAuthentication, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
-  def action_not_implemented(error) : CommonError
+  @[AC::Route::Exception(PlaceOS::Model::Error::NoResourceToken, status_code: HTTP::Status::NETWORK_AUTHENTICATION_REQUIRED)]
+  def needs_authentication(error) : CommonError
     Log.debug { error.message }
     render_error(error)
   end
@@ -251,7 +283,6 @@ abstract class Application < ActionController::Base
   # handler for a few different errors
   @[AC::Route::Exception(Error::NotAllowed, status_code: HTTP::Status::METHOD_NOT_ALLOWED)]
   @[AC::Route::Exception(PgORM::Error, status_code: HTTP::Status::INTERNAL_SERVER_ERROR)]
-  @[AC::Route::Exception(::PlaceOS::Client::API::Error, status_code: HTTP::Status::NOT_FOUND)]
   @[AC::Route::Exception(JSON::SerializableError, status_code: HTTP::Status::BAD_REQUEST)]
   @[AC::Route::Exception(::Enumerable::EmptyError, status_code: HTTP::Status::NOT_FOUND)] # TODO: Should be caught where it's happening, or the code refactored.
   def handled_generic_error(error) : CommonError

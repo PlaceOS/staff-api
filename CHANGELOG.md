@@ -2,6 +2,20 @@
 
 ### Feat
 
+- **mcp**: describe the server for its MCP Server Card
+- **tenants**: persist and return booking_period
+- **MCP**: cards show "Booked!" and the new booking without reloading
+- **MCP**: card redesign with browser tests in the card previewer
+- **MCP**: show cards on booking, people search and room listings
+- **MCP**: card fixes, meeting availability and rooms on the staff card
+- **MCP**: prompts for booking rooms and checking bookings and meetings
+- **MCP**: desks near colleagues, space photos and space map
+- **MCP**: desk booking prompt and free desk listing
+- **MCP**: show a booking's asset on its level map
+- **MCP**: nearby desks and a lean desk booking tool
+- **MCP**: spaces, cards and lean booking tools
+- **assets**: add asset controllers ported from rest-api
+- **MCP**: add MCP support and clean up tech debt
 - **staff**: add additional_fields query param
 - **bookings**: restrict booking approval to concierge users [PPT-2767]
 - **events**: hand a meeting to a new host (PPT-2640) ([#383](https://github.com/PlaceOS/staff-api/pull/383))
@@ -122,6 +136,12 @@
 
 ### Fix
 
+- **security**: take JWT sys_admin/support from the user record ([#394](https://github.com/PlaceOS/staff-api/pull/394))
+- **survey**: keep survey answers and triggers within the tenant
+- **security**: bump placeos-models to 9.123.2
+- **guests**: treat punctuation in search queries as a word break
+- **search**: match dotted room numbers like "4.23" as a single term
+- unified change history, stateless MCP specs and stale linked bookings ([#393](https://github.com/PlaceOS/staff-api/pull/393))
 - **events**: a meeting moved to a new host is sent with the attendees as given (PPT-2640) ([#389](https://github.com/PlaceOS/staff-api/pull/389))
 - **bookings**: PPT-2436 list a cancelled series when include_deleted is set ([#388](https://github.com/PlaceOS/staff-api/pull/388))
 - **bookings**: PPT-2436 keep cancelled recurring occurrences when include_deleted is set ([#387](https://github.com/PlaceOS/staff-api/pull/387))
@@ -264,6 +284,7 @@
 
 ### Refactor
 
+- remove rest-api client, access PlaceOS directly ([#391](https://github.com/PlaceOS/staff-api/pull/391))
 - **bookings**: clashing_assets to validate booking_start vs booking_end ([#373](https://github.com/PlaceOS/staff-api/pull/373))
 - **events**: [PPT-2358] classhing-assets to follow bookings signature ([#369](https://github.com/PlaceOS/staff-api/pull/369))
 - **calendars**: [PPT-2471] check_permission to call MS G get calendar instead ([#368](https://github.com/PlaceOS/staff-api/pull/368))

@@ -1,0 +1,314 @@
+require "../spec_helper"
+require "./helpers/api_spec_helper"
+
+# asserts a successful purchase orders index response and extracts the returned ids
+def purchase_order_index_ids(result) : Array(String)
+  result.status_code.should eq 200
+  Array(Hash(String, JSON::Any))
+    .from_json(result.body)
+    .map(&.["id"].to_s)
+end
+
+describe AssetPurchaseOrders do
+  before_each { clear_group_tables }
+
+  ApiSpec.test_404(AssetPurchaseOrders.base_route, model_name: PlaceOS::Model::AssetPurchaseOrder.table_name, headers: ApiSpec::Authentication.headers, clz: Int64)
+
+  describe "index", tags: "search" do
+    it "queries AssetPurchaseOrder", tags: "search" do
+      _, headers = ApiSpec::Authentication.authentication
+      doc = PlaceOS::Model::Generator.asset_purchase_order
+      purchase_order_number = random_name
+      doc.purchase_order_number = purchase_order_number
+      doc.save!
+      doc.persisted?.should be_true
+
+      other = PlaceOS::Model::Generator.asset_purchase_order.save!
+
+      params = HTTP::Params.encode({"q" => purchase_order_number, "limit" => "1000"})
+      path = "#{AssetPurchaseOrders.base_route.rstrip('/')}?#{params}"
+      ids = purchase_order_index_ids(client.get(path, headers: headers))
+      ids.should contain(doc.id)
+      ids.should_not contain(other.id)
+
+      doc.destroy
+      other.destroy
+    end
+
+    it "queries AssetPurchaseOrder by invoice number", tags: "search" do
+      _, headers = ApiSpec::Authentication.authentication
+      doc = PlaceOS::Model::Generator.asset_purchase_order
+      invoice_number = random_name
+      doc.invoice_number = invoice_number
+      doc.save!
+
+      other = PlaceOS::Model::Generator.asset_purchase_order.save!
+
+      params = HTTP::Params.encode({"q" => invoice_number, "limit" => "1000"})
+      path = "#{AssetPurchaseOrders.base_route.rstrip('/')}?#{params}"
+      ids = purchase_order_index_ids(client.get(path, headers: headers))
+      ids.should contain(doc.id)
+      ids.should_not contain(other.id)
+
+      doc.destroy
+      other.destroy
+    end
+  end
+
+  describe "CRUD operations", tags: "crud" do
+    ApiSpec.test_crd(PlaceOS::Model::AssetPurchaseOrder, AssetPurchaseOrders)
+    ApiSpec.test_crd(PlaceOS::Model::AssetPurchaseOrder, AssetPurchaseOrders, sys_admin: false, support: false, groups: ["management"])
+    ApiSpec.test_crd(PlaceOS::Model::AssetPurchaseOrder, AssetPurchaseOrders, sys_admin: false, support: false, groups: ["concierge"])
+
+    it "fails to create if a regular user" do
+      body = PlaceOS::Model::Generator.asset_purchase_order.to_json
+      result = client.post(
+        AssetPurchaseOrders.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: false, support: false)
+      )
+      result.status_code.should eq 403
+    end
+  end
+
+  describe "authority scoping" do
+    # concierge has manage on the org zone, so these requests pass the zone permission checks
+    concierge = -> { ApiSpec::Authentication.headers(sys_admin: false, support: false, groups: ["concierge"]) }
+    other_authority = ->(name : String) { PlaceOS::Model::Generator.authority(domain: "https://#{name}-#{random_name}.example.com").save! }
+
+    it "sets the authority from the caller's domain on create" do
+      other = other_authority.call("po-create")
+      body = JSON.parse(PlaceOS::Model::Generator.asset_purchase_order(other).to_json).as_h
+
+      result = client.post(AssetPurchaseOrders.base_route, body: body.to_json, headers: concierge.call)
+      result.status_code.should eq 201
+      created = PlaceOS::Model::AssetPurchaseOrder.from_trusted_json(result.body)
+      created.authority_id.should eq PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!.id
+
+      created.destroy
+      other.destroy
+    end
+
+    it "only lists the caller authority's purchase orders, admins included" do
+      other = other_authority.call("po-index")
+      mine = PlaceOS::Model::Generator.asset_purchase_order.save!
+      theirs = PlaceOS::Model::Generator.asset_purchase_order(other).save!
+      path = "#{AssetPurchaseOrders.base_route.rstrip('/')}?limit=10000"
+
+      ids = JSON.parse(client.get(path, headers: concierge.call).body).as_a.map(&.["id"].as_s)
+      ids.should contain(mine.id)
+      ids.should_not contain(theirs.id)
+
+      # admin and support users are held to their own authority too
+      ids = JSON.parse(client.get(path, headers: ApiSpec::Authentication.headers).body).as_a.map(&.["id"].as_s)
+      ids.should_not contain(theirs.id)
+
+      mine.destroy
+      other.destroy
+    end
+
+    it "returns 404 to show, update or delete another authority's purchase order, admins included" do
+      other = other_authority.call("po-show")
+      theirs = PlaceOS::Model::Generator.asset_purchase_order(other).save!
+      path = File.join(AssetPurchaseOrders.base_route, theirs.id.to_s)
+
+      client.get(path, headers: concierge.call).status_code.should eq 404
+      client.patch(path, body: {invoice_number: "INV-1"}.to_json, headers: concierge.call).status_code.should eq 404
+      client.delete(path, headers: concierge.call).status_code.should eq 404
+      PlaceOS::Model::AssetPurchaseOrder.find?(theirs.id).should_not be_nil
+
+      client.get(path, headers: ApiSpec::Authentication.headers).status_code.should eq 404
+
+      other.destroy
+    end
+
+    it "keeps the purchase order's authority on update" do
+      other = other_authority.call("po-update")
+      mine = PlaceOS::Model::Generator.asset_purchase_order.save!
+      authority_id = mine.authority_id
+
+      result = client.patch(
+        File.join(AssetPurchaseOrders.base_route, mine.id.to_s),
+        body: {invoice_number: "INV-2", authority_id: other.id}.to_json,
+        headers: concierge.call,
+      )
+      result.status_code.should eq 200
+      PlaceOS::Model::AssetPurchaseOrder.find!(mine.id).authority_id.should eq authority_id
+
+      mine.destroy
+      other.destroy
+    end
+  end
+
+  describe "scopes" do
+    ApiSpec.test_controller_scope(AssetPurchaseOrders)
+  end
+
+  describe "support-subsystem permissions" do
+    it "allows POST for a support user with Create on the org zone (both sides)" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Create).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Create).save!
+
+      body = PlaceOS::Model::Generator.asset_purchase_order.to_json
+      result = client.post(AssetPurchaseOrders.base_route, body: body, headers: headers)
+      result.status_code.should eq 201
+
+      PlaceOS::Model::AssetPurchaseOrder.from_trusted_json(result.body).destroy
+    end
+
+    it "rejects POST when the support user only has Read on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Read).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Read).save!
+
+      body = PlaceOS::Model::Generator.asset_purchase_order.to_json
+      result = client.post(AssetPurchaseOrders.base_route, body: body, headers: headers)
+      result.status_code.should eq 403
+    end
+
+    it "requires Update on both sides to PATCH a purchase order" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      purchase_order = PlaceOS::Model::Generator.asset_purchase_order.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Update).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Update).save!
+
+      result = client.patch(
+        path: "#{AssetPurchaseOrders.base_route}/#{purchase_order.id}",
+        body: {purchase_order_number: "po-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.success?.should be_true
+      purchase_order.destroy
+    end
+
+    it "rejects PATCH when the support user only has Create on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      purchase_order = PlaceOS::Model::Generator.asset_purchase_order.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Create).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Create).save!
+
+      result = client.patch(
+        path: "#{AssetPurchaseOrders.base_route}/#{purchase_order.id}",
+        body: {purchase_order_number: "po-#{random_name}"}.to_json,
+        headers: headers,
+      )
+      result.status_code.should eq 403
+      purchase_order.destroy
+    end
+
+    it "requires Delete on both sides to DELETE a purchase order" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      purchase_order = PlaceOS::Model::Generator.asset_purchase_order.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Delete).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Delete).save!
+
+      result = client.delete(path: "#{AssetPurchaseOrders.base_route}/#{purchase_order.id}", headers: headers)
+      result.success?.should be_true
+      PlaceOS::Model::AssetPurchaseOrder.find?(purchase_order.id).should be_nil
+    end
+
+    it "rejects DELETE when the support user only has Update on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      purchase_order = PlaceOS::Model::Generator.asset_purchase_order.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Update).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Update).save!
+
+      result = client.delete(path: "#{AssetPurchaseOrders.base_route}/#{purchase_order.id}", headers: headers)
+      result.status_code.should eq 403
+      purchase_order.destroy
+    end
+
+    # GET (index/show) requires the Read bit (or Manage) on the org zone;
+    # writes keep the verb's bit.
+    it "allows GET index for a support user with Manage on the org zone (both sides)" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Manage).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Manage).save!
+
+      result = client.get(AssetPurchaseOrders.base_route, headers: headers)
+      result.status_code.should eq 200
+    end
+
+    it "allows GET index and show for a support user with Read on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      purchase_order = PlaceOS::Model::Generator.asset_purchase_order.save!
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Read).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Read).save!
+
+      result = client.get(AssetPurchaseOrders.base_route, headers: headers)
+      result.status_code.should eq 200
+
+      result = client.get("#{AssetPurchaseOrders.base_route}/#{purchase_order.id}", headers: headers)
+      result.status_code.should eq 200
+      purchase_order.destroy
+    end
+
+    it "rejects GET index when the support user only has Create on the org zone" do
+      authority = PlaceOS::Model::Authority.find_by_domain("localhost").not_nil!
+      user, headers = ApiSpec::Authentication.authentication(sys_admin: false, support: false)
+      org_zone = ApiSpec::Authentication.org_zone
+
+      group = PlaceOS::Model::Generator.group(authority: authority, subsystems: ["support"]).save!
+      PlaceOS::Model::Generator.group_user(user: user, group: group, permissions: PlaceOS::Model::Permissions::Create).save!
+      PlaceOS::Model::Generator.group_zone(group: group, zone: org_zone, permissions: PlaceOS::Model::Permissions::Create).save!
+
+      result = client.get(AssetPurchaseOrders.base_route, headers: headers)
+      result.status_code.should eq 403
+    end
+
+    it "allows a support-JWT user to POST regardless of group grants" do
+      body = PlaceOS::Model::Generator.asset_purchase_order.to_json
+      result = client.post(
+        AssetPurchaseOrders.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: false, support: true),
+      )
+      result.status_code.should eq 201
+      PlaceOS::Model::AssetPurchaseOrder.from_trusted_json(result.body).destroy
+    end
+
+    it "allows an admin-JWT user to POST regardless of group grants" do
+      body = PlaceOS::Model::Generator.asset_purchase_order.to_json
+      result = client.post(
+        AssetPurchaseOrders.base_route,
+        body: body,
+        headers: ApiSpec::Authentication.headers(sys_admin: true, support: false),
+      )
+      result.status_code.should eq 201
+      PlaceOS::Model::AssetPurchaseOrder.from_trusted_json(result.body).destroy
+    end
+  end
+end

@@ -29,17 +29,6 @@ describe Bookings do
   client = AC::SpecHelper.client
   headers = Mock::Headers.office365_guest
 
-  # see the NOTE in bookings_clash_e2e_spec.cr -- these must be registered inside
-  # each example, never in the global `Spec.before_each`
-  stub_engine = -> do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed").to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed").to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending").to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/checkin").to_return(body: "")
-  end
-
   # creates a booking for the given visitors, returning the raw response
   create_visit = ->(booking_type : String, asset_id : String, visitor_emails : Array(String), starting : Int64, ending : Int64) do
     client.post(BOOKINGS_BASE, headers: headers, body: {
@@ -105,7 +94,6 @@ describe Bookings do
   {"visitor", "room"}.each do |booking_type|
     {:booking, :guest}.each do |level|
       it "allows a new #{booking_type} booking over a #{booking_type} booking checked out early (#{level} level check out)" do
-        stub_engine.call
         asset_id = "#{booking_type}-slot-#{level}"
 
         visit_then_check_out.call(booking_type, asset_id, level)
@@ -117,7 +105,6 @@ describe Bookings do
   # control: proves the second booking really does overlap the first, so the
   # examples above are exercising clash detection rather than passing trivially
   it "still rejects a new room booking over a room booking that has not been checked out" do
-    stub_engine.call
     asset_id = "room-slot-control"
 
     first = create_visit.call("room", asset_id, ["first.visitor@external.com"], 5.minutes.ago.to_unix, 25.minutes.from_now.to_unix)
@@ -135,7 +122,6 @@ describe Bookings do
     visitor_b = "visitor.b@external.com"
 
     it "keeps the booking active until the last visitor on site checks out" do
-      stub_engine.call
       asset_id = "room-slot-multi"
       booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
 
@@ -153,7 +139,6 @@ describe Bookings do
     end
 
     it "releases the booking when the only visitor who arrived checks out" do
-      stub_engine.call
       asset_id = "room-slot-partial"
       booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
 
@@ -166,7 +151,6 @@ describe Bookings do
     end
 
     it "releases the booking when a visitor who never arrived is checked out" do
-      stub_engine.call
       asset_id = "room-slot-no-show"
       booking_id = first_room_visit.call(asset_id, [visitor_a])
 
@@ -177,7 +161,6 @@ describe Bookings do
     end
 
     it "checks every visitor out when the host checks out of the meeting" do
-      stub_engine.call
       asset_id = "room-slot-host-checkout"
       booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
 
@@ -190,7 +173,6 @@ describe Bookings do
     end
 
     it "does not check out a visitor who never arrived when the host checks out" do
-      stub_engine.call
       asset_id = "room-slot-host-checkout-no-show"
       booking_id = first_room_visit.call(asset_id, [visitor_a, visitor_b])
 

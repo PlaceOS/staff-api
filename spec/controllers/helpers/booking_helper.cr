@@ -7,7 +7,7 @@ module BookingsHelper
 
   def create_booking(tenant_id : Int64, user_email : String, zones : Array(String) = random_zones, event_id = nil, booking_type = "desk", parent_id = nil, asset_id = nil)
     user_name = Faker::Internet.user_name
-    asset_id = asset_id.presence || "asset-#{Random.new.rand(500)}"
+    asset_id = asset_id.presence || "asset-#{UUID.random}"
     Booking.create!(
       tenant_id: tenant_id,
       parent_id: parent_id,

@@ -32,18 +32,6 @@ describe Bookings do
   owner_headers = Mock::Headers.office365_normal_user(email: "owner@example.com")
   other_headers = Mock::Headers.office365_normal_user(email: "other@example.com")
 
-  # saving a booking spawns signals to the placeos engine, stub the outbound calls
-  stub_engine = -> do
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/auth/oauth/token")
-      .to_return(body: File.read("./spec/fixtures/tokens/placeos_token.json"))
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/booking/host_changed")
-      .to_return(body: "")
-    WebMock.stub(:post, "#{ENV["PLACE_URI"]}/api/engine/v2/signal?channel=staff/guest/attending")
-      .to_return(body: "")
-  end
-
   # an unapproved booking owned by owner@example.com, created by an admin
   create_pending = -> do
     status, body = BookingsHelper.http_create_booking(
@@ -61,7 +49,6 @@ describe Bookings do
   describe "approval permissions" do
     describe "#approve & #reject" do
       it "forbids users without approval permissions" do
-        stub_engine.call
         id = create_pending.call
 
         client.post("#{BOOKINGS_BASE}/#{id}/approve", headers: owner_headers).status_code.should eq(403)
@@ -76,7 +63,6 @@ describe Bookings do
       end
 
       it "allows zone managers" do
-        stub_engine.call
         id = create_pending.call
 
         response = client.post("#{BOOKINGS_BASE}/#{id}/approve", headers: manager_headers)
@@ -97,7 +83,6 @@ describe Bookings do
       end
 
       it "allows admins" do
-        stub_engine.call
         id = create_pending.call
 
         response = client.post("#{BOOKINGS_BASE}/#{id}/approve", headers: admin_headers)
@@ -108,8 +93,6 @@ describe Bookings do
 
     describe "#create" do
       it "forbids creating an approved or rejected booking without permission" do
-        stub_engine.call
-
         client.post(BOOKINGS_BASE, headers: owner_headers, body: approval_spec_booking_json(approved: true)).status_code.should eq(403)
         client.post(BOOKINGS_BASE, headers: owner_headers, body: approval_spec_booking_json(rejected: true)).status_code.should eq(403)
         client.post(BOOKINGS_BASE, headers: other_headers, body: approval_spec_booking_json(approved: true)).status_code.should eq(403)
@@ -118,8 +101,6 @@ describe Bookings do
       end
 
       it "allows users without permission to create pending bookings" do
-        stub_engine.call
-
         response = client.post(BOOKINGS_BASE, headers: owner_headers, body: approval_spec_booking_json(approved: false, rejected: false))
         response.status_code.should eq(201)
         body = JSON.parse(response.body).as_h
@@ -129,8 +110,6 @@ describe Bookings do
       end
 
       it "allows zone managers to create approved or rejected bookings" do
-        stub_engine.call
-
         response = client.post(BOOKINGS_BASE, headers: manager_headers, body: approval_spec_booking_json(approved: true))
         response.status_code.should eq(201)
         body = JSON.parse(response.body).as_h
@@ -149,8 +128,6 @@ describe Bookings do
       end
 
       it "allows admins to create approved bookings" do
-        stub_engine.call
-
         response = client.post(BOOKINGS_BASE, headers: admin_headers, body: approval_spec_booking_json(approved: true))
         response.status_code.should eq(201)
         body = JSON.parse(response.body).as_h
@@ -161,7 +138,6 @@ describe Bookings do
 
     describe "#update" do
       it "forbids the booking owner changing the approval state" do
-        stub_engine.call
         id = create_pending.call
 
         client.patch("#{BOOKINGS_BASE}/#{id}", headers: owner_headers, body: {approved: true}.to_json).status_code.should eq(403)
@@ -177,7 +153,6 @@ describe Bookings do
       end
 
       it "allows the owner to echo back the current approval state" do
-        stub_engine.call
         id = create_pending.call
         client.post("#{BOOKINGS_BASE}/#{id}/approve", headers: manager_headers).status_code.should eq(200)
 
@@ -190,7 +165,6 @@ describe Bookings do
       end
 
       it "forbids the owner resetting an approved booking" do
-        stub_engine.call
         id = create_pending.call
         client.post("#{BOOKINGS_BASE}/#{id}/approve", headers: manager_headers).status_code.should eq(200)
 
@@ -199,7 +173,6 @@ describe Bookings do
       end
 
       it "allows zone managers to approve, reject and reset via update" do
-        stub_engine.call
         id = create_pending.call
 
         response = client.patch("#{BOOKINGS_BASE}/#{id}", headers: manager_headers, body: {approved: true}.to_json)
@@ -229,7 +202,6 @@ describe Bookings do
       end
 
       it "keeps an explicit approval when a manager also changes the booking time" do
-        stub_engine.call
         id = create_pending.call
 
         response = client.patch("#{BOOKINGS_BASE}/#{id}", headers: manager_headers, body: {

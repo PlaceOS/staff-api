@@ -34,21 +34,24 @@ RUN shards install --production --ignore-crystal-version --skip-postinstall --sk
 COPY ./src src
 
 # Build App
-# -Dpreview_mt -Dexecution_context enable RFC 2 execution contexts so heavy
-# routes (e.g. bookings index) serialise responses in dedicated parallel pools.
+# --release optimises the binary and leaves out the MCP card previewer (src/staff-api.cr).
+# -no-pie: backtraces of a static PIE binary can't be resolved, they print `from ???`
 RUN PLACE_COMMIT=$PLACE_COMMIT \
-    shards build --production --error-trace --static -Dpreview_mt -Dexecution_context
+    shards build --production --release --link-flags=-no-pie --error-trace --static
+
+# Generate the MCP tool descriptions, they're extracted from the source code comments
+RUN ./bin/staff-api --mcp=/app/mcp.yml
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 RUN mkdir deps
 
-# Extract binary dependencies
+# Extract binary dependencies, a fully static binary has none (ldd exits 1)
 RUN for binary in /app/bin/*; do \
-        ldd "$binary" | \
+        { ldd "$binary" || true; } | \
         tr -s '[:blank:]' '\n' | \
-        grep '^/' | \
-        xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
+        { grep '^/' || true; } | \
+        xargs -r -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
     done
 
 # Build a minimal docker image
@@ -73,6 +76,9 @@ COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 # Copy the app into place
 COPY --from=build /app/deps /
 COPY --from=build /app/bin /
+COPY --from=build /app/mcp.yml /mcp.yml
+# MCP Apps cards rendered by tools, i.e. the space card
+COPY ./cards /cards
 
 # Use an unprivileged user.
 USER appuser:appuser

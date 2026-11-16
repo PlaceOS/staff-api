@@ -1,4 +1,5 @@
 require "../spec_helper"
+require "./helpers/schedule_helper"
 
 describe Staff do
   client = AC::SpecHelper.client
@@ -48,6 +49,50 @@ describe Staff do
 
     body = PlaceCalendar::User.from_json(client.get("#{STAFF_BASE}/#{user_id}", headers: headers).body)
     body.id.should eq(user_id)
+  end
+
+  describe "#free_busy" do
+    starting = Time.utc(2026, 10, 14)
+    ending = starting + 1.day
+    period = "period_start=#{starting.to_unix}&period_end=#{ending.to_unix}"
+
+    before_each do
+      WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
+        .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
+    end
+
+    it "returns the busy times of the person and me, from one request" do
+      requested = ScheduleHelper.stub({
+        "jane@example.com" => [{starting + 9.hours, starting + 10.hours}, {starting - 2.hours, starting - 1.hour}],
+        ScheduleHelper::ME => [{starting - 1.hour, starting + 1.hour}],
+      })
+
+      response = client.get("#{STAFF_BASE}/Jane@Example.com/free_busy?#{period}", headers: headers)
+      response.status_code.should eq 200
+      body = JSON.parse(response.body).as_a
+      body.map(&.["email"].as_s).should eq ["jane@example.com", ScheduleHelper::ME]
+      # busy times outside the period are dropped, those overlapping it are clipped to it
+      body[0]["busy"].should eq JSON.parse([{start: (starting + 9.hours).to_unix, end: (starting + 10.hours).to_unix}].to_json)
+      body[1]["busy"].should eq JSON.parse([{start: starting.to_unix, end: (starting + 1.hour).to_unix}].to_json)
+      requested.should eq [["jane@example.com", ScheduleHelper::ME]]
+    end
+
+    it "only checks me once when the person is me" do
+      requested = ScheduleHelper.stub({} of String => Array(Tuple(Time, Time)))
+      body = JSON.parse(client.get("#{STAFF_BASE}/#{ScheduleHelper::ME}/free_busy?#{period}", headers: headers).body).as_a
+      body.map(&.["email"].as_s).should eq [ScheduleHelper::ME]
+      requested.should eq [[ScheduleHelper::ME]]
+    end
+
+    it "rejects periods that are empty or longer than a week" do
+      client.get("#{STAFF_BASE}/jane@example.com/free_busy?period_start=#{ending.to_unix}&period_end=#{starting.to_unix}", headers: headers).status_code.should eq 400
+      client.get("#{STAFF_BASE}/jane@example.com/free_busy?period_start=#{starting.to_unix}&period_end=#{(starting + 8.days).to_unix}", headers: headers).status_code.should eq 400
+    end
+
+    it "is a card only tool" do
+      _toolbox, tool = ActionController::MCPServer.description.tool?("staff_free_busy").not_nil!
+      tool.visibility.should eq ["card"]
+    end
   end
 end
 

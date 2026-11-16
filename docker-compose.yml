@@ -14,6 +14,14 @@ services:
     ports:
       - 5432:5432
 
+  redis:
+    image: eqalpha/keydb
+    healthcheck:
+      test: ["CMD", "keydb-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   migrator:
     build:
       context: ${PWD}/spec/migration
@@ -31,6 +39,7 @@ services:
     volumes:
       - ${PWD}/spec:/app/spec
       - ${PWD}/src:/app/src
+      - ${PWD}/cards:/app/cards
       - ${PWD}/lib:/app/lib
       - ${PWD}/shard.lock:/app/shard.lock
       - ${PWD}/shard.override.yml:/app/shard.override.yml
@@ -39,13 +48,10 @@ services:
     depends_on:
       - migrator
       - db
+      - redis
     security_opt:
       - seccomp:unconfined
     environment:
       PG_DATABASE_URL: postgresql://postgres:password@db:5432/staff_api_test
-      PLACE_URI: http://toby.dev.place.tech
-      PLACE_EMAIL: toby@place.technology.com
-      PLACE_PASSWORD: password
-      PLACE_AUTH_CLIENT_ID: abc123
-      PLACE_AUTH_SECRET: abc123
+      REDIS_URL: redis://redis:6379
       GITHUB_ACTION: ${GITHUB_ACTION-}
