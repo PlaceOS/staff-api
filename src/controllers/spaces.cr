@@ -142,7 +142,30 @@ class Spaces < Application
     current_authority.try(&.config["org_zone"]?.try(&.as_s?))
   end
 
-  # the zones in the organisation's tree, every zone when there's no org zone
+  @fallback_organisation_id : UUID? = nil
+
+  # Ownership is a domain boundary only when the organisation has exactly one domain.
+  private def fallback_organisation_id : UUID
+    @fallback_organisation_id ||= begin
+      org_id = current_authority.try(&.organisation_id)
+      message = "configure org_zone for this domain: its room estate cannot be determined safely"
+      unless org_id && ::PlaceOS::Model::Authority.where(organisation_id: org_id).count == 1
+        raise Error::NotImplemented.new(message)
+      end
+
+      invalid_references = ::PlaceOS::Model::ControlSystem.where(organisation_id: org_id, bookable: true).where(<<-SQL, org_id).exists?
+        EXISTS (
+          SELECT 1 FROM unnest(sys.zones) AS referenced(id)
+          LEFT JOIN zone AS owned_zone ON owned_zone.id = referenced.id
+          WHERE owned_zone.organisation_id IS DISTINCT FROM ?::uuid
+        )
+        SQL
+      raise Error::NotImplemented.new(message) if invalid_references
+      org_id
+    end
+  end
+
+  # Zones in the configured tree, or in the verified single-domain estate.
   private def org_zones
     zones = ::PlaceOS::Model::Zone.all
     if org = org_zone_id
@@ -156,8 +179,17 @@ class Spaces < Application
           SELECT id FROM tree
         )
         SQL
+    else
+      zones = zones.where(organisation_id: fallback_organisation_id)
     end
     zones
+  end
+
+  private def zones_for_space(ids : Array(String)) : Array(::PlaceOS::Model::Zone)
+    return [] of ::PlaceOS::Model::Zone if ids.empty?
+    zones = ::PlaceOS::Model::Zone.where(id: ids)
+    zones = zones.where(organisation_id: fallback_organisation_id) unless org_zone_id
+    zones.to_a
   end
 
   # SQL limiting systems to bookable ones in every zone listed and the org zone
@@ -165,7 +197,12 @@ class Spaces < Application
     clauses = ["bookable = true"]
     args = [] of ::PgORM::Value
     zones = zone_ids.try(&.dup) || [] of String
-    org_zone_id.try { |org| zones << org }
+    if org = org_zone_id
+      zones << org
+    else
+      clauses << "organisation_id = ?"
+      args << fallback_organisation_id
+    end
     zones.uniq!
     unless zones.empty?
       clauses << "zones @> #{sql_array(zones)}"
@@ -282,7 +319,7 @@ class Spaces < Application
   ) : SpaceSchedule
     system = current_space
     zone_ids = system.zones
-    zones = zone_ids.empty? ? [] of ::PlaceOS::Model::Zone : ::PlaceOS::Model::Zone.find_all(zone_ids).to_a
+    zones = zones_for_space(zone_ids)
     # the most specific zone with a timezone, systems list their zones from org down to level
     location = system.timezone ||
                zone_ids.reverse.compact_map { |zone_id| zones.find(&.id.==(zone_id)).try(&.timezone) }.first? ||
@@ -341,7 +378,7 @@ class Spaces < Application
   @[AC::Route::GET("/:id/map")]
   def map : Nil
     system = current_space
-    zones = system.zones.empty? ? [] of ::PlaceOS::Model::Zone : ::PlaceOS::Model::Zone.find_all(system.zones).to_a.select!(&.map_id.presence)
+    zones = zones_for_space(system.zones).select!(&.map_id.presence)
     # the space's level, otherwise its most specific zone with a map (systems list zones from the org down)
     level = zones.find(&.tags.includes?("level")) ||
             system.zones.reverse.compact_map { |zone_id| zones.find(&.id.==(zone_id)) }.first?

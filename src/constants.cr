@@ -7,8 +7,11 @@ module App
   {% end %}
 
   ENVIRONMENT = ENV["SG_ENV"]? || "development"
-  TEST        = ENVIRONMENT == "test"
-  PRODUCTION  = ENVIRONMENT == "production"
+
+  # PPT-526: refuse cross-organisation tenant administration (true) or only log it (false)
+  PLACE_TENANCY_ENFORCE = ENV["PLACE_TENANCY_ENFORCE"]?.try(&.downcase).in?("true", "1", "yes") || false
+  TEST                  = ENVIRONMENT == "test"
+  PRODUCTION            = ENVIRONMENT == "production"
 
   BUILD_TIME   = {{ system("date -u").stringify }}
   BUILD_COMMIT = {{ env("PLACE_COMMIT") || "DEV" }}

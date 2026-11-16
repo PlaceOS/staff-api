@@ -11,6 +11,7 @@ abstract class Application < ActionController::Base
   # =========================================
   include Utils::PlaceOSHelpers
   include Utils::CurrentUser
+  include Utils::Tenancy
   include Utils::MultiTenant
 
   # the number of requests to queue before responding with too many requests
@@ -106,13 +107,11 @@ abstract class Application < ActionController::Base
 
   protected def check_jwt_scope
     access = user_token.get_access("public")
-    block_access = true
-
-    if request.method.downcase == "get"
-      block_access = access.none?
-    else
-      block_access = !access.write?
-    end
+    block_access = if request.method.downcase == "get"
+                     access.none?
+                   else
+                     !access.write?
+                   end
 
     if block_access
       Log.warn { {message: "unknown scope #{user_token.scope}", action: "authorize!", host: request.hostname, id: user_token.id} }
