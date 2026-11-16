@@ -92,7 +92,7 @@ describe Calendars do
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: "")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
     # this should return only two events
     tz = Time::Location.load("America/Los_Angeles")
@@ -100,7 +100,9 @@ describe Calendars do
     later = Time.parse("2019-03-15T12:15:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
 
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    body = JSON.parse(client.get(route, headers: headers).body).as_a
+    response = client.get(route, headers: headers)
+    response.status_code.should eq 200
+    body = JSON.parse(response.body).as_a
     body.should eq(CalendarsHelper.free_busy_output_15min)
   end
 
@@ -111,14 +113,15 @@ describe Calendars do
     WebMock.stub(:post, "https://graph.microsoft.com/v1.0/users/dev%40acaprojects.onmicrosoft.com/calendar/getSchedule")
       .to_return(body: File.read("./spec/fixtures/events/o365/get_schedule.json"))
     WebMock.stub(:post, "https://login.microsoftonline.com/bb89674a-238b-4b7d-91ec-6bebad83553a/oauth2/v2.0/token")
-      .to_return(body: "")
+      .to_return(body: File.read("./spec/fixtures/tokens/o365_token.json"))
 
     tz = Time::Location.load("America/Los_Angeles")
     now = Time.parse("2019-03-15T12:00:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
     later = Time.parse("2019-03-15T12:04:00", "%Y-%m-%dT%H:%M:%S", tz).to_unix
     route = "#{CALENDARS_BASE}/free_busy?calendars=dev@acaprojects.com&period_start=#{now}&period_end=#{later}&zone_ids=zone-EzcsmWbvUG6"
-    bad_request = client.get(route, headers: headers).status_code
-    bad_request.should eq(400)
+    response = client.get(route, headers: headers)
+    response.status_code.should eq(400)
+    response.body.should contain("period_end")
   end
 
   describe "#check_permission" do
