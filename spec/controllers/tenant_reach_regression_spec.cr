@@ -46,7 +46,11 @@ module TenantReachSpec
     end
 
     def headers(scope = [UserJWT::Scope::PUBLIC]) : HTTP::Headers
-      token = Model::Generator.jwt(@user, scope)
+      generated = Model::Generator.jwt(@user, scope)
+      token = UserJWT.new(
+        iss: generated.iss, iat: generated.iat, exp: generated.exp,
+        domain: @authority.domain, id: generated.id, user: generated.user, scope: generated.scope,
+      )
       HTTP::Headers{"Host" => @authority.domain, "Authorization" => "Bearer #{token.encode}", "Content-Type" => "application/json"}
     end
 
