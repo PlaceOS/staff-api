@@ -142,6 +142,8 @@ describe "tenant administration reach regressions" do
       grant = estate.grant(PlaceOS::Model::Grant::SCOPE_AUTHORITY, foreign_authority.id.to_s, TenantReachSpec::Permissions::Update)
       client.patch("#{Tenants.base_route}/#{foreign.id}", headers: estate.headers, body: {early_checkin: 19}.to_json).status_code.should eq 200
       Tenant.find(foreign.id).early_checkin.should eq 19
+      client.post("#{Tenants.base_route}/#{foreign.id}/limits", headers: estate.headers, body: {desk: 7}.to_json).status_code.should eq 200
+      client.post("#{Tenants.base_route}/#{foreign.id}/early_checkin", headers: estate.headers, body: "21").status_code.should eq 200
       client.get("#{Tenants.base_route}/#{foreign.id}/limits", headers: estate.headers).status_code.should eq 404
       client.delete("#{Tenants.base_route}/#{foreign.id}", headers: estate.headers).status_code.should eq 404
 

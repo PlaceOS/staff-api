@@ -14,7 +14,12 @@ class Tenants < Application
   @[AC::Route::Filter(:before_action, except: [:index, :create, :current_limits, :current_early_checkin])]
   private def find_tenant(id : Int64)
     found = Tenant.find(id)
-    ensure_domain_reach!(found.domain)
+    required = case request.method
+               when "GET", "HEAD" then ::PlaceOS::Model::Permissions::Read
+               when "DELETE"      then ::PlaceOS::Model::Permissions::Delete
+               else                    ::PlaceOS::Model::Permissions::Update
+               end
+    ensure_domain_reach!(found.domain, required: required)
     @tenant = found
   end
 
@@ -35,7 +40,8 @@ class Tenants < Application
   @[AC::Route::POST("/", body: :tenant_body, status_code: HTTP::Status::CREATED)]
   def create(tenant_body : Tenant::Responder) : Tenant::Responder
     tenant = tenant_body.to_tenant
-    ensure_domain_reach!(tenant.domain, "domain")
+    tenant.domain = tenant.domain.strip.downcase
+    ensure_domain_reach!(tenant.domain, "domain", required: ::PlaceOS::Model::Permissions::Create)
     tenant.save! rescue raise Error::ModelValidation.new(tenant.errors.map { |error| {field: error.field.to_s, reason: error.message}.as({field: String?, reason: String}) }, "error validating tenant data")
     tenant.as_json
   end
@@ -45,6 +51,9 @@ class Tenants < Application
   @[AC::Route::PATCH("/:id", body: :tenant_body)]
   def update(tenant_body : Tenant::Responder) : Tenant::Responder
     changes = tenant_body.to_tenant(update: true)
+    if domain = tenant_body.domain
+      ensure_domain_reach!(domain.strip.downcase, "domain", required: ::PlaceOS::Model::Permissions::Update)
+    end
 
     {% for key in [:name, :domain, :email_domain, :platform, :delegated, :booking_limits, :service_account, :credentials, :outlook_config, :early_checkin] %}
       begin
