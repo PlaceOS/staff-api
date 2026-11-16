@@ -146,7 +146,9 @@ describe "domain isolation regressions" do
     TenantReachSpec.with_estate do |estate|
       first = PlaceOS::Model::Generator.asset_category(estate.authority).save!
       second = PlaceOS::Model::Generator.asset_category(estate.authority).save!
-      legacy = PlaceOS::Model::Generator.asset_category(estate.authority).tap(&.authority_id = nil).save!
+      legacy = PlaceOS::Model::Generator.asset_category(estate.authority).save!
+      # Legacy NULLs are supported by the database, but new model writes require an authority.
+      PgORM::Database.connection(&.exec("UPDATE asset_category SET authority_id = NULL WHERE id = $1", legacy.id))
       type = PlaceOS::Model::Generator.asset_type(first).save!
       begin
         client.post(AssetTypes.base_route, headers: estate.headers, body: StaffDomainRegressionSpec.type_body(second)).status_code.should eq 201
