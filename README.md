@@ -37,6 +37,24 @@ LOGSTASH_HOST=example.com
 LOGSTASH_PORT=12345
 ```
 
+### Domain isolation
+
+Staff API uses the authenticated request domain for its calendar context, including
+email-domain tenant variants and delegated credentials.
+
+Configure the authority's `config.org_zone` to bound spaces and zones to that tree.
+Without it, the API uses ownership only when the organisation has exactly one
+PlaceOS domain and every owned room's zone references belong to that organisation.
+Missing or ambiguous ownership returns HTTP 501 with an `org_zone` configuration
+message. Unowned rooms and zones are excluded from the ownership fallback.
+
+`PLACE_TENANCY_ENFORCE=true` enables tenant-administration isolation after domain
+organisation ownership has been assigned. It defaults to false during rollout.
+Authority grants cover one domain; organisation and partner grants cover their
+respective domains. Each request requires the matching grant operation or Manage,
+alongside its existing JWT scope and admin requirements. Management partner staff
+organisations retain cluster administration; customer organisations do not.
+
 ## MCP Server
 
 The API is also available to LLM clients (Claude Code, Claude Desktop, VS Code,

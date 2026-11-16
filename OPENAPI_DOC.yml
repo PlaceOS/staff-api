@@ -19987,6 +19987,11 @@ components:
           - type: array
             items:
               type: string
+        organisation_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: "null"
         timezone:
           anyOf:
           - type: object
@@ -20368,6 +20373,11 @@ components:
           - type: array
             items:
               type: string
+        organisation_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: "null"
         place_id:
           anyOf:
           - type: "null"

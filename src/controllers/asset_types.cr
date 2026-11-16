@@ -52,6 +52,14 @@ class AssetTypes < Application
     raise Error::NotFound.new("asset type #{current_asset_type.id} not found")
   end
 
+  private def confirm_category_authority(asset_type : ::PlaceOS::Model::AssetType) : Nil
+    # Resolve the current id directly: a cached association can predate assignment.
+    category = asset_type.category_id.try { |id| ::PlaceOS::Model::AssetCategory.find?(id) }
+    owner = category.try(&.authority_id)
+    return if owner.nil? || owner == current_authority.as(::PlaceOS::Model::Authority).id
+    raise Error::Forbidden.new("asset category belongs to another authority")
+  end
+
   ###############################################################################################
 
   # List asset types, each with a count of its assets.
@@ -139,7 +147,7 @@ class AssetTypes < Application
           GROUP BY
               at.id, at.name, at.brand, at.description, at.model_number, at.images, at.category_id, at.created_at, at.updated_at
       ) subquery;
-    SQL
+      SQL
 
     result = PgORM::Database.connection do |db|
       db.query_one sql, args: args, &.read(JSON::PullParser?).try &.read_raw
@@ -160,6 +168,7 @@ class AssetTypes < Application
   def update(asset_type : ::PlaceOS::Model::AssetType) : ::PlaceOS::Model::AssetType
     current = current_asset_type
     current.assign_attributes(asset_type)
+    confirm_category_authority(current)
     raise Error::ModelValidation.new(current.errors) unless current.save
     current
   end
@@ -167,6 +176,7 @@ class AssetTypes < Application
   # Create an asset type.
   @[AC::Route::POST("/", body: :asset_type, status_code: HTTP::Status::CREATED)]
   def create(asset_type : ::PlaceOS::Model::AssetType) : ::PlaceOS::Model::AssetType
+    confirm_category_authority(asset_type)
     raise Error::ModelValidation.new(asset_type.errors) unless asset_type.save
     asset_type
   end
