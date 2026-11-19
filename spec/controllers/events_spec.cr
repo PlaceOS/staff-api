@@ -40,15 +40,22 @@ describe Events, tags: ["event"] do
 
       tenant = get_tenant
 
-      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "blue"}.to_json))
+      matching = EventMetadatasHelper.create_event(
+        tenant.id,
+        host: "red@example.com",
+        ext_data: JSON.parse(%({"colour":"blue"})),
+      )
       EventMetadatasHelper.create_event(tenant.id)
-      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse({"colour": "red"}.to_json))
+      EventMetadatasHelper.create_event(tenant.id, ext_data: JSON.parse(%({"colour":"red"})))
 
       field_name = "colour"
       value = "blue"
+      response = client.get("#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: headers)
+      response.status_code.should eq 200
 
-      body = JSON.parse(client.get("#{EVENTS_BASE}/extension_metadata?field_name=#{field_name}&value=#{value}", headers: headers).body)
-      body.to_s.includes?("red").should be_false
+      events = JSON.parse(response.body).as_a
+      events.map(&.["event_id"].as_s).should eq [matching.event_id]
+      events.first["ext_data"][field_name].as_s.should eq value
     end
 
     it "#index should return a list of events with metadata of master event if event in list is an occurrence" do
