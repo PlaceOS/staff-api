@@ -15,6 +15,20 @@ describe Calendars do
   end
 
   describe "#availability" do
+    it "returns a documented empty response when there are no calendars to check" do
+      start = Time.utc(2021, 3, 15, 10).to_unix
+      finish = Time.utc(2021, 3, 15, 11).to_unix
+      route = "#{CALENDARS_BASE}/availability"
+      response = client.get("#{route}?period_start=#{start}&period_end=#{finish}", headers: headers)
+      response.status_code.should eq(204)
+      response.body.should be_empty
+
+      document = AC::OpenAPI.generate_open_api_docs({} of String => AC::OpenAPI::KlassDoc, title: "Staff API", version: "v1")
+      responses = document[:paths][route].get.not_nil!.responses
+      responses["204"].content.should be_nil
+      responses["200"].content.not_nil!["application/json"].schema["type"].should eq("array")
+    end
+
     # a room's resource calendar passed via `calendars` (not `system_ids`) resolves to its
     # system from our own registry -- WITHOUT a calendar-provider round trip. The calendars
     # list endpoint is deliberately not stubbed: if it were called, WebMock would raise.

@@ -76,7 +76,7 @@ class Calendars < Application
 
   # Find the rooms or people that are free for a whole time period.
   @[AC::MCP(ui: "spaces/card.html")]
-  @[AC::Route::GET("/availability")]
+  @[AC::Route::GET("/availability", status: {Nil => HTTP::Status::NO_CONTENT})]
   def availability(
     @[AC::Param::Info(description: "search period start as a unix epoch in seconds", example: "1661725146")]
     period_start : Int64,
@@ -84,7 +84,7 @@ class Calendars < Application
     period_end : Int64,
     @[AC::Param::Info(description: "a comma separated list of calendar ids (email addresses) to include; for room resource calendars prefer `system_ids`", example: "user@org.com,room2@resource.org.com")]
     calendars : String? = nil,
-  ) : Array(Availability)
+  ) : Array(Availability)?
     # Grab the system emails
     candidates = matching_calendars.transform_keys &.downcase
     candidate_calendars = candidates.keys
@@ -95,7 +95,7 @@ class Calendars < Application
     all_calendars.concat(candidate_calendars)
     calendars = all_calendars.to_a
 
-    render :no_content, json: [] of Availability if calendars.empty?
+    return if calendars.empty?
     calendars = free_calendars(calendars, Time.unix(period_start), Time.unix(period_end))
 
     calendars.map { |email|
