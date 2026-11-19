@@ -7562,6 +7562,8 @@ paths:
           - type: boolean
           - type: "null"
       responses:
+        "204":
+          description: No Content
         "200":
           description: OK
           content:
@@ -17769,13 +17771,13 @@ components:
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         name:
           anyOf:
@@ -17806,13 +17808,13 @@ components:
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         purchase_order_number:
           anyOf:
@@ -17824,7 +17826,7 @@ components:
           - type: string
         supplier_details:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         purchase_date:
           anyOf:
@@ -17859,13 +17861,13 @@ components:
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         name:
           anyOf:
@@ -17893,6 +17895,12 @@ components:
           anyOf:
           - type: "null"
           - type: string
+        asset_count:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+          readOnly: true
         id:
           anyOf:
           - type: "null"
@@ -17902,13 +17910,13 @@ components:
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         identifier:
           anyOf:
@@ -17920,7 +17928,7 @@ components:
           - type: string
         other_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         barcode:
           anyOf:
@@ -17932,7 +17940,7 @@ components:
           - type: string
         client_ids:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         map_id:
           anyOf:
@@ -18091,6 +18099,7 @@ components:
           anyOf:
           - type: "null"
           - type: string
+            format: email
         department:
           anyOf:
           - type: "null"
@@ -18141,7 +18150,7 @@ components:
           - type: string
         extension_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         history:
           anyOf:
@@ -18149,6 +18158,27 @@ components:
           - type: array
             items:
               $ref: '#/components/schemas/PlaceOS.Model.Booking.History'
+        email_digest:
+          anyOf:
+          - type: "null"
+          - type: string
+          readOnly: true
+        booked_by_id:
+          anyOf:
+          - type: "null"
+          - type: string
+          readOnly: true
+        booked_by_email_digest:
+          anyOf:
+          - type: "null"
+          - type: string
+          readOnly: true
+        created:
+          anyOf:
+          - type: integer
+            format: Int64
+          - type: "null"
+          readOnly: true
         parent_id:
           anyOf:
           - type: integer
@@ -18166,12 +18196,40 @@ components:
             format: Int64
           - type: "null"
           description: provided when this booking is an instance of recurring booking
-        attendees:
+        linked_event:
+          anyOf:
+          - type: "null"
+          - $ref: '#/components/schemas/PlaceOS.Model.EventMetadata'
+          readOnly: true
+        linked_bookings:
           anyOf:
           - type: "null"
           - type: array
             items:
-              $ref: '#/components/schemas/PlaceCalendar.Event.Attendee'
+              $ref: '#/components/schemas/PlaceOS.Model.Booking'
+          readOnly: true
+        linked_parent_booking:
+          anyOf:
+          - type: "null"
+          - $ref: '#/components/schemas/PlaceOS.Model.Booking'
+          readOnly: true
+        attendees:
+          anyOf:
+          - anyOf:
+            - type: "null"
+            - type: array
+              items:
+                $ref: '#/components/schemas/PlaceCalendar.Event.Attendee'
+          - anyOf:
+            - type: "null"
+            - type: array
+              items:
+                $ref: '#/components/schemas/PlaceOS.Model.Attendee'
+        current_state:
+          anyOf:
+          - $ref: '#/components/schemas/PlaceOS.Model.Booking.State'
+          - type: "null"
+          readOnly: true
         asset_ids:
           anyOf:
           - type: "null"
@@ -18186,12 +18244,20 @@ components:
               type: string
         induction:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.Booking.Induction'
+          - enum:
+            - tentative
+            - accepted
+            - declined
+            type: string
           - type: "null"
           description: The induction status of the booking. Defaults to TENTATIVE.
         permission:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.Booking.Permission'
+          - enum:
+            - private
+            - open
+            - public
+            type: string
           - type: "null"
           description: The permission level for the booking. Defaults to private.
             If set to private, attendees must be invited.If set to open, users in
@@ -18199,7 +18265,12 @@ components:
             to join.
         recurrence_type:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.Booking.Recurrence'
+          - enum:
+            - none
+            - daily
+            - weekly
+            - monthly
+            type: string
           - type: "null"
           description: Is this a recurring booking. This field defines the type of
             recurrence
@@ -18239,6 +18310,13 @@ components:
           - type: integer
             format: Int64
           - type: "null"
+        guests:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              $ref: '#/components/schemas/PlaceOS.Model.Guest'
+          readOnly: true
         id:
           anyOf:
           - type: integer
@@ -18246,13 +18324,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceOS.Model.Guest:
       type: object
@@ -18261,6 +18339,7 @@ components:
           anyOf:
           - type: "null"
           - type: string
+            format: email
         name:
           anyOf:
           - type: "null"
@@ -18299,8 +18378,33 @@ components:
           - type: string
         extension_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
+        checked_in:
+          anyOf:
+          - type: boolean
+          - type: "null"
+          readOnly: true
+        visit_expected:
+          anyOf:
+          - type: boolean
+          - type: "null"
+          readOnly: true
+        booking:
+          anyOf:
+          - type: "null"
+          - $ref: '#/components/schemas/PlaceOS.Model.Booking'
+          readOnly: true
+        event:
+          anyOf:
+          - type: "null"
+          - $ref: '#/components/schemas/PlaceCalendar.Event'
+          readOnly: true
+        event_metadata:
+          anyOf:
+          - type: "null"
+          - type: object
+          readOnly: true
         tenant_id:
           anyOf:
           - type: integer
@@ -18313,13 +18417,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceCalendar.Event.Attendee:
       type: object
@@ -18350,7 +18454,7 @@ components:
           - type: "null"
         extension_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         preferred_name:
           anyOf:
@@ -18453,13 +18557,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceCalendar.Calendar:
       type: object
@@ -18605,8 +18709,8 @@ components:
           format: Int64
         event_end:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         id:
           anyOf:
@@ -18737,12 +18841,19 @@ components:
           - type: "null"
         extension_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         recurring_master_id:
           anyOf:
           - type: "null"
           - type: string
+        linked_bookings:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              $ref: '#/components/schemas/PlaceOS.Model.Booking'
+          readOnly: true
         setup_time:
           anyOf:
           - type: integer
@@ -18804,11 +18915,11 @@ components:
               type: string
         diff:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         snapshot:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         user_id:
           anyOf:
@@ -18820,12 +18931,12 @@ components:
           - type: string
         context:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceOS.Model.EventMetadata:
       type: object
@@ -18874,7 +18985,7 @@ components:
           - type: "null"
         ext_data:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         setup_time:
           anyOf:
@@ -18896,7 +19007,11 @@ components:
           - type: string
         permission:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.EventMetadata.Permission'
+          - enum:
+            - private
+            - open
+            - public
+            type: string
           - type: "null"
           description: The permission level for the event. Defaults to private. If
             set to private, attendees must be invited.If set to open, users in the
@@ -18907,6 +19022,13 @@ components:
           - type: integer
             format: Int64
           - type: "null"
+        linked_bookings:
+          anyOf:
+          - type: "null"
+          - type: array
+            items:
+              $ref: '#/components/schemas/PlaceOS.Model.Booking'
+          readOnly: true
         id:
           anyOf:
           - type: integer
@@ -18914,13 +19036,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceCalendar.Group:
       type: object
@@ -18965,8 +19087,7 @@ components:
           anyOf:
           - type: "null"
           - type: object
-            additionalProperties:
-              type: object
+            additionalProperties: {}
       required:
       - id
       - email
@@ -19257,8 +19378,7 @@ components:
           anyOf:
           - type: "null"
           - type: object
-            additionalProperties:
-              type: object
+            additionalProperties: {}
     Staff.Busy:
       type: object
       properties:
@@ -19295,7 +19415,18 @@ components:
           - type: string
         trigger:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.Survey.TriggerType'
+          - enum:
+            - none
+            - reserved
+            - checkedin
+            - checkedout
+            - noshow
+            - rejected
+            - cancelled
+            - ended
+            - visitor_checkedin
+            - visitor_checkedout
+            type: string
           - type: "null"
           description: 'Triggers on booking states: RESERVED, CHECKEDIN, CHECKEDOUT,
             REJECTED, CANCELLED, VISITOR_CHECKEDIN, VISITOR_CHECKEDOUT'
@@ -19324,13 +19455,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceOS.Model.Survey.Answer:
       type: object
@@ -19341,7 +19472,7 @@ components:
           - type: string
         answer_json:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         question_id:
           anyOf:
@@ -19360,13 +19491,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceOS.Model.Survey.Invitation:
       type: object
@@ -19395,13 +19526,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     PlaceOS.Model.Survey.Question:
       type: object
@@ -19420,7 +19551,7 @@ components:
           - type: string
         options:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         required:
           anyOf:
@@ -19428,7 +19559,7 @@ components:
           - type: "null"
         choices:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         max_rating:
           anyOf:
@@ -19451,6 +19582,11 @@ components:
           - type: integer
             format: Int64
           - type: "null"
+        deleted:
+          anyOf:
+          - type: boolean
+          - type: "null"
+          readOnly: true
         authority_id:
           anyOf:
           - type: "null"
@@ -19462,13 +19598,13 @@ components:
           - type: "null"
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
     Office365.ChatMessageList:
       type: object
@@ -19627,11 +19763,11 @@ components:
           - type: string
         credentials:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         booking_limits:
           anyOf:
-          - type: object
+          - {}
           - type: "null"
         booking_range:
           anyOf:
@@ -19660,8 +19796,8 @@ components:
       type: object
       properties:
         created_at:
-          type: string
-          format: date-time
+          type: integer
+          format: Int64
         name:
           type: string
         nickname:
@@ -19744,8 +19880,8 @@ components:
           format: Int64
         last_login:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         work_preferences:
           type: array
@@ -19897,31 +20033,29 @@ components:
       required:
       - state
       - time
-    PlaceOS.Model.Booking.Permission:
+    PlaceOS.Model.Booking.State:
       type: string
       enum:
-      - private
-      - open
-      - public
-    PlaceOS.Model.Booking.Recurrence:
-      type: string
-      enum:
-      - none
-      - daily
-      - weekly
-      - monthly
+      - reserved
+      - checked_in
+      - checked_out
+      - no_show
+      - rejected
+      - cancelled
+      - ended
+      - unknown
     PlaceOS.Model.ControlSystem:
       type: object
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         name:
           anyOf:
@@ -19989,7 +20123,7 @@ components:
               type: string
         timezone:
           anyOf:
-          - type: object
+          - type: string
           - type: "null"
         support_url:
           anyOf:
@@ -20037,7 +20171,12 @@ components:
               type: string
         orientation:
           anyOf:
-          - $ref: '#/components/schemas/PlaceOS.Model.Playlist.Orientation'
+          - enum:
+            - unspecified
+            - landscape
+            - portrait
+            - square
+            type: string
           - type: "null"
         sign_height:
           anyOf:
@@ -20061,8 +20200,8 @@ components:
           - type: "null"
         signage_last_seen:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         playlist_item_id:
           anyOf:
@@ -20072,8 +20211,7 @@ components:
           anyOf:
           - type: "null"
           - type: object
-            additionalProperties:
-              type: object
+            additionalProperties: {}
         remove_zones:
           anyOf:
           - type: "null"
@@ -20294,13 +20432,13 @@ components:
       properties:
         created_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         updated_at:
           anyOf:
-          - type: string
-            format: date-time
+          - type: integer
+            format: Int64
           - type: "null"
         name:
           anyOf:
@@ -20348,7 +20486,7 @@ components:
           - type: string
         timezone:
           anyOf:
-          - type: object
+          - type: string
           - type: "null"
         triggers:
           anyOf:
@@ -20403,8 +20541,7 @@ components:
           type: string
         description:
           type: string
-        details:
-          type: object
+        details: {}
         parent_id:
           anyOf:
           - type: "null"
@@ -20522,19 +20659,6 @@ components:
       - all_day
       - private
       description: a meeting in the space's calendar
-    PlaceOS.Model.Survey.TriggerType:
-      type: string
-      enum:
-      - none
-      - reserved
-      - checkedin
-      - checkedout
-      - noshow
-      - rejected
-      - cancelled
-      - ended
-      - visitor_checkedin
-      - visitor_checkedout
     PlaceOS.Model.Survey.Page:
       type: object
       properties:
@@ -20745,24 +20869,6 @@ components:
       required:
       - day_of_week
       - blocks
-    PlaceOS.Model.Booking.State:
-      type: string
-      enum:
-      - reserved
-      - checked_in
-      - checked_out
-      - no_show
-      - rejected
-      - cancelled
-      - ended
-      - unknown
-    PlaceOS.Model.Playlist.Orientation:
-      type: string
-      enum:
-      - unspecified
-      - landscape
-      - portrait
-      - square
     PlaceCalendar.AvailabilityStatus:
       type: string
       enum:
@@ -20986,8 +21092,7 @@ components:
     : type: array
     Hash-oString-nJSON.Any-c:
       type: object
-      additionalProperties:
-        type: object
+      additionalProperties: {}
     NamedTuple-ocan_edit-u00003A-u000020Bool-c:
       type: object
       properties:
@@ -20999,8 +21104,7 @@ components:
       anyOf:
       - $ref: '#/components/schemas/PlaceCalendar.Event.Attendee'
       - $ref: '#/components/schemas/PlaceOS.Model.Attendee'
-    JSON.Any:
-      type: object
+    JSON.Any: {}
     -oPlaceCalendar.Event-pNil-c:
       anyOf:
       - type: "null"
